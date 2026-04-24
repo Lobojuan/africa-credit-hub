@@ -87,7 +87,7 @@ const HERO_STATS = [
   { value: 172, suffix: "K+", label: "Credit Accounts", icon: CreditCard },
   { value: 42, suffix: "+", label: "Currencies Supported", icon: Banknote },
   { value: 79, suffix: "+", label: "SRS Requirements", icon: ShieldCheck },
-  { value: 5, suffix: "", label: "AU Languages", icon: Languages },
+  { value: 8, suffix: "", label: "Languages", icon: Languages },
 ];
 
 const PROBLEM_STATEMENTS = [
@@ -272,7 +272,7 @@ const PLATFORM_MODULES = [
         details: [
           "Conversational interface for guided dispute filing and resolution tracking",
           "FAQ knowledge base spanning 15 categories with keyword search",
-          "Multilingual support across all 5 AU languages",
+          "Multilingual support across all 8 languages",
           "Context-aware help suggestions based on current page and user role",
         ],
       },
@@ -288,11 +288,11 @@ const PLATFORM_MODULES = [
       },
       {
         icon: Globe,
-        title: "5 AU Language Localization",
+        title: "8-Language Localization",
         details: [
-          "Complete UI translation: English, French, Portuguese, Arabic, and Swahili",
+          "Complete UI translation: English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese, and Traditional Chinese",
           "Arabic RTL (right-to-left) layout support with automatic text direction",
-          "All documentation available in EN, FR, AR, and SW",
+          "All documentation available in EN, FR, AR, SW, ES, ZH-S, and ZH-T",
           "Dynamic language switching without page reload",
         ],
       },
@@ -434,9 +434,9 @@ const COMPETITIVE_ADVANTAGES = [
     desc: "Real-time exchange rate management with automated 6-hour refresh cycles for accurate cross-border valuation.",
   },
   {
-    metric: "5",
-    label: "AU Languages",
-    desc: "Complete localization including Arabic RTL support, covering every African Union working language.",
+    metric: "8",
+    label: "Languages",
+    desc: "Complete localization including Arabic RTL, Spanish, Simplified Chinese, and Traditional Chinese support.",
   },
   {
     metric: "4",

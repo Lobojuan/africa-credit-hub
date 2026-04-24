@@ -1965,7 +1965,7 @@ const pt = {
     mobileMoney: "Pagamentos M-Pesa e Mobile Money",
     papss: "Liquidações transfronteiriças PAPSS",
     currencies42: "42+ moedas africanas",
-    auLanguages: "5 línguas da UA",
+    auLanguages: "8 idiomas",
     offlineBatch: "Processamento em lote offline",
     platformPreview: "Pré-visualização da Plataforma",
     dashboardTitle: "O Seu Portfólio de Crédito, Um Painel",

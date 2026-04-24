@@ -205,7 +205,7 @@ export default function AboutPage() {
             <ValueCard icon={Scale} title="Regulatory Integrity" description="Every feature is built to meet or exceed the standards set by African central banks, from BoG CRB v1.1 to pan-continental SRS frameworks." />
             <ValueCard icon={Lock} title="Data Sovereignty" description="Multi-tenant architecture ensures each institution's data remains isolated, encrypted, and subject to the jurisdiction-specific retention policies of its home country." />
             <ValueCard icon={Heart} title="Financial Inclusion" description="By creating reliable credit histories for underserved populations, we help unlock access to capital for millions of borrowers across Africa." />
-            <ValueCard icon={Globe} title="Pan-African Reach" description="Purpose-built for the continent's diversity — 54 countries, 42+ currencies, 5 AU languages, and full RTL support for Arabic-speaking nations." />
+            <ValueCard icon={Globe} title="Pan-African Reach" description="Purpose-built for the continent's diversity — 54 countries, 42+ currencies, 8 languages, and full RTL support for Arabic-speaking nations." />
             <ValueCard icon={Network} title="Interoperability" description="REST APIs, OAuth 2.1 authentication, XBRL batch uploads, and pipe-delimited BoG exports ensure seamless integration with any banking system." />
             <ValueCard icon={Award} title="Excellence" description="Production-grade from day one — maker-checker workflows, tamper-evident audit trails, TOTP MFA, and SHA-256 hash-chained logs as standard." />
           </div>
@@ -254,7 +254,7 @@ export default function AboutPage() {
           <Card className="border-border/50">
             <CardContent className="p-6 sm:p-8">
               <TimelineItem year="2024" title="Foundation" description="Africa Credit Hub was founded with a mandate to build Africa's first cross-jurisdictional credit registry." />
-              <TimelineItem year="2025" title="Platform Architecture" description="Designed the multi-tenant SaaS architecture covering 54 African countries, 42+ currencies, and 5 AU languages. Built core RBAC, borrower management, and credit scoring engine." />
+              <TimelineItem year="2025" title="Platform Architecture" description="Designed the multi-tenant SaaS architecture covering 54 African countries, 42+ currencies, and 8 languages. Built core RBAC, borrower management, and credit scoring engine." />
               <TimelineItem year="2026 Q1" title="Africa Credit Hub v1.0 — v1.2" description="Launched the foundation platform with enterprise features: TOTP MFA, OAuth 2.1, AI chatbot, entity resolution, exchange rates, XBRL uploads, full internationalization, and mobile-responsive design." />
               <TimelineItem year="2026 Q1" title="Africa Credit Hub v2.5 — Ghana Launch" description="Achieved full Bank of Ghana CRB v1.1 compliance. Deployed Ghana-specific mode with 85 borrowers, 181 credit accounts, 17 institutions, pipe-delimited export engine, and BoG code catalogs." />
               <TimelineItem year="2026 Q1" title="Africa Credit Hub v2.5 — Intelligence Suite" description="Introduced AI-powered portfolio intelligence, blockchain audit anchoring, advanced credit scoring (ACH Scorecard v1.0), consumer self-service portal, cross-border entity resolution, and Stripe billing integration." />

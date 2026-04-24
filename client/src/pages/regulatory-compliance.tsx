@@ -109,7 +109,7 @@ const SRS_REQUIREMENTS: SRSRequirement[] = [
   { id: "REQ-RET-01", category: "Enterprise", description: "Configurable data retention policies per jurisdiction", status: "compliant", implementation: "Retention policies admin + 24hr enforcement engine", srsRef: "§6.8" },
   { id: "ENT-08", category: "Enterprise", description: "Exchange rate management (42+ currencies)", status: "compliant", implementation: "Exchange rates admin with converter", srsRef: "§6.9" },
   { id: "ENT-09", category: "Enterprise", description: "API administration module", status: "compliant", implementation: "API configurations CRUD with connection testing", srsRef: "§6.10" },
-  { id: "ENT-10", category: "Enterprise", description: "Trilingual support (EN/FR/PT)", status: "compliant", implementation: "i18next with EN, FR, PT full translations", srsRef: "§6.11" },
+  { id: "ENT-10", category: "Enterprise", description: "8-language support (EN/FR/PT/AR/SW/ES/ZH-S/ZH-T)", status: "compliant", implementation: "i18next with EN, FR, PT, AR, SW, ES, ZH-CN, ZH-TW full translations", srsRef: "§6.11" },
 
   { id: "NFR-SEC-02", category: "Security", description: "Password hashing with bcrypt", status: "compliant", implementation: "bcryptjs password hashing with salt rounds", srsRef: "§5.1" },
   { id: "NFR-SEC-06", category: "Security", description: "IP address tracking in audit logs", status: "compliant", implementation: "req.ip captured and stored in audit_logs.ipAddress", srsRef: "§5.1" },
@@ -825,7 +825,7 @@ export default function RegulatoryCompliancePage() {
                       <li>Cross-border entity resolution (passport + TIN)</li>
                       <li>Per-jurisdiction retention policies with enforcement</li>
                       <li>Tamper-evident SHA-256 hash chain audit log</li>
-                      <li>EN/FR/PT trilingual support</li>
+                      <li>8-language support (EN/FR/PT/AR/SW/ES/ZH-S/ZH-T)</li>
                       <li>42+ African currency support + exchange rates</li>
                     </ul>
                   </div>

@@ -5,6 +5,9 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
 import pt from "./i18n-pt";
 import ar from "./i18n-ar";
 import sw from "./i18n-sw";
+import es from "./i18n-es";
+import zhCN from "./i18n-zh-cn";
+import zhTW from "./i18n-zh-tw";
 
 const CO = PLATFORM_COMPANY_NAME;
 const CO_AUTHOR = PLATFORM_ADMIN_NAME;
@@ -1113,7 +1116,7 @@ const en = {
       s3: "Alternatively, sign in using Google, Microsoft, Apple, or Enterprise SSO via the social login buttons below the form.",
       s4: "If prompted, change your password on first login (must be 8+ characters with uppercase, lowercase, digit, and special character).",
       s5: "After login, enable Multi-Factor Authentication (MFA/TOTP) from your profile for extra security using any authenticator app (e.g., Google Authenticator, Authy).",
-      s6: "Use the language switcher in the top header to toggle between five languages — English, French, Portuguese, Arabic, and Swahili.",
+      s6: "Use the language switcher in the top header to toggle between eight languages — English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese, and Traditional Chinese.",
       s7: "Use the theme toggle (sun/moon icon) to switch between light and dark mode.",
       s8: "Navigate using the sidebar on the left — click the hamburger icon to collapse/expand it. The sidebar is organized into twelve sections: Overview, Credit Data, Reports & Scoring, Data Management, Workflows, Intelligence, Oversight & Compliance, Cross-Border, Administration, API & Integrations, Infrastructure, and Help & Resources. Sections and items you don't have access to are automatically hidden based on your role.",
       s9: "Your session will automatically expire after 15 minutes of inactivity. You will be redirected to the login page.",
@@ -1153,7 +1156,7 @@ const en = {
       s3: "Once registered, consumers see their credit score, active credit accounts, dispute history, and consent records.",
       s4: "Consumers can file disputes directly from the portal if they find incorrect information.",
       s5: "The portal is a read-only view of credit data — consumers cannot modify records.",
-      s6: "The portal supports all five platform languages (EN, FR, PT, AR, SW).",
+      s6: "The portal supports all eight platform languages (EN, FR, PT, AR, SW, ES, ZH-S, ZH-T).",
     },
     creditAccounts: {
       title: "Credit Accounts",
@@ -1182,7 +1185,7 @@ const en = {
       s7: "Click 'View Report' next to a result to generate their full credit report.",
       s8: "Credit reports include personal/company information, credit score (300-850), reason codes, all credit accounts, payment history, court judgments, and consent records.",
       s9: "Business borrowers get a separate Business Credit Report format with corporate-specific sections.",
-      s10: "PDF reports can be downloaded in all five languages using the language selector.",
+      s10: "PDF reports can be downloaded in all eight languages using the language selector.",
       s11: "All searches are logged in the audit trail for compliance.",
     },
     scoreMethodology: {
@@ -1472,7 +1475,7 @@ const en = {
       desc: "Downloadable documents, Ghana-specific docs, app guide, and version history.",
       s1: "Navigate to 'Documentation' in the sidebar to access general documents — API Guide, UAT, Systems, Users Manual, SRS Matrix, Data Dictionary, Deployment Guide, Security Report, Security Policy, DR Plan, Change Management, Pentest Readiness, and Liberia Proposal.",
       s2: "Navigate to 'Ghana Docs' (in Ghana mode) for Ghana-specific documents — SLA, Compliance Framework, E2E Test Plan, Data Standards, Data Protection Policy, Operations Manual, Ghana API Guide, and Connections Policy.",
-      s3: "All documents are available in five languages (EN, FR, PT, AR, SW) and can be downloaded as PDF or Markdown.",
+      s3: "All documents are available in eight languages (EN, FR, PT, AR, SW, ES, ZH-S, ZH-T) and can be downloaded as PDF or Markdown.",
       s4: "Use the 'App Guide' for an animated walkthrough of all platform features.",
       s5: "Check 'Version History' for release notes and changelog.",
       s6: "'Legal & Copyright' contains terms and legal information.",
@@ -1487,7 +1490,7 @@ const en = {
       s4: "Q: What happens when a dispute SLA is breached? — The dispute is flagged as 'BREACHED' and appears in regulatory reports for escalation.",
       s5: "Q: How many currencies are supported? — 42+ African currencies plus USD, EUR, and GBP for international settlement.",
       s6: "Q: What are the supported jurisdictions? — All 54 African countries are supported as a pan-African credit registry.",
-      s7: "Q: How do I switch languages? — Use the language switcher (globe icon) in the top header bar. English, French, Portuguese, Arabic, and Swahili are available.",
+      s7: "Q: How do I switch languages? — Use the language switcher (globe icon) in the top header bar. English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese, and Traditional Chinese are available.",
       s8: "Q: What is a PEP flag? — Politically Exposed Person designation for individuals holding prominent public functions.",
       s9: "Q: How long before my session times out? — Sessions expire after 15 minutes of inactivity.",
       s10: "Q: What credit score ranges are used? — 300-850 scale: 750–850 Excellent, 670–749 Good, 580–669 Fair, 450–579 Poor, 300–449 Very Poor.",
@@ -1789,7 +1792,7 @@ const en = {
       date: "March 2026",
       tag: "Internationalisation",
       description: "Internationalisation, currency localisation, and UI polish across all 54 African jurisdictions.",
-      f1: { title: "5 AU Languages", desc: "English, French, Portuguese, Arabic (RTL), and Swahili" },
+      f1: { title: "8 Languages", desc: "English, French, Portuguese, Arabic (RTL), Swahili, Spanish, Simplified Chinese, and Traditional Chinese" },
       f2: { title: "Arabic RTL Support", desc: "Full right-to-left layout with sidebar, forms, and tables" },
       f3: { title: "Currency Localisation", desc: "Auto-detect local currency from timezone with selector and USD reference" },
       f4: { title: "Multi-Language Docs", desc: "7 documents translated into EN, FR, AR, and SW" },
@@ -1871,8 +1874,8 @@ const en = {
         desc: "AI-powered assistant to help navigate the system, answer questions, and guide you through common tasks.",
       },
       language: {
-        title: "5 AU Languages",
-        desc: "Switch between English, French, Portuguese, Arabic (with full RTL layout), and Swahili — all African Union working languages.",
+        title: "8 Languages",
+        desc: "Switch between English, French, Portuguese, Arabic (with full RTL layout), Swahili, Spanish, Simplified Chinese, and Traditional Chinese.",
       },
       theme: {
         title: "Dark / Light Mode",
@@ -1899,7 +1902,7 @@ const en = {
     mobileMoney: "M-Pesa & Mobile Money payments",
     papss: "PAPSS cross-border settlements",
     currencies42: "42+ African currencies",
-    auLanguages: "5 AU languages",
+    auLanguages: "8 languages",
     offlineBatch: "Offline batch processing",
     platformPreview: "Platform Preview",
     dashboardTitle: "Your Credit Portfolio, One Dashboard",
@@ -2055,7 +2058,7 @@ const en = {
       welcome: {
         section: "Welcome",
         title: "Welcome to the Credit Registry System",
-        narration: "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management across five languages — English, French, Portuguese, Arabic, and Swahili. Let's take a tour of what you'll find inside.",
+        narration: "This walkthrough will guide you through every feature of the Pan-African Credit Registry System. The system covers all 54 African countries, supports 42+ currencies, and provides comprehensive credit information management across eight languages — English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese, and Traditional Chinese. Let's take a tour of what you'll find inside.",
       },
       login: {
         section: "Getting Started",
@@ -2100,7 +2103,7 @@ const en = {
       consumerPortal: {
         section: "Consumer Portal",
         title: "Consumer Self-Service Portal",
-        narration: "The Consumer Portal at '/my-credit' lets individuals check their own credit standing. Consumers can register via '/consumer/register' with their national ID and personal details. Once registered, they can view their credit score, credit accounts, dispute history, and consent records — all without needing a system login. This self-service portal supports all five platform languages.",
+        narration: "The Consumer Portal at '/my-credit' lets individuals check their own credit standing. Consumers can register via '/consumer/register' with their national ID and personal details. Once registered, they can view their credit score, credit accounts, dispute history, and consent records — all without needing a system login. This self-service portal supports all eight platform languages.",
         tip0: "Consumers register directly — no admin setup needed",
         tip1: "The portal shows a read-only view of their credit data",
         tip2: "Consumers can file disputes directly from the portal",
@@ -2148,7 +2151,7 @@ const en = {
       creditReport: {
         section: "Credit Reports",
         title: "Generating Credit Reports",
-        narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview. When downloading as PDF, choose from all five languages — English, French, Portuguese, Arabic, or Swahili — using the language selector. Business borrowers get a separate Business Credit Report format.",
+        narration: "From a borrower's detail page, click 'Generate Credit Report'. The system produces a comprehensive D&B-style report with a Credit Profile Overview, liability breakdown, aging analysis, credit exposure, and detailed facility cards with 24-month payment history grids. Use the 'AI Summary' button to generate a plain-language overview. When downloading as PDF, choose from all eight languages — English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese, or Traditional Chinese — using the language selector. Business borrowers get a separate Business Credit Report format.",
         tip0: "Each report gets a unique serial number for audit tracking",
         tip1: "Bureau Score ranges from 300 to 850 with grade and factor analysis",
         tip2: "Every report generation is logged in the audit trail",
@@ -2277,7 +2280,7 @@ const en = {
       helpdesk: {
         section: "Support",
         title: "Getting Help",
-        narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for downloadable guides — 13 general documents plus 8 Ghana-specific documents, all available in five languages with PDF download. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode.",
+        narration: "Need assistance? Use the Helpdesk for support tickets, the Online Manual for searchable help articles, or the Documentation page for downloadable guides — 13 general documents plus 8 Ghana-specific documents, all available in eight languages with PDF download. The floating chatbot (bottom-right) lets you ask questions, file disputes, or browse FAQs without leaving the page. Click the Sparkles icon in the chatbot to switch to AI Assistant mode.",
       },
       notifications: {
         section: "Notifications",
@@ -2299,7 +2302,7 @@ const en = {
       end: {
         section: "That's It!",
         title: "You're Ready to Go",
-        narration: "That covers all the key features — AI-powered risk analysis, AI Command Center, Portfolio Intelligence, Telco Scoring & Lending, Cross-Border data sharing, Consumer Self-Service Portal, multi-language support in five languages, real-time notifications, regulatory exports, and comprehensive system administration. The platform spans 54 African countries with 42+ currencies. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from 'App Guide' in the sidebar.",
+        narration: "That covers all the key features — AI-powered risk analysis, AI Command Center, Portfolio Intelligence, Telco Scoring & Lending, Cross-Border data sharing, Consumer Self-Service Portal, multi-language support in eight languages, real-time notifications, regulatory exports, and comprehensive system administration. The platform spans 54 African countries with 42+ currencies. Remember: the sidebar is your main navigation, the dashboard gives you real-time overview, and every action is logged for audit compliance. Replay this guide anytime from 'App Guide' in the sidebar.",
       },
     },
   },
@@ -3408,7 +3411,7 @@ const fr: typeof en = {
       s3: "Vous pouvez également vous connecter avec Google, Microsoft, Apple ou Enterprise SSO via les boutons de connexion sociale.",
       s4: "Si demandé, changez votre mot de passe à la première connexion (minimum 8 caractères avec majuscule, minuscule, chiffre et caractère spécial).",
       s5: "Après la connexion, activez l'Authentification Multi-Facteurs (MFA/TOTP) depuis votre profil pour plus de sécurité, en utilisant une application d'authentification (ex. Google Authenticator, Authy).",
-      s6: "Utilisez le sélecteur de langue dans l'en-tête pour basculer entre cinq langues — anglais, français, portugais, arabe et swahili.",
+      s6: "Utilisez le sélecteur de langue dans l'en-tête pour basculer entre huit langues — anglais, français, portugais, arabe, swahili, espagnol, chinois simplifié et chinois traditionnel.",
       s7: "Utilisez le bouton de thème (icône soleil/lune) pour passer du mode clair au mode sombre.",
       s8: "Naviguez à l'aide de la barre latérale à gauche — cliquez sur l'icône hamburger pour la réduire ou l'agrandir. La barre est organisée en douze sections : Aperçu, Données de Crédit, Rapports & Notation, Gestion des Données, Flux de Travail, Intelligence, Supervision & Conformité, Transfrontalier, Administration, API & Intégrations, Infrastructure, et Aide & Ressources.",
       s9: "Votre session expirera automatiquement après 15 minutes d'inactivité. Vous serez redirigé vers la page de connexion.",
@@ -3448,7 +3451,7 @@ const fr: typeof en = {
       s3: "Une fois inscrits, les consommateurs voient leur score de crédit, leurs comptes de crédit actifs, leur historique de litiges et leurs enregistrements de consentement.",
       s4: "Les consommateurs peuvent déposer des litiges directement depuis le portail s'ils trouvent des informations incorrectes.",
       s5: "Le portail est une vue en lecture seule des données de crédit — les consommateurs ne peuvent pas modifier les enregistrements.",
-      s6: "Le portail prend en charge les cinq langues de la plateforme (EN, FR, PT, AR, SW).",
+      s6: "Le portail prend en charge les huit langues de la plateforme (EN, FR, PT, AR, SW, ES, ZH-S, ZH-T).",
     },
     creditAccounts: {
       title: "Comptes de Crédit",
@@ -3477,7 +3480,7 @@ const fr: typeof en = {
       s7: "Cliquez sur 'Voir le Rapport' à côté d'un résultat pour générer leur rapport de crédit complet.",
       s8: "Les rapports de crédit incluent les informations personnelles/d'entreprise, le score de crédit (300-850), les codes de raison, tous les comptes de crédit, l'historique de paiement, les jugements judiciaires et les enregistrements de consentement.",
       s9: "Les emprunteurs commerciaux obtiennent un format de Rapport de Crédit Commercial distinct avec des sections spécifiques aux entreprises.",
-      s10: "Les rapports PDF peuvent être téléchargés dans les cinq langues en utilisant le sélecteur de langue.",
+      s10: "Les rapports PDF peuvent être téléchargés dans les huit langues en utilisant le sélecteur de langue.",
       s11: "Toutes les recherches sont enregistrées dans la piste d'audit à des fins de conformité.",
     },
     scoreMethodology: {
@@ -3767,7 +3770,7 @@ const fr: typeof en = {
       desc: "Documents téléchargeables, docs Ghana spécifiques, guide d'application et historique des versions.",
       s1: "Accédez à 'Documentation' dans la barre latérale pour accéder aux documents généraux — Guide API, UAT, Systèmes, Manuel Utilisateurs, Matrice SRS, Dictionnaire de Données, Guide de Déploiement, Rapport de Sécurité, Politique de Sécurité, Plan DR, Gestion des Changements, Préparation Pentest et Proposition Libéria.",
       s2: "Accédez à 'Docs Ghana' (en mode Ghana) pour les documents spécifiques au Ghana — SLA, Cadre de Conformité, Plan de Test E2E, Normes de Données, Politique de Protection des Données, Manuel d'Opérations, Guide API Ghana et Politique de Connexions.",
-      s3: "Tous les documents sont disponibles en cinq langues (EN, FR, PT, AR, SW) et peuvent être téléchargés en PDF ou Markdown.",
+      s3: "Tous les documents sont disponibles en huit langues (EN, FR, PT, AR, SW, ES, ZH-S, ZH-T) et peuvent être téléchargés en PDF ou Markdown.",
       s4: "Utilisez le 'Guide d'Application' pour une visite guidée animée de toutes les fonctionnalités de la plateforme.",
       s5: "Consultez 'Historique des Versions' pour les notes de version et le journal des modifications.",
       s6: "'Juridique & Droits d'Auteur' contient les conditions générales et les informations légales.",
@@ -4194,7 +4197,7 @@ const fr: typeof en = {
     mobileMoney: "Paiements M-Pesa & Mobile Money",
     papss: "Règlements transfrontaliers PAPSS",
     currencies42: "42+ devises africaines",
-    auLanguages: "5 langues de l'UA",
+    auLanguages: "8 langues",
     offlineBatch: "Traitement par lots hors ligne",
     platformPreview: "Aperçu de la Plateforme",
     dashboardTitle: "Votre Portefeuille de Crédit, Un Seul Tableau de Bord",
@@ -4350,7 +4353,7 @@ const fr: typeof en = {
       welcome: {
         section: "Bienvenue",
         title: "Bienvenue dans le Système de Registre de Crédit",
-        narration: "Cette visite guidée vous présentera toutes les fonctionnalités du Système Panafricain de Registre de Crédit. Le système couvre les 54 pays africains, prend en charge plus de 42 devises et offre une gestion complète des informations de crédit en cinq langues — anglais, français, portugais, arabe et swahili. Commençons la visite.",
+        narration: "Cette visite guidée vous présentera toutes les fonctionnalités du Système Panafricain de Registre de Crédit. Le système couvre les 54 pays africains, prend en charge plus de 42 devises et offre une gestion complète des informations de crédit en huit langues — anglais, français, portugais, arabe, swahili, espagnol, chinois simplifié et chinois traditionnel. Commençons la visite.",
       },
       login: {
         section: "Démarrage",
@@ -4443,7 +4446,7 @@ const fr: typeof en = {
       creditReport: {
         section: "Rapports de Crédit",
         title: "Générer des Rapports de Crédit",
-        narration: "Depuis la page de détail d'un emprunteur, cliquez sur 'Générer le rapport de crédit'. Le système produit un rapport complet de style D&B avec un aperçu du profil de crédit, une ventilation des passifs, une analyse du vieillissement, une exposition au crédit et des cartes de facilités détaillées. Lors du téléchargement en PDF, choisissez parmi les cinq langues.",
+        narration: "Depuis la page de détail d'un emprunteur, cliquez sur 'Générer le rapport de crédit'. Le système produit un rapport complet de style D&B avec un aperçu du profil de crédit, une ventilation des passifs, une analyse du vieillissement, une exposition au crédit et des cartes de facilités détaillées. Lors du téléchargement en PDF, choisissez parmi les huit langues.",
         tip0: "Chaque rapport reçoit un numéro de série unique pour le suivi d'audit",
         tip1: "Le score bureau va de 300 à 850 avec analyse des grades et des facteurs",
         tip2: "Chaque génération de rapport est enregistrée dans le journal d'audit",
@@ -4572,7 +4575,7 @@ const fr: typeof en = {
       helpdesk: {
         section: "Support",
         title: "Obtenir de l'Aide",
-        narration: "Besoin d'assistance ? Utilisez le Helpdesk pour les tickets de support, le Manuel en ligne pour les articles d'aide consultables, ou la page Documentation pour les guides téléchargeables — 13 documents généraux plus 8 documents spécifiques au Ghana, tous disponibles en cinq langues. Le chatbot flottant (en bas à droite) vous permet de poser des questions sans quitter la page.",
+        narration: "Besoin d'assistance ? Utilisez le Helpdesk pour les tickets de support, le Manuel en ligne pour les articles d'aide consultables, ou la page Documentation pour les guides téléchargeables — 13 documents généraux plus 8 documents spécifiques au Ghana, tous disponibles en huit langues. Le chatbot flottant (en bas à droite) vous permet de poser des questions sans quitter la page.",
       },
       notifications: {
         section: "Notifications",
@@ -4594,7 +4597,7 @@ const fr: typeof en = {
       end: {
         section: "C'est Tout !",
         title: "Vous Êtes Prêt !",
-        narration: "Cela couvre toutes les fonctionnalités clés — analyse des risques IA, Centre de Commande IA, Intelligence de portefeuille, Scoring & Prêts Telco, partage de données transfrontalier, Portail libre-service consommateur, support multilingue en cinq langues, notifications en temps réel, exports réglementaires et administration système complète. La plateforme couvre 54 pays africains avec plus de 42 devises.",
+        narration: "Cela couvre toutes les fonctionnalités clés — analyse des risques IA, Centre de Commande IA, Intelligence de portefeuille, Scoring & Prêts Telco, partage de données transfrontalier, Portail libre-service consommateur, support multilingue en huit langues, notifications en temps réel, exports réglementaires et administration système complète. La plateforme couvre 54 pays africains avec plus de 42 devises.",
       },
     },
   },
@@ -4610,6 +4613,9 @@ i18n
       pt: { translation: pt },
       ar: { translation: ar },
       sw: { translation: sw },
+      es: { translation: es },
+      "zh-CN": { translation: zhCN },
+      "zh-TW": { translation: zhTW },
     },
     fallbackLng: "en",
     interpolation: {

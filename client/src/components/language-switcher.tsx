@@ -10,12 +10,14 @@ import {
 } from "@/components/ui/select";
 import { isGhanaMode } from "@/lib/country-mode";
 
-const ALL_LANGS = ["en", "fr", "pt", "ar", "sw"] as const;
+const ALL_LANGS = ["en", "fr", "pt", "ar", "sw", "es", "zh-CN", "zh-TW"] as const;
 const GHANA_LANGS = ["en", "fr"] as const;
 
 function resolveLanguage(lang: string | undefined): string {
   if (!lang) return "en";
   const supported = isGhanaMode() ? GHANA_LANGS : ALL_LANGS;
+  // Exact match first (handles zh-CN / zh-TW correctly)
+  if ((supported as readonly string[]).includes(lang)) return lang;
   for (const s of supported) {
     if (lang.startsWith(s)) return s;
   }
@@ -36,7 +38,7 @@ export function LanguageSwitcher() {
       }}
     >
       <SelectTrigger
-        className="w-[80px] h-8 text-xs gap-1 px-2"
+        className="w-[96px] h-8 text-xs gap-1 px-2"
         data-testid="select-language"
       >
         <Globe className="w-3.5 h-3.5 shrink-0" />
@@ -48,6 +50,9 @@ export function LanguageSwitcher() {
         {!ghanaMode && <SelectItem value="pt" data-testid="option-lang-pt">PT</SelectItem>}
         {!ghanaMode && <SelectItem value="ar" data-testid="option-lang-ar">AR</SelectItem>}
         {!ghanaMode && <SelectItem value="sw" data-testid="option-lang-sw">SW</SelectItem>}
+        {!ghanaMode && <SelectItem value="es" data-testid="option-lang-es">ES</SelectItem>}
+        {!ghanaMode && <SelectItem value="zh-CN" data-testid="option-lang-zh-cn">ZH-S</SelectItem>}
+        {!ghanaMode && <SelectItem value="zh-TW" data-testid="option-lang-zh-tw">ZH-T</SelectItem>}
       </SelectContent>
     </Select>
   );

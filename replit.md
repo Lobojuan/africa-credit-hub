@@ -1,4 +1,4 @@
-# Africa Credit Hub v2.5
+# Africa Credit Hub v2.6
 
 ## Overview
 This project is a web-based Pan-African Credit Registry System (Africa Credit Hub v2.5) designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal. The system is designed for scalability, supporting over 10 million records and offers transaction-based monetization with a two-tier revenue split and a comprehensive settlement and payout system.
@@ -15,7 +15,7 @@ The system employs a modern full-stack architecture built for scalability and co
 
 **UI/UX Decisions:**
 -   **Frontend**: React with TypeScript and Vite, styled using Tailwind CSS and shadcn/ui.
--   **Internationalization**: Supports English, French, Portuguese, Arabic, and Swahili with RTL support.
+-   **Internationalization**: Supports 8 languages — English (en), French (fr), Portuguese (pt), Arabic (ar, RTL), Swahili (sw), Spanish (es), Simplified Chinese (zh-CN), and Traditional Chinese (zh-TW). Translation files: `client/src/lib/i18n.ts` (EN/FR), `i18n-pt.ts`, `i18n-ar.ts`, `i18n-sw.ts`, `i18n-es.ts`, `i18n-zh-cn.ts`, `i18n-zh-tw.ts`. Training center quizzes also available in all 8 languages via `training-translations.ts`. Language switcher shows ES, ZH-S, ZH-T in addition to the original 5.
 -   **Theming**: Dark/light theme with two visual style palettes (Pan-African teal/gold and Scandinavian blue/slate).
 -   **Responsiveness**: Mobile-first design with adaptive layouts and role-filtered navigation.
 -   **Interactive Elements**: Dashboards with drill-down capabilities, notifications, charts, an interactive SVG Africa map, and a circular SVG credit score gauge.

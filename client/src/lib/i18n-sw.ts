@@ -1976,7 +1976,7 @@ const sw: Record<string, any> = {
     mobileMoney: "Malipo ya M-Pesa na Pesa ya Simu",
     papss: "Malipo ya kuvuka mipaka ya PAPSS",
     currencies42: "Sarafu 42+ za Afrika",
-    auLanguages: "Lugha 5 za AU",
+    auLanguages: "Lugha 8",
     offlineBatch: "Usindikaji wa kundi nje ya mtandao",
     platformPreview: "Hakiki ya Jukwaa",
     dashboardTitle: "Kwingineko Yako ya Mikopo, Dashibodi Moja",

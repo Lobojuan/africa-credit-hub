@@ -1855,7 +1855,7 @@ const ar: Record<string, any> = {
     mobileMoney: "مدفوعات M-Pesa والأموال المتنقلة",
     papss: "تسويات PAPSS عبر الحدود",
     currencies42: "42+ عملة أفريقية",
-    auLanguages: "5 لغات للاتحاد الأفريقي",
+    auLanguages: "8 لغات",
     offlineBatch: "معالجة دفعية بدون اتصال",
     platformPreview: "معاينة المنصة",
     dashboardTitle: "محفظتك الائتمانية في لوحة معلومات واحدة",

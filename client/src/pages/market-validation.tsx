@@ -81,7 +81,7 @@ const COMPETITIVE_LANDSCAPE = [
     name: "CRB Africa (Kenya)",
     coverage: "Kenya only",
     weakness: "Single-country system. No multi-currency support. No regulatory compliance engine for other jurisdictions.",
-    ourAdvantage: "42+ currencies, per-country regulatory profiles, 5 AU language support",
+    ourAdvantage: "42+ currencies, per-country regulatory profiles, 8 language support",
   },
   {
     name: "XDS Data (South Africa)",
