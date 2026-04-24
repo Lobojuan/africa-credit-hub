@@ -171,6 +171,7 @@ export default function BorrowerDetailPage() {
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
   const [showInsights, setShowInsights] = useState(false);
   const [insights, setInsights] = useState<any>(null);
+  const [showRecoveryPlan, setShowRecoveryPlan] = useState(false);
 
   const aiRiskMutation = useMutation({
     mutationFn: async () => {
@@ -775,9 +776,97 @@ export default function BorrowerDetailPage() {
             : []),
         ];
 
+        const incomeLabel = grossIncome > 0 ? formatCurrency(grossIncome, currency) + "/mo" : null;
+
+        const recoverySteps: { title: string; description: string; timeframe: string; done?: boolean }[] =
+          verdict === "decline"
+            ? [
+                ...(hasDefault
+                  ? [
+                      {
+                        title: "Formally settle the defaulted account",
+                        description:
+                          "Contact the lender holding the default. Negotiate a full or agreed settlement and obtain a written clearance certificate. Keep that document — you will need it.",
+                        timeframe: "1–3 months",
+                        done: false,
+                      },
+                    ]
+                  : []),
+                {
+                  title: "Document your income",
+                  description: incomeLabel
+                    ? `Your income of ${incomeLabel} has been noted. Confirm it with 3 months of bank statements or certified payslips.`
+                    : "Provide 3 months of bank statements or certified payslips to show consistent monthly earnings.",
+                  timeframe: "Now",
+                  done: grossIncome > 0,
+                },
+                {
+                  title: "Open a small supervised credit facility",
+                  description:
+                    "Join a cooperative, microfinance institution, or savings group and take a small loan. Repay every instalment on time — this directly rebuilds your credit score.",
+                  timeframe: "1–2 months",
+                  done: false,
+                },
+                {
+                  title: "Maintain 12 consecutive on-time payments",
+                  description:
+                    "Each on-time payment repairs your score. A single missed payment can reset progress. Set up a standing order or mobile money auto-debit.",
+                  timeframe: "12 months",
+                  done: false,
+                },
+                {
+                  title: "Return for formal re-assessment",
+                  description:
+                    "Bring your settled default certificate, 3 months of clean bank statements, and latest payslips. At that point, with your income level, a standard loan will be considered.",
+                  timeframe: "After step 4",
+                  done: false,
+                },
+              ]
+            : verdict === "refer"
+            ? [
+                {
+                  title: "Provide collateral or a guarantor",
+                  description:
+                    "Offer security such as a vehicle logbook, land title deed, or a creditworthy guarantor to reduce the lender's risk. This is often enough to unlock conditional approval.",
+                  timeframe: "Now",
+                  done: false,
+                },
+                {
+                  title: "Confirm your income in writing",
+                  description: incomeLabel
+                    ? `Your income of ${incomeLabel} is on file. Strengthen this with 3 months of bank statements to move from amber to green.`
+                    : "Submit 3 months of bank statements or payslips. Documented income is one of the fastest ways to improve your credit standing.",
+                  timeframe: "Now",
+                  done: grossIncome > 0,
+                },
+                {
+                  title: "Request a smaller starter amount",
+                  description:
+                    "Apply for 30–50% of your intended loan amount to build a repayment track record with this institution. Lenders reward consistent repayment with larger limits.",
+                  timeframe: "Now",
+                  done: false,
+                },
+                {
+                  title: "Make every repayment on time for 6 months",
+                  description:
+                    "Six months of clean repayments will lift your score into standard lending range. Set a reminder or standing order so you never miss a date.",
+                  timeframe: "6 months",
+                  done: false,
+                },
+                {
+                  title: "Request a formal credit limit upgrade",
+                  description:
+                    "After 6 months of clean repayments, come back and request a credit review. You should qualify for the full amount you originally needed.",
+                  timeframe: "After step 4",
+                  done: false,
+                },
+              ]
+            : [];
+
         return (
           <Card className={`border ${cardClass}`} data-testid="card-lending-decision">
             <CardContent className="p-5">
+              {/* Top row: verdict + factors */}
               <div className="flex items-stretch gap-5">
                 <div className="flex flex-col items-center justify-center gap-1.5 flex-shrink-0">
                   {iconEl}
@@ -807,17 +896,15 @@ export default function BorrowerDetailPage() {
                           f.good ? "bg-green-500" : "bg-red-500"
                         }`}
                       />
-                      <span
-                        className={
-                          f.good ? "" : "font-semibold text-red-600 dark:text-red-400"
-                        }
-                      >
+                      <span className={f.good ? "" : "font-semibold text-red-600 dark:text-red-400"}>
                         {f.text}
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Lender guidance */}
               <div className="mt-4 pt-3 border-t border-border/40 flex items-start gap-2">
                 <Banknote className="w-4 h-4 flex-shrink-0 text-muted-foreground mt-0.5" />
                 <p className="text-xs text-muted-foreground">
@@ -825,6 +912,87 @@ export default function BorrowerDetailPage() {
                   {action}
                 </p>
               </div>
+
+              {/* Path to Approval — only for decline/refer */}
+              {recoverySteps.length > 0 && (
+                <div className="mt-3">
+                  <button
+                    className="flex items-center gap-2 text-xs font-semibold text-foreground hover:opacity-80 transition-opacity w-full"
+                    onClick={() => setShowRecoveryPlan(!showRecoveryPlan)}
+                    data-testid="toggle-recovery-plan"
+                  >
+                    <div className={`p-1 rounded ${
+                      verdict === "decline"
+                        ? "bg-red-100 dark:bg-red-900/40"
+                        : "bg-amber-100 dark:bg-amber-900/40"
+                    }`}>
+                      <TrendingUp className={`w-3.5 h-3.5 ${
+                        verdict === "decline"
+                          ? "text-red-600 dark:text-red-400"
+                          : "text-amber-600 dark:text-amber-400"
+                      }`} />
+                    </div>
+                    <span>Path to Approval — {recoverySteps.length} steps to get this client back on track</span>
+                    <div className="ml-auto">
+                      {showRecoveryPlan
+                        ? <ChevronUp className="w-3.5 h-3.5" />
+                        : <ChevronDown className="w-3.5 h-3.5" />
+                      }
+                    </div>
+                  </button>
+
+                  {showRecoveryPlan && (
+                    <div className="mt-4 space-y-0 animate-in fade-in slide-in-from-top-2 duration-300" data-testid="section-recovery-plan">
+                      {recoverySteps.map((step, i) => (
+                        <div key={i} className="flex gap-3">
+                          {/* Connector line */}
+                          <div className="flex flex-col items-center">
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 ${
+                              step.done
+                                ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 ring-1 ring-green-400"
+                                : verdict === "decline"
+                                ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-700"
+                                : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 ring-1 ring-amber-300 dark:ring-amber-700"
+                            }`}>
+                              {step.done ? "✓" : i + 1}
+                            </div>
+                            {i < recoverySteps.length - 1 && (
+                              <div className="w-px flex-1 bg-border/60 my-1" />
+                            )}
+                          </div>
+                          {/* Content */}
+                          <div className={`pb-4 flex-1 ${i === recoverySteps.length - 1 ? "pb-0" : ""}`}>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className={`text-xs font-semibold ${step.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                                {step.title}
+                              </p>
+                              <span className="flex items-center gap-1 text-[10px] text-muted-foreground bg-muted/60 rounded px-1.5 py-0.5">
+                                <Clock className="w-2.5 h-2.5" />
+                                {step.timeframe}
+                              </span>
+                              {step.done && (
+                                <span className="text-[10px] font-semibold text-green-600 dark:text-green-400">Done</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                              {step.description}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                      <div className={`mt-3 p-3 rounded-lg text-xs ${
+                        verdict === "decline"
+                          ? "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800"
+                          : "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800"
+                      }`}>
+                        <span className="font-semibold">Estimated time to approval: </span>
+                        {verdict === "decline" ? "12–15 months" : "3–6 months"} if all steps are completed consistently.
+                        {grossIncome > 0 && ` With ${incomeLabel} in monthly income, repayment capacity is already there — the missing piece is credit history.`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         );
