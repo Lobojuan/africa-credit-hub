@@ -1580,7 +1580,7 @@ export async function registerRoutes(
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(borrower.nationalId ?? '', borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
 
       await storage.createAuditLog({
         action: "VIEW", entity: "credit_report", entityId: req.params.id as string, userId: req.session?.userId,
@@ -6076,7 +6076,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(borrower.nationalId ?? '', borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
 
       let xdsBureauData: any = null;
       if (includeXds) {
@@ -12657,7 +12657,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { score: traditionalScore } = calculateCreditScore(
         accounts, inquiries.length, judgments, borrower.isPep || false, altData
       );
-      storage.recordConsumerScoreHistory(borrower.nationalId ?? '', borrower.id, traditionalScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, traditionalScore).catch(err => console.warn('[ScoreHistory]', err));
 
       broadcastEvent({
         type: "score_computed",
@@ -13549,7 +13549,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const cheques = await db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, borrowerId));
       const scoreResult = calculateCreditScore(accounts, 0, judgmentsList, borrower.isPep || false, []);
       const score = scoreResult.score;
-      storage.getBorrower(borrowerId).then(b => { if (b?.nationalId) return storage.recordConsumerScoreHistory(b.nationalId, borrowerId, score); }).catch(err => console.warn('[ScoreHistory]', err));
+      storage.getBorrower(borrowerId)
+        .then(b => { const id = b?.nationalId || b?.ghanaCardNumber || b?.passportNumber; if (id) return storage.recordConsumerScoreHistory(id, borrowerId, score); })
+        .catch(err => console.warn('[ScoreHistory]', err));
       const maxArrears = accounts.length > 0 ? Math.max(0, ...accounts.map(a => a.daysInArrears || 0)) : 0;
       const activeAccounts = accounts.filter(a => ["current","delinquent"].includes(a.status)).length;
       const hasActiveJudgment = judgmentsList.some(j => j.status === "active");
