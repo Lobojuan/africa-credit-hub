@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Download, FileText, Send, BellRing, Bell, BellOff, Settings2, Info, History, Zap, Lightbulb, Search, Clock, Layers, Star, Snowflake, Tag, ChevronRight, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -232,6 +232,10 @@ export default function ConsumerPortalPage() {
   const [smsPhone, setSmsPhone] = useState("");
   const [verifyMode, setVerifyMode] = useState<"register" | "sms-login">("register");
   const [otpSentByEmail, setOtpSentByEmail] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [isDuplicateId, setIsDuplicateId] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(0);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const sessionQuery = useQuery({
     queryKey: ["/api/consumer/session"],
@@ -487,6 +491,23 @@ export default function ConsumerPortalPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (view === "verify" && verifyMode === "register") {
+      setOtpCountdown(60);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      countdownRef.current = setInterval(() => {
+        setOtpCountdown(prev => {
+          if (prev <= 1) {
+            if (countdownRef.current) clearInterval(countdownRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, [view, verifyMode]);
+
   const registerMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/consumer/register", {
@@ -495,16 +516,25 @@ export default function ConsumerPortalPage() {
         body: JSON.stringify({ nationalId, phone, email, password, dateOfBirth, fullName: regFullName, country: regCountry, consentGiven }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.message);
+      if (!res.ok) throw Object.assign(new Error(body.message), { status: res.status });
       return body;
     },
     onSuccess: (result) => {
       setError(null);
+      setIsDuplicateId(false);
       setSuccessMsg(result.message);
       if (result.otp) setFallbackOtp(result.otp);
       setView("verify");
     },
-    onError: (err: Error) => setError(err.message),
+    onError: (err: any) => {
+      if (err.status === 409 || err.message?.toLowerCase().includes("already exists")) {
+        setIsDuplicateId(true);
+        setError(null);
+      } else {
+        setIsDuplicateId(false);
+        setError(err.message);
+      }
+    },
   });
 
   const loginMutation = useMutation({
@@ -548,6 +578,14 @@ export default function ConsumerPortalPage() {
       setError(null);
       setSuccessMsg(result.message);
       if (result.otp) setFallbackOtp(result.otp);
+      setOtpCountdown(60);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      countdownRef.current = setInterval(() => {
+        setOtpCountdown(prev => {
+          if (prev <= 1) { if (countdownRef.current) clearInterval(countdownRef.current); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
     },
     onError: (err: Error) => setError(err.message),
   });
@@ -835,7 +873,7 @@ export default function ConsumerPortalPage() {
 
               <div className="text-center">
                 <button
-                  onClick={() => { setError(null); setView("register"); }}
+                  onClick={() => { setError(null); setFieldErrors({}); setIsDuplicateId(false); setView("register"); }}
                   className="text-sm text-primary hover:underline"
                   data-testid="link-to-register"
                 >
@@ -855,19 +893,19 @@ export default function ConsumerPortalPage() {
                 <input
                   type="text"
                   value={regFullName}
-                  onChange={(e) => setRegFullName(e.target.value)}
+                  onChange={(e) => { setRegFullName(e.target.value); setFieldErrors(prev => ({ ...prev, fullName: "" })); }}
                   placeholder="As it appears on your ID"
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  className={`w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow ${fieldErrors.fullName ? "border-destructive" : ""}`}
                   data-testid="input-register-fullname"
-                  required
                 />
+                {fieldErrors.fullName && <p className="text-xs text-destructive mt-1" data-testid="error-register-fullname">{fieldErrors.fullName}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Country</label>
                 <select
                   value={regCountry}
-                  onChange={(e) => setRegCountry(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  onChange={(e) => { setRegCountry(e.target.value); setFieldErrors(prev => ({ ...prev, country: "" })); }}
+                  className={`w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow ${fieldErrors.country ? "border-destructive" : ""}`}
                   data-testid="select-register-country"
                 >
                   <option value="">Select your country</option>
@@ -883,28 +921,46 @@ export default function ConsumerPortalPage() {
                   <option value="Côte d'Ivoire">Côte d'Ivoire</option>
                   <option value="Other">Other African Country</option>
                 </select>
+                {fieldErrors.country && <p className="text-xs text-destructive mt-1" data-testid="error-register-country">{fieldErrors.country}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">National ID / Passport / Tax ID</label>
                 <input
                   type="text"
                   value={nationalId}
-                  onChange={(e) => setNationalId(e.target.value)}
+                  onChange={(e) => { setNationalId(e.target.value); setFieldErrors(prev => ({ ...prev, nationalId: "" })); setIsDuplicateId(false); }}
                   placeholder="e.g. GHA-123456789"
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  className={`w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow ${fieldErrors.nationalId || isDuplicateId ? "border-destructive" : ""}`}
                   data-testid="input-register-id"
                 />
+                {fieldErrors.nationalId && <p className="text-xs text-destructive mt-1" data-testid="error-register-id">{fieldErrors.nationalId}</p>}
+                {isDuplicateId && (
+                  <div className="mt-1.5 flex items-center gap-2 p-2.5 rounded-lg bg-destructive/10 text-xs text-destructive" data-testid="banner-duplicate-id">
+                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      This ID is already registered.{" "}
+                      <button
+                        onClick={() => { setIsDuplicateId(false); setError(null); setFieldErrors({}); setView("login"); }}
+                        className="font-semibold underline"
+                        data-testid="link-login-instead"
+                      >
+                        Log in instead
+                      </button>
+                    </span>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Phone Number</label>
                 <input
                   type="tel"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => { setPhone(e.target.value); setFieldErrors(prev => ({ ...prev, phone: "" })); }}
                   placeholder="+233 55 123 4567"
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  className={`w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow ${fieldErrors.phone ? "border-destructive" : ""}`}
                   data-testid="input-register-phone"
                 />
+                {fieldErrors.phone && <p className="text-xs text-destructive mt-1" data-testid="error-register-phone">{fieldErrors.phone}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Email (optional)</label>
@@ -922,10 +978,11 @@ export default function ConsumerPortalPage() {
                 <input
                   type="date"
                   value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
+                  onChange={(e) => { setDateOfBirth(e.target.value); setFieldErrors(prev => ({ ...prev, dateOfBirth: "" })); }}
+                  className={`w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow ${fieldErrors.dateOfBirth ? "border-destructive" : ""}`}
                   data-testid="input-register-dob"
                 />
+                {fieldErrors.dateOfBirth && <p className="text-xs text-destructive mt-1" data-testid="error-register-dob">{fieldErrors.dateOfBirth}</p>}
               </div>
               <div>
                 <label className="text-sm font-medium mb-1.5 block">Create Password</label>
@@ -933,9 +990,9 @@ export default function ConsumerPortalPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => { setPassword(e.target.value); setFieldErrors(prev => ({ ...prev, password: "" })); }}
                     placeholder="Minimum 8 characters"
-                    className="w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow pr-10"
+                    className={`w-full px-3 py-2.5 border rounded-xl text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow pr-10 ${fieldErrors.password ? "border-destructive" : ""}`}
                     data-testid="input-register-password"
                   />
                   <button
@@ -946,13 +1003,14 @@ export default function ConsumerPortalPage() {
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
+                {fieldErrors.password && <p className="text-xs text-destructive mt-1" data-testid="error-register-password">{fieldErrors.password}</p>}
               </div>
               <div className="flex items-start gap-2">
                 <input
                   type="checkbox"
                   id="consent-checkbox"
                   checked={consentGiven}
-                  onChange={(e) => setConsentGiven(e.target.checked)}
+                  onChange={(e) => { setConsentGiven(e.target.checked); setFieldErrors(prev => ({ ...prev, consent: "" })); }}
                   className="mt-1 rounded"
                   data-testid="checkbox-consent"
                 />
@@ -961,15 +1019,24 @@ export default function ConsumerPortalPage() {
                   I understand I can revoke this consent at any time.
                 </label>
               </div>
+              {fieldErrors.consent && <p className="text-xs text-destructive -mt-2" data-testid="error-register-consent">{fieldErrors.consent}</p>}
               <Button
                 onClick={() => {
-                  if (!regFullName.trim()) { setError("Full name is required"); return; }
-                  if (!regCountry) { setError("Please select your country"); return; }
-                  if (!consentGiven) { setError("You must consent to proceed"); return; }
+                  const errors: Record<string, string> = {};
+                  if (!regFullName.trim()) errors.fullName = "Full name is required";
+                  if (!regCountry) errors.country = "Please select your country";
+                  if (nationalId.length < 6) errors.nationalId = "National ID must be at least 6 characters";
+                  if (phone.replace(/\D/g, "").length < 8) errors.phone = "Phone number must be at least 8 digits";
+                  if (!dateOfBirth) errors.dateOfBirth = "Date of birth is required";
+                  if (password.length < 8) errors.password = "Password must be at least 8 characters";
+                  if (!consentGiven) errors.consent = "You must accept the consent to proceed";
+                  if (Object.keys(errors).length > 0) { setFieldErrors(errors); return; }
+                  setFieldErrors({});
                   setError(null);
+                  setIsDuplicateId(false);
                   registerMutation.mutate();
                 }}
-                disabled={registerMutation.isPending || nationalId.length < 6 || phone.length < 8 || password.length < 8 || !dateOfBirth || !regFullName.trim() || !regCountry || !consentGiven}
+                disabled={registerMutation.isPending}
                 size="lg"
                 className="w-full rounded-xl"
                 data-testid="button-consumer-register"
@@ -1004,7 +1071,7 @@ export default function ConsumerPortalPage() {
 
               <div className="text-center">
                 <button
-                  onClick={() => { setError(null); setView("login"); }}
+                  onClick={() => { setError(null); setFieldErrors({}); setIsDuplicateId(false); setView("login"); }}
                   className="text-sm text-primary hover:underline"
                   data-testid="link-to-login"
                 >
@@ -1075,15 +1142,22 @@ export default function ConsumerPortalPage() {
               </Button>
               <div className="text-center space-y-2">
                 {verifyMode === "register" && (
-                  <button
-                    onClick={() => { setError(null); setSuccessMsg(null); resendMutation.mutate(); }}
-                    disabled={resendMutation.isPending}
-                    className="text-sm text-primary hover:underline disabled:opacity-50"
-                    data-testid="button-resend-otp"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 inline mr-1 ${resendMutation.isPending ? "animate-spin" : ""}`} />
-                    {resendMutation.isPending ? "Sending..." : "Resend code"}
-                  </button>
+                  <div className="space-y-1.5">
+                    <button
+                      onClick={() => { setError(null); setSuccessMsg(null); resendMutation.mutate(); }}
+                      disabled={resendMutation.isPending || otpCountdown > 0}
+                      className="text-sm text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
+                      data-testid="button-resend-otp"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 inline mr-1 ${resendMutation.isPending ? "animate-spin" : ""}`} />
+                      {resendMutation.isPending ? "Sending..." : "Resend code"}
+                    </button>
+                    {otpCountdown > 0 && (
+                      <p className="text-xs text-muted-foreground" data-testid="text-otp-countdown">
+                        Resend available in {otpCountdown}s
+                      </p>
+                    )}
+                  </div>
                 )}
                 {verifyMode === "sms-login" && (
                   <button
