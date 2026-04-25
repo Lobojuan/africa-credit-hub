@@ -360,6 +360,7 @@ export default function ConsumerPortalPage() {
     retry: false,
   });
 
+  const [optimisticFrozen, setOptimisticFrozen] = useState<boolean | null>(null);
   const freezeMutation = useMutation({
     mutationFn: async (frozen: boolean) => {
       const res = await fetch("/api/consumer/credit-freeze", {
@@ -371,7 +372,13 @@ export default function ConsumerPortalPage() {
       if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
       return res.json();
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/credit-freeze"] }); },
+    onMutate: (frozen: boolean) => { setOptimisticFrozen(frozen); },
+    onSuccess: () => {
+      setOptimisticFrozen(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/consumer/credit-freeze"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/consumer/session"] });
+    },
+    onError: () => { setOptimisticFrozen(null); },
   });
 
   const pushSubscribeMutation = useMutation({
@@ -1672,67 +1679,77 @@ export default function ConsumerPortalPage() {
                 </Card>
 
                 {/* ─── 7. CREDIT FREEZE ───────────────────────────────────────── */}
-                <Card className={`shadow-sm ${freezeQuery.data?.frozen ? "border-blue-300 dark:border-blue-700" : ""}`} data-testid="card-credit-freeze">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Snowflake className={`w-4 h-4 ${freezeQuery.data?.frozen ? "text-blue-500" : "text-muted-foreground"}`} />
-                        <h3 className="text-sm font-bold">Credit Freeze</h3>
-                        {freezeQuery.data?.frozen && (
-                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0 text-[10px] h-4 px-1.5">ACTIVE</Badge>
+                {(() => {
+                  const frozen = optimisticFrozen ?? freezeQuery.data?.frozen ?? false;
+                  return (
+                    <Card className={`shadow-sm ${frozen ? "border-blue-300 dark:border-blue-700" : ""}`} data-testid="card-credit-freeze">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Snowflake className={`w-4 h-4 ${frozen ? "text-blue-500" : "text-muted-foreground"}`} />
+                            <h3 className="text-sm font-bold">Credit Freeze</h3>
+                            {frozen && (
+                              <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0 text-[10px] h-4 px-1.5">ACTIVE</Badge>
+                            )}
+                          </div>
+                          <Switch
+                            data-testid="switch-credit-freeze"
+                            checked={frozen}
+                            disabled={freezeMutation.isPending || freezeQuery.isLoading}
+                            onCheckedChange={(v) => freezeMutation.mutate(v)}
+                          />
+                        </div>
+                        {frozen ? (
+                          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+                            <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-1.5 mb-1">
+                              <Snowflake className="w-3.5 h-3.5" /> Credit File Frozen
+                            </p>
+                            <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed">Your credit file is currently frozen. Lenders cannot access your credit report. Toggle off to lift the freeze when applying for credit.</p>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground leading-relaxed">Enable a credit freeze to prevent lenders from accessing your credit report without your explicit authorisation. Useful if you suspect identity theft.</p>
                         )}
-                      </div>
-                      <Switch
-                        data-testid="switch-credit-freeze"
-                        checked={freezeQuery.data?.frozen ?? false}
-                        disabled={freezeMutation.isPending || freezeQuery.isLoading}
-                        onCheckedChange={(v) => freezeMutation.mutate(v)}
-                      />
-                    </div>
-                    {freezeQuery.data?.frozen ? (
-                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
-                        <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-1.5 mb-1">
-                          <Snowflake className="w-3.5 h-3.5" /> Credit File Frozen
-                        </p>
-                        <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed">Your credit file is currently frozen. Lenders cannot access your credit report. Toggle off to lift the freeze when applying for credit.</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-muted-foreground leading-relaxed">Enable a credit freeze to prevent lenders from accessing your credit report without your explicit authorisation. Useful if you suspect identity theft.</p>
-                    )}
-                    {freezeMutation.isError && (
-                      <p className="text-xs text-red-500 mt-2">{(freezeMutation.error as Error).message}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                        {freezeMutation.isError && (
+                          <p className="text-xs text-red-500 mt-2">{(freezeMutation.error as Error).message}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* ─── 8. PWA PUSH NOTIFICATIONS ──────────────────────────────── */}
-                <Card className="shadow-sm" data-testid="card-push-notifications">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {pushStatusQuery.data?.subscribed ? <BellRing className="w-4 h-4 text-primary" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
-                        <h3 className="text-sm font-bold">Push Notifications</h3>
-                      </div>
-                      <Switch
-                        data-testid="switch-push-notifications"
-                        checked={pushStatusQuery.data?.subscribed ?? false}
-                        disabled={pushSubscribeMutation.isPending || pushUnsubscribeMutation.isPending || pushStatusQuery.isLoading}
-                        onCheckedChange={(v) => { if (v) pushSubscribeMutation.mutate(); else pushUnsubscribeMutation.mutate(); }}
-                      />
-                    </div>
-                    {pushStatusQuery.data?.subscribed ? (
-                      <p className="text-xs text-muted-foreground">Push notifications are enabled. You will be alerted when your credit score changes or a lender accesses your file.</p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">Enable push notifications to receive instant alerts on your device whenever there is activity on your credit file.</p>
-                    )}
-                    {pushSubscribeMutation.isError && (
-                      <p className="text-xs text-red-500 mt-2">{(pushSubscribeMutation.error as Error).message}</p>
-                    )}
-                    {pushSubscribeMutation.isSuccess && (
-                      <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Notifications enabled!</p>
-                    )}
-                  </CardContent>
-                </Card>
+                {(() => {
+                  const supportsPush = typeof window !== "undefined" && "PushManager" in window && "serviceWorker" in navigator;
+                  return supportsPush ? (
+                    <Card className="shadow-sm" data-testid="card-push-notifications">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            {pushStatusQuery.data?.subscribed ? <BellRing className="w-4 h-4 text-primary" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+                            <h3 className="text-sm font-bold">Push Notifications</h3>
+                          </div>
+                          <Switch
+                            data-testid="switch-push-notifications"
+                            checked={pushStatusQuery.data?.subscribed ?? false}
+                            disabled={pushSubscribeMutation.isPending || pushUnsubscribeMutation.isPending || pushStatusQuery.isLoading}
+                            onCheckedChange={(v) => { if (v) pushSubscribeMutation.mutate(); else pushUnsubscribeMutation.mutate(); }}
+                          />
+                        </div>
+                        {pushStatusQuery.data?.subscribed ? (
+                          <p className="text-xs text-muted-foreground">Push notifications are enabled. You will be alerted when your credit score changes or a lender accesses your file.</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Enable push notifications to receive instant alerts on your device whenever there is activity on your credit file.</p>
+                        )}
+                        {pushSubscribeMutation.isError && (
+                          <p className="text-xs text-red-500 mt-2">{(pushSubscribeMutation.error as Error).message}</p>
+                        )}
+                        {pushSubscribeMutation.isSuccess && (
+                          <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Notifications enabled!</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ) : null;
+                })()}
 
                 {/* ─── CREDIT MONITORING ALERTS ────────────────────────────────────────── */}
                 <Card className="shadow-sm border-primary/20" data-testid="card-monitoring-alerts">

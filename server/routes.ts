@@ -3161,11 +3161,8 @@ export async function registerRoutes(
       const consumerNationalId = (req.session as any).consumerNationalId;
       const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
       if (!consumerAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
-      // Freeze check — blocked lender/third-party access when consumer freeze is active
-      if (consumerAccount.creditFrozen) {
-        return res.status(403).json({ message: "Credit report access is currently frozen. Disable the credit freeze to allow lookups.", frozen: true });
-      }
-
+      // Note: /api/consumer/lookup is consumer self-access — freeze does NOT block self-view.
+      // Freeze enforcement applies only to lender/third-party endpoints (credit inquiries, borrower report).
       const nationalId = consumerNationalId;
       const dateOfBirth = consumerAccount.dateOfBirth;
 

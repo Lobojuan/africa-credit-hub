@@ -79,6 +79,9 @@ export async function migrateCrifFeatures() {
     ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS full_name TEXT;
     ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS country TEXT;
     ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS consent_given BOOLEAN DEFAULT false;
+    ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS credit_frozen BOOLEAN DEFAULT false;
+    ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS push_endpoint TEXT;
+    ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS push_keys JSONB;
 
     CREATE TABLE IF NOT EXISTS consumer_push_subscriptions (
       id SERIAL PRIMARY KEY,
