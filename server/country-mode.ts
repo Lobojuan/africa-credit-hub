@@ -88,6 +88,38 @@ const COUNTRY_REGISTRY: Record<string, ServerCountryConfig> = {
     dataProtectionLaw: "Protection of Personal Information Act (POPIA)",
     brandTitle: "South Africa Credit Registry",
   },
+  cotedivoire: {
+    name: "Côte d'Ivoire",
+    code: "CI",
+    currency: "XOF",
+    regulatoryBody: "Banque Centrale des États de l'Afrique de l'Ouest (BCEAO)",
+    dataProtectionLaw: "Loi n° 2013-450 relative à la protection des données à caractère personnel",
+    brandTitle: "Registre de Crédit de Côte d'Ivoire",
+  },
+  senegal: {
+    name: "Senegal",
+    code: "SN",
+    currency: "XOF",
+    regulatoryBody: "Banque Centrale des États de l'Afrique de l'Ouest (BCEAO)",
+    dataProtectionLaw: "Loi n° 2008-12 portant sur la Protection des Données à Caractère Personnel",
+    brandTitle: "Registre de Crédit du Sénégal",
+  },
+  cameroon: {
+    name: "Cameroon",
+    code: "CM",
+    currency: "XAF",
+    regulatoryBody: "Banque des États de l'Afrique Centrale (BEAC)",
+    dataProtectionLaw: "Loi n° 2010/012 relative à la cybersécurité et à la cybercriminalité",
+    brandTitle: "Registre de Crédit du Cameroun",
+  },
+  morocco: {
+    name: "Morocco",
+    code: "MA",
+    currency: "MAD",
+    regulatoryBody: "Bank Al-Maghrib",
+    dataProtectionLaw: "Loi n° 09-08 relative à la protection des personnes physiques",
+    brandTitle: "Registre de Crédit du Maroc",
+  },
 };
 
 export function getCountryMode(): string | null {

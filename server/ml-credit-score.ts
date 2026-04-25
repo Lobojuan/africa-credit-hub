@@ -109,12 +109,23 @@ function computeAltDataReliability(altData: MLAlternativeData[]): number {
   return ratio * 0.5 + sourceDiversity * 0.3 + volumeScore * 0.2;
 }
 
+export interface AfricanRiskFactors {
+  isAgriculturalBorrower?: boolean;
+  seasonalIncomeVolatility?: number;
+  foreignCurrencyDebtRatio?: number;
+  informalSavingsGroupMember?: boolean;
+  susuChamaMonthsActive?: number;
+  hasUntitledLandCollateral?: boolean;
+  regionalStabilityScore?: number;
+}
+
 export function calculateMLCreditScore(
   accounts: MLAccountInput[],
   inquiryCount: number,
   judgmentCount: number,
   isPep: boolean,
-  alternativeData: MLAlternativeData[] = []
+  alternativeData: MLAlternativeData[] = [],
+  africanRiskFactors: AfricanRiskFactors = {}
 ): MLCreditScoreResult {
   const featureImportance: MLScoreFactor[] = [];
 
@@ -256,6 +267,84 @@ export function calculateMLCreditScore(
       contribution: Math.round(pepPenalty * 100),
       direction: "negative",
       description: "Politically Exposed Person — elevated risk factor",
+    });
+  }
+
+  // ── African-specific risk factors ─────────────────────────────────
+  const {
+    isAgriculturalBorrower = false,
+    seasonalIncomeVolatility = 0,
+    foreignCurrencyDebtRatio = 0,
+    informalSavingsGroupMember = false,
+    susuChamaMonthsActive = 0,
+    hasUntitledLandCollateral = false,
+    regionalStabilityScore = 1.0,
+  } = africanRiskFactors;
+
+  if (isAgriculturalBorrower) {
+    const volatility = clamp(seasonalIncomeVolatility, 0, 1);
+    const agriPenalty = volatility > 0.5 ? -(volatility - 0.3) * 0.6 : 0.05;
+    logit += agriPenalty;
+    featureImportance.push({
+      feature: "Agricultural / Seasonal Income",
+      value: Math.round(volatility * 100),
+      contribution: Math.round(agriPenalty * 100),
+      direction: agriPenalty >= 0 ? "neutral" : "negative",
+      description: volatility > 0.5
+        ? `High seasonal income volatility (${Math.round(volatility * 100)}%) — cash-flow risk`
+        : "Agricultural borrower with manageable seasonal income",
+    });
+  }
+
+  if (foreignCurrencyDebtRatio > 0) {
+    const fxRisk = clamp(foreignCurrencyDebtRatio, 0, 1);
+    const fxPenalty = fxRisk > 0.4 ? -(fxRisk - 0.2) * 0.7 : 0;
+    logit += fxPenalty;
+    if (Math.abs(fxPenalty) > 0.01) {
+      featureImportance.push({
+        feature: "Currency Devaluation Exposure",
+        value: Math.round(fxRisk * 100),
+        contribution: Math.round(fxPenalty * 100),
+        direction: "negative",
+        description: `${Math.round(fxRisk * 100)}% of debt is foreign-currency denominated — devaluation risk`,
+      });
+    }
+  }
+
+  if (informalSavingsGroupMember) {
+    const chamaMonths = Math.min(susuChamaMonthsActive, 36);
+    const chamaBoost = 0.05 + (chamaMonths / 36) * 0.10;
+    logit += chamaBoost;
+    featureImportance.push({
+      feature: "Informal Savings Group (Susu/Chama)",
+      value: chamaMonths,
+      contribution: Math.round(chamaBoost * 100),
+      direction: "positive",
+      description: `Active member for ${chamaMonths} months — demonstrates financial discipline`,
+    });
+  }
+
+  if (hasUntitledLandCollateral) {
+    const landPenalty = -0.12;
+    logit += landPenalty;
+    featureImportance.push({
+      feature: "Untitled Land Collateral",
+      value: 1,
+      contribution: Math.round(landPenalty * 100),
+      direction: "negative",
+      description: "Collateral includes untitled land — enforcement risk if borrower defaults",
+    });
+  }
+
+  if (regionalStabilityScore < 0.8) {
+    const stabilityPenalty = -(1 - regionalStabilityScore) * 0.5;
+    logit += stabilityPenalty;
+    featureImportance.push({
+      feature: "Regional Stability",
+      value: Math.round(regionalStabilityScore * 100),
+      contribution: Math.round(stabilityPenalty * 100),
+      direction: "negative",
+      description: `Regional stability index ${Math.round(regionalStabilityScore * 100)}% — elevated macro-environment risk`,
     });
   }
 

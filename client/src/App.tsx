@@ -89,6 +89,8 @@ const DataManagementPage = lazy(() => import("@/pages/data-management"));
 const RegulatoryCompliancePage = lazy(() => import("@/pages/regulatory-compliance"));
 const BogExportPage = lazy(() => import("@/pages/bog-export"));
 const BslExportPage = lazy(() => import("@/pages/bsl-export"));
+const CbkExportPage = lazy(() => import("@/pages/cbk-export"));
+const CbnExportPage = lazy(() => import("@/pages/cbn-export"));
 const VersionHistoryPage = lazy(() => import("@/pages/version-history"));
 const AppGuidePage = lazy(() => import("@/pages/app-guide"));
 const TrainingCenterPage = lazy(() => import("@/pages/training-center"));
@@ -215,6 +217,8 @@ function Router() {
         <Route path="/regulatory-compliance" component={RegulatoryCompliancePage} />
         <Route path="/bog-export" component={BogExportPage} />
         <Route path="/bsl-export" component={BslExportPage} />
+        <Route path="/cbk-export" component={() => <Suspense fallback={<LazyFallback />}><CbkExportPage /></Suspense>} />
+        <Route path="/cbn-export" component={() => <Suspense fallback={<LazyFallback />}><CbnExportPage /></Suspense>} />
         <Route path="/version-history" component={VersionHistoryPage} />
         <Route path="/guide" component={AppGuidePage} />
         <Route path="/training" component={TrainingCenterPage} />

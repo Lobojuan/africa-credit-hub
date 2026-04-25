@@ -13,8 +13,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const DATA_SOURCES = [
-  "MTN Mobile Money", "Airtel Money", "Vodafone Cash", "Mpesa",
-  "GCB Bank", "Ecobank", "Stanbic Bank", "UBA", "Zenith Bank", "Access Bank", "Other"
+  // West Africa — Mobile Money
+  "MTN Mobile Money", "Airtel Money", "Vodafone Cash", "Tigo Cash",
+  // East Africa — Mobile Money
+  "M-Pesa (Kenya/Tanzania)", "Airtel Money (EA)", "T-Kash (Telkom Kenya)",
+  // Francophone / West Africa
+  "Orange Money", "Wave (Senegal/CI)", "Moov Money", "Free Money",
+  // Pan-African Fintechs
+  "Flutterwave", "Chipper Cash", "Nala", "Cellulant",
+  // East Africa — Banks & Payments
+  "Pesalink (Kenya)", "Equity Bank", "Co-operative Bank", "KCB Bank",
+  // West Africa — Banks
+  "GCB Bank", "Ecobank", "Stanbic Bank", "Fidelity Bank Ghana",
+  "Access Bank", "First Bank Nigeria", "GTBank", "Zenith Bank", "UBA",
+  // Southern Africa
+  "Standard Bank", "ABSA", "Capitec", "FNB South Africa",
+  // Other
+  "Other",
 ];
 
 function getScoreBadge(score: number) {

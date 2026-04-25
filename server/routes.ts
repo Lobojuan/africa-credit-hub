@@ -12642,6 +12642,108 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
+  // ── Predictive Default Warning ─────────────────────────────────────────
+  app.get("/api/borrowers/:id/default-risk", requireAuth, requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const borrower = await storage.getBorrower(req.params.id as string);
+      if (!borrower) return res.status(404).json({ message: "Borrower not found" });
+
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+
+      const now = Date.now();
+      const msIn30Days = 30 * 24 * 60 * 60 * 1000;
+
+      const delinquentAccounts = accounts.filter(a => a.status === "delinquent");
+      const recentlyDelinquent = delinquentAccounts.filter(a => {
+        if (!a.updatedAt) return false;
+        return (now - new Date(a.updatedAt).getTime()) < 90 * 24 * 60 * 60 * 1000;
+      });
+      const writtenOff = accounts.filter(a => a.status === "written_off");
+      const restructured = accounts.filter(a => a.status === "restructured");
+      const recentInquiries = inquiries.filter(i => {
+        if (!i.requestedDate) return false;
+        return (now - new Date(i.requestedDate).getTime()) < msIn30Days * 2;
+      });
+      const activeJudgments = judgments.filter((j: any) => j.status === "active");
+
+      const totalAccounts = accounts.length;
+      let riskScore = 0;
+      const warnings: { severity: "low" | "medium" | "high" | "critical"; message: string }[] = [];
+
+      if (delinquentAccounts.length > 0) {
+        const pct = delinquentAccounts.length / Math.max(totalAccounts, 1);
+        riskScore += pct * 40;
+        if (pct > 0.5) {
+          warnings.push({ severity: "critical", message: `${delinquentAccounts.length} of ${totalAccounts} accounts are delinquent — immediate attention required` });
+        } else {
+          warnings.push({ severity: "high", message: `${delinquentAccounts.length} account(s) in delinquency — monitor closely` });
+        }
+      }
+      if (recentlyDelinquent.length > 0) {
+        riskScore += 15;
+        warnings.push({ severity: "high", message: `${recentlyDelinquent.length} account(s) became delinquent in the last 90 days — deteriorating trend` });
+      }
+      if (writtenOff.length > 0) {
+        riskScore += writtenOff.length * 10;
+        warnings.push({ severity: "critical", message: `${writtenOff.length} account(s) written off — historical default event recorded` });
+      }
+      if (restructured.length > 0) {
+        riskScore += restructured.length * 5;
+        warnings.push({ severity: "medium", message: `${restructured.length} account(s) restructured — potential cash-flow stress` });
+      }
+      if (recentInquiries.length > 5) {
+        riskScore += 10;
+        warnings.push({ severity: "medium", message: `${recentInquiries.length} credit inquiries in the last 60 days — possible credit-seeking behaviour` });
+      }
+      if (activeJudgments.length > 0) {
+        riskScore += activeJudgments.length * 12;
+        warnings.push({ severity: "high", message: `${activeJudgments.length} active court judgment(s) — legal enforcement risk` });
+      }
+      if (borrower.isPep) {
+        riskScore += 5;
+        warnings.push({ severity: "medium", message: "Politically Exposed Person — enhanced due-diligence required" });
+      }
+
+      const clampedRisk = Math.min(riskScore, 100);
+      let riskLevel: "low" | "moderate" | "elevated" | "high" | "critical";
+      if (clampedRisk < 15) riskLevel = "low";
+      else if (clampedRisk < 30) riskLevel = "moderate";
+      else if (clampedRisk < 50) riskLevel = "elevated";
+      else if (clampedRisk < 70) riskLevel = "high";
+      else riskLevel = "critical";
+
+      let recommendation = "No immediate action required. Continue regular monitoring.";
+      if (riskLevel === "moderate") recommendation = "Schedule a borrower review within 30 days. Verify latest income and repayment capacity.";
+      if (riskLevel === "elevated") recommendation = "Initiate proactive outreach to borrower. Consider restructuring before accounts deteriorate further.";
+      if (riskLevel === "high") recommendation = "Escalate to collections team. Request updated financial statements and collateral re-valuation.";
+      if (riskLevel === "critical") recommendation = "Immediate enforcement action advised. Notify legal team and freeze new disbursements. File with collections.";
+
+      res.json({
+        borrowerId: borrower.id,
+        borrowerName: borrower.firstName
+          ? `${borrower.firstName} ${borrower.lastName || ""}`
+          : borrower.companyName,
+        riskScore: clampedRisk,
+        riskLevel,
+        warnings,
+        recommendation,
+        summary: {
+          totalAccounts,
+          delinquentCount: delinquentAccounts.length,
+          writtenOffCount: writtenOff.length,
+          restructuredCount: restructured.length,
+          activeJudgments: activeJudgments.length,
+          recentInquiries: recentInquiries.length,
+        },
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
   app.get("/api/blockchain/anchors", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
     try {
       const anchors = await getAnchors(50);
@@ -12815,6 +12917,83 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     if (req.session.userRole === "super_admin" || req.session.userRole === "platform_admin") return true;
     return job.initiatorUserId === req.session.userId;
   }
+
+  app.get("/api/export/stats", requireAuth, requireRole("admin", "lender", "super_admin"), async (req, res) => {
+    try {
+      const countryFilter = getCountryFilter(req);
+      const [bcResult, acResult] = await Promise.all([
+        db.select({ cnt: count() }).from(borrowers).where(countryFilter ? eq(borrowers.country, countryFilter) : undefined),
+        db.select({ cnt: count() }).from(creditAccounts),
+      ]);
+      res.json({ borrowerCount: bcResult[0]?.cnt ?? 0, accountCount: acResult[0]?.cnt ?? 0 });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/export/regulatory", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const { fileType = "CONC", reportingDate, sequenceNumber = "1", country = "GH", preview } = req.query as Record<string, string>;
+      const isPreview = preview === "true";
+
+      const borrowerResult = await storage.getBorrowers(1, 500, req.session?.organizationId, getCountryFilter(req) || undefined);
+      const allBorrowers = borrowerResult.data;
+      const lines: string[] = [];
+
+      const today = reportingDate || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const countryCode = (country || "GH").toUpperCase();
+      const regulatorPrefix = countryCode === "KE" ? "CBK" : countryCode === "NG" ? "CBN" : "REG";
+
+      lines.push(`${regulatorPrefix}|${fileType}|${today}|${sequenceNumber}|${countryCode}|AFRICA_CREDIT_HUB`);
+
+      if (fileType === "CONC" || fileType === "BUSC") {
+        const isConsumer = fileType === "CONC";
+        const filteredBorrowers = allBorrowers.filter((b: any) =>
+          isConsumer ? b.borrowerType === "individual" : b.borrowerType === "business"
+        );
+        for (const b of filteredBorrowers.slice(0, isPreview ? 20 : 10000)) {
+          const accounts = await storage.getCreditAccountsByBorrower(b.id);
+          for (const a of accounts) {
+            const row = [
+              b.firstName || b.companyName || "",
+              b.lastName || "",
+              b.ghanaCardNumber || b.nationalId || b.registrationNumber || "",
+              a.facilityType || "TML",
+              a.status || "current",
+              a.currentBalance || "0",
+              a.currency || "USD",
+              a.disbursementDate || "",
+              a.maturityDate || "",
+              a.daysInArrears || "0",
+            ].join("|");
+            lines.push(row);
+            if (isPreview && lines.length >= 20) break;
+          }
+          if (isPreview && lines.length >= 20) break;
+        }
+      } else if (fileType === "CONJ" || fileType === "BUSJ") {
+        const judgmentsRaw = await db.select().from(courtJudgments).limit(isPreview ? 20 : 10000);
+        for (const j of judgmentsRaw) {
+          lines.push([j.borrowerId, j.caseNumber, j.court, j.judgmentDate, j.status, j.amount || "0"].join("|"));
+        }
+      } else if (fileType === "COND" || fileType === "BUSD") {
+        const chequesRaw = await db.select().from(dishonouredCheques).limit(isPreview ? 20 : 10000);
+        for (const c of chequesRaw) {
+          lines.push([(c as any).borrowerId || "", (c as any).chequeNumber || "", (c as any).amount || "0", (c as any).bank || ""].join("|"));
+        }
+      }
+
+      lines.push(`EOF|${lines.length - 1}|${today}`);
+
+      const csv = lines.join("\n");
+      if (!isPreview) {
+        const prefix = countryCode === "KE" ? "CBK" : countryCode === "NG" ? "CBN" : "REG";
+        res.setHeader("Content-Disposition", `attachment; filename="${prefix}-${today}-${fileType}-${sequenceNumber}.csv"`);
+        res.setHeader("Content-Type", "text/csv");
+      } else {
+        res.setHeader("Content-Type", "text/plain");
+      }
+      res.send(csv);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
 
   app.get("/api/export/progress/:jobId", requireAuth, async (req, res) => {
     const job = exportJobs.get(req.params.jobId as string);
@@ -14903,6 +15082,43 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         grantorNationalId: body.grantorIdentifier || null,
         loanApplicationId: body.loanApplicationId || undefined,
       });
+
+      // ── Cross-lender risk alert ──────────────────────────────────────
+      // Notify other lenders who have active credit exposure to the same borrower
+      try {
+        const borrowerName = (item.borrowerName || "").trim().toLowerCase();
+        if (borrowerName.length > 2) {
+          const allCollateral = await storage.getCollateralItems(undefined, undefined);
+          const otherLenderOrgIds = new Set(
+            allCollateral
+              .filter(c =>
+                c.id !== item.id &&
+                c.lenderOrganizationId &&
+                c.lenderOrganizationId !== (orgId || item.lenderOrganizationId) &&
+                (c.borrowerName || "").trim().toLowerCase() === borrowerName &&
+                c.approvalStatus === "approved" &&
+                c.countryCode === effectiveCountry
+              )
+              .map(c => c.lenderOrganizationId!)
+          );
+          for (const alertOrgId of otherLenderOrgIds) {
+            const orgUsers = await storage.getUsers(alertOrgId, effectiveCountry);
+            const admins = orgUsers.filter(u => u.role === "admin" || u.role === "lender");
+            for (const adminUser of admins) {
+              await storage.createNotification({
+                userId: adminUser.id,
+                organizationId: alertOrgId,
+                type: "cross_lender_risk_alert",
+                title: "New Collateral Filing on Shared Borrower",
+                message: `A new collateral registration (${item.registrationNumber}) has been filed against ${item.borrowerName} by another institution. Review your exposure to this borrower.`,
+                link: "/collateral-registry",
+                country: effectiveCountry,
+              });
+            }
+          }
+        }
+      } catch (_alertErr) { /* non-critical — don't fail the main request */ }
+
       res.status(201).json(item);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });

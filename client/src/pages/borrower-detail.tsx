@@ -271,6 +271,67 @@ function CreditAccountDetail({ account, currency }: { account: CreditAccount; cu
   );
 }
 
+function DefaultRiskCard({ borrowerId }: { borrowerId: string }) {
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ["/api/borrowers", borrowerId, "default-risk"],
+    queryFn: async () => {
+      const res = await fetch(`/api/borrowers/${borrowerId}/default-risk`, { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+  });
+
+  if (isLoading) return null;
+  if (!data || data.riskLevel === "low") return null;
+
+  const colorMap: Record<string, string> = {
+    moderate: "border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20",
+    elevated: "border-orange-200 dark:border-orange-800 bg-orange-50/60 dark:bg-orange-900/20",
+    high: "border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/20",
+    critical: "border-red-300 dark:border-red-700 bg-red-100/60 dark:bg-red-900/30",
+  };
+  const iconColorMap: Record<string, string> = {
+    moderate: "text-amber-600 dark:text-amber-400",
+    elevated: "text-orange-600 dark:text-orange-400",
+    high: "text-red-600 dark:text-red-400",
+    critical: "text-red-700 dark:text-red-300",
+  };
+  const severityColors: Record<string, string> = {
+    low: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+    medium: "bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300",
+    high: "bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300",
+    critical: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
+  };
+
+  return (
+    <Card className={`${colorMap[data.riskLevel] || colorMap.moderate}`} data-testid="card-default-risk">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <TrendingDown className={`w-5 h-5 mt-0.5 shrink-0 ${iconColorMap[data.riskLevel] || iconColorMap.moderate}`} />
+          <div className="flex-1 space-y-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-sm">Predictive Default Warning</p>
+              <Badge className={`text-xs capitalize ${severityColors[data.riskLevel] || severityColors.medium}`}>
+                {data.riskLevel} risk — score {data.riskScore}/100
+              </Badge>
+            </div>
+            <ul className="space-y-1">
+              {(data.warnings || []).map((w: any, i: number) => (
+                <li key={i} className="flex items-start gap-2 text-xs">
+                  <span className={`mt-0.5 shrink-0 w-1.5 h-1.5 rounded-full mt-1.5 ${severityColors[w.severity]?.includes("red") ? "bg-red-500" : severityColors[w.severity]?.includes("orange") ? "bg-orange-500" : "bg-amber-500"}`} />
+                  <span className="text-muted-foreground">{w.message}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-muted-foreground border-t pt-2 mt-2">{data.recommendation}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function BorrowerDetailPage() {
   const { t } = useTranslation();
   const [, params] = useRoute("/borrowers/:id");
@@ -1241,6 +1302,8 @@ export default function BorrowerDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <DefaultRiskCard borrowerId={borrower.id} />
 
       {showInsights && (
         <Card className="border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50/60 to-orange-50/60 dark:from-amber-950/20 dark:to-orange-950/20" data-testid="card-ai-insights">

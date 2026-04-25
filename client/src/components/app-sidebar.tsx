@@ -152,8 +152,16 @@ function getOversightItems(activeCountryName?: string): NavItem[] {
   const country = activeCountryName?.toLowerCase().replace(/[\s_-]/g, "") || "";
   if (country === "sierraleone" || isSierraLeoneMode()) {
     items.push({ label: "BSL Export", tKey: "sidebar.bslExport", url: "/bsl-export", icon: FileSpreadsheet, testId: "nav-bsl-export", roles: ["admin", "regulator", "super_admin"] });
+  } else if (country === "kenya") {
+    items.push({ label: "BOG Export", tKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "CBK Export", tKey: "sidebar.cbkExport", url: "/cbk-export", icon: FileSpreadsheet, testId: "nav-cbk-export", roles: ["admin", "regulator", "super_admin"] });
+  } else if (country === "nigeria") {
+    items.push({ label: "BOG Export", tKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "CBN Export", tKey: "sidebar.cbnExport", url: "/cbn-export", icon: FileSpreadsheet, testId: "nav-cbn-export", roles: ["admin", "regulator", "super_admin"] });
   } else {
     items.push({ label: "BOG Export", tKey: "sidebar.bogExport", url: "/bog-export", icon: FileSpreadsheet, testId: "nav-bog-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "CBK Export (Kenya)", tKey: "sidebar.cbkExport", url: "/cbk-export", icon: FileSpreadsheet, testId: "nav-cbk-export", roles: ["admin", "regulator", "super_admin"] });
+    items.push({ label: "CBN Export (Nigeria)", tKey: "sidebar.cbnExport", url: "/cbn-export", icon: FileSpreadsheet, testId: "nav-cbn-export", roles: ["admin", "regulator", "super_admin"] });
   }
   return items;
 }
