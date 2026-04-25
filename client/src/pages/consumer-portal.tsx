@@ -1520,6 +1520,13 @@ export default function ConsumerPortalPage() {
                                   <span><span className="text-muted-foreground">From </span><span className="font-medium">{offer.rateFrom} p.a.</span></span>
                                 </div>
                                 <p className="text-[10px] text-muted-foreground mt-0.5">{offer.term}</p>
+                                <button
+                                  data-testid={`btn-learn-more-${offer.id}`}
+                                  className="mt-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400 hover:underline focus:outline-none"
+                                  onClick={() => {}}
+                                >
+                                  Learn More →
+                                </button>
                               </div>
                               <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${offer.likelihood === "high" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : offer.likelihood === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-muted text-muted-foreground"}`}>
                                 {offer.likelihood === "high" ? "High match" : offer.likelihood === "medium" ? "Good match" : "Possible"}

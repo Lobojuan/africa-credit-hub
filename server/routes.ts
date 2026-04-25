@@ -16521,7 +16521,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
       ).limit(1);
       const borrower = borrowerResult[0];
-      if (!borrower) return res.json([]);
+      if (!borrower) return res.json({ score: null, tips: [] });
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
