@@ -1296,12 +1296,12 @@ export default function ConsumerPortalPage() {
                     ) : (
                       <div>
                         {(() => {
-                          const sorted = [...scoreHistoryQuery.data].reverse();
-                          const firstScore = sorted[0]?.score ?? 0;
-                          const lastScore = sorted[sorted.length - 1]?.score ?? 0;
-                          const prev = sorted.length >= 2 ? sorted[sorted.length - 2]?.score : null;
-                          const delta = prev !== null ? lastScore - prev : null;
-                          const trendDir = sorted.length >= 2 ? (lastScore > firstScore ? "up" : lastScore < firstScore ? "down" : "flat") : "flat";
+                          const sorted = [...scoreHistoryQuery.data].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                          const oldestScore = sorted[0]?.score ?? 0;
+                          const newestScore = sorted[sorted.length - 1]?.score ?? 0;
+                          const prevScore = sorted.length >= 2 ? sorted[sorted.length - 2]?.score : null;
+                          const delta = prevScore !== null ? newestScore - prevScore : null;
+                          const trendDir = sorted.length >= 2 ? (newestScore > oldestScore ? "up" : newestScore < oldestScore ? "down" : "flat") : "flat";
                           const trendColor = trendDir === "up" ? "#16a34a" : trendDir === "down" ? "#dc2626" : "hsl(var(--primary))";
                           const isUp = delta !== null && delta > 0;
                           const isDown = delta !== null && delta < 0;
@@ -1365,8 +1365,8 @@ export default function ConsumerPortalPage() {
                         <div className="space-y-2.5">
                           <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" data-testid="toggle-pay-arrears">
                             <div>
-                              <p className="text-xs font-medium">Pay all outstanding arrears</p>
-                              <p className="text-[10px] text-muted-foreground">Clears overdue payments on all accounts</p>
+                              <p className="text-xs font-medium">Pay off highest balance account</p>
+                              <p className="text-[10px] text-muted-foreground">Fully settles your largest outstanding credit account</p>
                             </div>
                             <Switch checked={simToggles.payArrears} onCheckedChange={(v) => setSimToggles(s => ({ ...s, payArrears: v }))} data-testid="switch-sim-pay-arrears" />
                           </div>

@@ -16548,8 +16548,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (totalLimit > 0 && totalDebt / totalLimit > 0.6) {
         tips.push({ id: "reduce-utilisation", title: "Reduce Credit Utilisation", detail: `Your current credit utilisation is ${Math.round((totalDebt / totalLimit) * 100)}%. Aim to keep it below 30% by paying down balances. This is one of the fastest score boosters.`, estimatedImpact: "high", icon: "chart" });
       }
-      if (accounts.length < 2) {
-        tips.push({ id: "diversify-credit", title: "Build a Diverse Credit History", detail: "Having only one type of credit limits your score potential. A mix of instalment loans and revolving credit — managed responsibly — improves your credit profile over time.", estimatedImpact: "low", icon: "layers" });
+      if (accounts.length < 3) {
+        tips.push({ id: "diversify-credit", title: "Build a Diverse Credit History", detail: `You have ${accounts.length} credit account(s) on file. Lenders prefer to see at least 3 accounts across different credit types. A mix of instalment loans and revolving credit, managed responsibly, improves your profile.`, estimatedImpact: "medium", icon: "layers" });
+      }
+      const oldestAccount = accounts.reduce((oldest: any, a: any) => {
+        const d = a.openDate ? new Date(a.openDate).getTime() : Date.now();
+        return !oldest || d < new Date(oldest.openDate || Date.now()).getTime() ? a : oldest;
+      }, null);
+      const accountAgeMonths = oldestAccount?.openDate
+        ? Math.floor((Date.now() - new Date(oldestAccount.openDate).getTime()) / (1000 * 60 * 60 * 24 * 30))
+        : 0;
+      if (accountAgeMonths < 12 && accounts.length > 0) {
+        tips.push({ id: "age-accounts", title: "Keep Accounts Open Longer", detail: `Your oldest account is ${accountAgeMonths < 1 ? "less than a month" : `${accountAgeMonths} month${accountAgeMonths !== 1 ? "s" : ""}`} old. Credit age is a key scoring factor — avoid closing existing accounts and let your history mature over time.`, estimatedImpact: "medium", icon: "clock" });
       }
       if (score >= 580 && score < 700) {
         tips.push({ id: "autopay", title: "Set Up Automatic Payments", detail: "Payment history is the largest factor in your score. Setting up auto-pay ensures you never miss a due date, which can steadily improve your score over 6–12 months.", estimatedImpact: "medium", icon: "clock" });
@@ -16560,8 +16570,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (tips.length === 0) {
         tips.push({ id: "maintain", title: "Maintain Your Strong Profile", detail: "Your credit profile looks good! Keep paying on time, avoid unnecessary applications, and consider checking your report annually for any errors.", estimatedImpact: "low", icon: "star" });
       }
+      if (tips.length < 3) {
+        if (!tips.find(t => t.id === "autopay")) tips.push({ id: "autopay", title: "Set Up Automatic Payments", detail: "Payment history is the largest factor in your score. Setting up auto-pay ensures you never miss a due date, which can steadily improve your score over 6–12 months.", estimatedImpact: "medium", icon: "clock" });
+        if (tips.length < 3) tips.push({ id: "check-errors", title: "Review Your Credit Report for Errors", detail: "Inaccurate data can suppress your score. Check your report annually and file a dispute if you find accounts, balances, or personal details that are incorrect.", estimatedImpact: "medium", icon: "search" });
+      }
+      const finalTips = tips.slice(0, 5);
 
-      res.json({ score, tips });
+      res.json({ score, tips: finalTips });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
