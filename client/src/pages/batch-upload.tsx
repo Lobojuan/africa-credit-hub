@@ -1676,7 +1676,7 @@ export default function BatchUploadPage() {
               {historyQuery.isLoading ? (
                 <div className="space-y-3">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />
+                    <Skeleton key={i} className="h-12 w-full rounded-md" />
                   ))}
                 </div>
               ) : !historyQuery.data || historyQuery.data.length === 0 ? (

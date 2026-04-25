@@ -134,12 +134,24 @@ export default function ConsumersPage() {
         </div>
       ) : (
         <Card>
-          <CardContent className="p-12 text-center">
-            <User className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-            <h3 className="font-semibold" data-testid="text-no-consumers">No consumers found</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {search ? "No consumers match your search criteria." : "Individual borrowers will appear here."}
+          <CardContent className="p-12 text-center flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <User className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold" data-testid="text-no-consumers">
+              {search ? "No consumers found" : "No consumers yet"}
+            </h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              {search
+                ? "Try adjusting your search or clearing the filter."
+                : "Register your first individual borrower to get started."}
             </p>
+            {!search && (
+              <Button size="sm" onClick={() => navigate("/borrowers")}
+                data-testid="button-empty-register-consumer">
+                Register Borrower
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

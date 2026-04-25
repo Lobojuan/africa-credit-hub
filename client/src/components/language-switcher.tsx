@@ -40,6 +40,7 @@ export function LanguageSwitcher() {
       <SelectTrigger
         className="w-[96px] h-8 text-xs gap-1 px-2"
         data-testid="select-language"
+        aria-label="Select language"
       >
         <Globe className="w-3.5 h-3.5 shrink-0" />
         <SelectValue />

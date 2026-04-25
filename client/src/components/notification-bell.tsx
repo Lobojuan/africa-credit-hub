@@ -105,6 +105,7 @@ export function NotificationBell() {
           variant="ghost"
           size="icon"
           data-testid="button-notification-bell"
+          aria-label="Notifications"
           className="relative"
         >
           <Bell className="w-4 h-4" />

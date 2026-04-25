@@ -4,7 +4,7 @@ import { Switch, Route, useLocation } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { useTranslation } from "react-i18next";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -16,7 +16,7 @@ import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { PasswordChangeDialog } from "@/components/password-change-dialog";
 import { PLATFORM_SUPPORT_EMAIL } from "@/lib/platform-config";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle, Shield, Fingerprint } from "lucide-react";
+import { LogOut, Loader2, MessageCircle, Building2, LayoutGrid, User, Clock, XCircle, Shield, Fingerprint, Search } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import {
@@ -310,6 +310,23 @@ function AuthenticatedApp() {
   const [passkeyRegistered, setPasskeyRegistered] = useState(false);
 
   useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        window.location.href = "/search";
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        document.querySelector<HTMLButtonElement>(
+          "[data-testid='button-sidebar-toggle']"
+        )?.click();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
     const shouldPrompt = sessionStorage.getItem("passkey_prompt") === "1";
     const dismissed = sessionStorage.getItem("passkey_banner_dismissed") === "1";
@@ -507,7 +524,7 @@ function AuthenticatedApp() {
           {isMobile ? (
             <header className="flex items-center justify-between px-3 py-2 border-b shrink-0 ltr-header h-14">
               <div className="flex items-center gap-2">
-                <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+                <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" aria-label="Toggle sidebar (Ctrl+B)" />
                 <span className="text-sm font-bold tracking-tight truncate max-w-[140px]" data-testid="text-mobile-brand">Africa Credit Hub</span>
               </div>
               <div className="flex items-center gap-1.5">
@@ -603,7 +620,7 @@ function AuthenticatedApp() {
             </header>
           ) : (
             <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b shrink-0 ltr-header">
-              <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" />
+              <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" aria-label="Toggle sidebar (Ctrl+B)" />
               {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
                 <Button
                   variant="outline"
@@ -644,6 +661,17 @@ function AuthenticatedApp() {
               <span className="text-base text-muted-foreground" data-testid="text-current-user">
                 {user.fullName}
               </span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden md:flex gap-1.5 text-xs text-muted-foreground h-8 px-2" onClick={() => window.location.href="/search"} data-testid="button-header-search">
+                    <Search className="h-4 w-4" />
+                    <kbd className="pointer-events-none hidden md:inline-flex h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-60">
+                      ⌘K
+                    </kbd>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Search (⌘K)</TooltipContent>
+              </Tooltip>
               <NotificationBell />
               <ThemeToggle />
               <LanguageSwitcher />

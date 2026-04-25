@@ -18,21 +18,14 @@ import { useAuth } from "@/hooks/use-auth";
 import { SUPPORTED_COUNTRIES } from "@/lib/currency";
 import { isGhanaMode, getDefaultCountry } from "@/lib/country-mode";
 import type { Institution } from "@shared/schema";
+import { getStatusBadgeClass, getStatusBadgeVariant } from "@/lib/status-colors";
 
 const institutionTypes = ["bank", "mfi", "utility", "telecom", "digital_lender", "sacco"] as const;
 const submissionFrequencies = ["daily", "weekly", "monthly"] as const;
 
 function StatusBadge({ status }: { status: string }) {
-  const variant = status === "active" ? "default" : status === "suspended" ? "destructive" : "secondary";
-  const className =
-    status === "active"
-      ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 dark:bg-green-900 dark:text-green-200"
-      : status === "suspended"
-        ? ""
-        : "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 dark:bg-yellow-900 dark:text-yellow-200";
-
   return (
-    <Badge variant={variant} className={className} data-testid={`badge-status-${status}`}>
+    <Badge variant={getStatusBadgeVariant(status)} className={getStatusBadgeClass(status)} data-testid={`badge-status-${status}`}>
       {status}
     </Badge>
   );

@@ -25,6 +25,7 @@ import { isGhanaMode, getDefaultCurrency, CREDIT_SCORE_FACTORS, getCountryConfig
 import { useCountryTheme } from "@/components/country-theme-provider";
 import { ReferenceRateBadge, CurrencyReference } from "@/components/currency-reference";
 import type { CreditAccount, AuditLog, ExchangeRate } from "@shared/schema";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 
 const POPULAR_CODES = ["USD", "EUR", "GBP", "ETB", "KES", "NGN", "ZAR", "EGP", "GHS", "TZS", "UGX", "XAF", "XOF", "MAD", "RWF"];
 
@@ -554,7 +555,7 @@ export default function Dashboard() {
   });
   const currencyOptions = useMemo(() => getDisplayCurrencies(detectedCurrency), [detectedCurrency]);
 
-  const { data: stats, isLoading: statsLoading } = useQuery<{
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery<{
     totalBorrowers: number;
     totalAccounts: number;
     totalInquiries: number;
@@ -731,6 +732,8 @@ export default function Dashboard() {
         ) : null}
       </div>
 
+      <OnboardingChecklist />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
         {statsLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
@@ -756,6 +759,17 @@ export default function Dashboard() {
             <StatCard title={t('dashboard.pendingApprovals')} value={stats.pendingApprovalCount.toLocaleString()} icon={CheckSquare} testId="stat-approvals" subtitle={t('dashboard.pendingApprovalsSub')} colorIndex={6} onClick={() => setSelectedDetail("approvals")} sparklineData={trends?.approvals} />
             <StatCard title={t('dashboard.openDisputes')} value={stats.openDisputeCount.toLocaleString()} icon={AlertCircle} testId="stat-disputes" subtitle={t('dashboard.openDisputesSub')} colorIndex={7} onClick={() => setSelectedDetail("disputes")} sparklineData={trends?.disputes} />
           </>
+        ) : statsError ? (
+          <div className="col-span-4 flex flex-col items-center justify-center py-16 text-center gap-3">
+            <AlertCircle className="w-10 h-10 text-destructive/60" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Dashboard data could not be loaded.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => refetchStats()}
+              data-testid="button-retry-stats">
+              Try Again
+            </Button>
+          </div>
         ) : null}
       </div>
 

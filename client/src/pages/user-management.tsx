@@ -62,6 +62,7 @@ export default function UserManagementPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
@@ -520,24 +521,32 @@ export default function UserManagementPage() {
       </Card>
 
       {/* Delete confirm dialog */}
-      <Dialog open={!!deleteConfirmUser} onOpenChange={(open) => !open && setDeleteConfirmUser(null)}>
+      <Dialog open={!!deleteConfirmUser} onOpenChange={(open) => { if (!open) { setDeleteConfirmText(""); setDeleteConfirmUser(null); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('users.confirmDelete')}</DialogTitle>
-            <DialogDescription className="sr-only">Dialog form content</DialogDescription>
+            <DialogDescription>
+              This action is permanent and cannot be undone. Type{" "}
+              <span className="font-semibold text-destructive">DELETE</span>{" "}
+              to confirm.
+            </DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground" data-testid="text-delete-confirm-message">
-            {t('users.confirmDeleteMessage', { name: deleteConfirmUser?.fullName })}
-          </p>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteConfirmUser(null)} data-testid="button-cancel-delete">{t('common.cancel')}</Button>
+          <Input
+            value={deleteConfirmText}
+            onChange={e => setDeleteConfirmText(e.target.value)}
+            placeholder="Type DELETE to confirm"
+            className="font-mono"
+            data-testid="input-delete-confirm"
+          />
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="outline" onClick={() => { setDeleteConfirmText(""); setDeleteConfirmUser(null); }} data-testid="button-cancel-delete">{t('common.cancel')}</Button>
             <Button
               variant="destructive"
-              disabled={deleteMutation.isPending}
-              onClick={() => deleteConfirmUser && deleteMutation.mutate(deleteConfirmUser.id)}
+              disabled={deleteMutation.isPending || deleteConfirmText !== "DELETE"}
+              onClick={() => { if (deleteConfirmText === "DELETE" && deleteConfirmUser) deleteMutation.mutate(deleteConfirmUser.id); }}
               data-testid="button-confirm-delete"
             >
-              {deleteMutation.isPending ? t('users.deleting') : t('common.delete')}
+              {deleteMutation.isPending ? t('users.deleting') : "Delete Permanently"}
             </Button>
           </div>
         </DialogContent>

@@ -19,6 +19,7 @@ export function ThemeToggle() {
           size="icon"
           variant="ghost"
           data-testid="button-theme-toggle"
+          aria-label="Toggle theme"
         >
           {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
         </Button>

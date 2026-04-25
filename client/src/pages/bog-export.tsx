@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Download, FileText, Eye, Loader2, FileSpreadsheet } from "lucide-react";
+import { Download, FileText, Eye, Loader2, FileSpreadsheet, History } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,17 @@ export default function BogExportPage() {
   const [correctionIndicator, setCorrectionIndicator] = useState("0");
   const [downloading, setDownloading] = useState(false);
   const [previewType, setPreviewType] = useState<BogFileType | null>(null);
+  const [exportHistory, setExportHistory] = useState<Array<{
+    filename: string;
+    fileType: string;
+    reportingDate: string;
+    timestamp: string;
+    rowCount?: number;
+  }>>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("bog_export_history") || "[]");
+    } catch { return []; }
+  });
 
   const filenamePreview = `SRN-${reportingDate}-${getTodayDate()}-1.1-${fileType}-${sequenceNumber}.csv`;
 
@@ -89,6 +100,18 @@ export default function BogExportPage() {
         desc += `\n\nDecryption Key: ${oneTimeKey}\nIV: ${iv}\nSHA-256: ${sha256}\n\nSave this key — it cannot be recovered.`;
       }
       toast({ title: "Encrypted export complete", description: desc });
+      const newEntry = {
+        filename,
+        fileType,
+        reportingDate,
+        timestamp: new Date().toLocaleTimeString(),
+        rowCount: undefined as number | undefined,
+      };
+      setExportHistory(prev => {
+        const updated = [newEntry, ...prev].slice(0, 10);
+        sessionStorage.setItem("bog_export_history", JSON.stringify(updated));
+        return updated;
+      });
     } catch (e: any) {
       toast({ title: "Export failed", description: e.message, variant: "destructive" });
     } finally {
@@ -270,6 +293,45 @@ export default function BogExportPage() {
           </Card>
         </div>
       </div>
+
+      {exportHistory.length > 0 && (
+        <Card data-testid="card-export-history">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-semibold">Session Export History</h3>
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => {
+                  setExportHistory([]);
+                  sessionStorage.removeItem("bog_export_history");
+                }}
+                data-testid="button-clear-history"
+              >
+                Clear
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {exportHistory.map((entry, i) => (
+                <div key={i}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/40 text-sm"
+                  data-testid={`row-history-${i}`}>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline">{entry.fileType}</Badge>
+                    <span className="font-mono text-xs text-muted-foreground truncate max-w-[280px]">
+                      {entry.filename}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground shrink-0 ml-4">
+                    {entry.timestamp}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

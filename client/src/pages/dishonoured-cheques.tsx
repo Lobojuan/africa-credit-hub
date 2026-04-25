@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Ban, Clock } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -150,11 +151,18 @@ export default function DishonouredChequesPage() {
               </Table>
             </div>
           ) : (
-            <div className="text-center py-12">
-              <Ban className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground" data-testid="text-no-cheques">
-                {t("dishonouredCheques.noRecords", "No dishonoured cheques found")}
+            <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-2">
+                <Ban className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="font-semibold text-foreground">No Dishonoured Cheques</h3>
+              <p className="text-sm text-muted-foreground max-w-xs" data-testid="text-no-cheques">
+                {t("dishonouredCheques.noRecords", "No dishonoured cheque records have been registered yet.")}
               </p>
+              <Button variant="outline" size="sm" onClick={() => navigate("/borrowers")}
+                data-testid="button-empty-go-borrowers">
+                View Borrowers
+              </Button>
             </div>
           )}
         </CardContent>
