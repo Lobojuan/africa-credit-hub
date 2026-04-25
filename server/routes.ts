@@ -3340,6 +3340,15 @@ export async function registerRoutes(
             } else if (updated.entityType === "credit_account") {
               await storage.createCreditAccount(payload);
               deliverWebhook("credit_account.created", payload, payload.organizationId).catch(() => {});
+              if (payload.borrowerId) {
+                storage.fireConsumerMonitoringAlerts(
+                  payload.borrowerId,
+                  "new_account",
+                  "New Credit Account Filed",
+                  `A new credit account has been filed on your credit profile.`,
+                  { accountNumber: payload.accountNumber, accountType: payload.accountType },
+                ).catch(err => console.warn("[NewAccount Push]", err));
+              }
             }
           } else if (updated.action === "UPDATE" && updated.entityId) {
             if (updated.entityType === "borrower") {
@@ -3475,6 +3484,13 @@ export async function registerRoutes(
         details: `Updated dispute status to ${dispute.status}`,
         ipAddress: req.ip || null,
       });
+      storage.fireConsumerMonitoringAlerts(
+        dispute.borrowerId,
+        "dispute_update",
+        "Dispute Status Updated",
+        `Your dispute has been updated to: ${dispute.status}.`,
+        { disputeId: dispute.id, status: dispute.status, resolution: dispute.resolution ?? undefined },
+      ).catch(err => console.warn("[Dispute Push]", err));
       res.json(dispute);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
@@ -5770,6 +5786,20 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         creditAccountId: req.params.creditAccountId as string,
       });
       const entry = await storage.createPaymentHistory(parsed);
+      if (entry.status === "late" || entry.status === "missed") {
+        try {
+          const acct = await storage.getCreditAccount(entry.creditAccountId);
+          if (acct?.borrowerId) {
+            storage.fireConsumerMonitoringAlerts(
+              acct.borrowerId,
+              "late_payment",
+              "Late Payment Recorded",
+              `A ${entry.status} payment has been recorded on one of your credit accounts.`,
+              { creditAccountId: entry.creditAccountId, status: entry.status, daysLate: entry.daysLate, period: entry.period },
+            ).catch(err => console.warn("[LatePayment Push]", err));
+          }
+        } catch {}
+      }
       res.status(201).json(entry);
     } catch (e: any) {
       res.status(400).json({ message: e.message });
