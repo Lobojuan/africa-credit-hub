@@ -1374,7 +1374,7 @@ export default function ConsumerPortalPage() {
                     </div>
                     {scoreHistoryQuery.isLoading ? (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground py-4 justify-center"><Loader2 className="w-3 h-3 animate-spin" /> Loading...</div>
-                    ) : !scoreHistoryQuery.data || scoreHistoryQuery.data.length === 0 ? (
+                    ) : !scoreHistoryQuery.data || scoreHistoryQuery.data.length < 2 ? (
                       <div className="space-y-2">
                         <p className="text-xs text-muted-foreground">No historical score data on file yet. Your score trend will appear here as your credit file is updated over time.</p>
                         <div className="bg-muted/30 rounded-xl p-3">
@@ -1394,7 +1394,7 @@ export default function ConsumerPortalPage() {
                     ) : (
                       <div>
                         {(() => {
-                          const sorted = [...scoreHistoryQuery.data].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+                          const sorted = [...scoreHistoryQuery.data].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(-12);
                           const oldestScore = sorted[0]?.score ?? 0;
                           const newestScore = sorted[sorted.length - 1]?.score ?? 0;
                           const prevScore = sorted.length >= 2 ? sorted[sorted.length - 2]?.score : null;
