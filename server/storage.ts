@@ -5,7 +5,7 @@ import { sendPushToConsumerAccount } from "./push-notifications";
 import { encryptBorrowerPII, decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
-  courtJudgments, consentRecords, paymentHistory, creditScoreHistory, institutions, billingRecords, creditReportLogs, apiKeys,
+  courtJudgments, consentRecords, paymentHistory, creditScoreHistory, consumerScoreHistory, institutions, billingRecords, creditReportLogs, apiKeys,
   exchangeRates, retentionPolicies, apiConfigurations, organizations, dishonouredCheques, borrowerAlerts,
   contactEvents, linkClusters, assetTraceRecords, collectionAssignments, collectionAttempts, collectionSlaSettings,
   type ContactEvent, type LinkCluster, type AssetTraceRecord,
@@ -414,7 +414,7 @@ export interface IStorage {
   firePortfolioTriggers(borrowerId: string, eventType: string, eventData: object): Promise<number>;
   getAccountTrends(creditAccountId: string): Promise<{ period: string; amountDue: string; amountPaid: string; status: string; daysLate: number }[]>;
   getBorrowerTrendSummary(borrowerId: string): Promise<{ scoreHistory: { score: number; createdAt: Date }[]; accountCount: number; activeDelinquencies: number; balanceTrend: string }>;
-  recordConsumerScoreHistory(borrowerId: string, score: number, factors?: string): Promise<void>;
+  recordConsumerScoreHistory(nationalId: string, score: number): Promise<void>;
 
   // Consumer Monitoring
   getConsumerMonitoringPrefs(consumerAccountId: string): Promise<ConsumerMonitoringPrefs | undefined>;
@@ -3396,21 +3396,16 @@ export class DatabaseStorage implements IStorage {
     return { scoreHistory: scoreRows.map(r => ({ score: r.score, createdAt: r.createdAt! })), accountCount: accounts.length, activeDelinquencies: delinquent, balanceTrend };
   }
 
-  async recordConsumerScoreHistory(borrowerId: string, score: number, factors?: string): Promise<void> {
+  async recordConsumerScoreHistory(nationalId: string, score: number): Promise<void> {
+    if (!nationalId) return;
     const [latest] = await db
-      .select({ score: creditScoreHistory.score })
-      .from(creditScoreHistory)
-      .where(eq(creditScoreHistory.borrowerId, borrowerId))
-      .orderBy(desc(creditScoreHistory.createdAt))
+      .select({ score: consumerScoreHistory.score })
+      .from(consumerScoreHistory)
+      .where(eq(consumerScoreHistory.nationalId, nationalId))
+      .orderBy(desc(consumerScoreHistory.recordedAt))
       .limit(1);
     if (latest && latest.score === score) return;
-    await db.insert(creditScoreHistory).values({
-      borrowerId,
-      score,
-      scoreModel: "v2.6_bureau",
-      factors: factors ?? null,
-      provider: "Africa Credit Hub",
-    });
+    await db.insert(consumerScoreHistory).values({ nationalId, score });
   }
 
   // -------------------------------------------------------------------------

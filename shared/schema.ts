@@ -509,6 +509,17 @@ export const creditScoreHistory = pgTable("credit_score_history", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const consumerScoreHistory = pgTable("consumer_score_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  nationalId: text("national_id").notNull(),
+  score: integer("score").notNull(),
+  recordedAt: timestamp("recorded_at").defaultNow(),
+});
+
+export const insertConsumerScoreHistorySchema = createInsertSchema(consumerScoreHistory).omit({ id: true, recordedAt: true });
+export type InsertConsumerScoreHistory = z.infer<typeof insertConsumerScoreHistorySchema>;
+export type ConsumerScoreHistory = typeof consumerScoreHistory.$inferSelect;
+
 export const apiConfigurations = pgTable("api_configurations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
