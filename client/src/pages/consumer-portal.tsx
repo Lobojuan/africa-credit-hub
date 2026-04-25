@@ -131,7 +131,7 @@ function DisputeFilingDialog() {
 // ---------------------------------------------------------------------------
 // PDF Report Download
 // ---------------------------------------------------------------------------
-function CreditReportDownloadButton({ borrowerName }: { borrowerName: string }) {
+function CreditReportDownloadButton() {
   const [loading, setLoading] = useState(false);
 
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -1272,7 +1272,7 @@ export default function ConsumerPortalPage() {
                           <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Try Again
                         </Button>
                         <DisputeFilingDialog />
-                        <CreditReportDownloadButton borrowerName="Consumer" />
+                        <CreditReportDownloadButton />
                       </div>
                       <p className="text-[10px] text-muted-foreground">
                         <Lock className="w-3 h-3 inline mr-1" />
@@ -2063,7 +2063,7 @@ export default function ConsumerPortalPage() {
                     <p className="text-xs text-muted-foreground mb-3">
                       Download a formatted PDF summary of your credit profile — suitable for sharing with lenders or employers.
                     </p>
-                    <CreditReportDownloadButton borrowerName={data?.borrower ? `${data.borrower.firstName || ""} ${data.borrower.lastName || ""}`.trim() || data.borrower.companyName || "Consumer" : "Consumer"} />
+                    <CreditReportDownloadButton />
                   </CardContent>
                 </Card>
 
