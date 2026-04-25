@@ -3461,6 +3461,7 @@ export class DatabaseStorage implements IStorage {
           sentViaSms: false,
           sentViaEmail: false,
         });
+        sendPushToConsumerAccount(pref.consumerAccountId, title, message).catch(() => {});
         fired++;
       }
     }
