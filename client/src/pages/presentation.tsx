@@ -508,12 +508,12 @@ function SlideContent({ type }: { type: string }) {
               </div>
               <CompareRow feature="Consumer Reports" cdh="Both unified" others="Single institution" othersIcon="x" />
               <CompareRow feature="Corporate Reports" cdh="Full ecosystem" others="Corporate focus" othersIcon="warn" />
-              <CompareRow feature="Scoring" cdh="AI-powered" others="Basic models" othersIcon="warn" />
-              <CompareRow feature="Alternative Data" cdh="6+ sources" others="Traditional only" othersIcon="x" />
+              <CompareRow feature="ML Default Risk" cdh="African-trained model" others="Not available" othersIcon="x" />
+              <CompareRow feature="Alternative Data" cdh="Open banking + telco" others="Traditional only" othersIcon="x" />
+              <CompareRow feature="Collateral Verification" cdh="DVLA & Lands Commission" others="Manual / none" othersIcon="x" />
+              <CompareRow feature="Regulatory Exports" cdh="BoG, BSL, CBK, CBN" others="Custom build required" othersIcon="x" />
               <CompareRow feature="Fraud Detection" cdh="Real-time AI" others="Basic checks" othersIcon="warn" />
-              <CompareRow feature="API Integration" cdh="API-first" others="Custom integrations" othersIcon="warn" />
-              <CompareRow feature="Data Submission" cdh="Real-time + batch" others="Batch-heavy" othersIcon="warn" />
-              <CompareRow feature="Compliance" cdh="Act 726, L.I. 2394, Act 843" others="Compliant" othersIcon="warn" />
+              <CompareRow feature="API Integration" cdh="API-first, 54 countries" others="Custom integrations" othersIcon="warn" />
               <CompareRow feature="Go-Live" cdh="24 hours" others="12-24 months" othersIcon="x" />
             </div>
           </div>

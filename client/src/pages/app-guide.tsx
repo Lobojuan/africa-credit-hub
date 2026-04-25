@@ -14,10 +14,10 @@ import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 type UserRole = "super_admin" | "admin" | "lender" | "regulator" | "viewer";
 
 const ROLE_CONFIG: Record<UserRole, { label: string; color: string; bg: string; description: string }> = {
-  super_admin: { label: "Super Admin", color: "text-purple-700 dark:text-purple-300", bg: "bg-purple-100 dark:bg-purple-900/30", description: "Full platform access — all 16 topic areas" },
-  admin:       { label: "Administrator", color: "text-blue-700 dark:text-blue-300",   bg: "bg-blue-100 dark:bg-blue-900/30",   description: "Institution-level operations — 14 topic areas" },
-  lender:      { label: "Lender",        color: "text-teal-700 dark:text-teal-300",   bg: "bg-teal-100 dark:bg-teal-900/30",   description: "Credit origination & borrower tools — 9 topic areas" },
-  regulator:   { label: "Regulator",     color: "text-orange-700 dark:text-orange-300", bg: "bg-orange-100 dark:bg-orange-900/30", description: "Oversight, compliance & reporting — 8 topic areas" },
+  super_admin: { label: "Super Admin", color: "text-purple-700 dark:text-purple-300", bg: "bg-purple-100 dark:bg-purple-900/30", description: "Full platform access — all 18 topic areas" },
+  admin:       { label: "Administrator", color: "text-blue-700 dark:text-blue-300",   bg: "bg-blue-100 dark:bg-blue-900/30",   description: "Institution-level operations — 16 topic areas" },
+  lender:      { label: "Lender",        color: "text-teal-700 dark:text-teal-300",   bg: "bg-teal-100 dark:bg-teal-900/30",   description: "Credit origination & borrower tools — 10 topic areas" },
+  regulator:   { label: "Regulator",     color: "text-orange-700 dark:text-orange-300", bg: "bg-orange-100 dark:bg-orange-900/30", description: "Oversight, compliance & reporting — 9 topic areas" },
   viewer:      { label: "Viewer",        color: "text-slate-700 dark:text-slate-300", bg: "bg-slate-100 dark:bg-slate-900/30", description: "Read-only browsing — 4 topic areas" },
 };
 
@@ -130,6 +130,8 @@ const GUIDES: GuideSection[] = [
       { title: "Review the amortization schedule", description: "After entering loan details, the system auto-generates an amortization schedule showing each repayment date, principal, interest, and outstanding balance. Review it before submitting." },
       { title: "Submit for maker-checker approval", description: "Click Submit. The application enters Pending Approvals. An Admin or Super Admin (not the submitter) must approve it before disbursement is triggered.", tip: "You cannot approve your own loan applications." },
       { title: "Register collateral", description: "Click 'Collateral Registry' in the sidebar. Click '+ Register Collateral'. Enter asset type (land, vehicle, equipment, securities), estimated value, location, and document reference.", path: "/collateral-registry" },
+      { title: "Verify vehicle collateral via DVLA", description: "For vehicle or motor vehicle collateral, enter the DVLA reference number in the 'DVLA Reference' field on the collateral form. The system checks the Ghana DVLA database in real time and displays the registered owner and encumbrance status before you save.", tip: "DVLA verification prevents fraud — always verify before accepting a vehicle as collateral." },
+      { title: "Verify land collateral via Lands Commission", description: "For land or real estate collateral, enter the title deed number in the 'Lands Commission Reference' field. The system queries the Lands Commission registry to confirm ownership, parcel boundaries, and any existing charges.", tip: "Lands Commission verification is mandatory for mortgage-secured loans in Ghana." },
       { title: "Link collateral to a loan", description: "From the Collateral Registry, open an asset record and click 'Link to Loan'. Select the approved loan. The asset is now marked as encumbered and the lien is recorded.", tip: "One asset can only be linked to one active loan at a time." },
       { title: "Release collateral after repayment", description: "Once a loan reaches Fully Repaid or Closed status, open the linked collateral record and click 'Release Lien'. The asset returns to unencumbered status." },
     ],
@@ -175,6 +177,7 @@ const GUIDES: GuideSection[] = [
     steps: [
       { title: "Open the AI Command Center", description: "Click 'AI Command Center' in the Intelligence section of the sidebar. Type a natural-language query — e.g. 'Show me all defaulted borrowers in Ghana' — and the AI runs the analysis.", path: "/ai-command-center" },
       { title: "Run a borrower AI risk analysis", description: "On any borrower detail page, click the purple 'AI Risk Analysis' button. You'll receive a risk score, key risk factors, regulatory flags, and recommended actions." },
+      { title: "Read the Predictive Default Risk card", description: "On borrowers with medium or high risk, the 'Predictive Default Risk' card appears on their detail page. It shows the probability of default within 90 days (Low / Medium / High), a confidence percentage, and three contributing risk factors drawn from the African-trained ML model — covering payment behaviour, open banking signals, and cross-lender exposure.", tip: "The card is hidden for low-risk borrowers to reduce noise. Medium and high risk borrowers always display it for proactive intervention." },
       { title: "Use AI on credit reports", description: "Inside any generated credit report, click 'AI Summary'. The AI produces a plain-language narrative of the borrower's credit standing — ideal for non-technical stakeholders." },
       { title: "Explore Portfolio Intelligence", description: "Click 'Portfolio Intelligence' in the sidebar. The AI highlights concentration risks, sector exposures, vintage trends, and emerging portfolio risks with supporting charts.", path: "/portfolio-intelligence" },
       { title: "Use the AI chatbot assistant", description: "The floating chat icon in the bottom-right corner opens the Credit Registry Assistant. Ask questions about data, regulations, or how to use any feature — it responds with streaming answers." },
@@ -200,7 +203,7 @@ const GUIDES: GuideSection[] = [
   {
     id: "regulatory-reporting",
     title: "Regulatory Reporting",
-    description: "Access the regulatory dashboard, generate BoG/BSL exports, and manage the compliance queue.",
+    description: "Access the regulatory dashboard, generate BoG/BSL/CBK/CBN exports, and manage the compliance queue.",
     icon: Landmark,
     iconColor: "text-emerald-600",
     roles: ["super_admin", "admin", "regulator"],
@@ -208,6 +211,8 @@ const GUIDES: GuideSection[] = [
       { title: "Open the Regulatory Dashboard", description: "Click 'Regulatory Dashboard' in the sidebar. See NPL ratios, data submission rates, dispute resolution performance, and sector exposure across all institutions.", path: "/regulatory-dashboard" },
       { title: "Filter by country, institution, and date", description: "Use the filter controls at the top of the Regulatory Dashboard to drill into specific markets, institution categories, or time periods." },
       { title: "Generate a BoG or BSL export", description: "Click 'BOG Export' (Ghana) or 'BSL Export' (Sierra Leone) in the sidebar. Generate regulatory submission files in the exact format required by the central bank.", path: "/bog-export" },
+      { title: "Generate a CBK export (Kenya)", description: "Click 'CBK Export' in the sidebar. Select the reporting period and institution filter, then click Generate. The export produces a Central Bank of Kenya-formatted CRB submission file ready for direct upload.", path: "/cbk-export", tip: "CBK exports include all credit accounts, NPL flags, and restructured facilities — no manual formatting needed." },
+      { title: "Generate a CBN export (Nigeria)", description: "Click 'CBN Export' in the sidebar. Generate a Central Bank of Nigeria-compliant credit bureau data file. Supports both individual and corporate borrower schedules in the CBN prescribed XML format.", path: "/cbn-export" },
       { title: "Review the Compliance Queue", description: "Click 'Compliance Queue' to see all records flagged for regulatory attention — SLA breaches, data quality issues, escalated disputes.", path: "/compliance-queue" },
       { title: "Run an AI compliance report", description: "In 'Regulatory Compliance', select a country from the dropdown and click 'Generate AI Compliance Report' for an AI-powered jurisdiction assessment." },
       { title: "View the Audit Trail", description: "Click 'Audit Trail' for a tamper-evident log of every action on the platform. Filter by user, action type, or date. Export as CSV or Excel.", path: "/audit-trail", tip: "Audit logs use SHA-256 hash chaining — they cannot be modified by anyone, including Super Admins." },
@@ -294,6 +299,40 @@ const GUIDES: GuideSection[] = [
       { title: "Toggle maintenance mode", description: "Under System Settings, use the Maintenance Mode toggle to put the platform into a read-only state for scheduled maintenance. Only Super Admins can toggle this — all API writes are blocked during maintenance.", tip: "Always notify institutions before enabling maintenance mode." },
       { title: "Check system status", description: "Click 'System Status' in the Infrastructure section for real-time health metrics — API response times, database latency, error rates, and active sessions.", path: "/system-status" },
       { title: "Review security settings", description: "Click 'Security' in Infrastructure for password policy, login anomaly detection, active session management, and PII encryption configuration.", path: "/security" },
+    ],
+  },
+  {
+    id: "open-banking",
+    title: "Open Banking & Alternative Data",
+    description: "Connect African open banking providers, pull live bank statements, and enrich borrower profiles with alternative data.",
+    icon: Network,
+    iconColor: "text-sky-600",
+    roles: ["super_admin", "admin", "lender", "regulator"],
+    steps: [
+      { title: "Open the Open Banking hub", description: "Click 'Open Banking' in the sidebar under Credit Data. The hub lists all connected African open banking providers — covering Ghana (GhIPSS), Kenya (Open Banking Kenya), Nigeria (NIBSS Open Banking), South Africa (Open Finance SA), and more.", path: "/open-banking" },
+      { title: "Connect a bank account for a borrower", description: "On any borrower detail page, click 'Link Bank Account'. The borrower authenticates with their bank via the open banking OAuth flow. Once connected, live account data is pulled immediately.", tip: "The borrower must provide explicit consent — the system creates a dated consent record automatically." },
+      { title: "View live bank statement data", description: "After connection, open the 'Bank Statements' tab on the borrower profile. See categorised transactions — salary credits, recurring bills, cash withdrawals — going back 12 months." },
+      { title: "Review income and cash-flow analysis", description: "The system auto-calculates average monthly income, income stability score, recurring expense ratio, and net disposable income from the connected bank data. These figures feed directly into the credit score." },
+      { title: "Enrich profiles with mobile money data", description: "For unbanked borrowers, connect mobile money accounts (M-Pesa, MTN MoMo, Airtel Money, Wave) as an alternative data source. Transaction patterns and float balances contribute to the alternative credit score." },
+      { title: "Manage data provider consents", description: "Click 'Consent Management' in the sidebar. All open banking and mobile money consents are listed with their scope, expiry date, and revocation option. Borrowers can revoke at any time, which triggers immediate data deletion.", path: "/consent-management" },
+      { title: "Monitor cross-lender risk alerts", description: "The platform aggregates open banking signals across all participating lenders to detect simultaneous multi-lender applications. A red 'Cross-Lender Alert' badge appears on the borrower profile when suspicious simultaneous borrowing is detected.", tip: "Cross-lender alerts are shared across all member institutions in real time — powered by the open banking data layer." },
+    ],
+  },
+  {
+    id: "predictive-risk",
+    title: "Predictive Default Risk",
+    description: "Understand and act on the African-trained ML model that predicts 90-day default probability for each borrower.",
+    icon: Activity,
+    iconColor: "text-rose-500",
+    roles: ["super_admin", "admin"],
+    steps: [
+      { title: "Find the Predictive Default Risk card", description: "On any borrower detail page, scroll to the 'Predictive Default Risk' card. It appears for Medium and High risk borrowers only — Low risk borrowers do not show the card to reduce noise.", tip: "If a borrower you expect to see the card for does not show it, their current ML risk level is Low." },
+      { title: "Read the default probability score", description: "The card shows the probability of default within the next 90 days as a percentage (e.g. 67%), a confidence level (e.g. High Confidence — 89%), and a colour-coded risk band: green (Low <30%), amber (Medium 30–69%), red (High ≥70%)." },
+      { title: "Review the three contributing risk factors", description: "Below the score, three key factors explain why the model arrived at this prediction — for example: 'Irregular payment cadence over last 6 months', 'Multiple simultaneous open banking applications detected', 'Cross-lender exposure above country average'. These are drawn from payment behaviour, open banking signals, and cross-lender data." },
+      { title: "Run the AI Risk Analysis for deeper detail", description: "Click the purple 'AI Risk Analysis' button on the same borrower page for a fuller AI-generated narrative including regulatory flags, recommended actions, and a comparison against the country peer group.", tip: "The Predictive Default Risk card uses the ML model output; the AI Risk Analysis uses the language model — they complement each other." },
+      { title: "Use the Portfolio Intelligence view for cohort analysis", description: "Click 'Portfolio Intelligence' in the sidebar. Filter by Risk Level = High to see all High-risk borrowers in your portfolio ranked by default probability. Use this for proactive outreach before defaults occur.", path: "/portfolio-intelligence" },
+      { title: "Understand the model's African training data", description: "Navigate to 'Score Methodology' and select the 'ML Model' tab. The model was trained on payment history from 18 African markets, open banking transaction patterns, telco payment data, and cross-lender exposure records — specifically calibrated for African economic cycles and informal income patterns.", path: "/score-methodology" },
+      { title: "Export High-risk borrowers for intervention", description: "From 'Export Center', select 'High-Risk Borrower Extract'. This produces a CSV of all borrowers with a 90-day default probability above your configured threshold — ready for your collections or relationship management team.", path: "/export-center" },
     ],
   },
 ];
