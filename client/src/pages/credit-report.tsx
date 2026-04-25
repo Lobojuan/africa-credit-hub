@@ -12,7 +12,7 @@ import {
   ArrowLeft, Printer, FileText, Download, User, Building2, CreditCard, Search,
   AlertTriangle, Shield, Gavel, CheckCircle2, XCircle, Clock, Flag,
   Calendar, MapPin, Phone, Mail, Briefcase, Hash, TrendingUp, Activity,
-  Landmark, BarChart3, Layers, Table, Loader2, Brain, Sparkles, Globe,
+  Landmark, BarChart3, Layers, Table, Loader2, Brain, Sparkles, Globe, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -679,11 +679,31 @@ export default function CreditReportPage() {
                 {generateMutation.isPending ? "Generating..." : "Verify Consent & Generate Report"}
               </Button>
             </div>
-            {generateMutation.isError && (
-              <p className="text-sm text-destructive">
-                {(generateMutation.error as any)?.message || "Failed to generate report. Please try again."}
-              </p>
-            )}
+            {generateMutation.isError && (() => {
+              const errMsg: string = (generateMutation.error as any)?.message || "";
+              const isFrozen = errMsg.toLowerCase().includes("frozen");
+              if (isFrozen) {
+                return (
+                  <div
+                    className="flex gap-3 items-start rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 mt-2"
+                    data-testid="banner-credit-freeze"
+                  >
+                    <Lock className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Credit Freeze Active</p>
+                      <p className="text-sm text-amber-700 dark:text-amber-400">
+                        This consumer has placed a credit freeze on their file. Access is not permitted until the freeze is lifted by the data subject.
+                      </p>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <p className="text-sm text-destructive" data-testid="text-report-error">
+                  {errMsg || "Failed to generate report. Please try again."}
+                </p>
+              );
+            })()}
           </CardContent>
         </Card>
       )}
