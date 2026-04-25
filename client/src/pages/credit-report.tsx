@@ -681,7 +681,7 @@ export default function CreditReportPage() {
             </div>
             {generateMutation.isError && (() => {
               const errMsg: string = (generateMutation.error as any)?.message || "";
-              const isFrozen = errMsg.toLowerCase().includes("frozen");
+              const isFrozen = errMsg.startsWith("403:") && errMsg.toLowerCase().includes("frozen");
               if (isFrozen) {
                 return (
                   <div
