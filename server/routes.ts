@@ -3477,20 +3477,24 @@ export async function registerRoutes(
   app.patch("/api/disputes/:id", requireRole("admin", "regulator"), async (req, res) => {
     try {
       const validatedBody = insertDisputeSchema.partial().parse(req.body);
-      const dispute = await storage.updateDispute(req.params["id"] as string, { status: (validatedBody as any).status, resolution: (validatedBody as any).resolution });
+      const existingDispute = await storage.getDispute(req.params["id"] as string);
+      const newStatus: string | undefined = (validatedBody as any).status;
+      const dispute = await storage.updateDispute(req.params["id"] as string, { status: newStatus, resolution: (validatedBody as any).resolution });
       if (!dispute) return res.status(404).json({ message: "Dispute not found" });
       await storage.createAuditLog({
         action: "UPDATE_DISPUTE", entity: "dispute", entityId: dispute.id, userId: req.session?.userId,
         details: `Updated dispute status to ${dispute.status}`,
         ipAddress: req.ip || null,
       });
-      storage.fireConsumerMonitoringAlerts(
-        dispute.borrowerId,
-        "dispute_update",
-        "Dispute Status Updated",
-        `Your dispute has been updated to: ${dispute.status}.`,
-        { disputeId: dispute.id, status: dispute.status, resolution: dispute.resolution ?? undefined },
-      ).catch(err => console.warn("[Dispute Push]", err));
+      if (newStatus && existingDispute && newStatus !== existingDispute.status) {
+        storage.fireConsumerMonitoringAlerts(
+          dispute.borrowerId,
+          "dispute_update",
+          "Dispute Status Updated",
+          `Your dispute status changed from ${existingDispute.status} to ${dispute.status}.`,
+          { disputeId: dispute.id, previousStatus: existingDispute.status, newStatus: dispute.status, resolution: dispute.resolution ?? undefined },
+        ).catch(err => console.warn("[Dispute Push]", err));
+      }
       res.json(dispute);
     } catch (e: any) {
       res.status(400).json({ message: e.message });

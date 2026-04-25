@@ -3406,13 +3406,14 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     if (latest && latest.score === score) return;
     await db.insert(consumerScoreHistory).values({ nationalId, borrowerId: borrowerId ?? null, score });
-    if (borrowerId) {
-      const prevScore = latest?.score ?? null;
-      const message = prevScore !== null
-        ? `Your credit score changed from ${prevScore} to ${score}.`
-        : `Your credit score has been recorded: ${score}.`;
-      this.fireConsumerMonitoringAlerts(borrowerId, "score_change", "Credit Score Changed", message, { previousScore: prevScore, newScore: score })
-        .catch(err => console.warn("[Score Push]", err));
+    if (borrowerId && latest) {
+      this.fireConsumerMonitoringAlerts(
+        borrowerId,
+        "score_change",
+        "Credit Score Changed",
+        `Your credit score changed from ${latest.score} to ${score}.`,
+        { previousScore: latest.score, newScore: score },
+      ).catch(err => console.warn("[Score Push]", err));
     }
   }
 
