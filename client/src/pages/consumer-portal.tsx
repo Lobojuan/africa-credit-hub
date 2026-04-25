@@ -21,7 +21,7 @@ interface ConsumerDispute { id: string; disputeType: string; description: string
 interface ConsumerInquiry { id: string; institution: string; purpose: string; isSoftPull: boolean; createdAt: string; }
 interface PushStatusResponse { subscribed: boolean; vapidPublicKey?: string; }
 interface FreezeResponse { frozen: boolean; }
-interface ImprovementTipsResponse { score: number; tips: { id: string; title: string; impact: string; description: string }[] }
+interface ImprovementTipsResponse { score: number; tips: { id: string; title: string; estimatedImpact: string; detail: string }[] }
 interface PushSubscribeResponse { subscribed: boolean; }
 interface ConsumerMonitoringAlert { id: string; alertType: string; message: string; isRead: boolean; createdAt: string; }
 type MonitoringPrefs = { alertOnInquiry: boolean; alertOnScoreChange: boolean; alertOnNewAccount: boolean; alertOnDelinquency: boolean; emailAlerts: boolean; smsAlerts: boolean; }
@@ -1198,11 +1198,11 @@ export default function ConsumerPortalPage() {
 
                 {/* ─── CREDIT FREEZE BANNER ──────────────────────────────────── */}
                 {freezeQuery.data?.frozen && (
-                  <div className="bg-blue-600 text-white rounded-xl px-4 py-3 flex items-center gap-3 shadow" data-testid="banner-credit-freeze">
+                  <div className="bg-red-600 text-white rounded-xl px-4 py-3 flex items-center gap-3 shadow" data-testid="banner-credit-freeze">
                     <Snowflake className="w-5 h-5 flex-shrink-0 animate-pulse" />
                     <div className="flex-1">
                       <p className="text-sm font-bold leading-tight">Credit File Frozen</p>
-                      <p className="text-xs text-blue-100 leading-snug">Lenders cannot access your credit report. Toggle off the freeze below when applying for credit.</p>
+                      <p className="text-xs text-red-100 leading-snug">Lenders cannot access your credit report. Toggle off the freeze below when applying for credit.</p>
                     </div>
                   </div>
                 )}
@@ -1426,19 +1426,19 @@ export default function ConsumerPortalPage() {
                     ) : (
                       <div className="space-y-2">
                         {tipsQuery.data.tips.map((tip: ImprovementTipsResponse["tips"][number]) => (
-                          <div key={tip.id} data-testid={`tip-${tip.id}`} className={`rounded-xl p-3 border ${tip.impact === "high" ? "border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800" : tip.impact === "medium" ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800" : "border-muted bg-muted/20"}`}>
+                          <div key={tip.id} data-testid={`tip-${tip.id}`} className={`rounded-xl p-3 border ${tip.estimatedImpact === "high" ? "border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800" : tip.estimatedImpact === "medium" ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800" : "border-muted bg-muted/20"}`}>
                             <div className="flex items-start gap-2">
-                              <div className={`mt-0.5 flex-shrink-0 ${tip.impact === "high" ? "text-red-500" : tip.impact === "medium" ? "text-amber-500" : "text-muted-foreground"}`}>
-                                {tip.impact === "high" ? <AlertTriangle className="w-3.5 h-3.5" /> : tip.impact === "medium" ? <Clock className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />}
+                              <div className={`mt-0.5 flex-shrink-0 ${tip.estimatedImpact === "high" ? "text-red-500" : tip.estimatedImpact === "medium" ? "text-amber-500" : "text-muted-foreground"}`}>
+                                {tip.estimatedImpact === "high" ? <AlertTriangle className="w-3.5 h-3.5" /> : tip.estimatedImpact === "medium" ? <Clock className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />}
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-0.5">
                                   <p className="text-xs font-semibold">{tip.title}</p>
-                                  <Badge variant="outline" className={`text-[9px] px-1 h-4 ${tip.impact === "high" ? "border-red-300 text-red-600" : tip.impact === "medium" ? "border-amber-300 text-amber-600" : "border-muted text-muted-foreground"}`}>
-                                    {tip.impact} impact
+                                  <Badge variant="outline" className={`text-[9px] px-1 h-4 ${tip.estimatedImpact === "high" ? "border-red-300 text-red-600" : tip.estimatedImpact === "medium" ? "border-amber-300 text-amber-600" : "border-muted text-muted-foreground"}`}>
+                                    {tip.estimatedImpact} impact
                                   </Badge>
                                 </div>
-                                <p className="text-[11px] text-muted-foreground leading-relaxed">{tip.description}</p>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">{tip.detail}</p>
                               </div>
                             </div>
                           </div>

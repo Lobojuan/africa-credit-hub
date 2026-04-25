@@ -16529,36 +16529,36 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
       const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
 
-      const tips: { id: string; title: string; description: string; impact: "high" | "medium" | "low"; icon: string }[] = [];
+      const tips: { id: string; title: string; detail: string; estimatedImpact: "high" | "medium" | "low"; icon: string }[] = [];
       const delinquentAccounts = accounts.filter(a => a.status === "delinquent" || a.daysInArrears > 0);
       const recentInquiries = inquiries.filter(i => i.createdAt && new Date(i.createdAt).getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000);
 
       if (delinquentAccounts.length > 0) {
-        tips.push({ id: "settle-arrears", title: "Settle Outstanding Arrears", description: `You have ${delinquentAccounts.length} account(s) with outstanding payments. Bringing these current could significantly boost your score within 30 days.`, impact: "high", icon: "alert" });
+        tips.push({ id: "settle-arrears", title: "Settle Outstanding Arrears", detail: `You have ${delinquentAccounts.length} account(s) with outstanding payments. Bringing these current could significantly boost your score within 30 days.`, estimatedImpact: "high", icon: "alert" });
       }
       if (recentInquiries.length > 3) {
-        tips.push({ id: "reduce-inquiries", title: "Reduce Credit Applications", description: `You have ${recentInquiries.length} credit inquiries in the past 90 days. Multiple applications signal risk to lenders. Consider waiting 3–6 months before applying again.`, impact: "medium", icon: "search" });
+        tips.push({ id: "reduce-inquiries", title: "Reduce Credit Applications", detail: `You have ${recentInquiries.length} credit inquiries in the past 90 days. Multiple applications signal risk to lenders. Consider waiting 3–6 months before applying again.`, estimatedImpact: "medium", icon: "search" });
       }
       const defaultedAccounts = accounts.filter(a => a.status === "default" || a.status === "written_off");
       if (defaultedAccounts.length > 0) {
-        tips.push({ id: "negotiate-defaults", title: "Negotiate Settlement on Defaults", description: "Contact lenders about your defaulted accounts. Even partial settlements can improve your credit standing and may be noted as 'settled' on your file.", impact: "high", icon: "handshake" });
+        tips.push({ id: "negotiate-defaults", title: "Negotiate Settlement on Defaults", detail: "Contact lenders about your defaulted accounts. Even partial settlements can improve your credit standing and may be noted as 'settled' on your file.", estimatedImpact: "high", icon: "handshake" });
       }
       const totalDebt = accounts.reduce((sum, a) => sum + Number(a.currentBalance || 0), 0);
       const totalLimit = accounts.reduce((sum, a) => sum + Number(a.originalAmount || 0), 0);
       if (totalLimit > 0 && totalDebt / totalLimit > 0.6) {
-        tips.push({ id: "reduce-utilisation", title: "Reduce Credit Utilisation", description: `Your current credit utilisation is ${Math.round((totalDebt / totalLimit) * 100)}%. Aim to keep it below 30% by paying down balances. This is one of the fastest score boosters.`, impact: "high", icon: "chart" });
+        tips.push({ id: "reduce-utilisation", title: "Reduce Credit Utilisation", detail: `Your current credit utilisation is ${Math.round((totalDebt / totalLimit) * 100)}%. Aim to keep it below 30% by paying down balances. This is one of the fastest score boosters.`, estimatedImpact: "high", icon: "chart" });
       }
       if (accounts.length < 2) {
-        tips.push({ id: "diversify-credit", title: "Build a Diverse Credit History", description: "Having only one type of credit limits your score potential. A mix of instalment loans and revolving credit — managed responsibly — improves your credit profile over time.", impact: "low", icon: "layers" });
+        tips.push({ id: "diversify-credit", title: "Build a Diverse Credit History", detail: "Having only one type of credit limits your score potential. A mix of instalment loans and revolving credit — managed responsibly — improves your credit profile over time.", estimatedImpact: "low", icon: "layers" });
       }
       if (score >= 580 && score < 700) {
-        tips.push({ id: "autopay", title: "Set Up Automatic Payments", description: "Payment history is the largest factor in your score. Setting up auto-pay ensures you never miss a due date, which can steadily improve your score over 6–12 months.", impact: "medium", icon: "clock" });
+        tips.push({ id: "autopay", title: "Set Up Automatic Payments", detail: "Payment history is the largest factor in your score. Setting up auto-pay ensures you never miss a due date, which can steadily improve your score over 6–12 months.", estimatedImpact: "medium", icon: "clock" });
       }
       if (judgments.length > 0) {
-        tips.push({ id: "resolve-judgments", title: "Resolve Court Judgments", description: `You have ${judgments.length} active court judgment(s) on your record. Resolving these, even through payment plans, can have a major positive impact on your creditworthiness.`, impact: "high", icon: "gavel" });
+        tips.push({ id: "resolve-judgments", title: "Resolve Court Judgments", detail: `You have ${judgments.length} active court judgment(s) on your record. Resolving these, even through payment plans, can have a major positive impact on your creditworthiness.`, estimatedImpact: "high", icon: "gavel" });
       }
       if (tips.length === 0) {
-        tips.push({ id: "maintain", title: "Maintain Your Strong Profile", description: "Your credit profile looks good! Keep paying on time, avoid unnecessary applications, and consider checking your report annually for any errors.", impact: "low", icon: "star" });
+        tips.push({ id: "maintain", title: "Maintain Your Strong Profile", detail: "Your credit profile looks good! Keep paying on time, avoid unnecessary applications, and consider checking your report annually for any errors.", estimatedImpact: "low", icon: "star" });
       }
 
       res.json({ score, tips });
