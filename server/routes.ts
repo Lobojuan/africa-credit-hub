@@ -12558,6 +12558,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   await seedOrganizations();
   await seedRegistryCountryConfig();
   await ensureRegistryAuthoritySeeded();
+  await seedCollateralDemoData();
 
   registerExternalApi(app);
 
@@ -16596,3 +16597,171 @@ async function ensureRegistryAuthoritySeeded() {
     routeLogger.info(`[Seed] ensureRegistryAuthoritySeeded skipped: ${e.message}`);
   }
 }
+
+async function seedCollateralDemoData() {
+  try {
+    const ghanaMode = isGhanaMode();
+    if (!ghanaMode) return;
+
+    const existingCount = await db.select({ cnt: count() }).from(collateralItems);
+    if ((existingCount[0]?.cnt ?? 0) >= 10) return;
+
+    const allOrgs = await storage.getOrganizations();
+    const raOrg = allOrgs.find(o => o.type === "registry_authority");
+    const lenderOrgs = allOrgs.filter(o =>
+      o.type === "bank" || o.type === "microfinance" || o.type === "fintech"
+    );
+    if (!raOrg || lenderOrgs.length === 0) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+    const twoYearsOut = new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+    const lo = (idx: number) => (lenderOrgs[idx % lenderOrgs.length] || lenderOrgs[0]).id;
+
+    const items: InsertCollateralItem[] = [
+      {
+        registrationNumber: "REG-GH-2025-001", certificateNumber: "CERT-GH-2025-001",
+        collateralType: "vehicle", collateralClass: "motor_vehicle",
+        description: "Toyota Land Cruiser 300 GX 2023 — VIN: JTMHX3JH1L4072241",
+        estimatedValue: "420000", currency: "GHS", location: "Accra, Greater Accra Region",
+        registrationDate: sixMonthsAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "approved",
+        lenderOrganizationId: lo(0), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "JTMHX3JH1L4072241", legalRegime: "Common Law",
+        borrowerName: "Kwame Mensah", debtorType: "individual",
+        securityInterestType: "loan_security", financingDuration: "custom",
+        isPmsi: false, lienPriority: 1, verificationCode: "VC-GH2025001",
+      },
+      {
+        registrationNumber: "REG-GH-2025-002", certificateNumber: "CERT-GH-2025-002",
+        collateralType: "real_estate", collateralClass: "commercial_property",
+        description: "Two-storey commercial office building — Plot 14, Liberation Road, Accra",
+        estimatedValue: "2800000", currency: "GHS", location: "Liberation Road, Accra",
+        registrationDate: sixMonthsAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "approved",
+        lenderOrganizationId: lo(1), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "PLOT-14-LIBROAD-ACC", legalRegime: "Common Law",
+        borrowerName: "Kumasi Breweries Ltd", debtorType: "business",
+        securityInterestType: "mortgage", financingDuration: "custom",
+        isPmsi: false, lienPriority: 1, verificationCode: "VC-GH2025002",
+      },
+      {
+        registrationNumber: "REG-GH-2025-003", certificateNumber: "CERT-GH-2025-003",
+        collateralType: "equipment", collateralClass: "industrial_equipment",
+        description: "Caterpillar 336 Hydraulic Excavator — S/N: CAT0336XKJM09821",
+        estimatedValue: "1150000", currency: "GHS", location: "Tema Industrial Area",
+        registrationDate: sixMonthsAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "approved",
+        lenderOrganizationId: lo(2), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "CAT0336XKJM09821", legalRegime: "Common Law",
+        borrowerName: "Accra Textiles Group", debtorType: "business",
+        securityInterestType: "loan_security", financingDuration: "custom",
+        isPmsi: true, lienPriority: 1, verificationCode: "VC-GH2025003",
+      },
+      {
+        registrationNumber: "REG-GH-2025-004", certificateNumber: "CERT-GH-2025-004",
+        collateralType: "inventory", collateralClass: "trade_goods",
+        description: "Warehouse stock of bagged cement — 12,000 metric tonnes, GSCL Warehouse Tema Port",
+        estimatedValue: "960000", currency: "GHS", location: "Tema Port Free Zone",
+        registrationDate: sixMonthsAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "approved",
+        lenderOrganizationId: lo(3), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "GSCL-WH-12000MT-2025", legalRegime: "Common Law",
+        borrowerName: "Gold Coast Logistics", debtorType: "business",
+        securityInterestType: "inventory_finance", financingDuration: "custom",
+        isPmsi: false, lienPriority: 1, verificationCode: "VC-GH2025004",
+      },
+      {
+        registrationNumber: "REG-GH-2025-005", certificateNumber: "CERT-GH-2025-005",
+        collateralType: "receivables", collateralClass: "accounts_receivable",
+        description: "Assignment of receivables — Ministry of Roads contract MRH/2024/0112",
+        estimatedValue: "3400000", currency: "GHS", location: "Accra, Greater Accra",
+        registrationDate: sixMonthsAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "approved",
+        lenderOrganizationId: lo(4), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "MRH-2024-0112-RECV", legalRegime: "Common Law",
+        borrowerName: "Volta River Construction Ltd", debtorType: "business",
+        securityInterestType: "assignment_of_receivables", financingDuration: "custom",
+        isPmsi: false, lienPriority: 1, verificationCode: "VC-GH2025005",
+      },
+      {
+        registrationNumber: "REG-GH-2025-006",
+        collateralType: "vehicle", collateralClass: "motor_vehicle",
+        description: "Nissan Patrol Y62 2022 — VIN: JN8AY2BU0N9700891",
+        estimatedValue: "280000", currency: "GHS", location: "Kumasi, Ashanti Region",
+        registrationDate: oneMonthAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "pending",
+        lenderOrganizationId: lo(0), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "JN8AY2BU0N9700891", legalRegime: "Common Law",
+        borrowerName: "Ama Boateng", debtorType: "individual",
+        securityInterestType: "loan_security", financingDuration: "custom", isPmsi: false,
+      },
+      {
+        registrationNumber: "REG-GH-2025-007",
+        collateralType: "equipment", collateralClass: "agricultural_equipment",
+        description: "John Deere 6M Series Tractor — Serial: 1RW6M100KNM702244",
+        estimatedValue: "390000", currency: "GHS", location: "Sunyani, Brong-Ahafo Region",
+        registrationDate: oneMonthAgo, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "pending",
+        lenderOrganizationId: lo(1), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "1RW6M100KNM702244", legalRegime: "Common Law",
+        borrowerName: "Ashanti Agribusiness Co.", debtorType: "business",
+        securityInterestType: "loan_security", financingDuration: "custom", isPmsi: true,
+      },
+      {
+        registrationNumber: "REG-GH-2025-008",
+        collateralType: "real_estate", collateralClass: "residential_property",
+        description: "Three-bedroom house — No. 5 Cantonments Road, East Legon, Accra",
+        estimatedValue: "1200000", currency: "GHS", location: "East Legon, Accra",
+        registrationDate: today, expiryDate: twoYearsOut,
+        status: "active", approvalStatus: "pending",
+        lenderOrganizationId: lo(2), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "CANTRD-05-EASTLEGON", legalRegime: "Common Law",
+        borrowerName: "Kofi Asante", debtorType: "individual",
+        securityInterestType: "mortgage", financingDuration: "custom", isPmsi: false,
+      },
+      {
+        registrationNumber: "REG-GH-2025-009",
+        collateralType: "vehicle", collateralClass: "motor_vehicle",
+        description: "Mercedes-Benz E350 2018 — VIN: WDDZF4KB8JA419823",
+        estimatedValue: "180000", currency: "GHS", location: "Accra, Greater Accra",
+        registrationDate: oneMonthAgo, expiryDate: twoYearsOut,
+        status: "inactive", approvalStatus: "rejected",
+        rejectionReason: "VIN could not be verified against DVLA records. Please provide a valid DVLA registration certificate and resubmit.",
+        lenderOrganizationId: lo(3), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "WDDZF4KB8JA419823", legalRegime: "Common Law",
+        borrowerName: "Nana Ofori", debtorType: "individual",
+        securityInterestType: "loan_security", financingDuration: "custom", isPmsi: false,
+      },
+      {
+        registrationNumber: "REG-GH-2025-010",
+        collateralType: "real_estate", collateralClass: "commercial_property",
+        description: "Warehouse facility — Plot 88, Spintex Road, Accra",
+        estimatedValue: "1800000", currency: "GHS", location: "Spintex Road, Accra",
+        registrationDate: oneMonthAgo, expiryDate: twoYearsOut,
+        status: "inactive", approvalStatus: "rejected",
+        rejectionReason: "Land title documentation is incomplete. The indenture lacks the Lands Commission stamp. Please obtain a certified copy and resubmit.",
+        lenderOrganizationId: lo(4), countryCode: "GH", registryAuthorityId: raOrg.id,
+        assetLocalIdentifier: "PLOT88-SPINTEX-ACC", legalRegime: "Common Law",
+        borrowerName: "Cape Coast Fishing Co.", debtorType: "business",
+        securityInterestType: "mortgage", financingDuration: "custom", isPmsi: false,
+      },
+    ];
+
+    let seeded = 0;
+    for (const item of items) {
+      try {
+        await storage.createCollateralItem(item);
+        seeded++;
+      } catch (_e) { /* skip duplicates */ }
+    }
+    if (seeded > 0) {
+      routeLogger.info("[Seed] Seeded " + seeded + " demo collateral items for lender portal");
+    }
+  } catch (e: any) {
+    routeLogger.info("[Seed] seedCollateralDemoData skipped: " + e.message);
+  }
+}
+
