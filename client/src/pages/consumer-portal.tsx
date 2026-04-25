@@ -526,13 +526,15 @@ export default function ConsumerPortalPage() {
       if (result.otp) setFallbackOtp(result.otp);
       setView("verify");
     },
-    onError: (err: any) => {
-      if (err.status === 409 || err.message?.toLowerCase().includes("already exists")) {
+    onError: (err: unknown) => {
+      const status = (err as { status?: number }).status;
+      const message = err instanceof Error ? err.message : String(err);
+      if (status === 409 || message.toLowerCase().includes("already exists")) {
         setIsDuplicateId(true);
         setError(null);
       } else {
         setIsDuplicateId(false);
-        setError(err.message);
+        setError(message);
       }
     },
   });
@@ -707,7 +709,7 @@ export default function ConsumerPortalPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
-      <div className="max-w-lg mx-auto px-4 py-6 sm:px-6 sm:py-8 space-y-5">
+      <div className="max-w-[420px] mx-auto px-4 py-6 sm:px-5 sm:py-8 space-y-5">
 
         <div className="text-center space-y-2 pt-2 pb-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-semibold" data-testid="badge-consumer-portal">
