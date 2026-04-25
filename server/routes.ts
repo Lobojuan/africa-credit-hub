@@ -73,6 +73,7 @@ import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sen
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
+import { getVapidPublicKey, sendPushToConsumerAccount } from "./push-notifications";
 import type { BogFileType } from "@shared/bog-codes";
 import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE, BOG_OWNER_TENANT } from "@shared/bog-codes";
 import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from "@shared/credit-types";
@@ -1496,6 +1497,21 @@ export async function registerRoutes(
       if (parsed.borrowerId && !(await validateBorrowerCountry(parsed.borrowerId, req))) {
         return res.status(403).json({ message: "Data sovereignty violation: cannot create inquiry for borrower in a different country" });
       }
+      if (parsed.borrowerId) {
+        const borrower = await storage.getBorrower(parsed.borrowerId);
+        if (borrower) {
+          const nationalId = borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber;
+          if (nationalId) {
+            const [frozenAccount] = await db.select({ creditFrozen: consumerAccounts.creditFrozen })
+              .from(consumerAccounts)
+              .where(ilike(consumerAccounts.nationalId, nationalId))
+              .limit(1);
+            if (frozenAccount?.creditFrozen) {
+              return res.status(403).json({ message: "Access denied: this credit file is currently frozen by the data subject" });
+            }
+          }
+        }
+      }
       const inquiry = await storage.createCreditInquiry(parsed);
       await storage.createAuditLog({
         action: "CREATE", entity: "credit_inquiry", entityId: inquiry.id, userId: req.session?.userId,
@@ -1517,6 +1533,13 @@ export async function registerRoutes(
             purpose: inquiry.purpose,
             organizationId: borrower.organizationId ?? undefined,
           });
+          const borrowerNationalId = borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber;
+          if (borrowerNationalId) {
+            const [consAcc] = await db.select({ id: consumerAccounts.id }).from(consumerAccounts).where(ilike(consumerAccounts.nationalId, borrowerNationalId)).limit(1);
+            if (consAcc) {
+              sendPushToConsumerAccount(consAcc.id, "Credit Inquiry Alert", `${inquiry.institution} accessed your credit file for: ${inquiry.purpose}`).catch(() => {});
+            }
+          }
         }
       } catch {}
       res.status(201).json(inquiry);
@@ -1532,6 +1555,21 @@ export async function registerRoutes(
       const country = getCountryFilter(req);
       if (country && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
+      }
+      const borrowerNationalId = borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber;
+      if (borrowerNationalId) {
+        const [frozenConsumer] = await db.select({ creditFrozen: consumerAccounts.creditFrozen })
+          .from(consumerAccounts)
+          .where(ilike(consumerAccounts.nationalId, borrowerNationalId))
+          .limit(1);
+        if (frozenConsumer?.creditFrozen) {
+          await storage.createAuditLog({
+            action: "BLOCKED", entity: "credit_report", entityId: req.params.id as string, userId: req.session?.userId,
+            details: `Credit report access blocked — file frozen by data subject`,
+            ipAddress: req.ip || null,
+          });
+          return res.status(403).json({ message: "Access denied: this credit file is currently frozen by the data subject" });
+        }
       }
       const accounts = await storage.getCreditAccountsByBorrower(req.params.id as string);
       const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id as string);
@@ -3039,7 +3077,12 @@ export async function registerRoutes(
       email: account.email || null,
       profilePicture: account.profilePicture || null,
       authProvider: account.authProvider || "local",
+      creditFrozen: account.creditFrozen ?? false,
     });
+  });
+
+  app.get("/api/consumer/vapid-public-key", async (_req, res) => {
+    res.json({ publicKey: getVapidPublicKey() });
   });
 
   app.get("/api/consumer/verify-email", async (req, res) => {
@@ -16409,8 +16452,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/consumer/push-status", requireConsumer, async (req, res) => {
     try {
-      const [account] = await db.select({ pushEndpoint: consumerAccounts.pushEndpoint }).from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
-      res.json({ subscribed: !!account?.pushEndpoint });
+      const [account] = await db.select({ pushEndpoint: consumerAccounts.pushEndpoint, pushKeys: consumerAccounts.pushKeys }).from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      const isReal = !!account?.pushEndpoint && account.pushEndpoint !== "browser-notifications-enabled" && !!(account.pushKeys as any)?.auth;
+      res.json({ subscribed: isReal, vapidPublicKey: getVapidPublicKey() });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
@@ -16474,7 +16518,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
       ).limit(1);
       const borrower = borrowerResult[0];
-      if (!borrower) return res.json([]);
+      if (!borrower) return res.json({ score: null, offers: [] });
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);

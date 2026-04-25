@@ -374,15 +374,33 @@ export default function ConsumerPortalPage() {
 
   const pushSubscribeMutation = useMutation({
     mutationFn: async () => {
-      if (!("Notification" in window)) throw new Error("Notifications not supported");
+      if (!("Notification" in window)) throw new Error("Push notifications are not supported by this browser");
+      if (!("serviceWorker" in navigator)) throw new Error("Service Workers are not supported by this browser");
       const perm = await Notification.requestPermission();
       if (perm !== "granted") throw new Error("Permission denied. Please allow notifications in your browser settings.");
-      await fetch("/api/consumer/push-subscribe", {
+      const vapidRes = await fetch("/api/consumer/vapid-public-key");
+      const { publicKey } = await vapidRes.json();
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) await sub.unsubscribe();
+      const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+      };
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      const subJson = sub.toJSON();
+      const res = await fetch("/api/consumer/push-subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ endpoint: "browser-notifications-enabled", keys: null }),
+        body: JSON.stringify({ endpoint: subJson.endpoint, keys: subJson.keys }),
       });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
       return { subscribed: true };
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/push-status"] }); },
@@ -1268,7 +1286,24 @@ export default function ConsumerPortalPage() {
                       </div>
                     ) : (
                       <div>
-                        <p className="text-xs text-muted-foreground mb-3">Your credit score trend over the past {scoreHistoryQuery.data.length} recorded snapshots.</p>
+                        {(() => {
+                          const sorted = [...scoreHistoryQuery.data].reverse();
+                          const latest = sorted[sorted.length - 1]?.score ?? 0;
+                          const prev = sorted.length >= 2 ? sorted[sorted.length - 2]?.score : null;
+                          const delta = prev !== null ? latest - prev : null;
+                          const isUp = delta !== null && delta > 0;
+                          const isDown = delta !== null && delta < 0;
+                          return (
+                            <div className="flex items-center gap-3 mb-3">
+                              <span className="text-xs text-muted-foreground">Score trend over {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""}</span>
+                              {delta !== null && (
+                                <span className={`ml-auto inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${isUp ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : isDown ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-muted text-muted-foreground"}`} data-testid="badge-score-delta">
+                                  {isUp ? "↑" : isDown ? "↓" : "→"} {isUp ? "+" : ""}{delta} vs prev
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                         <div style={{ height: 160 }}>
                           <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={[...scoreHistoryQuery.data].reverse().map((h: any) => ({
@@ -1439,18 +1474,44 @@ export default function ConsumerPortalPage() {
                         <span>No disputes on file. If you believe information on your credit report is inaccurate, use the button below to file a dispute.</span>
                       </div>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {myDisputesQuery.data.map((d: any) => {
-                          const statusColors: Record<string, string> = { open: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300", under_review: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", resolved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300", rejected: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" };
-                          const statusClass = statusColors[d.status] || "bg-muted text-muted-foreground";
+                          const stages: { key: string; label: string; date?: string }[] = [
+                            { key: "filed", label: "Filed", date: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined },
+                            { key: "review", label: "Under Review", date: d.status === "under_review" || d.status === "resolved" || d.status === "rejected" ? (d.updatedAt ? new Date(d.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "In progress") : undefined },
+                            { key: "resolved", label: d.status === "rejected" ? "Rejected" : "Resolved", date: d.resolvedAt ? new Date(d.resolvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined },
+                          ];
+                          const stageIndex = { open: 0, under_review: 1, resolved: 2, rejected: 2 }[d.status as string] ?? 0;
                           return (
-                            <div key={d.id} data-testid={`dispute-${d.id}`} className="rounded-xl border p-3 space-y-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-semibold">{(d.disputeType || "dispute").replace(/_/g, " ")}</p>
-                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusClass}`}>{(d.status || "open").replace(/_/g, " ")}</span>
+                            <div key={d.id} data-testid={`dispute-${d.id}`} className="rounded-xl border p-3 space-y-2.5">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-xs font-semibold capitalize">{(d.disputeType || "dispute").replace(/_/g, " ")}</p>
+                                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{d.description}</p>
+                                </div>
+                                {d.slaDeadline && (
+                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">SLA: {new Date(d.slaDeadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                                )}
                               </div>
-                              <p className="text-[11px] text-muted-foreground line-clamp-2">{d.description}</p>
-                              <p className="text-[10px] text-muted-foreground">Filed: {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "—"}{d.slaDeadline ? ` · SLA: ${new Date(d.slaDeadline).toLocaleDateString()}` : ""}{d.resolvedAt ? ` · Resolved: ${new Date(d.resolvedAt).toLocaleDateString()}` : ""}</p>
+                              <div className="flex items-center gap-0" data-testid={`dispute-timeline-${d.id}`}>
+                                {stages.map((stage, i) => {
+                                  const done = i <= stageIndex;
+                                  const active = i === stageIndex;
+                                  return (
+                                    <div key={stage.key} className="flex-1 flex flex-col items-center relative">
+                                      {i > 0 && (
+                                        <div className={`absolute top-2.5 right-1/2 w-full h-0.5 ${done ? "bg-primary" : "bg-muted"}`} />
+                                      )}
+                                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center z-10 ${done ? (active ? "border-primary bg-primary" : "border-primary bg-primary/20") : "border-muted bg-background"}`}>
+                                        {done && !active && <span className="text-[8px] text-primary font-bold">✓</span>}
+                                        {active && <span className="w-2 h-2 rounded-full bg-white" />}
+                                      </div>
+                                      <p className={`text-[9px] mt-0.5 text-center leading-tight ${active ? "text-primary font-semibold" : done ? "text-muted-foreground" : "text-muted-foreground/50"}`}>{stage.label}</p>
+                                      {stage.date && <p className="text-[9px] text-muted-foreground/70 text-center">{stage.date}</p>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           );
                         })}
