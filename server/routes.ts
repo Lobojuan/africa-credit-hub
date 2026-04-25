@@ -3407,6 +3407,65 @@ export async function registerRoutes(
         .text("Score Range: 300 – 850", 40, doc.y + 2, { width: W, align: "center" });
       doc.moveDown(0.8);
 
+      // Score tier progress bar
+      ensureSpace(80);
+      const BAR_X = 40;
+      const BAR_H = 13;
+      const SCORE_MIN = 300;
+      const SCORE_TOTAL = 550; // 850 - 300
+      const barY = doc.y + 4;
+      const GAP = 1.5;
+
+      const tierDefs = [
+        { label: "Poor",      start: 300, end: 600, displayRange: "300–599", color: "#dc2626" },
+        { label: "Fair",      start: 600, end: 650, displayRange: "600–649", color: "#ea580c" },
+        { label: "Good",      start: 650, end: 700, displayRange: "650–699", color: "#ca8a04" },
+        { label: "Very Good", start: 700, end: 750, displayRange: "700–749", color: "#65a30d" },
+        { label: "Excellent", start: 750, end: 851, displayRange: "750–850", color: "#16a34a" },
+      ];
+
+      // Draw filled tier segments
+      let segX = BAR_X;
+      tierDefs.forEach(tier => {
+        const segW = ((tier.end - tier.start) / SCORE_TOTAL) * W - GAP;
+        const isActive = creditScore >= tier.start && creditScore < tier.end;
+        doc.rect(segX, barY, segW, BAR_H).fill(isActive ? tier.color : `${tier.color}55`);
+        segX += segW + GAP;
+      });
+
+      // Score position marker (thin vertical bar spanning slightly above/below the tier bar)
+      const scoreRatio = Math.min(Math.max((creditScore - SCORE_MIN) / SCORE_TOTAL, 0), 1);
+      const markerX = Math.round(BAR_X + scoreRatio * W - 1);
+      doc.rect(markerX, barY - 3, 2, BAR_H + 6).fill(C_DARK);
+
+      // Tier labels and ranges beneath the bar
+      const labelY = barY + BAR_H + 5;
+      segX = BAR_X;
+      tierDefs.forEach(tier => {
+        const segW = ((tier.end - tier.start) / SCORE_TOTAL) * W - GAP;
+        const isActive = creditScore >= tier.start && creditScore < tier.end;
+        doc.fontSize(5.5).font(isActive ? "Helvetica-Bold" : "Helvetica")
+           .fill(isActive ? tier.color : C_LIGHT)
+           .text(tier.label, segX, labelY, { width: segW, align: "center" });
+        doc.fontSize(4.5).font("Helvetica").fill(C_LIGHT)
+           .text(tier.displayRange, segX, labelY + 8, { width: segW, align: "center" });
+        segX += segW + GAP;
+      });
+
+      // "X points away from next tier" message
+      const nextTierDef = tierDefs.find(t => t.start > creditScore);
+      if (nextTierDef) {
+        const ptsAway = nextTierDef.start - creditScore;
+        doc.fontSize(7.5).font("Helvetica").fill(C_GRAY)
+           .text(
+             `${ptsAway} point${ptsAway === 1 ? "" : "s"} away from "${nextTierDef.label}"`,
+             BAR_X, labelY + 20, { width: W, align: "center" }
+           );
+      }
+
+      doc.y = labelY + (nextTierDef ? 36 : 18);
+      doc.moveDown(0.3);
+
       const activeAccts = accounts.filter(a => a.status !== "closed");
       const overdue = accounts.filter(a => a.status === "delinquent" || a.status === "non_performing" || (Number(a.daysInArrears) || 0) > 0);
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat((a.currentBalance as any) || "0"), 0);
