@@ -1,6 +1,7 @@
 import { eq, desc, like, or, and, sql, count, ilike, inArray, gte, lt } from "drizzle-orm";
 import crypto from "crypto";
 import { db } from "./db";
+import { sendPushToConsumerAccount } from "./push-notifications";
 import { encryptBorrowerPII, decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
 import {
   users, borrowers, creditAccounts, creditInquiries, auditLogs, pendingApprovals, disputes, notifications,
@@ -3419,6 +3420,7 @@ export class DatabaseStorage implements IStorage {
 
   async createConsumerMonitoringAlert(data: InsertConsumerMonitoringAlert): Promise<ConsumerMonitoringAlert> {
     const [created] = await db.insert(consumerMonitoringAlerts).values(data).returning();
+    sendPushToConsumerAccount(data.consumerAccountId, data.title, data.message).catch(() => {});
     return created;
   }
 

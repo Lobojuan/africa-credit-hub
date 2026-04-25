@@ -16434,16 +16434,17 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ─── Push Notification Subscription ───────────────────────────────────────
-  app.post("/api/consumer/push-subscribe", requireConsumer, async (req, res) => {
+  app.post("/api/consumer/push-subscription", requireConsumer, async (req, res) => {
     try {
-      const { endpoint, keys } = req.body;
+      const { endpoint, keys } = req.body as { endpoint: string; keys: { p256dh: string; auth: string } | null };
       if (!endpoint) return res.status(400).json({ message: "endpoint required" });
-      await db.update(consumerAccounts).set({ pushEndpoint: endpoint, pushKeys: keys ?? null }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      if (!keys?.p256dh || !keys?.auth) return res.status(400).json({ message: "keys.p256dh and keys.auth are required for Web Push" });
+      await db.update(consumerAccounts).set({ pushEndpoint: endpoint, pushKeys: keys }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
       res.json({ subscribed: true });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.delete("/api/consumer/push-subscribe", requireConsumer, async (req, res) => {
+  app.delete("/api/consumer/push-subscription", requireConsumer, async (req, res) => {
     try {
       await db.update(consumerAccounts).set({ pushEndpoint: null, pushKeys: null }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
       res.json({ subscribed: false });

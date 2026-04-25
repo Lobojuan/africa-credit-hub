@@ -14,6 +14,17 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface ScoreHistoryPoint { id: string; score: number; scoreModel: string | null; createdAt: string; }
+interface ConsumerDispute { id: string; disputeType: string; description: string; status: string; createdAt: string; updatedAt?: string; slaDeadline?: string; resolvedAt?: string; }
+interface ConsumerInquiry { id: string; institution: string; purpose: string; isSoftPull: boolean; createdAt: string; }
+interface PushStatusResponse { subscribed: boolean; vapidPublicKey?: string; }
+interface FreezeResponse { frozen: boolean; }
+interface ImprovementTipsResponse { score: number; tips: { id: string; title: string; impact: string; description: string }[] }
+interface PushSubscribeResponse { subscribed: boolean; }
+
+// ---------------------------------------------------------------------------
 // Dispute Filing Dialog
 // ---------------------------------------------------------------------------
 function DisputeFilingDialog() {
@@ -281,78 +292,67 @@ export default function ConsumerPortalPage() {
   });
 
   // ── New feature queries ─────────────────────────────────────────────────────
-  const scoreHistoryQuery = useQuery<any[]>({
+  const scoreHistoryQuery = useQuery<ScoreHistoryPoint[]>({
     queryKey: ["/api/consumer/score-history"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/score-history", { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      return res.json() as Promise<ScoreHistoryPoint[]>;
     },
     enabled: !!isLoggedIn,
     retry: false,
   });
 
-  const myDisputesQuery = useQuery<any[]>({
+  const myDisputesQuery = useQuery<ConsumerDispute[]>({
     queryKey: ["/api/consumer/my-disputes"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/my-disputes", { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      return res.json() as Promise<ConsumerDispute[]>;
     },
     enabled: !!isLoggedIn,
     retry: false,
   });
 
-  const myInquiriesQuery = useQuery<any[]>({
+  const myInquiriesQuery = useQuery<ConsumerInquiry[]>({
     queryKey: ["/api/consumer/my-inquiries"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/my-inquiries", { credentials: "include" });
       if (!res.ok) return [];
-      return res.json();
+      return res.json() as Promise<ConsumerInquiry[]>;
     },
     enabled: !!isLoggedIn,
     retry: false,
   });
 
-  const freezeQuery = useQuery<{ frozen: boolean }>({
+  const freezeQuery = useQuery<FreezeResponse>({
     queryKey: ["/api/consumer/credit-freeze"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/credit-freeze", { credentials: "include" });
       if (!res.ok) return { frozen: false };
-      return res.json();
+      return res.json() as Promise<FreezeResponse>;
     },
     enabled: !!isLoggedIn,
     retry: false,
   });
 
-  const pushStatusQuery = useQuery<{ subscribed: boolean }>({
+  const pushStatusQuery = useQuery<PushStatusResponse>({
     queryKey: ["/api/consumer/push-status"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/push-status", { credentials: "include" });
       if (!res.ok) return { subscribed: false };
-      return res.json();
+      return res.json() as Promise<PushStatusResponse>;
     },
     enabled: !!isLoggedIn,
     retry: false,
   });
 
-  const tipsQuery = useQuery<{ score: number; tips: any[] }>({
+  const tipsQuery = useQuery<ImprovementTipsResponse>({
     queryKey: ["/api/consumer/improvement-tips"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/improvement-tips", { credentials: "include" });
       if (!res.ok) return { score: 0, tips: [] };
-      return res.json();
-    },
-    enabled: !!isLoggedIn,
-    retry: false,
-  });
-
-  const offersQuery = useQuery<{ score: number; offers: any[] }>({
-    queryKey: ["/api/consumer/prequalified-offers"],
-    queryFn: async () => {
-      const res = await fetch("/api/consumer/prequalified-offers", { credentials: "include" });
-      if (!res.ok) return { score: 0, offers: [] };
-      return res.json();
+      return res.json() as Promise<ImprovementTipsResponse>;
     },
     enabled: !!isLoggedIn,
     retry: false,
@@ -394,42 +394,29 @@ export default function ConsumerPortalPage() {
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
       const subJson = sub.toJSON();
-      const res = await fetch("/api/consumer/push-subscribe", {
+      const res = await fetch("/api/consumer/push-subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ endpoint: subJson.endpoint, keys: subJson.keys }),
       });
       if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
-      return { subscribed: true };
+      return { subscribed: true } as PushSubscribeResponse;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/push-status"] }); },
   });
 
-  const pushUnsubscribeMutation = useMutation({
+  const pushUnsubscribeMutation = useMutation<PushSubscribeResponse>({
     mutationFn: async () => {
-      await fetch("/api/consumer/push-subscribe", { method: "DELETE", credentials: "include" });
+      await fetch("/api/consumer/push-subscription", { method: "DELETE", credentials: "include" });
       return { subscribed: false };
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/push-status"] }); },
   });
 
-  const [simulatorAction, setSimulatorAction] = useState("");
-  const [simulatorResult, setSimulatorResult] = useState<{ baseScore: number; simulatedScore: number; delta: number; explanation: string } | null>(null);
-
-  const simulateMutation = useMutation({
-    mutationFn: async (action: string) => {
-      const res = await fetch("/api/consumer/simulate-score", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ action }),
-      });
-      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
-      return res.json();
-    },
-    onSuccess: (result) => setSimulatorResult(result),
-  });
+  // ── Local score simulator (3 toggles, no API call) ──────────────────────────
+  const [simToggles, setSimToggles] = useState({ payArrears: false, reduceUtil: false, onTimePayments: false });
+  const [inquiryExpanded, setInquiryExpanded] = useState(false);
 
   const [monitorPrefsOpen, setMonitorPrefsOpen] = useState(false);
   const [localPrefs, setLocalPrefs] = useState({ alertOnInquiry: true, alertOnScoreChange: true, alertOnNewAccount: true, alertOnDelinquency: true, emailAlerts: true, smsAlerts: false });
@@ -1198,6 +1185,18 @@ export default function ConsumerPortalPage() {
 
             {data && scoreInfo && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500" data-testid="consumer-results">
+
+                {/* ─── CREDIT FREEZE BANNER ──────────────────────────────────── */}
+                {freezeQuery.data?.frozen && (
+                  <div className="bg-blue-600 text-white rounded-xl px-4 py-3 flex items-center gap-3 shadow" data-testid="banner-credit-freeze">
+                    <Snowflake className="w-5 h-5 flex-shrink-0 animate-pulse" />
+                    <div className="flex-1">
+                      <p className="text-sm font-bold leading-tight">Credit File Frozen</p>
+                      <p className="text-xs text-blue-100 leading-snug">Lenders cannot access your credit report. Toggle off the freeze below when applying for credit.</p>
+                    </div>
+                  </div>
+                )}
+
                 <Card className="shadow-sm overflow-hidden">
                   <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
                     <div className="flex items-center justify-center gap-2 mb-5">
@@ -1288,99 +1287,119 @@ export default function ConsumerPortalPage() {
                       <div>
                         {(() => {
                           const sorted = [...scoreHistoryQuery.data].reverse();
-                          const latest = sorted[sorted.length - 1]?.score ?? 0;
+                          const firstScore = sorted[0]?.score ?? 0;
+                          const lastScore = sorted[sorted.length - 1]?.score ?? 0;
                           const prev = sorted.length >= 2 ? sorted[sorted.length - 2]?.score : null;
-                          const delta = prev !== null ? latest - prev : null;
+                          const delta = prev !== null ? lastScore - prev : null;
+                          const trendDir = sorted.length >= 2 ? (lastScore > firstScore ? "up" : lastScore < firstScore ? "down" : "flat") : "flat";
+                          const trendColor = trendDir === "up" ? "#16a34a" : trendDir === "down" ? "#dc2626" : "hsl(var(--primary))";
                           const isUp = delta !== null && delta > 0;
                           const isDown = delta !== null && delta < 0;
+                          const chartPoints = sorted.map((h) => ({
+                            date: new Date(h.createdAt).toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
+                            score: h.score,
+                          }));
                           return (
-                            <div className="flex items-center gap-3 mb-3">
-                              <span className="text-xs text-muted-foreground">Score trend over {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""}</span>
-                              {delta !== null && (
-                                <span className={`ml-auto inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${isUp ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : isDown ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-muted text-muted-foreground"}`} data-testid="badge-score-delta">
-                                  {isUp ? "↑" : isDown ? "↓" : "→"} {isUp ? "+" : ""}{delta} vs prev
-                                </span>
-                              )}
-                            </div>
+                            <>
+                              <div className="flex items-center gap-3 mb-3">
+                                <span className="text-xs text-muted-foreground">Score trend over {sorted.length} snapshot{sorted.length !== 1 ? "s" : ""}</span>
+                                {delta !== null && (
+                                  <span className={`ml-auto inline-flex items-center gap-0.5 text-xs font-semibold px-2 py-0.5 rounded-full ${isUp ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : isDown ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-muted text-muted-foreground"}`} data-testid="badge-score-delta">
+                                    {isUp ? "↑" : isDown ? "↓" : "→"} {isUp ? "+" : ""}{delta} vs prev
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ height: 160 }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={chartPoints}>
+                                    <defs>
+                                      <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor={trendColor} stopOpacity={0.3} />
+                                        <stop offset="95%" stopColor={trendColor} stopOpacity={0} />
+                                      </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                                    <YAxis domain={[300, 850]} tick={{ fontSize: 10 }} width={35} />
+                                    <Tooltip formatter={(v: number) => [v, "Score"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                                    <Area type="monotone" dataKey="score" stroke={trendColor} strokeWidth={2} fill="url(#scoreGrad)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                                  </AreaChart>
+                                </ResponsiveContainer>
+                              </div>
+                            </>
                           );
                         })()}
-                        <div style={{ height: 160 }}>
-                          <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={[...scoreHistoryQuery.data].reverse().map((h: any) => ({
-                              date: new Date(h.createdAt).toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
-                              score: h.score,
-                            }))}>
-                              <defs>
-                                <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                                </linearGradient>
-                              </defs>
-                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                              <YAxis domain={[300, 850]} tick={{ fontSize: 10 }} width={35} />
-                              <Tooltip formatter={(v: any) => [v, "Score"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
-                              <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#scoreGrad)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
-                            </AreaChart>
-                          </ResponsiveContainer>
-                        </div>
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                {/* ─── 2. SCORE SIMULATOR ─────────────────────────────────────── */}
-                <Card className="shadow-sm" data-testid="card-score-simulator">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Zap className="w-4 h-4 text-amber-500" />
-                      <h3 className="text-sm font-bold">Score Simulator</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">See how a financial action could change your credit score.</p>
-                    <Select value={simulatorAction} onValueChange={setSimulatorAction}>
-                      <SelectTrigger className="rounded-xl text-xs h-9" data-testid="select-simulator-action">
-                        <SelectValue placeholder="Choose an action…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pay_all_arrears">Pay all outstanding arrears</SelectItem>
-                        <SelectItem value="settle_default">Settle a defaulted account</SelectItem>
-                        <SelectItem value="reduce_utilisation_30">Reduce credit utilisation to 30%</SelectItem>
-                        <SelectItem value="no_late_payments_6mo">6 months of on-time payments</SelectItem>
-                        <SelectItem value="new_loan">Take a new loan</SelectItem>
-                        <SelectItem value="close_old_account">Close an old account</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      size="sm"
-                      className="w-full rounded-xl mt-2"
-                      data-testid="button-run-simulation"
-                      disabled={!simulatorAction || simulateMutation.isPending}
-                      onClick={() => { setSimulatorResult(null); simulateMutation.mutate(simulatorAction); }}
-                    >
-                      {simulateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 mr-1.5" />}
-                      {simulateMutation.isPending ? "Simulating…" : "Run Simulation"}
-                    </Button>
-                    {simulatorResult && (
-                      <div className="mt-3 rounded-xl border p-3 space-y-2 animate-in fade-in" data-testid="simulator-result">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Current score</span>
-                          <span className="font-bold" data-testid="text-sim-base">{simulatorResult.baseScore}</span>
+                {/* ─── 2. SCORE SIMULATOR (local what-if toggles) ─────────────── */}
+                {(() => {
+                  const base = data.creditScore;
+                  const delinq = (data as { delinquentAccounts?: number }).delinquentAccounts ?? 0;
+                  const arrearsImpact = simToggles.payArrears ? Math.min(65, Math.max(20, delinq * 15 + 20)) : 0;
+                  const utilImpact = simToggles.reduceUtil ? Math.min(35, Math.max(15, Math.round((850 - base) * 0.1))) : 0;
+                  const onTimeImpact = simToggles.onTimePayments ? Math.min(45, Math.max(20, Math.round((850 - base) * 0.12))) : 0;
+                  const totalDelta = arrearsImpact + utilImpact + onTimeImpact;
+                  const projected = Math.min(850, base + totalDelta);
+                  const anyOn = simToggles.payArrears || simToggles.reduceUtil || simToggles.onTimePayments;
+                  return (
+                    <Card className="shadow-sm" data-testid="card-score-simulator">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Zap className="w-4 h-4 text-amber-500" />
+                          <h3 className="text-sm font-bold">Score Simulator</h3>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Projected score</span>
-                          <span className={`font-bold text-base ${simulatorResult.delta >= 0 ? "text-emerald-600" : "text-red-500"}`} data-testid="text-sim-projected">
-                            {simulatorResult.simulatedScore}
-                            <span className="text-xs ml-1">({simulatorResult.delta >= 0 ? "+" : ""}{simulatorResult.delta})</span>
-                          </span>
+                        <p className="text-xs text-muted-foreground mb-3">Toggle actions below to see how they could affect your score in real time.</p>
+                        <div className="space-y-2.5">
+                          <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" data-testid="toggle-pay-arrears">
+                            <div>
+                              <p className="text-xs font-medium">Pay all outstanding arrears</p>
+                              <p className="text-[10px] text-muted-foreground">Clears overdue payments on all accounts</p>
+                            </div>
+                            <Switch checked={simToggles.payArrears} onCheckedChange={(v) => setSimToggles(s => ({ ...s, payArrears: v }))} data-testid="switch-sim-pay-arrears" />
+                          </div>
+                          <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" data-testid="toggle-reduce-util">
+                            <div>
+                              <p className="text-xs font-medium">Reduce credit utilisation to ≤30%</p>
+                              <p className="text-[10px] text-muted-foreground">Pay down revolving balances to low usage</p>
+                            </div>
+                            <Switch checked={simToggles.reduceUtil} onCheckedChange={(v) => setSimToggles(s => ({ ...s, reduceUtil: v }))} data-testid="switch-sim-reduce-util" />
+                          </div>
+                          <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" data-testid="toggle-on-time-payments">
+                            <div>
+                              <p className="text-xs font-medium">Build 12 months of on-time payments</p>
+                              <p className="text-[10px] text-muted-foreground">Consistent payment history over the next year</p>
+                            </div>
+                            <Switch checked={simToggles.onTimePayments} onCheckedChange={(v) => setSimToggles(s => ({ ...s, onTimePayments: v }))} data-testid="switch-sim-on-time" />
+                          </div>
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-relaxed">{simulatorResult.explanation}</p>
-                      </div>
-                    )}
-                    {simulateMutation.isError && (
-                      <p className="text-xs text-red-500 mt-2">{(simulateMutation.error as Error).message}</p>
-                    )}
-                  </CardContent>
-                </Card>
+                        {anyOn && (
+                          <div className="mt-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-3 space-y-2 animate-in fade-in" data-testid="simulator-result">
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Current score</span>
+                              <span className="font-bold" data-testid="text-sim-base">{base}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-sm">
+                              <span className="text-muted-foreground">Projected score</span>
+                              <span className="font-bold text-base text-emerald-600 dark:text-emerald-400" data-testid="text-sim-projected">
+                                {projected}
+                                <span className="text-xs ml-1 font-medium">(+{totalDelta})</span>
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                              These are estimated improvements based on standard credit scoring rules.{" "}
+                              {simToggles.payArrears && `Clearing arrears typically adds +${arrearsImpact} pts. `}
+                              {simToggles.reduceUtil && `Lowering utilisation adds +${utilImpact} pts. `}
+                              {simToggles.onTimePayments && `12 months on-time payments adds +${onTimeImpact} pts.`}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
 
                 {/* ─── 3. PERSONALISED IMPROVEMENT TIPS ──────────────────────── */}
                 <Card className="shadow-sm" data-testid="card-improvement-tips">
@@ -1419,126 +1438,166 @@ export default function ConsumerPortalPage() {
                   </CardContent>
                 </Card>
 
-                {/* ─── 4. LENDER PRE-QUALIFICATION OFFERS ─────────────────────── */}
-                {offersQuery.data && offersQuery.data.offers.length > 0 && (
-                  <Card className="shadow-sm border-emerald-200 dark:border-emerald-800" data-testid="card-prequalified-offers">
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Tag className="w-4 h-4 text-emerald-600" />
-                        <h3 className="text-sm font-bold">Pre-qualified Offers</h3>
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] h-4 px-1.5 border-0">Based on your score</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground mb-3">These indicative offers are based on your credit score. Actual terms depend on lender assessment.</p>
-                      <div className="space-y-2">
-                        {offersQuery.data.offers.map((offer: any) => (
-                          <div key={offer.id} data-testid={`offer-${offer.id}`} className="rounded-xl border p-3 flex items-start gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                              <Tag className="w-4 h-4 text-emerald-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-xs font-semibold">{offer.lender}</p>
-                                {offer.badge && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] h-4 px-1 border-0">{offer.badge}</Badge>}
+                {/* ─── 4. LENDER PRE-QUALIFICATION OFFERS (frontend-static) ───── */}
+                {(() => {
+                  type Offer = { id: string; lender: string; product: string; maxAmount: string; currency: string; rateFrom: string; term: string; likelihood: "high" | "medium" | "low"; badge?: string };
+                  const score = data.creditScore;
+                  const staticOffers: Offer[] = score >= 650 ? [
+                    { id: "o1", lender: "Ecobank Ghana", product: "Personal Loan", maxAmount: "50,000", currency: "GHS", rateFrom: "18%", term: "Up to 60 months", likelihood: "high", badge: "Best Rate" },
+                    { id: "o2", lender: "Absa Bank Ghana", product: "Salary Advance", maxAmount: "30,000", currency: "GHS", rateFrom: "16%", term: "Up to 24 months", likelihood: "high" },
+                    { id: "o3", lender: "Fidelity Bank", product: "Home Improvement Loan", maxAmount: "100,000", currency: "GHS", rateFrom: "20%", term: "Up to 84 months", likelihood: "medium" },
+                  ] : score >= 500 ? [
+                    { id: "o1", lender: "GCB Bank", product: "Personal Loan", maxAmount: "20,000", currency: "GHS", rateFrom: "22%", term: "Up to 36 months", likelihood: "high" },
+                    { id: "o2", lender: "Zenith Bank Ghana", product: "Salary Advance", maxAmount: "10,000", currency: "GHS", rateFrom: "25%", term: "Up to 12 months", likelihood: "medium" },
+                    { id: "o3", lender: "Letshego Ghana", product: "Consumer Loan", maxAmount: "8,000", currency: "GHS", rateFrom: "28%", term: "Up to 18 months", likelihood: "medium" },
+                  ] : [
+                    { id: "o1", lender: "Opportunity International", product: "Micro Loan", maxAmount: "2,000", currency: "GHS", rateFrom: "32%", term: "Up to 6 months", likelihood: "low" },
+                    { id: "o2", lender: "Sinapi Aba Savings", product: "Group Guarantee Loan", maxAmount: "1,500", currency: "GHS", rateFrom: "35%", term: "Up to 6 months", likelihood: "low" },
+                  ];
+                  return (
+                    <Card className="shadow-sm border-emerald-200 dark:border-emerald-800" data-testid="card-prequalified-offers">
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Tag className="w-4 h-4 text-emerald-600" />
+                          <h3 className="text-sm font-bold">Pre-qualified Offers</h3>
+                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] h-4 px-1.5 border-0">Score band: {score >= 650 ? "≥650" : score >= 500 ? "500–649" : "<500"}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-3">Illustrative offers for your score band. Actual terms depend on lender assessment.</p>
+                        <div className="space-y-2">
+                          {staticOffers.map((offer) => (
+                            <div key={offer.id} data-testid={`offer-${offer.id}`} className="rounded-xl border p-3 flex items-start gap-3">
+                              <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                                <Tag className="w-4 h-4 text-emerald-600" />
                               </div>
-                              <p className="text-[11px] text-muted-foreground">{offer.product}</p>
-                              <div className="flex gap-3 mt-1 text-[11px]">
-                                <span><span className="text-muted-foreground">Up to </span><span className="font-medium">{offer.currency} {offer.maxAmount}</span></span>
-                                <span><span className="text-muted-foreground">From </span><span className="font-medium">{offer.rateFrom} p.a.</span></span>
-                              </div>
-                              <p className="text-[10px] text-muted-foreground mt-0.5">{offer.term}</p>
-                            </div>
-                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${offer.likelihood === "high" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : offer.likelihood === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-muted text-muted-foreground"}`}>
-                              {offer.likelihood === "high" ? "High match" : offer.likelihood === "medium" ? "Good match" : "Possible"}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground mt-2">* Offers are indicative only. Contact the lender directly to apply. Africa Credit Hub does not endorse any specific product.</p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* ─── 5. DISPUTE STATUS TRACKER ──────────────────────────────── */}
-                <Card className="shadow-sm" data-testid="card-dispute-tracker">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Activity className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-bold">My Disputes</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">Track the status of disputes you have filed with the bureau.</p>
-                    {myDisputesQuery.isLoading ? (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-3"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
-                    ) : !myDisputesQuery.data || myDisputesQuery.data.length === 0 ? (
-                      <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground flex items-start gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                        <span>No disputes on file. If you believe information on your credit report is inaccurate, use the button below to file a dispute.</span>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {myDisputesQuery.data.map((d: any) => {
-                          const stages: { key: string; label: string; date?: string }[] = [
-                            { key: "filed", label: "Filed", date: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined },
-                            { key: "review", label: "Under Review", date: d.status === "under_review" || d.status === "resolved" || d.status === "rejected" ? (d.updatedAt ? new Date(d.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "In progress") : undefined },
-                            { key: "resolved", label: d.status === "rejected" ? "Rejected" : "Resolved", date: d.resolvedAt ? new Date(d.resolvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined },
-                          ];
-                          const stageIndex = { open: 0, under_review: 1, resolved: 2, rejected: 2 }[d.status as string] ?? 0;
-                          return (
-                            <div key={d.id} data-testid={`dispute-${d.id}`} className="rounded-xl border p-3 space-y-2.5">
-                              <div className="flex items-start justify-between gap-2">
-                                <div>
-                                  <p className="text-xs font-semibold capitalize">{(d.disputeType || "dispute").replace(/_/g, " ")}</p>
-                                  <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{d.description}</p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="text-xs font-semibold">{offer.lender}</p>
+                                  {offer.badge && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] h-4 px-1 border-0">{offer.badge}</Badge>}
                                 </div>
-                                {d.slaDeadline && (
-                                  <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">SLA: {new Date(d.slaDeadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                                )}
+                                <p className="text-[11px] text-muted-foreground">{offer.product}</p>
+                                <div className="flex gap-3 mt-1 text-[11px]">
+                                  <span><span className="text-muted-foreground">Up to </span><span className="font-medium">{offer.currency} {offer.maxAmount}</span></span>
+                                  <span><span className="text-muted-foreground">From </span><span className="font-medium">{offer.rateFrom} p.a.</span></span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground mt-0.5">{offer.term}</p>
                               </div>
-                              <div className="flex items-center gap-0" data-testid={`dispute-timeline-${d.id}`}>
-                                {stages.map((stage, i) => {
-                                  const done = i <= stageIndex;
-                                  const active = i === stageIndex;
-                                  return (
-                                    <div key={stage.key} className="flex-1 flex flex-col items-center relative">
-                                      {i > 0 && (
-                                        <div className={`absolute top-2.5 right-1/2 w-full h-0.5 ${done ? "bg-primary" : "bg-muted"}`} />
-                                      )}
-                                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center z-10 ${done ? (active ? "border-primary bg-primary" : "border-primary bg-primary/20") : "border-muted bg-background"}`}>
-                                        {done && !active && <span className="text-[8px] text-primary font-bold">✓</span>}
-                                        {active && <span className="w-2 h-2 rounded-full bg-white" />}
-                                      </div>
-                                      <p className={`text-[9px] mt-0.5 text-center leading-tight ${active ? "text-primary font-semibold" : done ? "text-muted-foreground" : "text-muted-foreground/50"}`}>{stage.label}</p>
-                                      {stage.date && <p className="text-[9px] text-muted-foreground/70 text-center">{stage.date}</p>}
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${offer.likelihood === "high" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : offer.likelihood === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-muted text-muted-foreground"}`}>
+                                {offer.likelihood === "high" ? "High match" : offer.likelihood === "medium" ? "Good match" : "Possible"}
+                              </span>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-2">* Illustrative only. Africa Credit Hub does not endorse any specific product. Contact lenders directly to apply.</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+
+                {/* ─── 5. FILE A DISPUTE (always visible) ──────────────────── */}
+                <Card className="shadow-sm" data-testid="card-file-dispute">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Activity className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-bold">Disputes</h3>
+                      {(myDisputesQuery.data?.length ?? 0) > 0 && (
+                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-0 text-[10px] h-4 px-1.5">{myDisputesQuery.data!.length} active</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-2">Believe information on your credit report is wrong? File a dispute with the bureau.</p>
                     <DisputeFilingDialog />
                   </CardContent>
                 </Card>
 
-                {/* ─── 6. WHO ACCESSED MY DATA ────────────────────────────────── */}
+                {/* ─── 5b. DISPUTE STATUS TRACKER (hidden when no disputes) ──── */}
+                {(myDisputesQuery.data?.length ?? 0) > 0 && (
+                  <Card className="shadow-sm" data-testid="card-dispute-tracker">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Activity className="w-4 h-4 text-primary" />
+                        <h3 className="text-sm font-bold">My Active Disputes</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">Track the status of disputes you have filed with the bureau.</p>
+                      {myDisputesQuery.isLoading ? (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-3"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
+                      ) : (
+                        <div className="space-y-3">
+                          {myDisputesQuery.data!.map((d) => {
+                            const stages: { key: string; label: string; date?: string }[] = [
+                              { key: "filed", label: "Filed", date: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined },
+                              { key: "review", label: "Under Review", date: d.status === "under_review" || d.status === "resolved" || d.status === "rejected" ? (d.updatedAt ? new Date(d.updatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "In progress") : undefined },
+                              { key: "resolved", label: d.status === "rejected" ? "Rejected" : "Resolved", date: d.resolvedAt ? new Date(d.resolvedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : undefined },
+                            ];
+                            const stageIndex: Record<string, number> = { open: 0, under_review: 1, resolved: 2, rejected: 2 };
+                            const activeStage = stageIndex[d.status] ?? 0;
+                            return (
+                              <div key={d.id} data-testid={`dispute-${d.id}`} className="rounded-xl border p-3 space-y-2.5">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="text-xs font-semibold capitalize">{(d.disputeType || "dispute").replace(/_/g, " ")}</p>
+                                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{d.description}</p>
+                                  </div>
+                                  {d.slaDeadline && (
+                                    <span className="text-[10px] text-muted-foreground whitespace-nowrap flex-shrink-0">SLA: {new Date(d.slaDeadline).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center" data-testid={`dispute-timeline-${d.id}`}>
+                                  {stages.map((stage, i) => {
+                                    const done = i <= activeStage;
+                                    const active = i === activeStage;
+                                    return (
+                                      <div key={stage.key} className="flex-1 flex flex-col items-center relative">
+                                        {i > 0 && (
+                                          <div className={`absolute top-2.5 right-1/2 w-full h-0.5 ${done ? "bg-primary" : "bg-muted"}`} />
+                                        )}
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center z-10 ${done ? (active ? "border-primary bg-primary" : "border-primary bg-primary/20") : "border-muted bg-background"}`}>
+                                          {done && !active && <span className="text-[8px] text-primary font-bold">✓</span>}
+                                          {active && <span className="w-2 h-2 rounded-full bg-white" />}
+                                        </div>
+                                        <p className={`text-[9px] mt-0.5 text-center leading-tight ${active ? "text-primary font-semibold" : done ? "text-muted-foreground" : "text-muted-foreground/50"}`}>{stage.label}</p>
+                                        {stage.date && <p className="text-[9px] text-muted-foreground/70 text-center">{stage.date}</p>}
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ─── 6. WHO ACCESSED MY DATA (collapsible) ──────────────────── */}
                 <Card className="shadow-sm" data-testid="card-inquiry-feed">
                   <CardContent className="p-4">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Search className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-bold">Who Accessed My Data</h3>
-                    </div>
-                    <p className="text-xs text-muted-foreground mb-3">A log of institutions that have accessed your credit report. By law, lenders must have your consent.</p>
-                    {myInquiriesQuery.isLoading ? (
+                    <button
+                      className="w-full flex items-center justify-between mb-1 text-left"
+                      onClick={() => setInquiryExpanded(e => !e)}
+                      data-testid="button-toggle-inquiry-feed"
+                      aria-expanded={inquiryExpanded}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Search className="w-4 h-4 text-primary" />
+                        <h3 className="text-sm font-bold">Who Accessed My Data</h3>
+                        {(myInquiriesQuery.data?.length ?? 0) > 0 && (
+                          <Badge className="bg-muted text-muted-foreground border-0 text-[10px] h-4 px-1.5">{myInquiriesQuery.data!.length}</Badge>
+                        )}
+                      </div>
+                      <ChevronRight className={`w-4 h-4 text-muted-foreground transition-transform ${inquiryExpanded ? "rotate-90" : ""}`} />
+                    </button>
+                    {!inquiryExpanded ? (
+                      <p className="text-xs text-muted-foreground">Tap to see a log of lenders who accessed your credit report.</p>
+                    ) : myInquiriesQuery.isLoading ? (
                       <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-3"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
                     ) : !myInquiriesQuery.data || myInquiriesQuery.data.length === 0 ? (
-                      <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground flex items-start gap-2">
+                      <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground flex items-start gap-2 mt-2">
                         <Shield className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
                         <span>No inquiries recorded. This log will populate when lenders access your credit file.</span>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        {myInquiriesQuery.data.map((inq: any) => (
+                      <div className="space-y-2 mt-2">
+                        {myInquiriesQuery.data.map((inq) => (
                           <div key={inq.id} data-testid={`inquiry-${inq.id}`} className="flex items-start gap-2.5 rounded-xl border p-2.5">
                             <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
                               <Search className="w-3.5 h-3.5 text-primary" />
