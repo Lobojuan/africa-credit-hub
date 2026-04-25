@@ -414,6 +414,7 @@ export interface IStorage {
   firePortfolioTriggers(borrowerId: string, eventType: string, eventData: object): Promise<number>;
   getAccountTrends(creditAccountId: string): Promise<{ period: string; amountDue: string; amountPaid: string; status: string; daysLate: number }[]>;
   getBorrowerTrendSummary(borrowerId: string): Promise<{ scoreHistory: { score: number; createdAt: Date }[]; accountCount: number; activeDelinquencies: number; balanceTrend: string }>;
+  recordConsumerScoreHistory(borrowerId: string, score: number, factors?: string): Promise<void>;
 
   // Consumer Monitoring
   getConsumerMonitoringPrefs(consumerAccountId: string): Promise<ConsumerMonitoringPrefs | undefined>;
@@ -3393,6 +3394,23 @@ export class DatabaseStorage implements IStorage {
       else if (recent < older - 10) balanceTrend = "deteriorating";
     }
     return { scoreHistory: scoreRows.map(r => ({ score: r.score, createdAt: r.createdAt! })), accountCount: accounts.length, activeDelinquencies: delinquent, balanceTrend };
+  }
+
+  async recordConsumerScoreHistory(borrowerId: string, score: number, factors?: string): Promise<void> {
+    const [latest] = await db
+      .select({ score: creditScoreHistory.score })
+      .from(creditScoreHistory)
+      .where(eq(creditScoreHistory.borrowerId, borrowerId))
+      .orderBy(desc(creditScoreHistory.createdAt))
+      .limit(1);
+    if (latest && latest.score === score) return;
+    await db.insert(creditScoreHistory).values({
+      borrowerId,
+      score,
+      scoreModel: "v2.6_bureau",
+      factors: factors ?? null,
+      provider: "Africa Credit Hub",
+    });
   }
 
   // -------------------------------------------------------------------------
