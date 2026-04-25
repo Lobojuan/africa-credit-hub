@@ -417,7 +417,23 @@ export default function ConsumerPortalPage() {
 
   const pushUnsubscribeMutation = useMutation<PushSubscribeResponse>({
     mutationFn: async () => {
-      await fetch("/api/consumer/push-subscription", { method: "DELETE", credentials: "include" });
+      let endpoint: string | undefined;
+      if ("serviceWorker" in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          endpoint = sub.endpoint;
+          await sub.unsubscribe();
+        }
+      }
+      if (!endpoint) return { subscribed: false };
+      const res = await fetch("/api/consumer/push-subscription", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ endpoint }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
       return { subscribed: false };
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/push-status"] }); },

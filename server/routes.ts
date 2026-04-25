@@ -16496,12 +16496,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.delete("/api/consumer/push-subscription", requireConsumer, async (req, res) => {
     try {
       const { endpoint } = req.body as { endpoint?: string };
-      if (endpoint) {
-        await db.delete(consumerPushSubscriptions).where(and(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId), eq(consumerPushSubscriptions.endpoint, endpoint)));
-      } else {
-        // Delete all subscriptions for this consumer
-        await db.delete(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId));
-      }
+      if (!endpoint) return res.status(400).json({ message: "endpoint is required" });
+      await db.delete(consumerPushSubscriptions).where(and(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId), eq(consumerPushSubscriptions.endpoint, endpoint)));
       res.json({ subscribed: false });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
