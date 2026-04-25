@@ -206,11 +206,89 @@ interface ConsumerData {
 }
 
 function getScoreLabel(score: number): { label: string; color: string; description: string } {
-  if (score >= 750) return { label: "Excellent", color: "text-emerald-600 dark:text-emerald-400", description: "Your credit standing is excellent. You are likely to qualify for the best rates and terms." };
-  if (score >= 670) return { label: "Good", color: "text-green-600 dark:text-green-400", description: "Your credit standing is good. Most lenders will view you favourably." };
-  if (score >= 580) return { label: "Fair", color: "text-yellow-600 dark:text-yellow-400", description: "Your credit standing is fair. You may qualify for credit but not always at the best rates." };
-  if (score >= 450) return { label: "Poor", color: "text-orange-600 dark:text-orange-400", description: "Your credit standing needs improvement. Consider paying down debts and making payments on time." };
-  return { label: "Very Poor", color: "text-red-600 dark:text-red-400", description: "Your credit standing is very low. Focus on clearing outstanding debts and avoiding new borrowing." };
+  if (score >= 750) return { label: "Excellent",  color: "text-emerald-600 dark:text-emerald-400", description: "Your credit standing is excellent. You are likely to qualify for the best rates and terms." };
+  if (score >= 700) return { label: "Very Good",  color: "text-lime-700 dark:text-lime-400",        description: "Your credit standing is very good. Most lenders will view you favourably with competitive rates." };
+  if (score >= 650) return { label: "Good",       color: "text-amber-600 dark:text-amber-400",      description: "Your credit standing is good. You qualify for most credit products, though rates may vary." };
+  if (score >= 600) return { label: "Fair",       color: "text-orange-600 dark:text-orange-400",    description: "Your credit standing is fair. You may qualify for credit but not always at the best rates." };
+  return             { label: "Poor",       color: "text-red-600 dark:text-red-400",        description: "Your credit standing needs improvement. Consider paying down debts and making payments on time." };
+}
+
+const SCORE_TIERS = [
+  { label: "Poor",      min: 300, max: 599, color: "#dc2626", textClass: "text-red-600 dark:text-red-400",      range: "300–599" },
+  { label: "Fair",      min: 600, max: 649, color: "#ea580c", textClass: "text-orange-600 dark:text-orange-400", range: "600–649" },
+  { label: "Good",      min: 650, max: 699, color: "#ca8a04", textClass: "text-amber-600 dark:text-amber-400",   range: "650–699" },
+  { label: "Very Good", min: 700, max: 749, color: "#65a30d", textClass: "text-lime-700 dark:text-lime-400",     range: "700–749" },
+  { label: "Excellent", min: 750, max: 850, color: "#16a34a", textClass: "text-emerald-600 dark:text-emerald-400", range: "750–850" },
+];
+
+const SCORE_MIN = 300;
+const SCORE_MAX = 850;
+const SCORE_RANGE = SCORE_MAX - SCORE_MIN;
+
+function getNextTier(score: number): { name: string; pointsAway: number } | null {
+  if (score < 600) return { name: "Fair", pointsAway: 600 - score };
+  if (score < 650) return { name: "Good", pointsAway: 650 - score };
+  if (score < 700) return { name: "Very Good", pointsAway: 700 - score };
+  if (score < 750) return { name: "Excellent", pointsAway: 750 - score };
+  return null;
+}
+
+function ScoreTierBar({ score }: { score: number }) {
+  const clampedScore = Math.max(SCORE_MIN, Math.min(SCORE_MAX, score));
+  const indicatorPct = ((clampedScore - SCORE_MIN) / SCORE_RANGE) * 100;
+  const nextTier = getNextTier(score);
+
+  return (
+    <div className="w-full space-y-2" data-testid="score-tier-bar">
+      <div className="relative">
+        <div className="h-4 rounded-full overflow-hidden flex" data-testid="score-tier-segments">
+          {SCORE_TIERS.map((tier) => (
+            <div
+              key={tier.label}
+              className="h-full"
+              style={{
+                backgroundColor: tier.color,
+                width: `${((tier.max - tier.min + 1) / (SCORE_RANGE + 1)) * 100}%`,
+              }}
+              title={`${tier.label}: ${tier.min}–${tier.max}`}
+              data-testid={`tier-segment-${tier.label.toLowerCase().replace(/\s/g, "-")}`}
+            />
+          ))}
+        </div>
+        <div
+          className="absolute top-1/2 -translate-y-1/2 flex flex-col items-center"
+          style={{ left: `clamp(8px, calc(${indicatorPct}% - 8px), calc(100% - 8px))` }}
+          data-testid="score-tier-indicator"
+        >
+          <div className="w-4 h-4 rounded-full bg-white border-2 border-foreground shadow-md" />
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between text-[10px] font-medium">
+        {SCORE_TIERS.map((tier) => (
+          <div
+            key={tier.label}
+            className="flex flex-col items-center gap-0.5"
+            style={{ width: `${((tier.max - tier.min + 1) / (SCORE_RANGE + 1)) * 100}%` }}
+            data-testid={`tier-label-${tier.label.toLowerCase().replace(/\s/g, "-")}`}
+          >
+            <span className={`${tier.textClass} font-semibold leading-tight text-center`}>{tier.label}</span>
+            <span className="text-muted-foreground font-mono leading-tight">{tier.min}–{tier.max}</span>
+          </div>
+        ))}
+      </div>
+
+      {nextTier ? (
+        <p className="text-center text-xs text-muted-foreground" data-testid="text-next-tier">
+          <span className="font-semibold text-foreground">{nextTier.pointsAway} point{nextTier.pointsAway !== 1 ? "s" : ""}</span> away from <span className="font-semibold text-foreground">{nextTier.name}</span>
+        </p>
+      ) : (
+        <p className="text-center text-xs text-emerald-600 dark:text-emerald-400 font-semibold" data-testid="text-next-tier">
+          You have reached the highest tier — Excellent!
+        </p>
+      )}
+    </div>
+  );
 }
 
 type View = "login" | "register" | "verify" | "dashboard";
@@ -1316,7 +1394,10 @@ export default function ConsumerPortalPage() {
                       <p className={`text-xl font-bold ${scoreInfo.color}`} data-testid="text-score-label">{scoreInfo.label}</p>
                       <p className="text-xs text-muted-foreground">Score range: 300 – 850</p>
                     </div>
-                    <div className="mt-5 p-3 rounded-xl bg-muted/40 text-center">
+                    <div className="mt-5 px-2">
+                      <ScoreTierBar score={data.creditScore} />
+                    </div>
+                    <div className="mt-4 p-3 rounded-xl bg-muted/40 text-center">
                       <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-score-description">{scoreInfo.description}</p>
                     </div>
                   </div>
