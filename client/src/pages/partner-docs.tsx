@@ -419,7 +419,7 @@ export default function PartnerDocsPage() {
                     { title: "Macroeconomic NPL Dashboards", desc: "National-level non-performing loan dashboards, sector-level risk analysis, systemic risk indicators, and early warning systems.", icon: BarChart3 },
                     { title: "Regulatory Oversight Tools", desc: "Monitor all credit bureaus operating under your jurisdiction. View aggregate data submissions, compliance metrics, and dispute resolution rates.", icon: Scale },
                     { title: "On-Premise Deployment", desc: "Deploy the full platform within your own data center. We provide installation, configuration, training, and ongoing support.", icon: Cpu },
-                    { title: "Custom Integrations", desc: "Direct integration with national payment systems (GhIPSS, Ghana Interbank Payment), national ID systems (Ghana Card / NIA), and banking supervision tools.", icon: Settings },
+                    { title: "Custom Integrations", desc: "Direct integration with national payment systems (GhIPSS, Ghana Interbank Payment), national ID systems (Ghana Card / NIA), vehicle registries (DVLA), land title registries (Lands Commission of Ghana), and banking supervision tools.", icon: Settings },
                   ].map(item => (
                     <div key={item.title} className="rounded-lg border border-border bg-background p-3">
                       <h4 className="font-semibold text-foreground text-sm mb-1 flex items-center gap-1.5"><item.icon className="w-3.5 h-3.5 text-violet-500" />{item.title}</h4>

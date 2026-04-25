@@ -25,7 +25,7 @@ import {
   Award, Clock, CheckCircle2, XCircle, AlertTriangle,
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
-  Share2, Mail, MessageSquare, Printer, History, Send, Pencil,
+  Share2, Mail, MessageSquare, Printer, History, Send, Pencil, Car, Landmark,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -1011,6 +1011,8 @@ type CollateralFormData = {
   isPmsi: boolean;
   securityInterestType: string;
   financingDuration: string;
+  dvlaVerificationRef: string;
+  landsCommissionRef: string;
 };
 
 type RegisterCollateralDialogProps = {
@@ -1068,6 +1070,8 @@ function RegisterCollateralDialog({
     isPmsi: prefillData?.isPmsi ?? false,
     securityInterestType: prefillData?.securityInterestType ?? "loan_security",
     financingDuration: prefillData?.financingDuration ?? "custom",
+    dvlaVerificationRef: "",
+    landsCommissionRef: "",
   });
 
   const [form, setForm] = useState<CollateralFormData>(buildInitialForm);
@@ -1278,6 +1282,62 @@ function RegisterCollateralDialog({
               <Label>Notes</Label>
               <Textarea placeholder="Additional notes or conditions…" value={form.notes} onChange={e => set("notes", e.target.value)} />
             </div>
+
+            {/* DVLA Verification — shown for vehicle collateral */}
+            {(form.collateralType === "vehicle" || form.collateralClass === "motor_vehicle") && (
+              <div className="col-span-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/60 dark:bg-blue-900/20 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-blue-100 dark:bg-blue-900/40">
+                    <Car className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">DVLA Verification</p>
+                    <p className="text-xs text-muted-foreground">Driver and Vehicle Licensing Authority — Ghana</p>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">DVLA Registration / Reference Number</Label>
+                  <Input
+                    data-testid="input-dvla-ref"
+                    placeholder="e.g. GR-1234-22 or DVLA-REF-XXXXXXXX"
+                    value={form.dvlaVerificationRef}
+                    onChange={e => set("dvlaVerificationRef", e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter the vehicle registration number or DVLA title reference to enable cross-verification. The DVLA database confirms ownership and confirms no existing encumbrance on the vehicle.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Lands Commission Verification — shown for land/real estate collateral */}
+            {(form.collateralType === "land" || form.collateralType === "real_estate") && (
+              <div className="col-span-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/20 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-md bg-emerald-100 dark:bg-emerald-900/40">
+                    <Landmark className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">Lands Commission Verification</p>
+                    <p className="text-xs text-muted-foreground">Lands Commission of Ghana — Title &amp; Deed Registry</p>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Title Deed / Plot Reference Number</Label>
+                  <Input
+                    data-testid="input-lands-commission-ref"
+                    placeholder="e.g. LC/ACCRA/2021/00123 or Plot No. 45, Block B"
+                    value={form.landsCommissionRef}
+                    onChange={e => set("landsCommissionRef", e.target.value)}
+                    className="mt-1"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    The Lands Commission reference confirms the title deed is registered, the grantor is the registered owner, and the land is free from prior encumbrances or cautions.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
