@@ -79,6 +79,15 @@ export async function migrateCrifFeatures() {
     ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS full_name TEXT;
     ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS country TEXT;
     ALTER TABLE consumer_accounts ADD COLUMN IF NOT EXISTS consent_given BOOLEAN DEFAULT false;
+
+    CREATE TABLE IF NOT EXISTS consumer_push_subscriptions (
+      id SERIAL PRIMARY KEY,
+      consumer_account_id VARCHAR NOT NULL REFERENCES consumer_accounts(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      keys JSONB NOT NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_consumer_push_subs_account ON consumer_push_subscriptions(consumer_account_id);
   `);
   console.log("[CRIF] All new feature tables created successfully");
 }

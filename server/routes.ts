@@ -62,7 +62,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory, consumerPushSubscriptions } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -3161,6 +3161,10 @@ export async function registerRoutes(
       const consumerNationalId = (req.session as any).consumerNationalId;
       const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
       if (!consumerAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
+      // Freeze check — blocked lender/third-party access when consumer freeze is active
+      if (consumerAccount.creditFrozen) {
+        return res.status(403).json({ message: "Credit report access is currently frozen. Disable the credit freeze to allow lookups.", frozen: true });
+      }
 
       const nationalId = consumerNationalId;
       const dateOfBirth = consumerAccount.dateOfBirth;
@@ -16384,16 +16388,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       // Sort ascending for chart display (oldest → newest)
       let monthly = Array.from(monthMap.values()).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(-12);
-      // Synthesize a baseline point if fewer than 2 monthly data points exist
+      // Synthesize baseline points if fewer than 2 monthly data points exist
       if (monthly.length < 2) {
         const refScore = monthly.length === 1 ? monthly[0].score : (borrower.creditScore ?? 500);
-        const syntheticScore = Math.max(300, Math.min(850, refScore - Math.floor(Math.random() * 15) - 5));
-        const syntheticDate = new Date();
-        syntheticDate.setMonth(syntheticDate.getMonth() - (monthly.length === 0 ? 2 : 1));
-        monthly = [
-          { id: "synthetic-baseline", borrowerId: borrower.id, score: syntheticScore, scoreModel: "Ghana Credit Score", createdAt: syntheticDate.toISOString(), updatedAt: syntheticDate.toISOString() },
-          ...monthly,
-        ];
+        const syntheticPoints = [];
+        const pointsNeeded = 2 - monthly.length;
+        for (let i = pointsNeeded; i >= 1; i--) {
+          const delta = Math.floor(Math.random() * 12) + 5; // 5–16 pts lower than previous
+          const prevScore = syntheticPoints.length > 0 ? syntheticPoints[syntheticPoints.length - 1].score : refScore;
+          const synScore = Math.max(300, Math.min(850, prevScore - delta));
+          const synDate = new Date();
+          synDate.setMonth(synDate.getMonth() - (monthly.length + i));
+          syntheticPoints.push({ id: `synthetic-${i}`, borrowerId: borrower.id, score: synScore, scoreModel: "Ghana Credit Score", createdAt: synDate.toISOString(), updatedAt: synDate.toISOString() });
+        }
+        monthly = [...syntheticPoints, ...monthly];
       }
       res.json(monthly);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -16471,29 +16479,40 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  // ─── Push Notification Subscription ───────────────────────────────────────
+  // ─── Push Notification Subscription (1-to-many, multi-device) ────────────
   app.post("/api/consumer/push-subscription", requireConsumer, async (req, res) => {
     try {
       const { endpoint, keys } = req.body as { endpoint: string; keys: { p256dh: string; auth: string } | null };
       if (!endpoint) return res.status(400).json({ message: "endpoint required" });
       if (!keys?.p256dh || !keys?.auth) return res.status(400).json({ message: "keys.p256dh and keys.auth are required for Web Push" });
-      await db.update(consumerAccounts).set({ pushEndpoint: endpoint, pushKeys: keys }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      const consumerId = (req.session as any).consumerId as string;
+      // Upsert into subscriptions table (unique on endpoint)
+      await db.execute(sql`
+        INSERT INTO consumer_push_subscriptions (consumer_account_id, endpoint, keys)
+        VALUES (${consumerId}, ${endpoint}, ${JSON.stringify(keys)})
+        ON CONFLICT (endpoint) DO UPDATE SET keys = EXCLUDED.keys, consumer_account_id = EXCLUDED.consumer_account_id
+      `);
       res.json({ subscribed: true });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.delete("/api/consumer/push-subscription", requireConsumer, async (req, res) => {
     try {
-      await db.update(consumerAccounts).set({ pushEndpoint: null, pushKeys: null }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      const { endpoint } = req.body as { endpoint?: string };
+      if (endpoint) {
+        await db.delete(consumerPushSubscriptions).where(and(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId), eq(consumerPushSubscriptions.endpoint, endpoint)));
+      } else {
+        // Delete all subscriptions for this consumer
+        await db.delete(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId));
+      }
       res.json({ subscribed: false });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/consumer/push-status", requireConsumer, async (req, res) => {
     try {
-      const [account] = await db.select({ pushEndpoint: consumerAccounts.pushEndpoint, pushKeys: consumerAccounts.pushKeys }).from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
-      const isReal = !!account?.pushEndpoint && account.pushEndpoint !== "browser-notifications-enabled" && !!(account.pushKeys as any)?.auth;
-      res.json({ subscribed: isReal, vapidPublicKey: getVapidPublicKey() });
+      const subs = await db.select({ endpoint: consumerPushSubscriptions.endpoint }).from(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId)).limit(10);
+      res.json({ subscribed: subs.length > 0, deviceCount: subs.length, vapidPublicKey: getVapidPublicKey() });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

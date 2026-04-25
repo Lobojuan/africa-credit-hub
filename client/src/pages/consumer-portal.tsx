@@ -417,7 +417,7 @@ export default function ConsumerPortalPage() {
   });
 
   // ── Local score simulator (3 toggles, no API call) ──────────────────────────
-  const [simToggles, setSimToggles] = useState({ payArrears: false, reduceUtil: false, onTimePayments: false });
+  const [simToggles, setSimToggles] = useState({ payArrears: false, reduceUtil: false, noNewInquiries6m: false });
   const [inquiryExpanded, setInquiryExpanded] = useState(false);
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
 
@@ -1343,10 +1343,10 @@ export default function ConsumerPortalPage() {
                   const delinq = (data as { delinquentAccounts?: number }).delinquentAccounts ?? 0;
                   const arrearsImpact = simToggles.payArrears ? Math.min(65, Math.max(20, delinq * 15 + 20)) : 0;
                   const utilImpact = simToggles.reduceUtil ? Math.min(35, Math.max(15, Math.round((850 - base) * 0.1))) : 0;
-                  const onTimeImpact = simToggles.onTimePayments ? Math.min(45, Math.max(20, Math.round((850 - base) * 0.12))) : 0;
-                  const totalDelta = arrearsImpact + utilImpact + onTimeImpact;
+                  const noInquiryImpact = simToggles.noNewInquiries6m ? Math.min(25, Math.max(10, Math.round((850 - base) * 0.05))) : 0;
+                  const totalDelta = arrearsImpact + utilImpact + noInquiryImpact;
                   const projected = Math.min(850, base + totalDelta);
-                  const anyOn = simToggles.payArrears || simToggles.reduceUtil || simToggles.onTimePayments;
+                  const anyOn = simToggles.payArrears || simToggles.reduceUtil || simToggles.noNewInquiries6m;
                   return (
                     <Card className="shadow-sm" data-testid="card-score-simulator">
                       <CardContent className="p-4">
@@ -1370,12 +1370,12 @@ export default function ConsumerPortalPage() {
                             </div>
                             <Switch checked={simToggles.reduceUtil} onCheckedChange={(v) => setSimToggles(s => ({ ...s, reduceUtil: v }))} data-testid="switch-sim-reduce-util" />
                           </div>
-                          <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" data-testid="toggle-on-time-payments">
+                          <div className="flex items-center justify-between rounded-xl border px-3 py-2.5" data-testid="toggle-no-new-inquiries">
                             <div>
-                              <p className="text-xs font-medium">Build 12 months of on-time payments</p>
-                              <p className="text-[10px] text-muted-foreground">Consistent payment history over the next year</p>
+                              <p className="text-xs font-medium">No new inquiries for 6 months</p>
+                              <p className="text-[10px] text-muted-foreground">Avoid new credit applications for 6 months to let inquiries age off</p>
                             </div>
-                            <Switch checked={simToggles.onTimePayments} onCheckedChange={(v) => setSimToggles(s => ({ ...s, onTimePayments: v }))} data-testid="switch-sim-on-time" />
+                            <Switch checked={simToggles.noNewInquiries6m} onCheckedChange={(v) => setSimToggles(s => ({ ...s, noNewInquiries6m: v }))} data-testid="switch-sim-no-inquiries" />
                           </div>
                         </div>
                         {anyOn && (
@@ -1395,7 +1395,7 @@ export default function ConsumerPortalPage() {
                               These are estimated improvements based on standard credit scoring rules.{" "}
                               {simToggles.payArrears && `Clearing arrears typically adds +${arrearsImpact} pts. `}
                               {simToggles.reduceUtil && `Lowering utilisation adds +${utilImpact} pts. `}
-                              {simToggles.onTimePayments && `12 months on-time payments adds +${onTimeImpact} pts.`}
+                              {simToggles.noNewInquiries6m && `Avoiding new inquiries for 6 months adds +${noInquiryImpact} pts.`}
                             </p>
                           </div>
                         )}
@@ -1446,13 +1446,13 @@ export default function ConsumerPortalPage() {
                   type Offer = { id: string; lender: string; product: string; maxAmount: string; currency: string; rateFrom: string; term: string; likelihood: "high" | "medium" | "low"; badge?: string };
                   const score = data.creditScore;
                   const staticOffers: Offer[] = score >= 650 ? [
-                    { id: "o1", lender: "Ecobank Ghana", product: "Personal Loan", maxAmount: "50,000", currency: "GHS", rateFrom: "18%", term: "Up to 60 months", likelihood: "high", badge: "Best Rate" },
-                    { id: "o2", lender: "Absa Bank Ghana", product: "Salary Advance", maxAmount: "30,000", currency: "GHS", rateFrom: "16%", term: "Up to 24 months", likelihood: "high" },
-                    { id: "o3", lender: "Fidelity Bank", product: "Home Improvement Loan", maxAmount: "100,000", currency: "GHS", rateFrom: "20%", term: "Up to 84 months", likelihood: "medium" },
+                    { id: "o1", lender: "Stanbic Bank Ghana", product: "SME Business Loan", maxAmount: "200,000", currency: "GHS", rateFrom: "17%", term: "Up to 84 months", likelihood: "high", badge: "SME" },
+                    { id: "o2", lender: "Ecobank Ghana", product: "Personal Loan", maxAmount: "50,000", currency: "GHS", rateFrom: "18%", term: "Up to 60 months", likelihood: "high", badge: "Best Rate" },
+                    { id: "o3", lender: "Absa Bank Ghana", product: "Home Improvement Loan", maxAmount: "100,000", currency: "GHS", rateFrom: "19%", term: "Up to 84 months", likelihood: "medium" },
                   ] : score >= 500 ? [
-                    { id: "o1", lender: "GCB Bank", product: "Personal Loan", maxAmount: "20,000", currency: "GHS", rateFrom: "22%", term: "Up to 36 months", likelihood: "high" },
-                    { id: "o2", lender: "Zenith Bank Ghana", product: "Salary Advance", maxAmount: "10,000", currency: "GHS", rateFrom: "25%", term: "Up to 12 months", likelihood: "medium" },
-                    { id: "o3", lender: "Letshego Ghana", product: "Consumer Loan", maxAmount: "8,000", currency: "GHS", rateFrom: "28%", term: "Up to 18 months", likelihood: "medium" },
+                    { id: "o1", lender: "Sinapi Aba Savings", product: "Microfinance Loan", maxAmount: "5,000", currency: "GHS", rateFrom: "26%", term: "Up to 12 months", likelihood: "high" },
+                    { id: "o2", lender: "Letshego Ghana", product: "Savings-Secured Loan", maxAmount: "10,000", currency: "GHS", rateFrom: "22%", term: "Up to 24 months", likelihood: "high" },
+                    { id: "o3", lender: "GCB Bank", product: "Consumer Micro Loan", maxAmount: "3,000", currency: "GHS", rateFrom: "28%", term: "Up to 6 months", likelihood: "medium" },
                   ] : [];
 
                   if (score < 500) {

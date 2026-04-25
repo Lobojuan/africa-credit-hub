@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb, AnyPgColumn } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb, AnyPgColumn, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -1139,6 +1139,16 @@ export const consumerAccounts = pgTable("consumer_accounts", {
 export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true, emailToken: true, emailTokenExpiresAt: true, verificationMethod: true });
 export type InsertConsumerAccount = z.infer<typeof insertConsumerAccountSchema>;
 export type ConsumerAccount = typeof consumerAccounts.$inferSelect;
+
+// Push subscriptions table — 1-to-many per consumer account (multi-device support)
+export const consumerPushSubscriptions = pgTable("consumer_push_subscriptions", {
+  id: serial("id").primaryKey(),
+  consumerAccountId: varchar("consumer_account_id").notNull().references(() => consumerAccounts.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  keys: jsonb("keys").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type ConsumerPushSubscription = typeof consumerPushSubscriptions.$inferSelect;
 
 export const openBankingProfiles = pgTable("open_banking_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

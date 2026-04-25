@@ -1,7 +1,7 @@
 import webpush from "web-push";
 import { db } from "./db";
-import { consumerAccounts, borrowers } from "@shared/schema";
-import { eq, or, ilike } from "drizzle-orm";
+import { consumerAccounts, consumerPushSubscriptions, borrowers } from "@shared/schema";
+import { eq, ilike } from "drizzle-orm";
 import { createLogger } from "./logger";
 
 const logger = createLogger("push");
@@ -36,36 +36,43 @@ export function getVapidPublicKey(): string {
 
 export async function sendPushToConsumerAccount(consumerAccountId: string, title: string, body: string): Promise<void> {
   try {
-    const [account] = await db.select({
-      pushEndpoint: consumerAccounts.pushEndpoint,
-      pushKeys: consumerAccounts.pushKeys,
-    }).from(consumerAccounts).where(eq(consumerAccounts.id, consumerAccountId)).limit(1);
-
-    if (!account?.pushEndpoint || account.pushEndpoint === "browser-notifications-enabled") return;
-
-    const keys = account.pushKeys as any;
-    if (!keys?.p256dh || !keys?.auth) return;
+    // Fan out to ALL registered subscriptions for this consumer (multi-device)
+    const subs = await db.select().from(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.consumerAccountId, consumerAccountId));
+    if (subs.length === 0) return;
 
     getVapidKeys();
+    const payload = JSON.stringify({ title, body, icon: "/pwa-icon-192.png" });
 
-    await webpush.sendNotification(
-      { endpoint: account.pushEndpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } },
-      JSON.stringify({ title, body, icon: "/pwa-icon-192.png" })
-    );
-    logger.info(`[Push] Sent to consumer ${consumerAccountId}`);
+    await Promise.allSettled(subs.map(async (sub) => {
+      const keys = sub.keys as { p256dh?: string; auth?: string } | null;
+      if (!keys?.p256dh || !keys?.auth) return;
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } },
+          payload
+        );
+        logger.info(`[Push] Sent to consumer ${consumerAccountId} endpoint ...${sub.endpoint.slice(-20)}`);
+      } catch (e: any) {
+        if (e.statusCode === 410 || e.statusCode === 404) {
+          // Endpoint gone — clean it up
+          await db.delete(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.id, sub.id)).catch(() => {});
+          logger.info(`[Push] Removed expired subscription for consumer ${consumerAccountId}`);
+        } else {
+          logger.warn(`[Push] Failed push for consumer ${consumerAccountId}: ${e.message}`);
+        }
+      }
+    }));
   } catch (e: any) {
-    logger.warn(`[Push] Failed to send push: ${e.message}`);
+    logger.warn(`[Push] sendPushToConsumerAccount error: ${e.message}`);
   }
 }
 
 export async function sendPushToBorrowerConsumer(borrowerNationalId: string, title: string, body: string): Promise<void> {
   try {
-    const [account] = await db.select({
-      id: consumerAccounts.id,
-      pushEndpoint: consumerAccounts.pushEndpoint,
-      pushKeys: consumerAccounts.pushKeys,
-    }).from(consumerAccounts).where(ilike(consumerAccounts.nationalId, borrowerNationalId)).limit(1);
-
+    const [account] = await db.select({ id: consumerAccounts.id })
+      .from(consumerAccounts)
+      .where(ilike(consumerAccounts.nationalId, borrowerNationalId))
+      .limit(1);
     if (!account) return;
     await sendPushToConsumerAccount(account.id, title, body);
   } catch {}
