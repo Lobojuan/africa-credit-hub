@@ -23,6 +23,7 @@ import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { FraudRiskIndicator, FraudRiskBadge } from "@/components/fraud-risk-indicator";
 import { ScoreFactors } from "@/components/score-factors";
 import { AlternativeDataCard } from "@/components/alternative-data-card";
+import { OpenBankingCard } from "@/components/open-banking-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Gavel, FileCheck } from "lucide-react";
 import { queryClient, apiRequest, apiFormRequest } from "@/lib/queryClient";
@@ -1566,6 +1567,8 @@ export default function BorrowerDetailPage() {
       )}
 
       <AlternativeDataCard borrowerId={borrowerId ?? ""} />
+
+      <OpenBankingCard borrowerId={borrowerId ?? ""} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card>
