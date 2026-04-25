@@ -414,7 +414,7 @@ export interface IStorage {
   firePortfolioTriggers(borrowerId: string, eventType: string, eventData: object): Promise<number>;
   getAccountTrends(creditAccountId: string): Promise<{ period: string; amountDue: string; amountPaid: string; status: string; daysLate: number }[]>;
   getBorrowerTrendSummary(borrowerId: string): Promise<{ scoreHistory: { score: number; createdAt: Date }[]; accountCount: number; activeDelinquencies: number; balanceTrend: string }>;
-  recordConsumerScoreHistory(nationalId: string, score: number): Promise<void>;
+  recordConsumerScoreHistory(nationalId: string, borrowerId: string | null, score: number): Promise<void>;
 
   // Consumer Monitoring
   getConsumerMonitoringPrefs(consumerAccountId: string): Promise<ConsumerMonitoringPrefs | undefined>;
@@ -3396,7 +3396,7 @@ export class DatabaseStorage implements IStorage {
     return { scoreHistory: scoreRows.map(r => ({ score: r.score, createdAt: r.createdAt! })), accountCount: accounts.length, activeDelinquencies: delinquent, balanceTrend };
   }
 
-  async recordConsumerScoreHistory(nationalId: string, score: number): Promise<void> {
+  async recordConsumerScoreHistory(nationalId: string, borrowerId: string | null, score: number): Promise<void> {
     if (!nationalId) return;
     const [latest] = await db
       .select({ score: consumerScoreHistory.score })
@@ -3405,7 +3405,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(consumerScoreHistory.recordedAt))
       .limit(1);
     if (latest && latest.score === score) return;
-    await db.insert(consumerScoreHistory).values({ nationalId, score });
+    await db.insert(consumerScoreHistory).values({ nationalId, borrowerId: borrowerId ?? null, score });
   }
 
   // -------------------------------------------------------------------------

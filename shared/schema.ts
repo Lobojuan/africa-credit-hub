@@ -512,6 +512,7 @@ export const creditScoreHistory = pgTable("credit_score_history", {
 export const consumerScoreHistory = pgTable("consumer_score_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   nationalId: text("national_id").notNull(),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id),
   score: integer("score").notNull(),
   recordedAt: timestamp("recorded_at").defaultNow(),
 });
