@@ -880,7 +880,7 @@ export default function ConsumerPortalPage() {
                   data-testid="link-to-register"
                 >
                   <UserPlus className="w-3.5 h-3.5 inline mr-1" />
-                  Don't have an account? Register
+                  Don't have an account? Register here
                 </button>
               </div>
             </CardContent>
