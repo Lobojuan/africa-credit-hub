@@ -2243,6 +2243,7 @@ export async function registerRoutes(
   const perUserKeyGenerator = (req: any) => req.session?.userId || rateLimitKeyGenerator(req);
   const exportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { message: "Export rate limit exceeded. Maximum 5 exports per hour." }, standardHeaders: true, legacyHeaders: false, keyGenerator: perUserKeyGenerator, validate: { keyGeneratorIpFallback: false } });
   const consumerExportLimiter = rateLimit({ windowMs: 24 * 60 * 60 * 1000, max: 1, message: { message: "You can only download your data once per day." }, standardHeaders: true, legacyHeaders: false, keyGenerator: (req: any) => req.session?.consumerId || rateLimitKeyGenerator(req), validate: { keyGeneratorIpFallback: false } });
+  const consumerPdfLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, message: { message: "Too many PDF downloads. Please try again later." }, standardHeaders: true, legacyHeaders: false, keyGenerator: (req: any) => req.session?.consumerId || rateLimitKeyGenerator(req), validate: { keyGeneratorIpFallback: false } });
 
   const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
@@ -3215,6 +3216,282 @@ export async function registerRoutes(
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Consumer self-service PDF credit report
+  // ---------------------------------------------------------------------------
+  app.post("/api/consumer/credit-report-pdf", requireConsumer, consumerPdfLimiter, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const [consumerAccount] = await db.select().from(consumerAccounts)
+        .where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      if (!consumerAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
+
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(
+          ilike(borrowers.nationalId, consumerNationalId),
+          ilike(borrowers.ghanaCardNumber, consumerNationalId),
+          ilike(borrowers.passportNumber, consumerNationalId)
+        )
+      ).limit(1);
+      const borrower = borrowerResult[0];
+
+      const PDFDocument = (await import("pdfkit")).default;
+      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 50, left: 40, right: 40 }, bufferPages: true });
+      const chunks: Buffer[] = [];
+      doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+
+      const C_BLUE = "#0466C8";
+      const C_GREEN = "#16a34a";
+      const C_AMBER = "#ca8a04";
+      const C_RED = "#dc2626";
+      const C_DARK = "#1a1a1a";
+      const C_GRAY = "#555555";
+      const C_LIGHT = "#888888";
+      const W = doc.page.width - 80;
+      const platform = process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+      const reportDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+      const reportSerial = `CR-${Date.now().toString(36).toUpperCase()}`;
+
+      function ensureSpace(needed: number) {
+        if (doc.y + needed > doc.page.height - 60) { doc.addPage(); doc.y = 50; }
+      }
+
+      function drawPageHeader() {
+        doc.rect(40, 40, W, 58).fill(C_BLUE);
+        doc.fill("#ffffff").fontSize(13).font("Helvetica-Bold")
+          .text("PERSONAL CREDIT REPORT", 55, 50, { width: W - 120 });
+        doc.fontSize(8).font("Helvetica").fill("#cce0ff")
+          .text(platform, 55, 68, { width: W - 120 });
+        doc.fill("#ffffff").fontSize(7).font("Helvetica")
+          .text("Report Date", W - 80, 50, { width: 76, align: "right" });
+        doc.fontSize(8).font("Helvetica-Bold")
+          .text(reportDate, W - 80, 60, { width: 76, align: "right" });
+        doc.fill(C_DARK);
+        doc.y = 112;
+      }
+
+      function sectionHead(title: string) {
+        ensureSpace(40);
+        doc.moveDown(0.5);
+        const y = doc.y;
+        doc.rect(40, y - 2, W, 20).fill("#f0f4f8");
+        doc.fill(C_BLUE).fontSize(9).font("Helvetica-Bold").text(title, 46, y + 3);
+        doc.y = y + 22;
+        doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(C_BLUE).lineWidth(0.6).stroke();
+        doc.moveDown(0.4);
+        doc.fill(C_DARK);
+      }
+
+      function infoGrid(fields: [string, string][]) {
+        const colW = (W - 12) / 2;
+        for (let i = 0; i < fields.length; i += 2) {
+          ensureSpace(22);
+          const y = doc.y;
+          doc.fontSize(6.5).font("Helvetica").fill(C_LIGHT).text(fields[i][0].toUpperCase(), 40, y, { width: colW });
+          doc.fontSize(8.5).font("Helvetica-Bold").fill(C_DARK).text(fields[i][1] || "—", 40, y + 9, { width: colW });
+          if (i + 1 < fields.length) {
+            doc.fontSize(6.5).font("Helvetica").fill(C_LIGHT).text(fields[i + 1][0].toUpperCase(), 40 + colW + 12, y, { width: colW });
+            doc.fontSize(8.5).font("Helvetica-Bold").fill(C_DARK).text(fields[i + 1][1] || "—", 40 + colW + 12, y + 9, { width: colW });
+          }
+          doc.y = y + 22;
+        }
+        doc.moveDown(0.2);
+      }
+
+      let tblRow = 0;
+      function tHead(cols: { label: string; w: number; align?: string }[]) {
+        ensureSpace(22);
+        const y = doc.y;
+        doc.rect(40, y, W, 17).fill(C_BLUE);
+        let x = 44;
+        cols.forEach(c => {
+          doc.fill("#ffffff").fontSize(6.5).font("Helvetica-Bold")
+            .text(c.label.toUpperCase(), x, y + 4, { width: c.w - 6, align: (c.align as any) || "left" });
+          x += c.w;
+        });
+        doc.y = y + 18;
+        tblRow = 0;
+      }
+
+      function tRow(cols: { val: string; w: number; align?: string; bold?: boolean; color?: string }[]) {
+        ensureSpace(16);
+        const y = doc.y;
+        doc.rect(40, y, W, 15).fill(tblRow % 2 === 0 ? "#ffffff" : "#f7f9fc");
+        let x = 44;
+        cols.forEach(c => {
+          doc.fill(c.color || C_DARK).fontSize(7.5).font(c.bold ? "Helvetica-Bold" : "Helvetica")
+            .text(c.val || "—", x, y + 3, { width: c.w - 6, align: (c.align as any) || "left" });
+          x += c.w;
+        });
+        doc.moveTo(40, y + 15).lineTo(40 + W, y + 15).strokeColor("#e5e5e5").lineWidth(0.2).stroke();
+        doc.y = y + 16;
+        tblRow++;
+      }
+
+      function drawFooter() {
+        const pages = (doc as any).bufferedPageRange();
+        for (let i = 0; i < pages.count; i++) {
+          doc.switchToPage(pages.start + i);
+          const fy = doc.page.height - 38;
+          doc.moveTo(40, fy).lineTo(40 + W, fy).strokeColor("#cccccc").lineWidth(0.5).stroke();
+          doc.fontSize(6.5).font("Helvetica").fill(C_LIGHT)
+            .text(`${platform} | Personal Credit Report | ${reportSerial} | Generated ${reportDate} | Page ${i + 1} of ${pages.count}`,
+              40, fy + 6, { width: W, align: "center" });
+        }
+        doc.fill(C_DARK);
+      }
+
+      drawPageHeader();
+
+      if (!borrower) {
+        sectionHead("No Credit History Found");
+        doc.moveDown(1);
+        doc.fontSize(10).font("Helvetica").fill(C_GRAY)
+          .text("No credit file was found linked to your registered National ID.", 40, doc.y, { width: W, align: "center" });
+        doc.moveDown(0.4);
+        doc.fontSize(8.5).font("Helvetica").fill(C_LIGHT)
+          .text("This may mean you have not yet been registered with any participating lender. If you believe this is incorrect, please contact the bureau.", 40, doc.y, { width: W, align: "center" });
+        drawFooter();
+        doc.end();
+        const buf = await new Promise<Buffer>((resolve, reject) => {
+          doc.on("end", () => resolve(Buffer.concat(chunks)));
+          doc.on("error", reject);
+        });
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Content-Disposition", `attachment; filename="credit-report-${new Date().toISOString().slice(0,10)}.pdf"`);
+        return res.send(buf);
+      }
+
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
+      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+
+      function scoreGrade(s: number): { label: string; color: string } {
+        if (s >= 750) return { label: "Excellent", color: C_GREEN };
+        if (s >= 700) return { label: "Very Good", color: C_GREEN };
+        if (s >= 650) return { label: "Good", color: "#2d9d4e" };
+        if (s >= 600) return { label: "Fair", color: C_AMBER };
+        return { label: "Poor", color: C_RED };
+      }
+      const grade = scoreGrade(creditScore);
+
+      const fullName = borrower.type === "corporate"
+        ? (borrower.companyName || "—")
+        : `${borrower.firstName || ""} ${borrower.lastName || ""}`.trim() || "—";
+      const maskedId = consumerNationalId.length > 6
+        ? consumerNationalId.slice(0, 3) + "****" + consumerNationalId.slice(-3)
+        : "***" + consumerNationalId.slice(-2);
+
+      sectionHead("SUBJECT INFORMATION");
+      infoGrid([
+        ["Full Name", fullName],
+        ["National ID", maskedId],
+        ["Report Date", reportDate],
+        ["Report Reference", reportSerial],
+      ]);
+
+      sectionHead("CREDIT SCORE");
+      ensureSpace(70);
+      const scoreY = doc.y + 4;
+      doc.fontSize(42).font("Helvetica-Bold").fill(grade.color)
+        .text(String(creditScore), 40, scoreY, { width: W, align: "center" });
+      doc.fontSize(12).font("Helvetica-Bold").fill(grade.color)
+        .text(grade.label, 40, doc.y, { width: W, align: "center" });
+      doc.fontSize(8).font("Helvetica").fill(C_GRAY)
+        .text("Score Range: 300 – 850", 40, doc.y + 2, { width: W, align: "center" });
+      doc.moveDown(0.8);
+
+      const activeAccts = accounts.filter(a => a.status !== "closed");
+      const overdue = accounts.filter(a => a.status === "delinquent" || a.status === "non_performing" || (Number(a.daysInArrears) || 0) > 0);
+      const totalDebt = accounts.reduce((sum, a) => sum + parseFloat((a.currentBalance as any) || "0"), 0);
+      const currency = accounts.length > 0 ? ((accounts[0] as any).currency || "GHS") : "GHS";
+
+      sectionHead("CREDIT SUMMARY");
+      infoGrid([
+        ["Total Accounts", String(accounts.length)],
+        ["Active Accounts", String(activeAccts.length)],
+        ["Overdue / Delinquent", String(overdue.length)],
+        ["Total Outstanding Debt", `${currency} ${totalDebt.toLocaleString("en-US", { minimumFractionDigits: 2 })}`],
+        ["Credit Inquiries (All Time)", String(inquiries.length)],
+        ["Court Judgments", String(judgments.length)],
+      ]);
+
+      if (accounts.length > 0) {
+        sectionHead("ACCOUNT DETAILS");
+        const c1 = W * 0.28, c2 = W * 0.17, c3 = W * 0.15, c4 = W * 0.20, c5 = W * 0.20;
+        tHead([
+          { label: "Lender", w: c1 },
+          { label: "Account Type", w: c2 },
+          { label: "Status", w: c3 },
+          { label: "Balance", w: c4, align: "right" },
+          { label: "Opened", w: c5, align: "right" },
+        ]);
+        accounts.forEach(acct => {
+          const bal = parseFloat((acct.currentBalance as any) || "0");
+          const acctCur = (acct as any).currency || currency;
+          const statusLabel = acct.status === "closed" ? "Closed"
+            : acct.status === "delinquent" ? "Delinquent"
+            : acct.status === "non_performing" ? "Non-Performing"
+            : acct.status === "written_off" ? "Written Off"
+            : "Active";
+          const statusColor = acct.status === "closed" ? C_GRAY
+            : acct.status === "active" ? C_GREEN
+            : C_RED;
+          const openDate = (acct as any).openDate
+            ? new Date((acct as any).openDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+            : "—";
+          tRow([
+            { val: (acct as any).lenderInstitution || "—", w: c1 },
+            { val: (acct as any).accountType || "—", w: c2 },
+            { val: statusLabel, w: c3, color: statusColor, bold: true },
+            { val: `${acctCur} ${bal.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, w: c4, align: "right" },
+            { val: openDate, w: c5, align: "right" },
+          ]);
+        });
+      } else {
+        doc.moveDown(0.4);
+        doc.fontSize(8.5).font("Helvetica").fill(C_LIGHT)
+          .text("No credit accounts found on record.", 40, doc.y, { width: W, align: "center" });
+      }
+
+      if (inquiries.length > 0) {
+        doc.moveDown(0.6);
+        sectionHead("RECENT ENQUIRIES (last 5)");
+        const qi1 = W * 0.45, qi2 = W * 0.30, qi3 = W * 0.25;
+        tHead([{ label: "Institution", w: qi1 }, { label: "Purpose", w: qi2 }, { label: "Date", w: qi3, align: "right" }]);
+        inquiries.slice(0, 5).forEach(inq => {
+          const d = (inq as any).createdAt
+            ? new Date((inq as any).createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+            : "—";
+          tRow([
+            { val: (inq as any).institution || "—", w: qi1 },
+            { val: (inq as any).purpose || "—", w: qi2 },
+            { val: d, w: qi3, align: "right" },
+          ]);
+        });
+      }
+
+      drawFooter();
+      doc.end();
+
+      const buf = await new Promise<Buffer>((resolve, reject) => {
+        doc.on("end", () => resolve(Buffer.concat(chunks)));
+        doc.on("error", reject);
+      });
+
+      const filename = `credit-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.send(buf);
+    } catch (e: any) {
+      console.error("[ConsumerPDF]", e);
+      res.status(500).json({ message: "Failed to generate PDF. Please try again." });
     }
   });
 
