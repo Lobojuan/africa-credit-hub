@@ -1,4 +1,4 @@
-const CACHE_NAME = "cdh-v2.5.0";
+const CACHE_NAME = "cdh-v2.6.0";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -38,5 +38,40 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() => caches.match(request).then((cached) => cached || new Response("Offline", { status: 503 })))
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let data = { title: "Africa Credit Hub", body: "You have a new credit alert.", icon: "/pwa-icon-192.png" };
+  try {
+    if (event.data) {
+      const parsed = event.data.json();
+      data = { ...data, ...parsed };
+    }
+  } catch {}
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || "/pwa-icon-192.png",
+      badge: "/pwa-icon-192.png",
+      tag: "credit-alert",
+      renotify: true,
+      data: { url: "/my-credit" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/my-credit";
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url.includes("/my-credit") && "focus" in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) return clients.openWindow(targetUrl);
+    })
   );
 });

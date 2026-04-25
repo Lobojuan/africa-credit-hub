@@ -62,7 +62,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -16316,6 +16316,253 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const count = await storage.markAllConsumerMonitoringAlertsRead(consumerAccountId);
       res.json({ marked: count });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Consumer Score History ────────────────────────────────────────────────
+  app.get("/api/consumer/score-history", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      if (!consumerAccount) return res.status(401).json({ message: "Session expired" });
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const history = await db.select().from(creditScoreHistory).where(eq(creditScoreHistory.borrowerId, borrower.id)).orderBy(desc(creditScoreHistory.createdAt)).limit(24);
+      res.json(history);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Consumer My Disputes ──────────────────────────────────────────────────
+  app.get("/api/consumer/my-disputes", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const myDisputes = await db.select().from(disputes).where(eq(disputes.borrowerId, borrower.id)).orderBy(desc(disputes.createdAt)).limit(20);
+      res.json(myDisputes);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Consumer My Inquiries ─────────────────────────────────────────────────
+  app.get("/api/consumer/my-inquiries", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const myInquiries = await db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, borrower.id)).orderBy(desc(creditInquiries.createdAt)).limit(20);
+      res.json(myInquiries);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Credit Freeze ─────────────────────────────────────────────────────────
+  app.get("/api/consumer/credit-freeze", requireConsumer, async (req, res) => {
+    try {
+      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      if (!account) return res.status(401).json({ message: "Session expired" });
+      res.json({ frozen: account.creditFrozen ?? false });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/consumer/credit-freeze", requireConsumer, async (req, res) => {
+    try {
+      const { frozen } = req.body;
+      if (typeof frozen !== "boolean") return res.status(400).json({ message: "frozen must be boolean" });
+      await db.update(consumerAccounts).set({ creditFrozen: frozen }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      await storage.createAuditLog({
+        action: frozen ? "CONSUMER_CREDIT_FREEZE_ON" : "CONSUMER_CREDIT_FREEZE_OFF",
+        entity: "consumer_account",
+        entityId: (req.session as any).consumerId,
+        details: `Consumer ${frozen ? "enabled" : "disabled"} credit freeze`,
+        ipAddress: req.ip || null,
+        userId: null,
+        organizationId: null,
+      });
+      res.json({ frozen });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Push Notification Subscription ───────────────────────────────────────
+  app.post("/api/consumer/push-subscribe", requireConsumer, async (req, res) => {
+    try {
+      const { endpoint, keys } = req.body;
+      if (!endpoint) return res.status(400).json({ message: "endpoint required" });
+      await db.update(consumerAccounts).set({ pushEndpoint: endpoint, pushKeys: keys ?? null }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      res.json({ subscribed: true });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.delete("/api/consumer/push-subscribe", requireConsumer, async (req, res) => {
+    try {
+      await db.update(consumerAccounts).set({ pushEndpoint: null, pushKeys: null }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      res.json({ subscribed: false });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/consumer/push-status", requireConsumer, async (req, res) => {
+    try {
+      const [account] = await db.select({ pushEndpoint: consumerAccounts.pushEndpoint }).from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      res.json({ subscribed: !!account?.pushEndpoint });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Improvement Tips (score-based) ───────────────────────────────────────
+  app.get("/api/consumer/improvement-tips", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
+      const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+
+      const tips: { id: string; title: string; description: string; impact: "high" | "medium" | "low"; icon: string }[] = [];
+      const delinquentAccounts = accounts.filter(a => a.status === "delinquent" || a.daysInArrears > 0);
+      const recentInquiries = inquiries.filter(i => i.createdAt && new Date(i.createdAt).getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000);
+
+      if (delinquentAccounts.length > 0) {
+        tips.push({ id: "settle-arrears", title: "Settle Outstanding Arrears", description: `You have ${delinquentAccounts.length} account(s) with outstanding payments. Bringing these current could significantly boost your score within 30 days.`, impact: "high", icon: "alert" });
+      }
+      if (recentInquiries.length > 3) {
+        tips.push({ id: "reduce-inquiries", title: "Reduce Credit Applications", description: `You have ${recentInquiries.length} credit inquiries in the past 90 days. Multiple applications signal risk to lenders. Consider waiting 3–6 months before applying again.`, impact: "medium", icon: "search" });
+      }
+      const defaultedAccounts = accounts.filter(a => a.status === "default" || a.status === "written_off");
+      if (defaultedAccounts.length > 0) {
+        tips.push({ id: "negotiate-defaults", title: "Negotiate Settlement on Defaults", description: "Contact lenders about your defaulted accounts. Even partial settlements can improve your credit standing and may be noted as 'settled' on your file.", impact: "high", icon: "handshake" });
+      }
+      const totalDebt = accounts.reduce((sum, a) => sum + Number(a.currentBalance || 0), 0);
+      const totalLimit = accounts.reduce((sum, a) => sum + Number(a.originalAmount || 0), 0);
+      if (totalLimit > 0 && totalDebt / totalLimit > 0.6) {
+        tips.push({ id: "reduce-utilisation", title: "Reduce Credit Utilisation", description: `Your current credit utilisation is ${Math.round((totalDebt / totalLimit) * 100)}%. Aim to keep it below 30% by paying down balances. This is one of the fastest score boosters.`, impact: "high", icon: "chart" });
+      }
+      if (accounts.length < 2) {
+        tips.push({ id: "diversify-credit", title: "Build a Diverse Credit History", description: "Having only one type of credit limits your score potential. A mix of instalment loans and revolving credit — managed responsibly — improves your credit profile over time.", impact: "low", icon: "layers" });
+      }
+      if (score >= 580 && score < 700) {
+        tips.push({ id: "autopay", title: "Set Up Automatic Payments", description: "Payment history is the largest factor in your score. Setting up auto-pay ensures you never miss a due date, which can steadily improve your score over 6–12 months.", impact: "medium", icon: "clock" });
+      }
+      if (judgments.length > 0) {
+        tips.push({ id: "resolve-judgments", title: "Resolve Court Judgments", description: `You have ${judgments.length} active court judgment(s) on your record. Resolving these, even through payment plans, can have a major positive impact on your creditworthiness.`, impact: "high", icon: "gavel" });
+      }
+      if (tips.length === 0) {
+        tips.push({ id: "maintain", title: "Maintain Your Strong Profile", description: "Your credit profile looks good! Keep paying on time, avoid unnecessary applications, and consider checking your report annually for any errors.", impact: "low", icon: "star" });
+      }
+
+      res.json({ score, tips });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Pre-qualification Offers (score-based) ────────────────────────────────
+  app.get("/api/consumer/prequalified-offers", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
+      const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+
+      const offers: { id: string; lender: string; product: string; maxAmount: string; currency: string; rateFrom: string; term: string; likelihood: "high" | "medium" | "low"; badge?: string }[] = [];
+
+      if (score >= 750) {
+        offers.push(
+          { id: "o1", lender: "Ecobank", product: "Personal Loan", maxAmount: "50,000", currency: "GHS", rateFrom: "18%", term: "Up to 60 months", likelihood: "high", badge: "Best Rate" },
+          { id: "o2", lender: "Absa Bank", product: "Salary Advance", maxAmount: "30,000", currency: "GHS", rateFrom: "16%", term: "Up to 24 months", likelihood: "high" },
+          { id: "o3", lender: "Fidelity Bank", product: "Home Improvement Loan", maxAmount: "100,000", currency: "GHS", rateFrom: "20%", term: "Up to 84 months", likelihood: "medium" },
+        );
+      } else if (score >= 670) {
+        offers.push(
+          { id: "o1", lender: "GCB Bank", product: "Personal Loan", maxAmount: "20,000", currency: "GHS", rateFrom: "22%", term: "Up to 36 months", likelihood: "high" },
+          { id: "o2", lender: "Zenith Bank", product: "Salary Advance", maxAmount: "10,000", currency: "GHS", rateFrom: "25%", term: "Up to 12 months", likelihood: "high" },
+          { id: "o3", lender: "Letshego", product: "Consumer Loan", maxAmount: "15,000", currency: "GHS", rateFrom: "28%", term: "Up to 24 months", likelihood: "medium" },
+        );
+      } else if (score >= 580) {
+        offers.push(
+          { id: "o1", lender: "Opportunity International", product: "Micro Loan", maxAmount: "5,000", currency: "GHS", rateFrom: "30%", term: "Up to 12 months", likelihood: "medium" },
+          { id: "o2", lender: "FNB Ghana", product: "Secured Personal Loan", maxAmount: "8,000", currency: "GHS", rateFrom: "28%", term: "Up to 18 months", likelihood: "medium" },
+        );
+      } else if (score >= 450) {
+        offers.push(
+          { id: "o1", lender: "Sinapi Aba Savings", product: "Group Guarantee Loan", maxAmount: "2,000", currency: "GHS", rateFrom: "35%", term: "Up to 6 months", likelihood: "low" },
+        );
+      }
+
+      res.json({ score, offers });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Consumer Score Simulator ──────────────────────────────────────────────
+  app.post("/api/consumer/simulate-score", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.status(404).json({ message: "No credit file found" });
+
+      const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
+      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      let altData: any[] = [];
+      try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
+      const { score: baseScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+
+      const { action } = req.body as { action: string };
+      let simulatedScore = baseScore;
+      let explanation = "";
+
+      switch (action) {
+        case "pay_all_arrears":
+          simulatedScore = Math.min(850, baseScore + 45);
+          explanation = "Paying all outstanding arrears typically improves your score by 30–60 points within 30–45 days.";
+          break;
+        case "close_old_account":
+          simulatedScore = Math.max(300, baseScore - 15);
+          explanation = "Closing an old account shortens your credit history and reduces available credit, which may lower your score slightly.";
+          break;
+        case "reduce_utilisation_30":
+          simulatedScore = Math.min(850, baseScore + 30);
+          explanation = "Reducing your credit utilisation to below 30% is one of the fastest ways to raise your score.";
+          break;
+        case "new_loan":
+          simulatedScore = Math.max(300, baseScore - 10);
+          explanation = "Taking a new loan adds an inquiry and reduces average account age, causing a small temporary dip.";
+          break;
+        case "no_late_payments_6mo":
+          simulatedScore = Math.min(850, baseScore + 25);
+          explanation = "Six months of on-time payments demonstrates responsible behaviour and steadily improves your score.";
+          break;
+        case "settle_default":
+          simulatedScore = Math.min(850, baseScore + 55);
+          explanation = "Settling a defaulted account can significantly improve your creditworthiness, especially if it is recent.";
+          break;
+        default:
+          simulatedScore = baseScore;
+          explanation = "Select an action to see its projected score impact.";
+      }
+
+      res.json({ baseScore, simulatedScore, delta: simulatedScore - baseScore, explanation });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

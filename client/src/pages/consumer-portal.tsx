@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Download, FileText, Send, BellRing, Bell, BellOff, Settings2, Info } from "lucide-react";
+import { Shield, AlertTriangle, CheckCircle2, TrendingUp, User, Loader2, Scale, Phone, Lock, LogOut, UserPlus, KeyRound, ArrowLeft, Eye, EyeOff, Mail, MessageSquare, RefreshCw, Download, FileText, Send, BellRing, Bell, BellOff, Settings2, Info, History, Zap, Lightbulb, Search, Clock, Layers, Star, Snowflake, Tag, ChevronRight, Activity } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 // ---------------------------------------------------------------------------
 // Dispute Filing Dialog
@@ -277,6 +278,139 @@ export default function ConsumerPortalPage() {
       return res.json();
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/monitoring-alerts"] }); },
+  });
+
+  // ── New feature queries ─────────────────────────────────────────────────────
+  const scoreHistoryQuery = useQuery<any[]>({
+    queryKey: ["/api/consumer/score-history"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/score-history", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const myDisputesQuery = useQuery<any[]>({
+    queryKey: ["/api/consumer/my-disputes"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/my-disputes", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const myInquiriesQuery = useQuery<any[]>({
+    queryKey: ["/api/consumer/my-inquiries"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/my-inquiries", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const freezeQuery = useQuery<{ frozen: boolean }>({
+    queryKey: ["/api/consumer/credit-freeze"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/credit-freeze", { credentials: "include" });
+      if (!res.ok) return { frozen: false };
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const pushStatusQuery = useQuery<{ subscribed: boolean }>({
+    queryKey: ["/api/consumer/push-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/push-status", { credentials: "include" });
+      if (!res.ok) return { subscribed: false };
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const tipsQuery = useQuery<{ score: number; tips: any[] }>({
+    queryKey: ["/api/consumer/improvement-tips"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/improvement-tips", { credentials: "include" });
+      if (!res.ok) return { score: 0, tips: [] };
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const offersQuery = useQuery<{ score: number; offers: any[] }>({
+    queryKey: ["/api/consumer/prequalified-offers"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/prequalified-offers", { credentials: "include" });
+      if (!res.ok) return { score: 0, offers: [] };
+      return res.json();
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const freezeMutation = useMutation({
+    mutationFn: async (frozen: boolean) => {
+      const res = await fetch("/api/consumer/credit-freeze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ frozen }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+      return res.json();
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/credit-freeze"] }); },
+  });
+
+  const pushSubscribeMutation = useMutation({
+    mutationFn: async () => {
+      if (!("Notification" in window)) throw new Error("Notifications not supported");
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") throw new Error("Permission denied. Please allow notifications in your browser settings.");
+      await fetch("/api/consumer/push-subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ endpoint: "browser-notifications-enabled", keys: null }),
+      });
+      return { subscribed: true };
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/push-status"] }); },
+  });
+
+  const pushUnsubscribeMutation = useMutation({
+    mutationFn: async () => {
+      await fetch("/api/consumer/push-subscribe", { method: "DELETE", credentials: "include" });
+      return { subscribed: false };
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["/api/consumer/push-status"] }); },
+  });
+
+  const [simulatorAction, setSimulatorAction] = useState("");
+  const [simulatorResult, setSimulatorResult] = useState<{ baseScore: number; simulatedScore: number; delta: number; explanation: string } | null>(null);
+
+  const simulateMutation = useMutation({
+    mutationFn: async (action: string) => {
+      const res = await fetch("/api/consumer/simulate-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.message); }
+      return res.json();
+    },
+    onSuccess: (result) => setSimulatorResult(result),
   });
 
   const [monitorPrefsOpen, setMonitorPrefsOpen] = useState(false);
@@ -1106,7 +1240,326 @@ export default function ConsumerPortalPage() {
                   </Card>
                 )}
 
-                {/* ---- CREDIT MONITORING ALERTS ---- */}
+                {/* ─── 1. SCORE HISTORY CHART ─────────────────────────────────── */}
+                <Card className="shadow-sm" data-testid="card-score-history">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <History className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-bold">Score History</h3>
+                    </div>
+                    {scoreHistoryQuery.isLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground py-4 justify-center"><Loader2 className="w-3 h-3 animate-spin" /> Loading...</div>
+                    ) : !scoreHistoryQuery.data || scoreHistoryQuery.data.length === 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-muted-foreground">No historical score data on file yet. Your score trend will appear here as your credit file is updated over time.</p>
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Current Score</span>
+                            <span className="font-bold" data-testid="text-history-current-score">{data.creditScore}</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className="h-full rounded-full bg-primary"
+                              style={{ width: `${((data.creditScore - 300) / 550) * 100}%`, transition: "width 1s ease" }}
+                            />
+                          </div>
+                          <div className="flex justify-between text-[10px] text-muted-foreground mt-1"><span>300</span><span>850</span></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-3">Your credit score trend over the past {scoreHistoryQuery.data.length} recorded snapshots.</p>
+                        <div style={{ height: 160 }}>
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={[...scoreHistoryQuery.data].reverse().map((h: any) => ({
+                              date: new Date(h.createdAt).toLocaleDateString("en-GB", { month: "short", year: "2-digit" }),
+                              score: h.score,
+                            }))}>
+                              <defs>
+                                <linearGradient id="scoreGrad" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                              <YAxis domain={[300, 850]} tick={{ fontSize: 10 }} width={35} />
+                              <Tooltip formatter={(v: any) => [v, "Score"]} contentStyle={{ fontSize: 11, borderRadius: 8 }} />
+                              <Area type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#scoreGrad)" dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ─── 2. SCORE SIMULATOR ─────────────────────────────────────── */}
+                <Card className="shadow-sm" data-testid="card-score-simulator">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <h3 className="text-sm font-bold">Score Simulator</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">See how a financial action could change your credit score.</p>
+                    <Select value={simulatorAction} onValueChange={setSimulatorAction}>
+                      <SelectTrigger className="rounded-xl text-xs h-9" data-testid="select-simulator-action">
+                        <SelectValue placeholder="Choose an action…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pay_all_arrears">Pay all outstanding arrears</SelectItem>
+                        <SelectItem value="settle_default">Settle a defaulted account</SelectItem>
+                        <SelectItem value="reduce_utilisation_30">Reduce credit utilisation to 30%</SelectItem>
+                        <SelectItem value="no_late_payments_6mo">6 months of on-time payments</SelectItem>
+                        <SelectItem value="new_loan">Take a new loan</SelectItem>
+                        <SelectItem value="close_old_account">Close an old account</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      className="w-full rounded-xl mt-2"
+                      data-testid="button-run-simulation"
+                      disabled={!simulatorAction || simulateMutation.isPending}
+                      onClick={() => { setSimulatorResult(null); simulateMutation.mutate(simulatorAction); }}
+                    >
+                      {simulateMutation.isPending ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Zap className="w-3.5 h-3.5 mr-1.5" />}
+                      {simulateMutation.isPending ? "Simulating…" : "Run Simulation"}
+                    </Button>
+                    {simulatorResult && (
+                      <div className="mt-3 rounded-xl border p-3 space-y-2 animate-in fade-in" data-testid="simulator-result">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Current score</span>
+                          <span className="font-bold" data-testid="text-sim-base">{simulatorResult.baseScore}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Projected score</span>
+                          <span className={`font-bold text-base ${simulatorResult.delta >= 0 ? "text-emerald-600" : "text-red-500"}`} data-testid="text-sim-projected">
+                            {simulatorResult.simulatedScore}
+                            <span className="text-xs ml-1">({simulatorResult.delta >= 0 ? "+" : ""}{simulatorResult.delta})</span>
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">{simulatorResult.explanation}</p>
+                      </div>
+                    )}
+                    {simulateMutation.isError && (
+                      <p className="text-xs text-red-500 mt-2">{(simulateMutation.error as Error).message}</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ─── 3. PERSONALISED IMPROVEMENT TIPS ──────────────────────── */}
+                <Card className="shadow-sm" data-testid="card-improvement-tips">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lightbulb className="w-4 h-4 text-yellow-500" />
+                      <h3 className="text-sm font-bold">Personalised Improvement Tips</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">Actions tailored to your credit profile to help you improve your score.</p>
+                    {tipsQuery.isLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-3"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
+                    ) : !tipsQuery.data?.tips?.length ? (
+                      <p className="text-xs text-muted-foreground">No tips available at this time.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {tipsQuery.data.tips.map((tip: any) => (
+                          <div key={tip.id} data-testid={`tip-${tip.id}`} className={`rounded-xl p-3 border ${tip.impact === "high" ? "border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800" : tip.impact === "medium" ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800" : "border-muted bg-muted/20"}`}>
+                            <div className="flex items-start gap-2">
+                              <div className={`mt-0.5 flex-shrink-0 ${tip.impact === "high" ? "text-red-500" : tip.impact === "medium" ? "text-amber-500" : "text-muted-foreground"}`}>
+                                {tip.impact === "high" ? <AlertTriangle className="w-3.5 h-3.5" /> : tip.impact === "medium" ? <Clock className="w-3.5 h-3.5" /> : <Star className="w-3.5 h-3.5" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-0.5">
+                                  <p className="text-xs font-semibold">{tip.title}</p>
+                                  <Badge variant="outline" className={`text-[9px] px-1 h-4 ${tip.impact === "high" ? "border-red-300 text-red-600" : tip.impact === "medium" ? "border-amber-300 text-amber-600" : "border-muted text-muted-foreground"}`}>
+                                    {tip.impact} impact
+                                  </Badge>
+                                </div>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">{tip.description}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ─── 4. LENDER PRE-QUALIFICATION OFFERS ─────────────────────── */}
+                {offersQuery.data && offersQuery.data.offers.length > 0 && (
+                  <Card className="shadow-sm border-emerald-200 dark:border-emerald-800" data-testid="card-prequalified-offers">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Tag className="w-4 h-4 text-emerald-600" />
+                        <h3 className="text-sm font-bold">Pre-qualified Offers</h3>
+                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] h-4 px-1.5 border-0">Based on your score</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">These indicative offers are based on your credit score. Actual terms depend on lender assessment.</p>
+                      <div className="space-y-2">
+                        {offersQuery.data.offers.map((offer: any) => (
+                          <div key={offer.id} data-testid={`offer-${offer.id}`} className="rounded-xl border p-3 flex items-start gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                              <Tag className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-xs font-semibold">{offer.lender}</p>
+                                {offer.badge && <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[9px] h-4 px-1 border-0">{offer.badge}</Badge>}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground">{offer.product}</p>
+                              <div className="flex gap-3 mt-1 text-[11px]">
+                                <span><span className="text-muted-foreground">Up to </span><span className="font-medium">{offer.currency} {offer.maxAmount}</span></span>
+                                <span><span className="text-muted-foreground">From </span><span className="font-medium">{offer.rateFrom} p.a.</span></span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{offer.term}</p>
+                            </div>
+                            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${offer.likelihood === "high" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : offer.likelihood === "medium" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : "bg-muted text-muted-foreground"}`}>
+                              {offer.likelihood === "high" ? "High match" : offer.likelihood === "medium" ? "Good match" : "Possible"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2">* Offers are indicative only. Contact the lender directly to apply. Africa Credit Hub does not endorse any specific product.</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* ─── 5. DISPUTE STATUS TRACKER ──────────────────────────────── */}
+                <Card className="shadow-sm" data-testid="card-dispute-tracker">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Activity className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-bold">My Disputes</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">Track the status of disputes you have filed with the bureau.</p>
+                    {myDisputesQuery.isLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-3"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
+                    ) : !myDisputesQuery.data || myDisputesQuery.data.length === 0 ? (
+                      <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground flex items-start gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                        <span>No disputes on file. If you believe information on your credit report is inaccurate, use the button below to file a dispute.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {myDisputesQuery.data.map((d: any) => {
+                          const statusColors: Record<string, string> = { open: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300", under_review: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300", resolved: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300", rejected: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" };
+                          const statusClass = statusColors[d.status] || "bg-muted text-muted-foreground";
+                          return (
+                            <div key={d.id} data-testid={`dispute-${d.id}`} className="rounded-xl border p-3 space-y-1">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-semibold">{(d.disputeType || "dispute").replace(/_/g, " ")}</p>
+                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusClass}`}>{(d.status || "open").replace(/_/g, " ")}</span>
+                              </div>
+                              <p className="text-[11px] text-muted-foreground line-clamp-2">{d.description}</p>
+                              <p className="text-[10px] text-muted-foreground">Filed: {d.createdAt ? new Date(d.createdAt).toLocaleDateString() : "—"}{d.slaDeadline ? ` · SLA: ${new Date(d.slaDeadline).toLocaleDateString()}` : ""}{d.resolvedAt ? ` · Resolved: ${new Date(d.resolvedAt).toLocaleDateString()}` : ""}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <DisputeFilingDialog />
+                  </CardContent>
+                </Card>
+
+                {/* ─── 6. WHO ACCESSED MY DATA ────────────────────────────────── */}
+                <Card className="shadow-sm" data-testid="card-inquiry-feed">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Search className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-bold">Who Accessed My Data</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground mb-3">A log of institutions that have accessed your credit report. By law, lenders must have your consent.</p>
+                    {myInquiriesQuery.isLoading ? (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground justify-center py-3"><Loader2 className="w-3 h-3 animate-spin" /> Loading…</div>
+                    ) : !myInquiriesQuery.data || myInquiriesQuery.data.length === 0 ? (
+                      <div className="bg-muted/30 rounded-xl p-3 text-xs text-muted-foreground flex items-start gap-2">
+                        <Shield className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                        <span>No inquiries recorded. This log will populate when lenders access your credit file.</span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {myInquiriesQuery.data.map((inq: any) => (
+                          <div key={inq.id} data-testid={`inquiry-${inq.id}`} className="flex items-start gap-2.5 rounded-xl border p-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <Search className="w-3.5 h-3.5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-semibold truncate">{inq.institution || "Unknown Institution"}</p>
+                              <p className="text-[10px] text-muted-foreground">{(inq.purpose || "inquiry").replace(/_/g, " ")} · {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
+                            </div>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${inq.isSoftPull ? "bg-muted text-muted-foreground" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"}`}>
+                              {inq.isSoftPull ? "Soft" : "Hard"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ─── 7. CREDIT FREEZE ───────────────────────────────────────── */}
+                <Card className={`shadow-sm ${freezeQuery.data?.frozen ? "border-blue-300 dark:border-blue-700" : ""}`} data-testid="card-credit-freeze">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Snowflake className={`w-4 h-4 ${freezeQuery.data?.frozen ? "text-blue-500" : "text-muted-foreground"}`} />
+                        <h3 className="text-sm font-bold">Credit Freeze</h3>
+                        {freezeQuery.data?.frozen && (
+                          <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0 text-[10px] h-4 px-1.5">ACTIVE</Badge>
+                        )}
+                      </div>
+                      <Switch
+                        data-testid="switch-credit-freeze"
+                        checked={freezeQuery.data?.frozen ?? false}
+                        disabled={freezeMutation.isPending || freezeQuery.isLoading}
+                        onCheckedChange={(v) => freezeMutation.mutate(v)}
+                      />
+                    </div>
+                    {freezeQuery.data?.frozen ? (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-3">
+                        <p className="text-xs font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-1.5 mb-1">
+                          <Snowflake className="w-3.5 h-3.5" /> Credit File Frozen
+                        </p>
+                        <p className="text-[11px] text-blue-700 dark:text-blue-400 leading-relaxed">Your credit file is currently frozen. Lenders cannot access your credit report. Toggle off to lift the freeze when applying for credit.</p>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground leading-relaxed">Enable a credit freeze to prevent lenders from accessing your credit report without your explicit authorisation. Useful if you suspect identity theft.</p>
+                    )}
+                    {freezeMutation.isError && (
+                      <p className="text-xs text-red-500 mt-2">{(freezeMutation.error as Error).message}</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ─── 8. PWA PUSH NOTIFICATIONS ──────────────────────────────── */}
+                <Card className="shadow-sm" data-testid="card-push-notifications">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {pushStatusQuery.data?.subscribed ? <BellRing className="w-4 h-4 text-primary" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+                        <h3 className="text-sm font-bold">Push Notifications</h3>
+                      </div>
+                      <Switch
+                        data-testid="switch-push-notifications"
+                        checked={pushStatusQuery.data?.subscribed ?? false}
+                        disabled={pushSubscribeMutation.isPending || pushUnsubscribeMutation.isPending || pushStatusQuery.isLoading}
+                        onCheckedChange={(v) => { if (v) pushSubscribeMutation.mutate(); else pushUnsubscribeMutation.mutate(); }}
+                      />
+                    </div>
+                    {pushStatusQuery.data?.subscribed ? (
+                      <p className="text-xs text-muted-foreground">Push notifications are enabled. You will be alerted when your credit score changes or a lender accesses your file.</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Enable push notifications to receive instant alerts on your device whenever there is activity on your credit file.</p>
+                    )}
+                    {pushSubscribeMutation.isError && (
+                      <p className="text-xs text-red-500 mt-2">{(pushSubscribeMutation.error as Error).message}</p>
+                    )}
+                    {pushSubscribeMutation.isSuccess && (
+                      <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Notifications enabled!</p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* ─── CREDIT MONITORING ALERTS ────────────────────────────────────────── */}
                 <Card className="shadow-sm border-primary/20" data-testid="card-monitoring-alerts">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-3">

@@ -1131,6 +1131,9 @@ export const consumerAccounts = pgTable("consumer_accounts", {
   lastLogin: timestamp("last_login"),
   country: text("country"),
   consentGiven: boolean("consent_given").default(false),
+  creditFrozen: boolean("credit_frozen").default(false),
+  pushEndpoint: text("push_endpoint"),
+  pushKeys: jsonb("push_keys"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 export const insertConsumerAccountSchema = createInsertSchema(consumerAccounts).omit({ id: true, createdAt: true, lastLogin: true, failedAttempts: true, lockedUntil: true, otpCode: true, otpExpiresAt: true, verified: true, emailToken: true, emailTokenExpiresAt: true, verificationMethod: true });
