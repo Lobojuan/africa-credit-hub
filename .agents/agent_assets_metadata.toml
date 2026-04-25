@@ -246,3 +246,9 @@ id = "1kHxEz-8K1wNw7gLwoJR6"
 uri = "file://africa-credit-hub.zip"
 type = "unspecified"
 title = "Africa Credit Hub — Source Code"
+
+[[outputs]]
+id = "7IdcnOfNDkKLQhyhj0LIU"
+uri = "file://africa-credit-hub-v2.6-source.tar.gz"
+type = "unspecified"
+title = "Africa Credit Hub v2.6 — Source Code"
