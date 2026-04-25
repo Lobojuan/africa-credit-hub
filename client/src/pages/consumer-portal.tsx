@@ -23,6 +23,8 @@ interface PushStatusResponse { subscribed: boolean; vapidPublicKey?: string; }
 interface FreezeResponse { frozen: boolean; }
 interface ImprovementTipsResponse { score: number; tips: { id: string; title: string; impact: string; description: string }[] }
 interface PushSubscribeResponse { subscribed: boolean; }
+interface ConsumerMonitoringAlert { id: string; alertType: string; message: string; isRead: boolean; createdAt: string; }
+type MonitoringPrefs = { alertOnInquiry: boolean; alertOnScoreChange: boolean; alertOnNewAccount: boolean; alertOnDelinquency: boolean; emailAlerts: boolean; smsAlerts: boolean; }
 
 // ---------------------------------------------------------------------------
 // Dispute Filing Dialog
@@ -243,7 +245,7 @@ export default function ConsumerPortalPage() {
 
   const isLoggedIn = sessionQuery.data?.authenticated && view === "dashboard";
 
-  const monitoringAlertsQuery = useQuery<any[]>({
+  const monitoringAlertsQuery = useQuery<ConsumerMonitoringAlert[]>({
     queryKey: ["/api/consumer/monitoring-alerts"],
     queryFn: async () => {
       const res = await fetch("/api/consumer/monitoring-alerts?limit=20", { credentials: "include" });
@@ -266,7 +268,7 @@ export default function ConsumerPortalPage() {
   });
 
   const saveMonitoringPrefs = useMutation({
-    mutationFn: async (prefs: any) => {
+    mutationFn: async (prefs: MonitoringPrefs) => {
       const res = await fetch("/api/consumer/monitoring-prefs", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -417,9 +419,10 @@ export default function ConsumerPortalPage() {
   // ── Local score simulator (3 toggles, no API call) ──────────────────────────
   const [simToggles, setSimToggles] = useState({ payArrears: false, reduceUtil: false, onTimePayments: false });
   const [inquiryExpanded, setInquiryExpanded] = useState(false);
+  const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
 
   const [monitorPrefsOpen, setMonitorPrefsOpen] = useState(false);
-  const [localPrefs, setLocalPrefs] = useState({ alertOnInquiry: true, alertOnScoreChange: true, alertOnNewAccount: true, alertOnDelinquency: true, emailAlerts: true, smsAlerts: false });
+  const [localPrefs, setLocalPrefs] = useState<MonitoringPrefs>({ alertOnInquiry: true, alertOnScoreChange: true, alertOnNewAccount: true, alertOnDelinquency: true, emailAlerts: true, smsAlerts: false });
 
   useEffect(() => {
     if (monitoringPrefsQuery.data) {
@@ -1415,7 +1418,7 @@ export default function ConsumerPortalPage() {
                       <p className="text-xs text-muted-foreground">No tips available at this time.</p>
                     ) : (
                       <div className="space-y-2">
-                        {tipsQuery.data.tips.map((tip: any) => (
+                        {tipsQuery.data.tips.map((tip: ImprovementTipsResponse["tips"][number]) => (
                           <div key={tip.id} data-testid={`tip-${tip.id}`} className={`rounded-xl p-3 border ${tip.impact === "high" ? "border-red-200 bg-red-50 dark:bg-red-900/10 dark:border-red-800" : tip.impact === "medium" ? "border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800" : "border-muted bg-muted/20"}`}>
                             <div className="flex items-start gap-2">
                               <div className={`mt-0.5 flex-shrink-0 ${tip.impact === "high" ? "text-red-500" : tip.impact === "medium" ? "text-amber-500" : "text-muted-foreground"}`}>
@@ -1450,17 +1453,47 @@ export default function ConsumerPortalPage() {
                     { id: "o1", lender: "GCB Bank", product: "Personal Loan", maxAmount: "20,000", currency: "GHS", rateFrom: "22%", term: "Up to 36 months", likelihood: "high" },
                     { id: "o2", lender: "Zenith Bank Ghana", product: "Salary Advance", maxAmount: "10,000", currency: "GHS", rateFrom: "25%", term: "Up to 12 months", likelihood: "medium" },
                     { id: "o3", lender: "Letshego Ghana", product: "Consumer Loan", maxAmount: "8,000", currency: "GHS", rateFrom: "28%", term: "Up to 18 months", likelihood: "medium" },
-                  ] : [
-                    { id: "o1", lender: "Opportunity International", product: "Micro Loan", maxAmount: "2,000", currency: "GHS", rateFrom: "32%", term: "Up to 6 months", likelihood: "low" },
-                    { id: "o2", lender: "Sinapi Aba Savings", product: "Group Guarantee Loan", maxAmount: "1,500", currency: "GHS", rateFrom: "35%", term: "Up to 6 months", likelihood: "low" },
-                  ];
+                  ] : [];
+
+                  if (score < 500) {
+                    return (
+                      <Card className="shadow-sm border-amber-200 dark:border-amber-800" data-testid="card-prequalified-offers">
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <TrendingUp className="w-4 h-4 text-amber-600" />
+                            <h3 className="text-sm font-bold">Build Your Credit First</h3>
+                            <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] h-4 px-1.5 border-0">Score &lt;500</Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mb-3">Your current score is below 500. Most lenders require a score of at least 500 before considering unsecured credit. Focus on improving your score first.</p>
+                          <div className="space-y-2" data-testid="credit-builder-tips">
+                            {[
+                              { id: "cb1", step: "1", tip: "Pay all overdue amounts", detail: "Clearing existing arrears is the single fastest way to raise your score." },
+                              { id: "cb2", step: "2", tip: "Pay on time, every time", detail: "A 12-month streak of on-time payments can add 40–60 points to your score." },
+                              { id: "cb3", step: "3", tip: "Reduce your credit utilisation", detail: "Keep balances below 30% of your credit limits to show responsible usage." },
+                              { id: "cb4", step: "4", tip: "Dispute any errors", detail: "Incorrect or outdated data can unfairly lower your score. Use the Disputes section below." },
+                            ].map(item => (
+                              <div key={item.id} data-testid={`credit-builder-${item.id}`} className="flex gap-3 rounded-xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-900/10 p-3">
+                                <div className="w-6 h-6 rounded-full bg-amber-200 dark:bg-amber-800 flex items-center justify-center flex-shrink-0 text-[11px] font-bold text-amber-800 dark:text-amber-200">{item.step}</div>
+                                <div>
+                                  <p className="text-xs font-semibold">{item.tip}</p>
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">{item.detail}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-3">Once your score reaches 500, personalised product offers will appear here.</p>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+
                   return (
                     <Card className="shadow-sm border-emerald-200 dark:border-emerald-800" data-testid="card-prequalified-offers">
                       <CardContent className="p-4">
                         <div className="flex items-center gap-2 mb-1">
                           <Tag className="w-4 h-4 text-emerald-600" />
                           <h3 className="text-sm font-bold">Pre-qualified Offers</h3>
-                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] h-4 px-1.5 border-0">Score band: {score >= 650 ? "≥650" : score >= 500 ? "500–649" : "<500"}</Badge>
+                          <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-[10px] h-4 px-1.5 border-0">Score band: {score >= 650 ? "≥650" : "500–649"}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mb-3">Illustrative offers for your score band. Actual terms depend on lender assessment.</p>
                         <div className="space-y-2">
@@ -1597,20 +1630,42 @@ export default function ConsumerPortalPage() {
                       </div>
                     ) : (
                       <div className="space-y-2 mt-2">
-                        {myInquiriesQuery.data.map((inq) => (
-                          <div key={inq.id} data-testid={`inquiry-${inq.id}`} className="flex items-start gap-2.5 rounded-xl border p-2.5">
-                            <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <Search className="w-3.5 h-3.5 text-primary" />
+                        {myInquiriesQuery.data.map((inq) => {
+                          const isOpen = expandedInquiryId === inq.id;
+                          return (
+                            <div key={inq.id} data-testid={`inquiry-${inq.id}`} className="rounded-xl border overflow-hidden">
+                              <button
+                                className="w-full flex items-start gap-2.5 p-2.5 text-left hover:bg-muted/30 transition-colors"
+                                onClick={() => setExpandedInquiryId(isOpen ? null : inq.id)}
+                                aria-expanded={isOpen}
+                                data-testid={`button-expand-inquiry-${inq.id}`}
+                              >
+                                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <Search className="w-3.5 h-3.5 text-primary" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-semibold truncate">{inq.institution || "Unknown Institution"}</p>
+                                  <p className="text-[10px] text-muted-foreground">{(inq.purpose || "inquiry").replace(/_/g, " ")} · {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${inq.isSoftPull ? "bg-muted text-muted-foreground" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"}`}>
+                                    {inq.isSoftPull ? "Soft" : "Hard"}
+                                  </span>
+                                  <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                                </div>
+                              </button>
+                              {isOpen && (
+                                <div className="px-3 pb-3 pt-1 border-t bg-muted/10 space-y-1" data-testid={`inquiry-detail-${inq.id}`}>
+                                  <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Institution:</span> {inq.institution || "Unknown"}</p>
+                                  <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Purpose:</span> {(inq.purpose || "Credit inquiry").replace(/_/g, " ")}</p>
+                                  <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Type:</span> {inq.isSoftPull ? "Soft pull — does not affect your score" : "Hard pull — may affect your score"}</p>
+                                  <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Date:</span> {inq.createdAt ? new Date(inq.createdAt).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
+                                  {!inq.isSoftPull && <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">Hard inquiries remain on your credit file for 2 years. If you did not authorise this inquiry, you may file a dispute.</p>}
+                                </div>
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-xs font-semibold truncate">{inq.institution || "Unknown Institution"}</p>
-                              <p className="text-[10px] text-muted-foreground">{(inq.purpose || "inquiry").replace(/_/g, " ")} · {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
-                            </div>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 ${inq.isSoftPull ? "bg-muted text-muted-foreground" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"}`}>
-                              {inq.isSoftPull ? "Soft" : "Hard"}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -1686,9 +1741,9 @@ export default function ConsumerPortalPage() {
                       <div className="flex items-center gap-2">
                         <BellRing className="w-4 h-4 text-primary" />
                         <h3 className="text-sm font-bold">Credit Monitoring Alerts</h3>
-                        {monitoringAlertsQuery.data && monitoringAlertsQuery.data.filter((a: any) => !a.isRead).length > 0 && (
+                        {monitoringAlertsQuery.data && monitoringAlertsQuery.data.filter((a) => !a.isRead).length > 0 && (
                           <Badge variant="destructive" className="h-4 px-1 text-[10px]">
-                            {monitoringAlertsQuery.data.filter((a: any) => !a.isRead).length}
+                            {monitoringAlertsQuery.data.filter((a) => !a.isRead).length}
                           </Badge>
                         )}
                       </div>
@@ -1714,7 +1769,7 @@ export default function ConsumerPortalPage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        {monitoringAlertsQuery.data.slice(0, 5).map((alert: any) => (
+                        {monitoringAlertsQuery.data.slice(0, 5).map((alert) => (
                           <div
                             key={alert.id}
                             data-testid={`monitoring-alert-${alert.id}`}
@@ -1732,7 +1787,7 @@ export default function ConsumerPortalPage() {
                             )}
                           </div>
                         ))}
-                        {monitoringAlertsQuery.data.filter((a: any) => !a.isRead).length > 0 && (
+                        {monitoringAlertsQuery.data.filter((a) => !a.isRead).length > 0 && (
                           <Button
                             size="sm"
                             variant="ghost"
@@ -1765,7 +1820,7 @@ export default function ConsumerPortalPage() {
                                 <span className="text-sm">{label}</span>
                                 <Switch
                                   data-testid={`pref-switch-${key}`}
-                                  checked={(localPrefs as any)[key]}
+                                  checked={localPrefs[key as keyof typeof localPrefs]}
                                   onCheckedChange={(v) => setLocalPrefs(prev => ({ ...prev, [key]: v }))}
                                 />
                               </div>
@@ -1780,7 +1835,7 @@ export default function ConsumerPortalPage() {
                                 <span className="text-sm">{label}</span>
                                 <Switch
                                   data-testid={`pref-switch-${key}`}
-                                  checked={(localPrefs as any)[key]}
+                                  checked={localPrefs[key as keyof typeof localPrefs]}
                                   onCheckedChange={(v) => setLocalPrefs(prev => ({ ...prev, [key]: v }))}
                                 />
                               </div>

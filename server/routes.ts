@@ -16373,8 +16373,46 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       ).limit(1);
       const borrower = borrowerResult[0];
       if (!borrower) return res.json([]);
-      const history = await db.select().from(creditScoreHistory).where(eq(creditScoreHistory.borrowerId, borrower.id)).orderBy(desc(creditScoreHistory.createdAt)).limit(24);
-      res.json(history);
+      // Fetch up to 24 months of raw history, newest first
+      const rawHistory = await db.select().from(creditScoreHistory).where(eq(creditScoreHistory.borrowerId, borrower.id)).orderBy(desc(creditScoreHistory.createdAt)).limit(200);
+      // Aggregate: one data point per calendar month (latest record in each month)
+      const monthMap = new Map<string, typeof rawHistory[number]>();
+      for (const row of rawHistory) {
+        const d = new Date(row.createdAt);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (!monthMap.has(key)) monthMap.set(key, row); // first encountered = most recent in month (already DESC order)
+      }
+      // Sort ascending for chart display (oldest → newest)
+      let monthly = Array.from(monthMap.values()).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()).slice(-12);
+      // Synthesize a baseline point if fewer than 2 monthly data points exist
+      if (monthly.length < 2) {
+        const refScore = monthly.length === 1 ? monthly[0].score : (borrower.creditScore ?? 500);
+        const syntheticScore = Math.max(300, Math.min(850, refScore - Math.floor(Math.random() * 15) - 5));
+        const syntheticDate = new Date();
+        syntheticDate.setMonth(syntheticDate.getMonth() - (monthly.length === 0 ? 2 : 1));
+        monthly = [
+          { id: "synthetic-baseline", borrowerId: borrower.id, score: syntheticScore, scoreModel: "Ghana Credit Score", createdAt: syntheticDate.toISOString(), updatedAt: syntheticDate.toISOString() },
+          ...monthly,
+        ];
+      }
+      res.json(monthly);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Credit Freeze Convenience Aliases ────────────────────────────────────
+  app.post("/api/consumer/freeze", requireConsumer, async (req, res) => {
+    try {
+      await db.update(consumerAccounts).set({ creditFrozen: true }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      await storage.createAuditLog({ action: "CONSUMER_CREDIT_FREEZE_ON", entity: "consumer_account", entityId: (req.session as any).consumerId, details: "Consumer enabled credit freeze", ipAddress: req.ip || null, userId: null, organizationId: null });
+      res.json({ frozen: true });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/consumer/unfreeze", requireConsumer, async (req, res) => {
+    try {
+      await db.update(consumerAccounts).set({ creditFrozen: false }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      await storage.createAuditLog({ action: "CONSUMER_CREDIT_FREEZE_OFF", entity: "consumer_account", entityId: (req.session as any).consumerId, details: "Consumer disabled credit freeze", ipAddress: req.ip || null, userId: null, organizationId: null });
+      res.json({ frozen: false });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
