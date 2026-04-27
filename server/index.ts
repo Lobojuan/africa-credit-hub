@@ -296,16 +296,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", version: "2.6.0", uptime: Math.round(process.uptime()) });
 });
 
-app.get("/download-source", (_req, res) => {
-  const { createReadStream, existsSync } = require("fs");
-  const { join } = require("path");
-  const file = join(process.cwd(), "africa-credit-hub-source.tar.gz");
-  if (!existsSync(file)) return res.status(404).send("File not found");
-  res.setHeader("Content-Disposition", "attachment; filename=africa-credit-hub-source.tar.gz");
-  res.setHeader("Content-Type", "application/gzip");
-  createReadStream(file).pipe(res);
-});
-
 app.get("/api/maintenance/status", (req, res) => {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
