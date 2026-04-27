@@ -264,3 +264,21 @@ id = "cuAq3JkWtIb24KSQYsvAK"
 uri = "file://screenshots/login.jpg"
 type = "image"
 title = "Portal Selection — Business/Lender vs Personal Credit"
+
+[[outputs]]
+id = "IzNzLZ-8TU5QSDdZ8piSR"
+uri = "file://screenshots/landing-latest.jpg"
+type = "image"
+title = "Landing — latest live snapshot"
+
+[[outputs]]
+id = "yWNCbsx6NC9rQizzpgNid"
+uri = "file://screenshots/login-latest.jpg"
+type = "image"
+title = "Portal Selection — latest"
+
+[[outputs]]
+id = "20gYPEJ8DpRjV5fQyl5tY"
+uri = "file://screenshots/security-latest.jpg"
+type = "image"
+title = "Security & Compliance — latest"
