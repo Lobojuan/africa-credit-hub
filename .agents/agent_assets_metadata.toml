@@ -252,3 +252,15 @@ id = "7IdcnOfNDkKLQhyhj0LIU"
 uri = "file://africa-credit-hub-v2.6-source.tar.gz"
 type = "unspecified"
 title = "Africa Credit Hub v2.6 — Source Code"
+
+[[outputs]]
+id = "59FDSsKCyDbY0qHDS2lYt"
+uri = "file://screenshots/landing.jpg"
+type = "image"
+title = "Landing Page — africacredithub.com (live preview)"
+
+[[outputs]]
+id = "cuAq3JkWtIb24KSQYsvAK"
+uri = "file://screenshots/login.jpg"
+type = "image"
+title = "Portal Selection — Business/Lender vs Personal Credit"
