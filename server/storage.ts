@@ -421,7 +421,7 @@ export interface IStorage {
   upsertConsumerMonitoringPrefs(data: InsertConsumerMonitoringPrefs): Promise<ConsumerMonitoringPrefs>;
   getConsumerMonitoringAlerts(consumerAccountId: string, limit?: number): Promise<ConsumerMonitoringAlert[]>;
   createConsumerMonitoringAlert(data: InsertConsumerMonitoringAlert): Promise<ConsumerMonitoringAlert>;
-  markConsumerMonitoringAlertRead(id: string): Promise<boolean>;
+  markConsumerMonitoringAlertRead(id: string, consumerAccountId: string): Promise<boolean>;
   markAllConsumerMonitoringAlertsRead(consumerAccountId: string): Promise<number>;
   fireConsumerMonitoringAlerts(borrowerId: string, alertType: string, title: string, message: string, details?: object): Promise<number>;
 
@@ -3446,10 +3446,10 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async markConsumerMonitoringAlertRead(id: string): Promise<boolean> {
+  async markConsumerMonitoringAlertRead(id: string, consumerAccountId: string): Promise<boolean> {
     const result = await db.update(consumerMonitoringAlerts)
       .set({ isRead: true, readAt: new Date() })
-      .where(eq(consumerMonitoringAlerts.id, id));
+      .where(and(eq(consumerMonitoringAlerts.id, id), eq(consumerMonitoringAlerts.consumerAccountId, consumerAccountId)));
     return (result as any).rowCount > 0;
   }
 

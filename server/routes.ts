@@ -16416,6 +16416,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const primary = await storage.getBorrower(primaryId);
       if (!primary) return res.status(404).json({ message: "Primary borrower not found" });
+      if (req.session?.userRole !== 'super_admin' && primary.organizationId !== req.session?.organizationId) {
+        return res.status(403).json({ message: "You can only merge borrowers within your own organisation" });
+      }
 
       const userId = req.session?.userId as string;
       const orgId = req.session?.organizationId;
@@ -16423,6 +16426,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const dupRecords: any[] = [];
       for (const dupId of duplicateIds) {
         const dup = await storage.getBorrower(dupId);
+        if (dup && req.session?.userRole !== 'super_admin' && dup.organizationId !== req.session?.organizationId) {
+          return res.status(403).json({ message: `Duplicate borrower ${dupId} does not belong to your organisation` });
+        }
         if (dup) dupRecords.push(dup);
       }
       if (dupRecords.length === 0) return res.status(404).json({ message: "No valid duplicate records found" });
@@ -16726,7 +16732,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const consumerAccountId = (req.session as any)?.consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
-      const ok = await storage.markConsumerMonitoringAlertRead(req.params.id as string);
+      const ok = await storage.markConsumerMonitoringAlertRead(req.params.id as string, consumerAccountId);
       res.json({ success: ok });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -16831,6 +16837,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const { endpoint, keys } = req.body as { endpoint: string; keys: { p256dh: string; auth: string } | null };
       if (!endpoint) return res.status(400).json({ message: "endpoint required" });
+      if (!isSafeWebhookUrl(endpoint)) {
+        return res.status(400).json({ message: "Push endpoint URL is not permitted" });
+      }
       if (!keys?.p256dh || !keys?.auth) return res.status(400).json({ message: "keys.p256dh and keys.auth are required for Web Push" });
       const consumerId = (req.session as any).consumerId as string;
       // Upsert into subscriptions table (unique on endpoint)

@@ -808,5 +808,41 @@ export async function migrateNewTables() {
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_collateral_amendments_item_id
     ON collateral_amendments (collateral_item_id, amended_at DESC)`);
 
+  // Security hardening columns
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_history text[] DEFAULT '{}'`);
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS known_ips text[] DEFAULT '{}'`);
+  await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_ip text`);
+
+  // Consumer push subscriptions
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS consumer_push_subscriptions (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    consumer_account_id varchar NOT NULL,
+    endpoint text NOT NULL UNIQUE,
+    keys jsonb,
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_push_subs_consumer ON consumer_push_subscriptions(consumer_account_id)`);
+
+  // Consumer monitoring tables
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS consumer_monitoring_prefs (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    consumer_account_id varchar NOT NULL UNIQUE,
+    notify_inquiry boolean DEFAULT true,
+    notify_new_account boolean DEFAULT true,
+    notify_score_change boolean DEFAULT true,
+    notify_adverse boolean DEFAULT true,
+    updated_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS consumer_monitoring_alerts (
+    id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+    consumer_account_id varchar NOT NULL,
+    alert_type varchar(50) NOT NULL,
+    title text NOT NULL,
+    body text,
+    read boolean DEFAULT false,
+    created_at timestamp DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_monitoring_alerts_consumer ON consumer_monitoring_alerts(consumer_account_id)`);
+
   console.log('[NewTables] Migration complete');
 }
