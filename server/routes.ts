@@ -1580,7 +1580,7 @@ export async function registerRoutes(
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       await storage.createAuditLog({
         action: "VIEW", entity: "credit_report", entityId: req.params.id as string, userId: req.session?.userId,
@@ -1749,7 +1749,7 @@ export async function registerRoutes(
       });
       res.json(out);
     } catch (e: any) {
-      console.error("[affordability]", e);
+      routeLogger.error("[affordability]", { detail: e });
       const status = e?.statusCode || 500;
       res.status(status).json({ message: safeErrorMessage(e), code: e?.code });
     }
@@ -1774,7 +1774,7 @@ export async function registerRoutes(
       });
       res.json(out);
     } catch (e: any) {
-      console.error("[affordability/pdf]", e);
+      routeLogger.error("[affordability/pdf]", { detail: e });
       const status = e?.statusCode || 500;
       res.status(status).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
     }
@@ -1890,7 +1890,7 @@ export async function registerRoutes(
 
       res.json(linkConfig);
     } catch (e: any) {
-      console.error("[affordability/link-session]", e);
+      routeLogger.error("[affordability/link-session]", { detail: e });
       res.status(e?.statusCode || 500).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
     }
   });
@@ -2000,7 +2000,7 @@ export async function registerRoutes(
 
       res.json({ linked, affordability: out });
     } catch (e: any) {
-      console.error("[affordability/link-session/callback]", e);
+      routeLogger.error("[affordability/link-session/callback]", { detail: e });
       res.status(e?.statusCode || 500).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
     }
   });
@@ -2037,7 +2037,7 @@ export async function registerRoutes(
       });
       res.json(out);
     } catch (e: any) {
-      console.error("[affordability/connect-bank]", e);
+      routeLogger.error("[affordability/connect-bank]", { detail: e });
       const status = e?.statusCode || 500;
       res.status(status).json({ message: safeErrorMessage(e), code: e?.code ?? undefined });
     }
@@ -2078,7 +2078,7 @@ export async function registerRoutes(
 
       res.json({ message: "Open-banking consent revoked.", consentRecordId: openBankingRecord?.id ?? null, revokedLinkedAccounts: activeLinked.length });
     } catch (e: any) {
-      console.error("[affordability/revoke-bank]", e);
+      routeLogger.error("[affordability/revoke-bank]", { detail: e });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -3187,7 +3187,7 @@ export async function registerRoutes(
         altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`);
       } catch {}
       const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, creditScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       // Include affordability snapshot (if previously computed) — privacy-safe subset
       const consumerAffordability = await storage.getLatestAffordabilityAssessment(borrower.id).catch(() => undefined);
@@ -3549,7 +3549,7 @@ export async function registerRoutes(
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
       res.send(buf);
     } catch (e: any) {
-      console.error("[ConsumerPDF]", e);
+      routeLogger.error("[ConsumerPDF]", { detail: e });
       res.status(500).json({ message: "Failed to generate PDF. Please try again." });
     }
   });
@@ -3683,7 +3683,7 @@ export async function registerRoutes(
                   "New Credit Account Filed",
                   `A new credit account has been filed on your credit profile.`,
                   { accountNumber: payload.accountNumber, accountType: payload.accountType },
-                ).catch(err => console.warn("[NewAccount Push]", err));
+                ).catch(err => routeLogger.warn("[NewAccount Push]", { detail: err }));
               }
             }
           } else if (updated.action === "UPDATE" && updated.entityId) {
@@ -3829,7 +3829,7 @@ export async function registerRoutes(
           "Dispute Status Updated",
           `Your dispute status changed from ${existingDispute.status} to ${dispute.status}.`,
           { disputeId: dispute.id, previousStatus: existingDispute.status, newStatus: dispute.status, resolution: dispute.resolution ?? undefined },
-        ).catch(err => console.warn("[Dispute Push]", err));
+        ).catch(err => routeLogger.warn("[Dispute Push]", { detail: err }));
       }
       res.json(dispute);
     } catch (e: any) {
@@ -6136,7 +6136,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
               "Late Payment Recorded",
               `A ${entry.status} payment has been recorded on one of your credit accounts.`,
               { creditAccountId: entry.creditAccountId, status: entry.status, daysLate: entry.daysLate, period: entry.period },
-            ).catch(err => console.warn("[LatePayment Push]", err));
+            ).catch(err => routeLogger.warn("[LatePayment Push]", { detail: err }));
           }
         } catch {}
       }
@@ -6446,7 +6446,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
       const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       let xdsBureauData: any = null;
       if (includeXds) {
@@ -6483,7 +6483,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
             errorMessage: xdsResult.error ?? null,
           }).catch(() => {});
         } catch (xdsErr: any) {
-          console.error("[XDS] Failed to query bureau for credit report:", xdsErr.message);
+          routeLogger.error("[XDS] Failed to query bureau for credit report:", { detail: xdsErr.message });
         }
       }
 
@@ -13027,7 +13027,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { score: traditionalScore } = calculateCreditScore(
         accounts, inquiries.length, judgments, borrower.isPep || false, altData
       );
-      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, traditionalScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, traditionalScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       broadcastEvent({
         type: "score_computed",
@@ -13921,7 +13921,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const score = scoreResult.score;
       storage.getBorrower(borrowerId)
         .then(b => { const id = b?.nationalId || b?.ghanaCardNumber || b?.passportNumber; if (id) return storage.recordConsumerScoreHistory(id, borrowerId, score); })
-        .catch(err => console.warn('[ScoreHistory]', err));
+        .catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
       const maxArrears = accounts.length > 0 ? Math.max(0, ...accounts.map(a => a.daysInArrears || 0)) : 0;
       const activeAccounts = accounts.filter(a => ["current","delinquent"].includes(a.status)).length;
       const hasActiveJudgment = judgmentsList.some(j => j.status === "active");
@@ -14053,7 +14053,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         lastErr = e as Error;
       }
     }
-    console.error(`[trace-audit] FAIL-CLOSED on ${action}/${entityId}:`, lastErr?.message);
+    routeLogger.error(`[trace-audit] FAIL-CLOSED on ${action}/${entityId}:`, { detail: lastErr?.message });
     throw new Error(`Compliance audit log write failed (${action}). Trace request denied.`);
   }
 
@@ -14647,7 +14647,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             await sendDisputeNotification("Africa Credit Hub", body.contactValue, 0, "Collection reminder", "collection_reminder");
           }
         } catch (e: any) {
-          console.error("[collections] notify failed:", e.message);
+          routeLogger.error("[collections] notify failed:", { detail: e.message });
         }
       }
 
@@ -14793,7 +14793,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Start the collection SLA background checker
   import("./collection-sla-checker").then(({ startCollectionSlaChecker }) => {
     startCollectionSlaChecker();
-  }).catch(e => console.error("[routes] Failed to start SLA checker:", e.message));
+  }).catch(e => routeLogger.error("[routes] Failed to start SLA checker:", { detail: e.message }));
 
   // -------------------------------------------------------------------------
   // Training Center routes
@@ -15596,11 +15596,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
                 assetDesc,
                 getBaseUrl(),
               ).catch((err: any) => {
-                console.error(`[LienEmail] PATCH rejection email failed for collateral ${req.params.id as string}:`, err?.message || err);
+                routeLogger.error(`[LienEmail] PATCH rejection email failed for collateral ${req.params.id as string}:`, { detail: err?.message || err });
               });
             }
           }).catch((err: any) => {
-            console.error(`[LienEmail] PATCH: Failed to fetch lender org for rejection email (collateral ${req.params.id as string}):`, err?.message || err);
+            routeLogger.error(`[LienEmail] PATCH: Failed to fetch lender org for rejection email (collateral ${req.params.id as string}):`, { detail: err?.message || err });
           });
         }
         return res.json(rejected);
@@ -15644,7 +15644,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           amendedByName: amendingUserName ?? null,
           changedFields: JSON.stringify(changedFields),
         }).catch((err: any) => {
-          console.error(`[AmendmentLog] Failed to record amendment for collateral ${req.params.id}:`, err?.message || err);
+          routeLogger.error(`[AmendmentLog] Failed to record amendment for collateral ${req.params.id}:`, { detail: err?.message || err });
         });
 
         // Notify RA users if the item is pending review
@@ -15663,11 +15663,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
                   link: "/collateral-registry",
                   country: notifCountry,
                 }).catch((e: any) => {
-                  console.error(`[AmendmentNotify] Failed to create notification for RA user ${ru.id}:`, e?.message || e);
+                  routeLogger.error(`[AmendmentNotify] Failed to create notification for RA user ${ru.id}:`, { detail: e?.message || e });
                 })
               ));
             } catch (err: any) {
-              console.error(`[AmendmentNotify] Failed to notify RA for collateral ${req.params.id}:`, err?.message || err);
+              routeLogger.error(`[AmendmentNotify] Failed to notify RA for collateral ${req.params.id}:`, { detail: err?.message || err });
             }
           })();
         }
@@ -15881,11 +15881,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send approval email for collateral ${req.params.id as string}:`, err?.message || err);
+              routeLogger.error(`[LienEmail] Failed to send approval email for collateral ${req.params.id as string}:`, { detail: err?.message || err });
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for approval email (collateral ${req.params.id as string}):`, err?.message || err);
+          routeLogger.error(`[LienEmail] Failed to fetch lender org for approval email (collateral ${req.params.id as string}):`, { detail: err?.message || err });
         });
       }
 
@@ -15898,11 +15898,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             const assetDesc = item.description || item.collateralType || "Registered Asset";
             const resolvedCountry = item.countryCode || lenderOrg?.country;
             if (!resolvedCountry) {
-              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id as string} — falling back to GH for notification storage`);
+              routeLogger.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id as string} — falling back to GH for notification storage`);
             }
             const notifCountry = resolvedCountry || "GH";
             if (lenderUsers.length === 0) {
-              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id as string} — notification not delivered in-app`);
+              routeLogger.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id as string} — notification not delivered in-app`);
             }
             await Promise.all(lenderUsers.map(lu =>
               storage.createNotification({
@@ -15913,7 +15913,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
                 link: "/collateral-registry",
                 country: notifCountry,
               }).catch((e: any) => {
-                console.error(`[LienNotify] Failed to create lien_approved notification for user ${lu.id}:`, e?.message || e);
+                routeLogger.error(`[LienNotify] Failed to create lien_approved notification for user ${lu.id}:`, { detail: e?.message || e });
               })
             ));
             broadcastEvent({
@@ -15926,7 +15926,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               timestamp: new Date().toISOString(),
             }, { organizationId: item.lenderOrganizationId });
           } catch (err: any) {
-            console.error(`[LienNotify] Failed to create approval in-app notification for collateral ${req.params.id as string}:`, err?.message || err);
+            routeLogger.error(`[LienNotify] Failed to create approval in-app notification for collateral ${req.params.id as string}:`, { detail: err?.message || err });
           }
         })();
       }
@@ -15952,22 +15952,22 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             };
             if (lenderEmail) {
               await sendCertificateEmail(lenderEmail, emailOpts).catch((err: any) =>
-                console.error(`[Certificate Email] Failed to send to lender ${lenderEmail}:`, err.message)
+                routeLogger.error(`[Certificate Email] Failed to send to lender ${lenderEmail}:`, { detail: err.message })
               );
             } else {
-              console.warn(`[Certificate Email] No lender email on file for org ${updated.lenderOrganizationId}`);
+              routeLogger.warn(`[Certificate Email] No lender email on file for org ${updated.lenderOrganizationId}`);
             }
             // Optionally send to borrower if email is on file
             if (updated.borrowerId) {
               const [borrowerRow] = await db.select({ email: borrowers.email }).from(borrowers).where(eq(borrowers.id, updated.borrowerId)).limit(1);
               if (borrowerRow?.email) {
                 await sendCertificateEmail(borrowerRow.email, { ...emailOpts, recipientLabel: updated.borrowerName || "Borrower" }).catch((err: any) =>
-                  console.error(`[Certificate Email] Failed to send to borrower:`, err.message)
+                  routeLogger.error(`[Certificate Email] Failed to send to borrower:`, { detail: err.message })
                 );
               }
             }
           } catch (err: any) {
-            console.error("[Certificate Email] Background send failed:", err.message);
+            routeLogger.error("[Certificate Email] Background send failed:", { detail: err.message });
           }
         })();
       }
@@ -16006,11 +16006,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send rejection email for collateral ${req.params.id as string}:`, err?.message || err);
+              routeLogger.error(`[LienEmail] Failed to send rejection email for collateral ${req.params.id as string}:`, { detail: err?.message || err });
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for rejection email (collateral ${req.params.id as string}):`, err?.message || err);
+          routeLogger.error(`[LienEmail] Failed to fetch lender org for rejection email (collateral ${req.params.id as string}):`, { detail: err?.message || err });
         });
       }
 
@@ -16023,11 +16023,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             const assetDesc = item.description || item.collateralType || "Registered Asset";
             const resolvedCountry = item.countryCode || lenderOrg?.country;
             if (!resolvedCountry) {
-              console.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id as string} — falling back to GH for notification storage`);
+              routeLogger.warn(`[LienNotify] Could not resolve country for collateral ${req.params.id as string} — falling back to GH for notification storage`);
             }
             const notifCountry = resolvedCountry || "GH";
             if (lenderUsers.length === 0) {
-              console.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id as string} — notification not delivered in-app`);
+              routeLogger.warn(`[LienNotify] No users found in lender org ${item.lenderOrganizationId} for collateral ${req.params.id as string} — notification not delivered in-app`);
             }
             await Promise.all(lenderUsers.map(lu =>
               storage.createNotification({
@@ -16038,7 +16038,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
                 link: "/collateral-registry",
                 country: notifCountry,
               }).catch((e: any) => {
-                console.error(`[LienNotify] Failed to create lien_rejected notification for user ${lu.id}:`, e?.message || e);
+                routeLogger.error(`[LienNotify] Failed to create lien_rejected notification for user ${lu.id}:`, { detail: e?.message || e });
               })
             ));
             broadcastEvent({
@@ -16051,7 +16051,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               timestamp: new Date().toISOString(),
             }, { organizationId: item.lenderOrganizationId });
           } catch (err: any) {
-            console.error(`[LienNotify] Failed to create rejection in-app notification for collateral ${req.params.id as string}:`, err?.message || err);
+            routeLogger.error(`[LienNotify] Failed to create rejection in-app notification for collateral ${req.params.id as string}:`, { detail: err?.message || err });
           }
         })();
       }
@@ -16143,11 +16143,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send enforcement email for collateral ${req.params.id as string}:`, err?.message || err);
+              routeLogger.error(`[LienEmail] Failed to send enforcement email for collateral ${req.params.id as string}:`, { detail: err?.message || err });
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for enforcement email (collateral ${req.params.id as string}):`, err?.message || err);
+          routeLogger.error(`[LienEmail] Failed to fetch lender org for enforcement email (collateral ${req.params.id as string}):`, { detail: err?.message || err });
         });
       }
       res.json(updated);
@@ -16185,11 +16185,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
               assetDesc,
               getBaseUrl(),
             ).catch((err: any) => {
-              console.error(`[LienEmail] Failed to send release email for collateral ${req.params.id as string}:`, err?.message || err);
+              routeLogger.error(`[LienEmail] Failed to send release email for collateral ${req.params.id as string}:`, { detail: err?.message || err });
             });
           }
         }).catch((err: any) => {
-          console.error(`[LienEmail] Failed to fetch lender org for release email (collateral ${req.params.id as string}):`, err?.message || err);
+          routeLogger.error(`[LienEmail] Failed to fetch lender org for release email (collateral ${req.params.id as string}):`, { detail: err?.message || err });
         });
       }
       res.json(updated);
@@ -16229,7 +16229,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         maskedRecipient = `${local[0]}***@${domain}`;
         sent = await sendCollateralVerificationLinkEmail(recipient, lenderName, verificationUrl, description, borrowerName, message);
         if (!sent) {
-          console.log(`[Collateral Share][Email Stub] Would send to ${recipient}: ${verificationUrl}`);
+          routeLogger.info(`[Collateral Share][Email Stub] Would send to ${recipient}: ${verificationUrl}`);
           sent = true;
         }
       } else {
@@ -16242,7 +16242,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}${personalNote}\n\nVerify at: ${verificationUrl}\n\n- Africa Credit Hub`;
         sent = await sendSms(phone, smsText);
         if (!sent) {
-          console.log(`[Collateral Share][SMS Stub] Would send to ${phone}: ${verificationUrl}`);
+          routeLogger.info(`[Collateral Share][SMS Stub] Would send to ${phone}: ${verificationUrl}`);
           sent = true;
         }
       }
@@ -16883,7 +16883,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
       const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const tips: { id: string; title: string; detail: string; estimatedImpact: "high" | "medium" | "low"; icon: string }[] = [];
       const delinquentAccounts = accounts.filter(a => a.status === "delinquent" || a.daysInArrears > 0);
@@ -16951,7 +16951,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
       const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const offers: { id: string; lender: string; product: string; maxAmount: string; currency: string; rateFrom: string; term: string; likelihood: "high" | "medium" | "low"; badge?: string }[] = [];
 
@@ -16998,7 +16998,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
       const { score: baseScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
-      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, baseScore).catch(err => console.warn('[ScoreHistory]', err));
+      storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, baseScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const { action } = req.body as { action: string };
       let simulatedScore = baseScore;
