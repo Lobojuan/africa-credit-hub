@@ -380,6 +380,7 @@ app.use((req, res, next) => {
 app.set("trust proxy", 1);
 
 const httpLogger = createLogger("http");
+const startupLogger = createLogger("startup");
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -531,9 +532,9 @@ process.stderr.write = function (...args: any[]) {
     const { runPortableMigrations } = await import('./stripeClient');
     const databaseUrl = process.env.DATABASE_URL;
     if (databaseUrl) {
-      console.log('Initializing Stripe schema...');
+      startupLogger.info('Initializing Stripe schema...');
       await runPortableMigrations({ databaseUrl, schema: 'stripe' });
-      console.log('Stripe schema ready');
+      startupLogger.info('Stripe schema ready');
 
       const { getStripeSync } = await import('./stripeClient');
       const stripeSync = await getStripeSync();
@@ -546,8 +547,8 @@ process.stderr.write = function (...args: any[]) {
       console.log('Stripe webhook configured:', webhookResult?.webhook?.url || 'setup complete');
 
       stripeSync.syncBackfill()
-        .then(() => console.log('Stripe data synced'))
-        .catch((err: any) => console.error('Stripe sync error:', err));
+        .then(() => startupLogger.info('Stripe data synced'))
+        .catch((err: any) => startupLogger.error('Stripe sync error', err));
 
       const { seedStripeProducts } = await import('./stripe-seed');
       seedStripeProducts().catch((e: any) => console.error('Stripe seed error:', e));
