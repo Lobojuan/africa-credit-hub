@@ -9,23 +9,36 @@ interface Props {
   borrowerId: string;
 }
 
+interface VatProfileResponse {
+  merchant?: { id: string };
+  features?: {
+    vatActivityScore: number;
+    totalReceipts: number;
+    monthsWithActivity: number;
+  };
+}
+
+interface CollateralSnapshotResponse {
+  items?: Array<{ assetType?: string }>;
+}
+
 export function CrossProductCreditExtras({ borrowerId }: Props) {
   const { t } = useTranslation();
 
-  const { data: vatProfile } = useQuery<any>({
-    queryKey: ["/api/cross-product/borrower-merchant-credit-profile", borrowerId],
+  const { data: vatProfile } = useQuery<VatProfileResponse>({
+    queryKey: [`/api/cross-product/borrower-merchant-credit-profile/${borrowerId}`],
     enabled: !!borrowerId,
     retry: false,
   });
 
-  const { data: collateral } = useQuery<any>({
-    queryKey: ["/api/cross-product/collateral-snapshot", borrowerId],
+  const { data: collateral } = useQuery<CollateralSnapshotResponse>({
+    queryKey: [`/api/cross-product/collateral-snapshot/${borrowerId}`],
     enabled: !!borrowerId,
     retry: false,
   });
 
   const hasVat = !!vatProfile?.features;
-  const hasCollateral = !!collateral?.registrations?.length;
+  const hasCollateral = !!collateral?.items?.length;
 
   if (!hasVat && !hasCollateral) return null;
 
@@ -85,10 +98,10 @@ export function CrossProductCreditExtras({ borrowerId }: Props) {
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="text-3xl font-bold" data-testid="text-collateral-count">
-              {collateral.registrations.length}
+              {collateral.items!.length}
             </div>
             <div className="text-xs text-muted-foreground">
-              Active registrations across {new Set(collateral.registrations.map((r: any) => r.assetType)).size} asset types
+              Active registrations across {new Set(collateral.items!.map((r) => r.assetType)).size} asset types
             </div>
             <Link
               href="/collateral-registry"

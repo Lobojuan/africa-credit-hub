@@ -43,13 +43,13 @@ export default function MerchantCreditProfilePage() {
   }, [t]);
 
   const { data, isLoading, error } = useQuery<MerchantCreditProfileResponse>({
-    queryKey: ["/api/cross-product/merchant-credit-profile", merchantId],
+    queryKey: [`/api/cross-product/merchant-credit-profile/${merchantId}`],
     enabled: !!merchantId,
     retry: false,
   });
 
-  const errAny = error as any;
-  const isConsentError = errAny?.message?.includes("403") || errAny?.message?.includes("no_consent");
+  const errMessage = error instanceof Error ? error.message : "";
+  const isConsentError = errMessage.includes("403") || errMessage.includes("no_consent");
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto" data-testid="page-merchant-credit-profile">

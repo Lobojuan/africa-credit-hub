@@ -17076,13 +17076,21 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ----- Consent CRUD -----
   app.get("/api/cross-product/consents", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id;
-      const filter: { userId?: string; borrowerId?: string; merchantId?: string } = { userId };
-      if (req.query.borrowerId) filter.borrowerId = String(req.query.borrowerId);
-      if (req.query.merchantId) filter.merchantId = String(req.query.merchantId);
-      // also include merchant-owned consents if user owns a merchant
-      const merchant = userId ? await storage.getLotoMerchantByUserId(userId) : null;
-      if (merchant) filter.merchantId = merchant.id;
+      const userId = (req.session as any)?.user?.id as string | undefined;
+      const userRole = (req.session as any)?.user?.role as string | undefined;
+      const isAdmin = userRole === "admin" || userRole === "super_admin";
+      // Strict scoping: callers see ONLY consents they own (their own user consents, plus consents for any merchant they own).
+      // Admins/super-admins may filter by any borrowerId/merchantId via query params.
+      const filter: { userId?: string; borrowerId?: string; merchantId?: string } = {};
+      if (isAdmin) {
+        if (req.query.userId) filter.userId = String(req.query.userId);
+        if (req.query.borrowerId) filter.borrowerId = String(req.query.borrowerId);
+        if (req.query.merchantId) filter.merchantId = String(req.query.merchantId);
+      } else {
+        filter.userId = userId;
+        const merchant = userId ? await storage.getLotoMerchantByUserId(userId) : null;
+        if (merchant) filter.merchantId = merchant.id;
+      }
       const rows = await storage.getCrossProductConsents(filter);
       res.json(rows);
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -17103,7 +17111,25 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const parsed = grantConsentSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0].message });
-      const userId = (req.session as any)?.user?.id;
+      const userId = (req.session as any)?.user?.id as string | undefined;
+      const userRole = (req.session as any)?.user?.role as string | undefined;
+      const isAdmin = userRole === "admin" || userRole === "super_admin";
+
+      // Subject-ownership enforcement: caller may only grant a consent on a subject they own.
+      // - consumerUserId must equal the caller's userId (unless admin).
+      // - merchantId must reference a merchant the caller owns (unless admin).
+      // - borrowerId is restricted to admins (lender/regulator workflow).
+      if (parsed.data.consumerUserId && parsed.data.consumerUserId !== userId && !isAdmin) {
+        return res.status(403).json({ message: "forbidden_subject" });
+      }
+      if (parsed.data.merchantId && !isAdmin) {
+        const m = await storage.getLotoMerchantById(parsed.data.merchantId);
+        if (!m || m.userId !== userId) return res.status(403).json({ message: "forbidden_subject" });
+      }
+      if (parsed.data.borrowerId && !isAdmin) {
+        return res.status(403).json({ message: "forbidden_subject" });
+      }
+
       const months = parsed.data.durationMonths ?? DEFAULT_CONSENT_DURATION_MONTHS;
       const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + months);
       const row = await storage.createCrossProductConsent({
