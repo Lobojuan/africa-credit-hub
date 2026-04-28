@@ -67,7 +67,12 @@ interface SubjectRef {
 // CONSENT CHECKING
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function findActiveConsent(
+/**
+ * Returns the most recent matching consent row REGARDLESS of status/expiry,
+ * so the caller can produce an explicit `no_consent` vs `consent_revoked`
+ * vs `consent_expired` denial reason. Filtering happens in `requireConsent`.
+ */
+async function findLatestMatchingConsent(
   subject: SubjectRef,
   source: ProductId,
   target: ProductId,
@@ -79,19 +84,34 @@ async function findActiveConsent(
   if (subject.consumerUserId) subjectConditions.push(eq(crossProductConsents.userId, subject.consumerUserId));
   if (subjectConditions.length === 0) return null;
 
-  const now = new Date();
   const [row] = await db.select().from(crossProductConsents).where(
     and(
       or(...subjectConditions),
       eq(crossProductConsents.sourceProduct, source),
       eq(crossProductConsents.targetProduct, target),
       eq(crossProductConsents.purpose, purpose),
-      eq(crossProductConsents.status, "active"),
-      gte(crossProductConsents.expiresAt, now),
     )
   ).orderBy(desc(crossProductConsents.grantedAt)).limit(1);
 
   return row ?? null;
+}
+
+/**
+ * Returns the most recent ACTIVE+UNEXPIRED consent for the (subject, source,
+ * target, purpose) tuple. Used by callers that only care about happy-path
+ * authorization, not denial-reason classification.
+ */
+async function findActiveConsent(
+  subject: SubjectRef,
+  source: ProductId,
+  target: ProductId,
+  purpose: CrossProductPurpose,
+): Promise<CrossProductConsent | null> {
+  const latest = await findLatestMatchingConsent(subject, source, target, purpose);
+  if (!latest) return null;
+  if (latest.status !== "active") return null;
+  if (latest.expiresAt && latest.expiresAt < new Date()) return null;
+  return latest;
 }
 
 async function logAccess(
@@ -131,20 +151,26 @@ async function requireConsent(
 ): Promise<CrossProductConsent> {
   // Convention: source = data origin (the product that holds the data), target = data consumer (the caller).
   // ctx.targetProduct is the product whose data we're reading; ctx.callerProduct is the product asking.
-  const consent = await findActiveConsent(subject, ctx.targetProduct, ctx.callerProduct, ctx.purpose);
-  if (!consent) {
-    await logAccess(ctx, null, subject, "denied", "no_active_consent");
-    throw new CrossProductError("no_consent", `No active consent for ${ctx.callerProduct}->${ctx.targetProduct}/${ctx.purpose}`);
+  // We look up the LATEST matching consent (any status) so we can classify the
+  // denial reason precisely instead of collapsing every failure to no_consent.
+  const latest = await findLatestMatchingConsent(subject, ctx.targetProduct, ctx.callerProduct, ctx.purpose);
+  if (!latest) {
+    await logAccess(ctx, null, subject, "denied", "no_consent");
+    throw new CrossProductError("no_consent", `No consent on file for ${ctx.callerProduct}->${ctx.targetProduct}/${ctx.purpose}`);
   }
-  if (consent.status === "revoked" || consent.revokedAt) {
-    await logAccess(ctx, consent, subject, "denied", "consent_revoked");
+  if (latest.status === "revoked" || latest.revokedAt) {
+    await logAccess(ctx, latest, subject, "denied", "consent_revoked");
     throw new CrossProductError("consent_revoked", "Consent revoked");
   }
-  if (consent.expiresAt && consent.expiresAt < new Date()) {
-    await logAccess(ctx, consent, subject, "denied", "consent_expired");
+  if (latest.expiresAt && latest.expiresAt < new Date()) {
+    await logAccess(ctx, latest, subject, "denied", "consent_expired");
     throw new CrossProductError("consent_expired", "Consent expired");
   }
-  return consent;
+  if (latest.status !== "active") {
+    await logAccess(ctx, latest, subject, "denied", "no_consent");
+    throw new CrossProductError("no_consent", `Consent in non-active state: ${latest.status}`);
+  }
+  return latest;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -297,40 +323,79 @@ export const gateway = {
     return { features, consent };
   },
 
-  /** Loto-side: bureau reputation badge for a merchant (credit -> loto). */
+  /**
+   * Loto-side: bureau reputation badge for a merchant (credit -> loto).
+   * The badge is computed from the merchant's verified VAT receipt history
+   * (Loto Fiscal data) — this is what makes the badge a *bureau-derived*
+   * reputation signal even when the merchant has no separate borrower
+   * credit-bureau profile yet. The badge object always contains every
+   * field the UI renders so the API contract is stable.
+   */
   async getBureauBadgeForMerchant(
     merchantId: string,
     callerCtx: { userId?: string; ip?: string },
-  ): Promise<{ hasBureauProfile: boolean; tier: string | null; consent: CrossProductConsent } | null> {
+  ): Promise<{
+    badge: {
+      tier: "platinum" | "gold" | "silver" | "bronze" | "building";
+      score: number;
+      totalReceipts: number;
+      monthsWithActivity: number;
+      trend: string;
+      issuedAt: string;
+      hasBureauProfile: boolean;
+      bureauScore: number | null;
+    };
+    consent: CrossProductConsent;
+  } | null> {
     const ctx: GatewayCallContext = {
       callerProduct: "loto", targetProduct: "credit", purpose: "bureau_reputation_badge",
       userId: callerCtx.userId, ip: callerCtx.ip,
     };
     const [merchant] = await db.select().from(lotoMerchants).where(eq(lotoMerchants.id, merchantId));
     if (!merchant) return null;
-    let consent: CrossProductConsent;
-    try {
-      consent = await requireConsent(ctx, { merchantId });
-    } catch (e) {
-      return null; // No badge if no consent — that's the privacy default
-    }
-    let tier: string | null = null;
+    const consent = await requireConsent(ctx, { merchantId });
+
+    // Pull receipts directly (we already have consent and we're inside the gateway).
+    const receipts = await db.select().from(lotoReceipts).where(eq(lotoReceipts.merchantId, merchantId));
+    const features = computeReceiptFeatures(receipts);
+
+    // Derive the badge tier from the VAT activity score (300–850 scale).
+    let tier: "platinum" | "gold" | "silver" | "bronze" | "building";
+    const s = features.vatActivityScore;
+    if (s >= 740) tier = "platinum";
+    else if (s >= 670) tier = "gold";
+    else if (s >= 580) tier = "silver";
+    else if (s >= 500) tier = "bronze";
+    else tier = "building";
+
+    // If the merchant is also linked to a borrower with a bureau profile,
+    // surface that as supplementary signal (does not change the tier).
     let hasBureauProfile = false;
+    let bureauScore: number | null = null;
     if (merchant.borrowerId) {
       const [latestScore] = await db.select().from(creditScoreHistory)
         .where(eq(creditScoreHistory.borrowerId, merchant.borrowerId))
         .orderBy(desc(creditScoreHistory.createdAt)).limit(1);
       if (latestScore) {
         hasBureauProfile = true;
-        const s = latestScore.score ?? 0;
-        if (s >= 740) tier = "excellent";
-        else if (s >= 670) tier = "good";
-        else if (s >= 580) tier = "fair";
-        else tier = "building";
+        bureauScore = latestScore.score ?? null;
       }
     }
+
     await logAccess(ctx, consent, { merchantId }, "ok");
-    return { hasBureauProfile, tier, consent };
+    return {
+      badge: {
+        tier,
+        score: features.vatActivityScore,
+        totalReceipts: features.totalReceipts,
+        monthsWithActivity: features.monthsWithActivity,
+        trend: features.trend,
+        issuedAt: new Date().toISOString(),
+        hasBureauProfile,
+        bureauScore,
+      },
+      consent,
+    };
   },
 
   /** Credit -> Collateral: list active collateral items for a borrower in a credit report. */

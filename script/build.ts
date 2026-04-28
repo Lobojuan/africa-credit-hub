@@ -35,6 +35,13 @@ const allowlist = [
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
+  // Build-time guard: refuse to ship if any non-allowlisted file imports the
+  // cross-product bridge tables directly. Bypassing the consent gateway is a
+  // build error, not a runtime warning.
+  console.log("checking cross-product bridge isolation...");
+  const { runCrossProductIsolationCheck } = await import("../server/cross-product-isolation-check.js");
+  runCrossProductIsolationCheck({ failOnViolation: true });
+
   console.log("building client...");
   await viteBuild();
 
