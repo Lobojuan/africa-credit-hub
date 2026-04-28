@@ -294,3 +294,9 @@ id = "7Be3s4y6h61v70bH--hmm"
 uri = "file://exports/codebase.zip"
 type = "unspecified"
 title = "Africa Credit Hub — Source Code (5 MB ZIP)"
+
+[[outputs]]
+id = "C_bHQ1GpIUo1UcminFsn4"
+uri = "file://exports/africa-credit-hub-source.zip"
+type = "unspecified"
+title = "Africa Credit Hub — Source Code (zip)"
