@@ -19,7 +19,7 @@ interface TourPage {
 }
 
 const baseStep = (extra: Partial<Step> = {}): Partial<Step> => ({
-  disableBeacon: true,
+  skipBeacon: true,
   spotlightPadding: 6,
   ...extra,
 });
@@ -360,13 +360,7 @@ export function DemoTour() {
       steps={activeSteps}
       run={run}
       continuous
-      showSkipButton
-      showProgress
-      disableOverlay
-      disableOverlayClose
-      hideCloseButton={false}
       scrollToFirstStep
-      disableScrollParentFix
       onEvent={handleCallback}
       locale={{
         back: "Back",
@@ -375,27 +369,23 @@ export function DemoTour() {
         next: "Next",
         skip: "Skip tour",
       }}
+      options={{
+        primaryColor: "hsl(215, 55%, 50%)",
+        zIndex: 10000,
+        textColor: "hsl(215, 30%, 18%)",
+        arrowColor: "#ffffff",
+        backgroundColor: "#ffffff",
+        overlayColor: "rgba(0, 0, 0, 0)",
+        hideOverlay: true,
+        overlayClickAction: false,
+        showProgress: true,
+        buttons: ["back", "skip", "close", "primary"],
+      }}
       styles={{
-        options: {
-          primaryColor: "hsl(215, 55%, 50%)",
-          zIndex: 10000,
-          textColor: "hsl(215, 30%, 18%)",
-          arrowColor: "#ffffff",
-          backgroundColor: "#ffffff",
-          overlayColor: "rgba(0, 0, 0, 0)",
-        },
         overlay: {
           backgroundColor: "rgba(0, 0, 0, 0)",
           pointerEvents: "none",
           mixBlendMode: "normal",
-        },
-        overlayLegacy: {
-          backgroundColor: "rgba(0, 0, 0, 0)",
-          pointerEvents: "none",
-        },
-        overlayLegacyCenter: {
-          backgroundColor: "rgba(0, 0, 0, 0)",
-          pointerEvents: "none",
         },
         spotlight: {
           pointerEvents: "none",
@@ -410,7 +400,7 @@ export function DemoTour() {
           fontWeight: 700,
           marginBottom: 6,
         },
-        buttonNext: {
+        buttonPrimary: {
           borderRadius: 10,
           padding: "8px 14px",
           fontWeight: 600,
