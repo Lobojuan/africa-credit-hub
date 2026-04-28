@@ -86,10 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       clearCSRFToken();
+      try { sessionStorage.removeItem("demo_tour_state"); } catch {}
       window.location.replace("/");
     },
     onError: () => {
       clearCSRFToken();
+      try { sessionStorage.removeItem("demo_tour_state"); } catch {}
       window.location.replace("/");
     },
   });

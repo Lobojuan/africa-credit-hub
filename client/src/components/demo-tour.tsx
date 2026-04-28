@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import { Joyride, STATUS, ACTIONS, type CallBackProps, type Step } from "react-joyride";
+import { Joyride, STATUS, ACTIONS, type EventData, type Step } from "react-joyride";
+
+type CallBackProps = EventData;
 
 const STORAGE_KEY = "demo_tour_state";
 
@@ -43,19 +45,19 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="section-concentration-alerts"]',
+          target: "main",
+          placement: "center",
           title: "Concentration risk alerts",
           content:
-            "Automatic warnings when your portfolio is over-exposed to a sector, region, or single borrower — calculated in real time.",
-          placement: "top",
+            "Scroll the dashboard and you'll see automatic warnings when your portfolio is over-exposed to a sector, region, or single borrower — all calculated in real time.",
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-collateral-registry"]',
-          title: "Collateral Registry",
+          target: "body",
+          placement: "center",
+          title: "Next: Collateral Registry",
           content:
             "Click Continue and we'll head to the Pan-African collateral registry — where you file pledged-asset registrations and search liens against any borrower.",
-          placement: "right",
           ...baseStep(),
         } as Step,
       ],
@@ -80,11 +82,11 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-credit-search"]',
-          title: "Generate a credit report next",
+          target: "body",
+          placement: "center",
+          title: "Next: Generate a credit report",
           content:
             "Click Continue and we'll go to the Credit Report Search — where you can generate a full report on any borrower in seconds.",
-          placement: "right",
           ...baseStep(),
         } as Step,
       ],
@@ -101,11 +103,11 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-portfolio-intelligence"]',
+          target: "body",
+          placement: "center",
           title: "AI Portfolio Intelligence",
           content:
-            "Bonus: Portfolio Intelligence uses AI to find concentration risks, predict defaults, and recommend portfolio rebalancing across your entire book.",
-          placement: "right",
+            "Bonus capability — Portfolio Intelligence uses AI to find concentration risks, predict defaults, and recommend portfolio rebalancing across your entire book. Find it in the sidebar after the tour.",
           ...baseStep(),
         } as Step,
         {
@@ -139,11 +141,11 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-collateral-registry"]',
-          title: "Registry Authority Portal",
+          target: "body",
+          placement: "center",
+          title: "Next: Registry Authority Portal",
           content:
             "Click Continue and we'll go to the approval portal where you'll review pending filings.",
-          placement: "right",
           ...baseStep(),
         } as Step,
       ],
@@ -168,11 +170,11 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-audit-trail"]',
+          target: "body",
+          placement: "center",
           title: "Tamper-evident audit trail",
           content:
-            "Every decision you make is anchored to an immutable audit trail with blockchain-style verification — supporting regulatory inspections and dispute resolution.",
-          placement: "right",
+            "Every decision you make is anchored to an immutable audit trail with blockchain-style verification — supporting regulatory inspections and dispute resolution. Find it in the sidebar.",
           ...baseStep(),
         } as Step,
         {
@@ -207,11 +209,11 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-organizations"]',
+          target: "body",
+          placement: "center",
           title: "Multi-tenant organizations",
           content:
             "Every lender, regulator, and partner is a separate tenant with isolated data, custom branding, and per-org billing. Click Continue and we'll see them.",
-          placement: "right",
           ...baseStep(),
         } as Step,
       ],
@@ -228,11 +230,11 @@ const flows: Record<DemoRole, TourPage[]> = {
           ...baseStep(),
         } as Step,
         {
-          target: '[data-testid="nav-platform-metrics"]',
-          title: "Platform Metrics",
+          target: "body",
+          placement: "center",
+          title: "Next: Platform Metrics",
           content:
             "Real-time platform telemetry: active users, API calls, queries per second, revenue, and error rates. Click Continue to see it.",
-          placement: "right",
           ...baseStep(),
         } as Step,
       ],
@@ -293,6 +295,24 @@ export function DemoTour() {
     setActiveSteps([]);
   }, []);
 
+  const advanceStage = useCallback(() => {
+    if (!state) {
+      setRun(false);
+      return;
+    }
+    const flow = flows[state.role];
+    const nextStage = state.stage + 1;
+    if (nextStage >= flow.length) {
+      stopTour();
+    } else {
+      setRun(false);
+      const ns: DemoTourState = { role: state.role, stage: nextStage };
+      writeState(ns);
+      setState(ns);
+      setLocation(flow[nextStage].path);
+    }
+  }, [state, setLocation, stopTour]);
+
   useEffect(() => {
     if (!state) {
       setRun(false);
@@ -310,32 +330,25 @@ export function DemoTour() {
       return;
     }
     setActiveSteps(stage.steps);
-    const t = setTimeout(() => setRun(true), 600);
+    const t = setTimeout(() => setRun(true), 700);
     return () => clearTimeout(t);
   }, [state, location, stopTour]);
 
   const handleCallback = (data: CallBackProps) => {
     const { status, action } = data;
-    if (status === STATUS.SKIPPED || action === ACTIONS.CLOSE) {
+
+    if (status === STATUS.SKIPPED) {
       stopTour();
       return;
     }
+
     if (status === STATUS.FINISHED) {
-      if (!state) {
-        setRun(false);
-        return;
-      }
-      const flow = flows[state.role];
-      const nextStage = state.stage + 1;
-      if (nextStage >= flow.length) {
-        stopTour();
-      } else {
-        setRun(false);
-        const ns: DemoTourState = { role: state.role, stage: nextStage };
-        writeState(ns);
-        setState(ns);
-        setLocation(flow[nextStage].path);
-      }
+      advanceStage();
+      return;
+    }
+
+    if (action === ACTIONS.CLOSE) {
+      stopTour();
     }
   };
 
@@ -351,7 +364,9 @@ export function DemoTour() {
       showProgress
       disableOverlayClose
       hideCloseButton={false}
-      callback={handleCallback}
+      scrollToFirstStep
+      disableScrollParentFix
+      onEvent={handleCallback}
       locale={{
         back: "Back",
         close: "Close",
