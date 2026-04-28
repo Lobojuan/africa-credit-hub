@@ -28,6 +28,7 @@ import {
   type CrossProductConsent,
   type LotoMerchant,
   type LotoReceipt,
+  type CollateralItem,
 } from "@shared/schema";
 
 export type ProductId = "loto" | "credit" | "collateral";
@@ -118,7 +119,7 @@ async function logAccess(
       entityId: subjectId,
       details,
       ipAddress: ctx.ip ?? null,
-    } as any);
+    });
   } catch (err) {
     console.error("[gateway] audit log write failed", err);
   }
@@ -186,7 +187,7 @@ export function computeReceiptFeatures(receipts: LotoReceipt[]): MerchantReceipt
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     if (!buckets[key]) buckets[key] = { receipts: 0, turnover: 0 };
     buckets[key].receipts++;
-    const amt = parseFloat(r.amount as any);
+    const amt = parseFloat(String(r.amount));
     buckets[key].turnover += amt;
     totalTurnover += amt;
   }
@@ -336,7 +337,7 @@ export const gateway = {
   async getCollateralForBorrower(
     borrowerId: string,
     callerCtx: { userId?: string; ip?: string },
-  ): Promise<{ items: any[]; consent: CrossProductConsent }> {
+  ): Promise<{ items: CollateralItem[]; consent: CrossProductConsent }> {
     const ctx: GatewayCallContext = {
       callerProduct: "credit", targetProduct: "collateral", purpose: "credit_collateral_view",
       userId: callerCtx.userId, ip: callerCtx.ip,

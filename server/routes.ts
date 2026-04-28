@@ -17165,21 +17165,74 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!owns && !isAdmin) return res.status(403).json({ message: "forbidden" });
       const row = await storage.revokeCrossProductConsent(req.params.id, reason);
       if (!row) return res.status(404).json({ message: "not_found" });
+
+      // Revocation is state-destructive: purge any downstream fiscal_receipts contribution
+      // so the borrower's credit profile no longer reflects merchant data after opt-out.
+      if (existing.purpose === "merchant_credit_profile" && existing.merchantId) {
+        try {
+          const m = await storage.getLotoMerchantById(existing.merchantId);
+          if (m?.borrowerId) {
+            await storage.deleteAlternativeDataForBorrower(m.borrowerId, "fiscal_receipts");
+          }
+        } catch (purgeErr) {
+          console.error("[cross-product] revoke purge failed", purgeErr);
+        }
+      }
+
       res.json(row);
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ----- Gateway-protected reads -----
+  // Authorization model for cross-product reads (in addition to gateway consent enforcement):
+  //   merchant-scoped reads → owner of the merchant OR admin/super_admin/regulator/lender
+  //   consumer-scoped reads (:userId) → self OR admin/super_admin/regulator
+  //   borrower-scoped reads (:borrowerId) → admin/super_admin/regulator/lender (lender workflow)
+  // This closes IDOR-style access where consent exists but the caller has no relationship to the subject.
+  const isLenderRole = (role?: string) =>
+    role === "admin" || role === "super_admin" || role === "regulator" ||
+    role === "lender" || role === "loan_officer" || role === "underwriter";
+
+  async function requireMerchantAccess(req: Request, merchantId: string): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+    const userId = (req.session as any)?.user?.id as string | undefined;
+    const role = (req.session as any)?.user?.role as string | undefined;
+    if (isLenderRole(role)) return { ok: true };
+    if (!userId) return { ok: false, status: 401, message: "unauthenticated" };
+    const m = await storage.getLotoMerchantById(merchantId);
+    if (!m) return { ok: false, status: 404, message: "not_found" };
+    if (m.userId === userId) return { ok: true };
+    return { ok: false, status: 403, message: "forbidden_subject" };
+  }
+
+  function requireConsumerOrLender(req: Request, userIdParam: string): { ok: true } | { ok: false; status: number; message: string } {
+    const userId = (req.session as any)?.user?.id as string | undefined;
+    const role = (req.session as any)?.user?.role as string | undefined;
+    if (isLenderRole(role)) return { ok: true };
+    if (userId && userId === userIdParam) return { ok: true };
+    return { ok: false, status: 403, message: "forbidden_subject" };
+  }
+
+  function requireLenderOnly(req: Request): { ok: true } | { ok: false; status: number; message: string } {
+    const role = (req.session as any)?.user?.role as string | undefined;
+    if (isLenderRole(role)) return { ok: true };
+    return { ok: false, status: 403, message: "forbidden_role" };
+  }
+
   app.get("/api/cross-product/merchant-credit-profile/:merchantId", requireAuth, async (req, res) => {
     try {
+      const auth = await requireMerchantAccess(req, req.params.merchantId);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const result = await gateway.getMerchantReceiptFeatures(req.params.merchantId, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
   });
 
   // Resolve borrower → linked merchant, then fetch via gateway. Returns 204 if no merchant.
+  // Borrower-keyed lookup is a lender workflow, restricted to lender/admin/regulator roles.
   app.get("/api/cross-product/borrower-merchant-credit-profile/:borrowerId", requireAuth, async (req, res) => {
     try {
+      const auth = requireLenderOnly(req);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const merchant = await storage.getLotoMerchantByBorrowerId(req.params.borrowerId);
       if (!merchant) return res.status(204).end();
       const result = await gateway.getMerchantReceiptFeatures(merchant.id, gatewayCallerCtx(req));
@@ -17189,6 +17242,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/cross-product/consumer-spending/:userId", requireAuth, async (req, res) => {
     try {
+      const auth = requireConsumerOrLender(req, req.params.userId);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const result = await gateway.getConsumerSpendingFeatures(req.params.userId, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
@@ -17196,6 +17251,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/cross-product/collateral-snapshot/:borrowerId", requireAuth, async (req, res) => {
     try {
+      const auth = requireLenderOnly(req);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const result = await gateway.getCollateralForBorrower(req.params.borrowerId, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
@@ -17203,6 +17260,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/cross-product/credit-snapshot/:borrowerId", requireAuth, async (req, res) => {
     try {
+      const auth = requireLenderOnly(req);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const result = await gateway.getCreditSnapshotForBorrower(req.params.borrowerId, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
@@ -17210,6 +17269,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/cross-product/bureau-badge/:merchantId", requireAuth, async (req, res) => {
     try {
+      const auth = await requireMerchantAccess(req, req.params.merchantId);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const result = await gateway.getBureauBadgeForMerchant(req.params.merchantId, gatewayCallerCtx(req));
       res.json(result ?? { hasBureauProfile: false, tier: null });
     } catch (e) { handleGatewayError(res, e); }

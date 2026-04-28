@@ -449,6 +449,7 @@ export interface IStorage {
   createCrossProductConsent(input: any): Promise<any>;
   revokeCrossProductConsent(id: string, reason?: string): Promise<any | undefined>;
   getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string }): Promise<any[]>;
+  deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -3694,6 +3695,15 @@ export class DatabaseStorage implements IStorage {
         return true;
       } catch { return false; }
     });
+  }
+  async deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number> {
+    const result = await db.delete(alternativeData).where(
+      and(
+        eq(alternativeData.borrowerId, borrowerId),
+        eq(alternativeData.source, source as any),
+      )
+    ).returning({ id: alternativeData.id });
+    return result.length;
   }
 }
 
