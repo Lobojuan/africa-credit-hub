@@ -282,3 +282,9 @@ id = "20gYPEJ8DpRjV5fQyl5tY"
 uri = "file://screenshots/security-latest.jpg"
 type = "image"
 title = "Security & Compliance — latest"
+
+[[outputs]]
+id = "9g9C-bnn2A4Wp0XX9m9uw"
+uri = "file://exports/codebase.tar.gz"
+type = "unspecified"
+title = "Africa Credit Hub — Source Archive (13 MB)"
