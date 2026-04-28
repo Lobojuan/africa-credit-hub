@@ -140,6 +140,7 @@ const PlatformMasterControlPage = lazy(() => import("@/pages/platform-master-con
 const ComplianceQueuePage = lazy(() => import("@/pages/compliance-queue"));
 const LoanOriginationPage = lazy(() => import("@/pages/loan-origination"));
 const CollateralRegistryPage = lazy(() => import("@/pages/collateral-registry"));
+const LotoWorkspacePage = lazy(() => import("@/pages/loto-workspace"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
 const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
@@ -234,6 +235,7 @@ function Router() {
         <Route path="/loan-origination" component={LoanOriginationPage} />
         <Route path="/collateral-registry" component={CollateralRegistryPage} />
         <Route path="/registry-authority-portal" component={RegistryAuthorityPortalPage} />
+        <Route path="/loto-fiscal" component={LotoWorkspacePage} />
         <Route path="/institution-analytics" component={InstitutionAnalyticsPage} />
         <Route path="/institution-branding" component={InstitutionBrandingPage} />
         <Route path="/organizations" component={OrganizationsPage} />

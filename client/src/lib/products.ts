@@ -105,7 +105,7 @@ export const PRODUCT_REGISTRY: Record<ProductId, ProductDefinition> = {
       "A revenue-mobilisation pilot: citizens scan their VAT receipts, weekly draws reward compliant retailers, and the tax authority gains real-time receipt visibility.",
     routePrefix: "/loto",
     publicLanding: "/loto",
-    primaryAuthRoute: "/loto",
+    primaryAuthRoute: "/loto-fiscal",
     status: "scaffold",
     badgeKey: "products.loto.badge",
     englishBadge: "Pilot launching Q3 2026",
@@ -114,7 +114,7 @@ export const PRODUCT_REGISTRY: Record<ProductId, ProductDefinition> = {
     accentTo: "hsl(28 85% 50%)",
     accentText: "hsl(142 60% 30%)",
     allowedRoles: ["super_admin", "admin", "regulator", "tax_auditor"],
-    insideRoutePrefixes: ["/loto"],
+    insideRoutePrefixes: ["/loto", "/loto-fiscal"],
   },
 };
 

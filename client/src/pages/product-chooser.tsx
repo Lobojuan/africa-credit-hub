@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Layers, Lock, LogOut } from "lucide-react";
+import { ArrowRight, Layers, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import {
   PRODUCT_ORDER,
@@ -68,18 +68,15 @@ export default function ProductChooserPage() {
 
       <section className="max-w-5xl mx-auto px-4 md:px-6 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {PRODUCT_ORDER.map((id) => {
+          {PRODUCT_ORDER.filter((id) => accessibleIds.has(id)).map((id) => {
             const p = PRODUCT_REGISTRY[id];
             const Icon = p.icon;
-            const accessible = accessibleIds.has(id);
             const isPilot = p.status !== "live";
             return (
               <Card
                 key={id}
-                className={`relative overflow-hidden border-slate-200/80 dark:border-slate-800 transition-all ${
-                  accessible ? "hover-elevate cursor-pointer" : "opacity-60"
-                }`}
-                onClick={() => accessible && choose(p)}
+                className="relative overflow-hidden border-slate-200/80 dark:border-slate-800 transition-all hover-elevate cursor-pointer"
+                onClick={() => choose(p)}
                 data-testid={`card-chooser-${id}`}
               >
                 <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${p.accentFrom}, ${p.accentTo})` }} />
@@ -107,22 +104,15 @@ export default function ProductChooserPage() {
                     {t(p.descKey, p.englishDesc)}
                   </p>
                   <div className="mt-5">
-                    {accessible ? (
-                      <Button
-                        className="gap-2 text-white"
-                        style={{ background: `linear-gradient(135deg, ${p.accentFrom}, ${p.accentTo})` }}
-                        onClick={(e) => { e.stopPropagation(); choose(p); }}
-                        data-testid={`button-enter-${id}`}
-                      >
-                        {t(`products.${id}.enter`, `Enter ${p.englishName}`)}
-                        <ArrowRight className="w-4 h-4" />
-                      </Button>
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400" data-testid={`text-locked-${id}`}>
-                        <Lock className="w-3.5 h-3.5" />
-                        {t("chooser.locked")}
-                      </div>
-                    )}
+                    <Button
+                      className="gap-2 text-white"
+                      style={{ background: `linear-gradient(135deg, ${p.accentFrom}, ${p.accentTo})` }}
+                      onClick={(e) => { e.stopPropagation(); choose(p); }}
+                      data-testid={`button-enter-${id}`}
+                    >
+                      {t(`products.${id}.enter`, `Enter ${p.englishName}`)}
+                      <ArrowRight className="w-4 h-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
