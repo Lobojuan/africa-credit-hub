@@ -154,7 +154,9 @@ class LazyErrorBoundary extends Component<{ children: ReactNode }, { hasError: b
   static getDerivedStateFromError() {
     return { hasError: true };
   }
-  componentDidCatch(_error: Error, _info: ErrorInfo) {}
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error("[LazyErrorBoundary] Render error:", error, info);
+  }
   render() {
     if (this.state.hasError) {
       return (
