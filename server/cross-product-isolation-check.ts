@@ -50,14 +50,25 @@ export function runCrossProductIsolationCheck(opts: { failOnViolation?: boolean 
     try { content = readFileSync(file, "utf8"); } catch { continue; }
     if (!content.includes("@shared/schema")) continue;
 
-    // Extract the imported symbols from "@shared/schema" import statements.
-    const importRegex = /import\s*(?:type\s+)?\{([\s\S]*?)\}\s*from\s*["']@shared\/schema["']/g;
+    // Match `import {...} from "@shared/schema"` (value imports). We deliberately
+    // do NOT match `import type {...}` — type-only imports are erased at compile
+    // time and cannot reach the bridge tables at runtime. Inside a value import,
+    // we also skip individual symbols prefixed with the `type ` modifier.
+    const importRegex = /import\s*(\btype\s+)?\{([\s\S]*?)\}\s*from\s*["']@shared\/schema["']/g;
     let m: RegExpExecArray | null;
     while ((m = importRegex.exec(content)) !== null) {
-      const symbols = m[1].split(",").map((s) => s.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]);
+      const isTypeOnlyImport = !!m[1];
+      if (isTypeOnlyImport) continue; // entire `import type {...}` is erased
+      const symbols = m[2].split(",").map((raw) => {
+        const trimmed = raw.trim();
+        const isTypeMember = /^type\s+/.test(trimmed);
+        const name = trimmed.replace(/^type\s+/, "").split(/\s+as\s+/)[0];
+        return { name, isTypeMember };
+      });
       for (const sym of symbols) {
-        if (BRIDGE_TABLES.includes(sym)) {
-          violations.push({ file: rel, symbol: sym });
+        if (sym.isTypeMember) continue; // per-symbol `type Foo` is erased too
+        if (BRIDGE_TABLES.includes(sym.name)) {
+          violations.push({ file: rel, symbol: sym.name });
         }
       }
     }

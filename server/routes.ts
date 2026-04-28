@@ -17058,7 +17058,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   function gatewayCallerCtx(req: Request) {
     return {
-      userId: (req.session as any)?.user?.id ?? (req as any).user?.id,
+      userId: req.session?.userId ?? (req as any).user?.id,
       ip: req.ip,
     };
   }
@@ -17073,8 +17073,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ----- Consent CRUD -----
   app.get("/api/cross-product/consents", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id as string | undefined;
-      const userRole = (req.session as any)?.user?.role as string | undefined;
+      const userId = req.session?.userId as string | undefined;
+      const userRole = req.session?.userRole as string | undefined;
       const isAdmin = userRole === "admin" || userRole === "super_admin";
       // Strict scoping: callers see ONLY consents they own (their own user consents, plus consents for any merchant they own).
       // Admins/super-admins may filter by any borrowerId/merchantId via query params.
@@ -17108,8 +17108,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const parsed = grantConsentSchema.safeParse(req.body);
       if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0].message });
-      const userId = (req.session as any)?.user?.id as string | undefined;
-      const userRole = (req.session as any)?.user?.role as string | undefined;
+      const userId = req.session?.userId as string | undefined;
+      const userRole = req.session?.userRole as string | undefined;
       const isAdmin = userRole === "admin" || userRole === "super_admin";
 
       // Subject-ownership enforcement: caller may only grant a consent on a subject they own.
@@ -17168,8 +17168,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/cross-product/consents/:id/revoke", requireAuth, async (req, res) => {
     try {
       const reason = String(req.body?.reason ?? "user_revoked");
-      const userId = (req.session as any)?.user?.id as string | undefined;
-      const userRole = (req.session as any)?.user?.role as string | undefined;
+      const userId = req.session?.userId as string | undefined;
+      const userRole = req.session?.userRole as string | undefined;
       // Look up the consent and ensure the caller owns it (by userId or by owning the linked merchant), or is an admin/super_admin.
       const existing = await storage.getCrossProductConsentById(req.params.id);
       if (!existing) return res.status(404).json({ message: "not_found" });
@@ -17198,8 +17198,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     role === "lender" || role === "loan_officer" || role === "underwriter";
 
   async function requireMerchantAccess(req: Request, merchantId: string): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
-    const userId = (req.session as any)?.user?.id as string | undefined;
-    const role = (req.session as any)?.user?.role as string | undefined;
+    const userId = req.session?.userId as string | undefined;
+    const role = req.session?.userRole as string | undefined;
     if (isLenderRole(role)) return { ok: true };
     if (!userId) return { ok: false, status: 401, message: "unauthenticated" };
     const m = await storage.getLotoMerchantById(merchantId);
@@ -17209,15 +17209,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   }
 
   function requireConsumerOrLender(req: Request, userIdParam: string): { ok: true } | { ok: false; status: number; message: string } {
-    const userId = (req.session as any)?.user?.id as string | undefined;
-    const role = (req.session as any)?.user?.role as string | undefined;
+    const userId = req.session?.userId as string | undefined;
+    const role = req.session?.userRole as string | undefined;
     if (isLenderRole(role)) return { ok: true };
     if (userId && userId === userIdParam) return { ok: true };
     return { ok: false, status: 403, message: "forbidden_subject" };
   }
 
   function requireLenderOnly(req: Request): { ok: true } | { ok: false; status: number; message: string } {
-    const role = (req.session as any)?.user?.role as string | undefined;
+    const role = req.session?.userRole as string | undefined;
     if (isLenderRole(role)) return { ok: true };
     return { ok: false, status: 403, message: "forbidden_role" };
   }
@@ -17304,7 +17304,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/loto/merchants/me", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "unauthenticated" });
       const merchant = await storage.getLotoMerchantByUserId(userId);
       res.json(merchant ?? null);
@@ -17313,7 +17313,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/loto/merchants/me/receipts", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "unauthenticated" });
       const merchant = await storage.getLotoMerchantByUserId(userId);
       if (!merchant) return res.json({ merchant: null, receipts: [], features: null });
@@ -17325,7 +17325,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/loto/merchants/me/credit-opt-in", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "unauthenticated" });
       const merchant = await storage.getLotoMerchantByUserId(userId);
       if (!merchant) return res.status(404).json({ message: "merchant_not_found" });
@@ -17369,7 +17369,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/loto/consumers/me/spending", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "unauthenticated" });
       const receipts = await storage.listLotoReceiptsByConsumer(userId);
       const features = computeReceiptFeatures(receipts as any);
@@ -17379,7 +17379,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/loto/consumers/me/credit-opt-in", requireAuth, async (req, res) => {
     try {
-      const userId = (req.session as any)?.user?.id;
+      const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "unauthenticated" });
       const enable = Boolean(req.body?.enable);
       if (enable) {
