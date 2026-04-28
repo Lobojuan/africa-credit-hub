@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { useBrandColors } from "@/hooks/use-brand-colors";
 import { ConsentGateModal } from "@/components/consent-gate-modal";
+import { CrossProductCreditExtras } from "@/components/cross-product-credit-extras";
 import { formatCurrency } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { BOG_ACCOUNT_STATUS, mapInternalStatusToBog } from "@shared/bog-codes";
@@ -837,6 +838,8 @@ export default function CreditReportPage() {
               <Printer className="w-4 h-4 mr-2" /> Print Report
             </Button>
           </div>
+
+          {borrowerId && <CrossProductCreditExtras borrowerId={borrowerId} />}
 
           {aiSummary && (
             <Card className="border border-purple-200 dark:border-purple-800 overflow-visible print:hidden" data-testid="card-ai-summary">

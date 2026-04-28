@@ -141,6 +141,9 @@ const ComplianceQueuePage = lazy(() => import("@/pages/compliance-queue"));
 const LoanOriginationPage = lazy(() => import("@/pages/loan-origination"));
 const CollateralRegistryPage = lazy(() => import("@/pages/collateral-registry"));
 const LotoWorkspacePage = lazy(() => import("@/pages/loto-workspace"));
+const DataSharingPage = lazy(() => import("@/pages/data-sharing"));
+const MerchantCreditProfilePage = lazy(() => import("@/pages/merchant-credit-profile"));
+const FinancialInclusionPage = lazy(() => import("@/pages/financial-inclusion"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
 const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
@@ -236,6 +239,9 @@ function Router() {
         <Route path="/collateral-registry" component={CollateralRegistryPage} />
         <Route path="/registry-authority-portal" component={RegistryAuthorityPortalPage} />
         <Route path="/loto-fiscal" component={LotoWorkspacePage} />
+        <Route path="/data-sharing" component={DataSharingPage} />
+        <Route path="/merchant-credit-profile/:merchantId" component={MerchantCreditProfilePage} />
+        <Route path="/financial-inclusion" component={FinancialInclusionPage} />
         <Route path="/institution-analytics" component={InstitutionAnalyticsPage} />
         <Route path="/institution-branding" component={InstitutionBrandingPage} />
         <Route path="/organizations" component={OrganizationsPage} />
@@ -859,6 +865,7 @@ function App() {
             <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
             <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
             <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
+            <Route path="/financial-inclusion" component={() => <Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense>} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
             <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />

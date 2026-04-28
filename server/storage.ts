@@ -74,6 +74,8 @@ import {
   type InstitutionBranding, type InsertInstitutionBranding,
   type RegistryCountryConfig, type InsertRegistryCountryConfig,
   type CollateralAmendmentRequest, type InsertCollateralAmendmentRequest,
+  lotoMerchants, lotoReceipts, crossProductConsents,
+  type LotoMerchant, type LotoReceipt, type CrossProductConsent,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
   consumerMonitoringPrefs, consumerMonitoringAlerts, consumerAccounts,
   type PortfolioTriggerSubscription, type InsertPortfolioTriggerSubscription,
@@ -431,6 +433,22 @@ export interface IStorage {
   getCollateralAmendmentRequestsForItem(collateralItemId: string): Promise<CollateralAmendmentRequest[]>;
   approveCollateralAmendmentRequest(requestId: string, reviewedBy: string): Promise<CollateralAmendmentRequest | { error: "not_found" | "not_pending" | "invalid_data" | "collateral_not_approved" }>;
   rejectCollateralAmendmentRequest(requestId: string, reviewedBy: string, reviewNotes: string): Promise<CollateralAmendmentRequest | { error: "not_found" | "not_pending" }>;
+
+  // ── Cross-Product Bridge ─────────────────────────────────────────────
+  getLotoMerchantById(id: string): Promise<any | undefined>;
+  getLotoMerchantByUserId(userId: string): Promise<any | undefined>;
+  getLotoMerchantByBorrowerId(borrowerId: string): Promise<any | undefined>;
+  createLotoMerchant(input: any): Promise<any>;
+  updateLotoMerchantOptIn(id: string, optIn: boolean): Promise<any>;
+  listLotoMerchants(limit?: number): Promise<any[]>;
+  listLotoReceiptsByMerchant(merchantId: string, limit?: number): Promise<any[]>;
+  listLotoReceiptsByConsumer(userId: string, limit?: number): Promise<any[]>;
+  createLotoReceipt(input: any): Promise<any>;
+  getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }): Promise<any[]>;
+  getCrossProductConsentById(id: string): Promise<any | undefined>;
+  createCrossProductConsent(input: any): Promise<any>;
+  revokeCrossProductConsent(id: string, reason?: string): Promise<any | undefined>;
+  getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string }): Promise<any[]>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -3602,6 +3620,80 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(collateralAmendmentRequests.id, requestId), eq(collateralAmendmentRequests.status, "pending")))
       .returning();
     return updated;
+  }
+
+  // ── Cross-Product Bridge ──────────────────────────────────────────────
+  async getLotoMerchantById(id: string) {
+    const [row] = await db.select().from(lotoMerchants).where(eq(lotoMerchants.id, id));
+    return row;
+  }
+  async getLotoMerchantByUserId(userId: string) {
+    const [row] = await db.select().from(lotoMerchants).where(eq(lotoMerchants.userId, userId));
+    return row;
+  }
+  async getLotoMerchantByBorrowerId(borrowerId: string) {
+    const [row] = await db.select().from(lotoMerchants).where(eq(lotoMerchants.borrowerId, borrowerId));
+    return row;
+  }
+  async createLotoMerchant(input: any) {
+    const [row] = await db.insert(lotoMerchants).values(input).returning();
+    return row;
+  }
+  async updateLotoMerchantOptIn(id: string, optIn: boolean) {
+    const [row] = await db.update(lotoMerchants).set({ creditOptInActive: optIn }).where(eq(lotoMerchants.id, id)).returning();
+    return row;
+  }
+  async listLotoMerchants(limit = 50) {
+    return db.select().from(lotoMerchants).orderBy(desc(lotoMerchants.registeredAt)).limit(limit);
+  }
+  async listLotoReceiptsByMerchant(merchantId: string, limit = 200) {
+    return db.select().from(lotoReceipts).where(eq(lotoReceipts.merchantId, merchantId)).orderBy(desc(lotoReceipts.issuedAt)).limit(limit);
+  }
+  async listLotoReceiptsByConsumer(userId: string, limit = 200) {
+    return db.select().from(lotoReceipts).where(eq(lotoReceipts.consumerUserId, userId)).orderBy(desc(lotoReceipts.issuedAt)).limit(limit);
+  }
+  async createLotoReceipt(input: any) {
+    const [row] = await db.insert(lotoReceipts).values(input).returning();
+    return row;
+  }
+  async getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }) {
+    const ors = [];
+    if (filter.userId) ors.push(eq(crossProductConsents.userId, filter.userId));
+    if (filter.borrowerId) ors.push(eq(crossProductConsents.borrowerId, filter.borrowerId));
+    if (filter.merchantId) ors.push(eq(crossProductConsents.merchantId, filter.merchantId));
+    if (ors.length === 0) return [];
+    return db.select().from(crossProductConsents).where(or(...ors)).orderBy(desc(crossProductConsents.grantedAt));
+  }
+  async getCrossProductConsentById(id: string) {
+    const [row] = await db.select().from(crossProductConsents).where(eq(crossProductConsents.id, id));
+    return row;
+  }
+  async createCrossProductConsent(input: any) {
+    const [row] = await db.insert(crossProductConsents).values(input).returning();
+    return row;
+  }
+  async revokeCrossProductConsent(id: string, reason?: string) {
+    const [row] = await db.update(crossProductConsents)
+      .set({ status: "revoked", revokedAt: new Date(), revokedReason: reason ?? null })
+      .where(eq(crossProductConsents.id, id))
+      .returning();
+    return row;
+  }
+  async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string }) {
+    const rows = await db.select().from(auditLogs)
+      .where(eq(auditLogs.action, "cross_product_access"))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+    if (!filter) return rows;
+    return rows.filter((r: any) => {
+      try {
+        const d = JSON.parse(r.details ?? "{}");
+        if (filter.source && d.sourceProduct !== filter.source) return false;
+        if (filter.target && d.targetProduct !== filter.target) return false;
+        if (filter.purpose && d.purpose !== filter.purpose) return false;
+        return true;
+      } catch { return false; }
+    });
   }
 }
 

@@ -48,9 +48,20 @@ import {
   registryCountryConfig,
   collateralItems,
   collateralAmendmentRequests,
+  crossProductConsents,
+  lotoMerchants,
+  lotoReceipts,
   type InsertCollateralItem,
   type CollateralItem,
+  type CrossProductConsent,
+  type LotoMerchant,
+  type LotoReceipt,
 } from "@shared/schema";
+import {
+  gateway, CrossProductError, computeReceiptFeatures,
+  syncMerchantReceiptsToAlternativeData, DEFAULT_CONSENT_DURATION_MONTHS,
+  type CrossProductPurpose,
+} from "./cross-product-gateway";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -12976,6 +12987,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   await seedRegistryCountryConfig();
   await ensureRegistryAuthoritySeeded();
   await seedCollateralDemoData();
+  try {
+    const { seedCrossProductDemoData } = await import("./seed-cross-product");
+    await seedCrossProductDemoData();
+  } catch (e: any) {
+    routeLogger.info("[Seed] seedCrossProductDemoData skipped: " + e.message);
+  }
 
   registerExternalApi(app);
 
@@ -17036,6 +17053,292 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       res.json({ baseScore, simulatedScore, delta: simulatedScore - baseScore, explanation });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CROSS-PRODUCT DATA BRIDGE — gateway routes, consent CRUD, audit
+  // ════════════════════════════════════════════════════════════════════════
+
+  function gatewayCallerCtx(req: Request) {
+    return {
+      userId: (req.session as any)?.user?.id ?? (req as any).user?.id,
+      ip: req.ip,
+    };
+  }
+
+  function handleGatewayError(res: Response, err: unknown) {
+    if (err instanceof CrossProductError) {
+      return res.status(403).json({ error: err.code, message: err.message });
+    }
+    return res.status(500).json({ error: "internal", message: safeErrorMessage(err) });
+  }
+
+  // ----- Consent CRUD -----
+  app.get("/api/cross-product/consents", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      const filter: { userId?: string; borrowerId?: string; merchantId?: string } = { userId };
+      if (req.query.borrowerId) filter.borrowerId = String(req.query.borrowerId);
+      if (req.query.merchantId) filter.merchantId = String(req.query.merchantId);
+      // also include merchant-owned consents if user owns a merchant
+      const merchant = userId ? await storage.getLotoMerchantByUserId(userId) : null;
+      if (merchant) filter.merchantId = merchant.id;
+      const rows = await storage.getCrossProductConsents(filter);
+      res.json(rows);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  const grantConsentSchema = z.object({
+    sourceProduct: z.enum(["loto", "credit", "collateral"]),
+    targetProduct: z.enum(["loto", "credit", "collateral"]),
+    purpose: z.enum(["merchant_credit_profile","consumer_spending_credit","bureau_reputation_badge","collateral_credit_view","credit_collateral_view"]),
+    borrowerId: z.string().optional(),
+    merchantId: z.string().optional(),
+    consumerUserId: z.string().optional(),
+    durationMonths: z.number().int().min(1).max(60).optional(),
+    scopeNote: z.string().optional(),
+  });
+
+  app.post("/api/cross-product/consents", requireAuth, async (req, res) => {
+    try {
+      const parsed = grantConsentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0].message });
+      const userId = (req.session as any)?.user?.id;
+      const months = parsed.data.durationMonths ?? DEFAULT_CONSENT_DURATION_MONTHS;
+      const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + months);
+      const row = await storage.createCrossProductConsent({
+        userId: parsed.data.consumerUserId ?? userId ?? null,
+        borrowerId: parsed.data.borrowerId ?? null,
+        merchantId: parsed.data.merchantId ?? null,
+        sourceProduct: parsed.data.sourceProduct,
+        targetProduct: parsed.data.targetProduct,
+        purpose: parsed.data.purpose,
+        scopeNote: parsed.data.scopeNote ?? null,
+        expiresAt,
+        grantedByIp: req.ip ?? null,
+      });
+      res.status(201).json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/cross-product/consents/:id/revoke", requireAuth, async (req, res) => {
+    try {
+      const reason = String(req.body?.reason ?? "user_revoked");
+      const userId = (req.session as any)?.user?.id as string | undefined;
+      const userRole = (req.session as any)?.user?.role as string | undefined;
+      // Look up the consent and ensure the caller owns it (by userId or by owning the linked merchant), or is an admin/super_admin.
+      const existing = await storage.getCrossProductConsentById(req.params.id);
+      if (!existing) return res.status(404).json({ message: "not_found" });
+      const isAdmin = userRole === "admin" || userRole === "super_admin";
+      let owns = false;
+      if (existing.userId && userId && existing.userId === userId) owns = true;
+      if (!owns && existing.merchantId && userId) {
+        const m = await storage.getLotoMerchantById(existing.merchantId);
+        if (m && (m.userId === userId)) owns = true;
+      }
+      if (!owns && !isAdmin) return res.status(403).json({ message: "forbidden" });
+      const row = await storage.revokeCrossProductConsent(req.params.id, reason);
+      if (!row) return res.status(404).json({ message: "not_found" });
+      res.json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ----- Gateway-protected reads -----
+  app.get("/api/cross-product/merchant-credit-profile/:merchantId", requireAuth, async (req, res) => {
+    try {
+      const result = await gateway.getMerchantReceiptFeatures(req.params.merchantId, gatewayCallerCtx(req));
+      res.json(result);
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
+  // Resolve borrower → linked merchant, then fetch via gateway. Returns 204 if no merchant.
+  app.get("/api/cross-product/borrower-merchant-credit-profile/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const merchant = await storage.getLotoMerchantByBorrowerId(req.params.borrowerId);
+      if (!merchant) return res.status(204).end();
+      const result = await gateway.getMerchantReceiptFeatures(merchant.id, gatewayCallerCtx(req));
+      res.json({ merchant, ...result });
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
+  app.get("/api/cross-product/consumer-spending/:userId", requireAuth, async (req, res) => {
+    try {
+      const result = await gateway.getConsumerSpendingFeatures(req.params.userId, gatewayCallerCtx(req));
+      res.json(result);
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
+  app.get("/api/cross-product/collateral-snapshot/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const result = await gateway.getCollateralForBorrower(req.params.borrowerId, gatewayCallerCtx(req));
+      res.json(result);
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
+  app.get("/api/cross-product/credit-snapshot/:borrowerId", requireAuth, async (req, res) => {
+    try {
+      const result = await gateway.getCreditSnapshotForBorrower(req.params.borrowerId, gatewayCallerCtx(req));
+      res.json(result);
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
+  app.get("/api/cross-product/bureau-badge/:merchantId", requireAuth, async (req, res) => {
+    try {
+      const result = await gateway.getBureauBadgeForMerchant(req.params.merchantId, gatewayCallerCtx(req));
+      res.json(result ?? { hasBureauProfile: false, tier: null });
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
+  app.get("/api/cross-product/audit", requireAuth, requireRole("admin", "super_admin", "regulator"), async (req, res) => {
+    try {
+      const filter = {
+        source: req.query.source ? String(req.query.source) : undefined,
+        target: req.query.target ? String(req.query.target) : undefined,
+        purpose: req.query.purpose ? String(req.query.purpose) : undefined,
+      };
+      const limit = req.query.limit ? Math.min(500, Number(req.query.limit)) : 100;
+      const rows = await storage.getCrossProductAuditEntries(limit, filter);
+      const enriched = rows.map((r: any) => {
+        let parsed: any = {};
+        try { parsed = JSON.parse(r.details ?? "{}"); } catch {}
+        return { ...r, _meta: parsed };
+      });
+      res.json(enriched);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LOTO data endpoints (minimal — full pilot in #236 follow-up)
+  // ════════════════════════════════════════════════════════════════════════
+
+  app.get("/api/loto/merchants/me", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const merchant = await storage.getLotoMerchantByUserId(userId);
+      res.json(merchant ?? null);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/loto/merchants/me/receipts", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const merchant = await storage.getLotoMerchantByUserId(userId);
+      if (!merchant) return res.json({ merchant: null, receipts: [], features: null });
+      const receipts = await storage.listLotoReceiptsByMerchant(merchant.id);
+      const features = computeReceiptFeatures(receipts as any);
+      res.json({ merchant, receipts, features });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/loto/merchants/me/credit-opt-in", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const merchant = await storage.getLotoMerchantByUserId(userId);
+      if (!merchant) return res.status(404).json({ message: "merchant_not_found" });
+      const enable = Boolean(req.body?.enable);
+      await storage.updateLotoMerchantOptIn(merchant.id, enable);
+      if (enable) {
+        const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + DEFAULT_CONSENT_DURATION_MONTHS);
+        await storage.createCrossProductConsent({
+          userId,
+          borrowerId: merchant.borrowerId ?? null,
+          merchantId: merchant.id,
+          sourceProduct: "loto",
+          targetProduct: "credit",
+          purpose: "merchant_credit_profile",
+          scopeNote: "Merchant opted in to share fiscal-receipt history with credit bureau",
+          expiresAt,
+          grantedByIp: req.ip ?? null,
+        });
+        // best-effort sync to alternative_data
+        try {
+          await syncMerchantReceiptsToAlternativeData(merchant.id, gatewayCallerCtx(req));
+        } catch (err) {
+          // Even if sync fails (e.g. no borrower link), opt-in succeeds
+          console.warn("[loto opt-in] alt-data sync skipped:", (err as Error).message);
+        }
+      } else {
+        // Revoke active merchant_credit_profile consents
+        const consents = await storage.getCrossProductConsents({ merchantId: merchant.id });
+        for (const c of consents as any[]) {
+          if (c.status === "active" && c.purpose === "merchant_credit_profile") {
+            await storage.revokeCrossProductConsent(c.id, "merchant_opt_out");
+          }
+        }
+      }
+      const updated = await storage.getLotoMerchantByUserId(userId);
+      res.json({ merchant: updated, optInActive: enable });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/loto/consumers/me/spending", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const receipts = await storage.listLotoReceiptsByConsumer(userId);
+      const features = computeReceiptFeatures(receipts as any);
+      res.json({ receipts, features });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/loto/consumers/me/credit-opt-in", requireAuth, async (req, res) => {
+    try {
+      const userId = (req.session as any)?.user?.id;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const enable = Boolean(req.body?.enable);
+      if (enable) {
+        const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + DEFAULT_CONSENT_DURATION_MONTHS);
+        const row = await storage.createCrossProductConsent({
+          userId,
+          sourceProduct: "loto",
+          targetProduct: "credit",
+          purpose: "consumer_spending_credit",
+          scopeNote: "Consumer opted in to share verified spending insights with credit bureau",
+          expiresAt,
+          grantedByIp: req.ip ?? null,
+        });
+        return res.json({ optInActive: true, consent: row });
+      }
+      const consents = await storage.getCrossProductConsents({ userId });
+      for (const c of consents as any[]) {
+        if (c.status === "active" && c.purpose === "consumer_spending_credit") {
+          await storage.revokeCrossProductConsent(c.id, "consumer_opt_out");
+        }
+      }
+      res.json({ optInActive: false });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // PUBLIC: Financial Inclusion Impact (no auth)
+  // ════════════════════════════════════════════════════════════════════════
+  app.get("/api/public/financial-inclusion-impact", async (_req, res) => {
+    try {
+      const merchants = await storage.listLotoMerchants(500);
+      const optedIn = merchants.filter((m: any) => m.creditOptInActive).length;
+      const allReceiptsCount = await db.select({ c: sql<number>`count(*)::int` }).from(lotoReceipts);
+      const totalReceipts = (allReceiptsCount[0]?.c ?? 0) as number;
+      const turnoverRow = await db.select({ s: sql<string>`coalesce(sum(amount),0)::text` }).from(lotoReceipts);
+      const totalTurnover = parseFloat(turnoverRow[0]?.s ?? "0");
+      const consentsActive = await db.select({ c: sql<number>`count(*)::int` })
+        .from(crossProductConsents).where(eq(crossProductConsents.status, "active"));
+      const auditCount = await db.select({ c: sql<number>`count(*)::int` })
+        .from(auditLogs).where(eq(auditLogs.action, "cross_product_access"));
+      res.json({
+        merchantsRegistered: merchants.length,
+        merchantsOptedIn: optedIn,
+        verifiedReceipts: totalReceipts,
+        verifiedTurnover: totalTurnover,
+        currency: "XOF",
+        activeCrossProductConsents: (consentsActive[0]?.c ?? 0) as number,
+        bridgeAccessesLogged: (auditCount[0]?.c ?? 0) as number,
+        defaultConsentMonths: DEFAULT_CONSENT_DURATION_MONTHS,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   return httpServer;

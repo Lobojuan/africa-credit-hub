@@ -405,6 +405,7 @@ export default function AuditTrailPage() {
                   <SelectContent>
                     <SelectItem value="all">All Actions</SelectItem>
                     <SelectItem value="TRACE_*">Trace activity (all TRACE_*)</SelectItem>
+                    <SelectItem value="cross_product_access">Cross-Product Accesses (Bridge)</SelectItem>
                     {(stats?.uniqueActions || []).map(action => (
                       <SelectItem key={action} value={action}>{action}</SelectItem>
                     ))}

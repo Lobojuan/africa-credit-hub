@@ -802,7 +802,7 @@ export const insertPricingTierSchema = createInsertSchema(pricingTiers).omit({ i
 export type InsertPricingTier = z.infer<typeof insertPricingTierSchema>;
 export type PricingTier = typeof pricingTiers.$inferSelect;
 
-export const alternativeDataSourceEnum = pgEnum("alternative_data_source", ["mobile_money", "utility", "telco", "rent", "insurance", "merchant"]);
+export const alternativeDataSourceEnum = pgEnum("alternative_data_source", ["mobile_money", "utility", "telco", "rent", "insurance", "merchant", "fiscal_receipts"]);
 export const alternativeDataStatusEnum = pgEnum("alternative_data_status", ["active", "expired", "revoked"]);
 
 export const alternativeData = pgTable("alternative_data", {
@@ -2086,3 +2086,89 @@ export const collateralAmendmentRequests = pgTable("collateral_amendment_request
 export const insertCollateralAmendmentRequestSchema = createInsertSchema(collateralAmendmentRequests).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCollateralAmendmentRequest = z.infer<typeof insertCollateralAmendmentRequestSchema>;
 export type CollateralAmendmentRequest = typeof collateralAmendmentRequests.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Loto Fiscal — Minimal merchant + receipt schema (foundation for cross-product
+// data bridge until full Loto product ships)
+// ---------------------------------------------------------------------------
+
+export const lotoMerchants = pgTable("loto_merchants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id),
+  userId: varchar("user_id").references(() => users.id),
+  shopName: text("shop_name").notNull(),
+  ownerName: text("owner_name"),
+  vatRegistrationNumber: text("vat_registration_number"),
+  countryCode: text("country_code").notNull().default("CI"),
+  currency: text("currency").notNull().default("XOF"),
+  city: text("city"),
+  category: text("category"),
+  registeredAt: timestamp("registered_at").defaultNow(),
+  // Indicates merchant has opted in to share receipt data with Credit Bureau
+  creditOptInActive: boolean("credit_opt_in_active").notNull().default(false),
+});
+
+export const insertLotoMerchantSchema = createInsertSchema(lotoMerchants).omit({ id: true, registeredAt: true });
+export type InsertLotoMerchant = z.infer<typeof insertLotoMerchantSchema>;
+export type LotoMerchant = typeof lotoMerchants.$inferSelect;
+
+export const lotoReceipts = pgTable("loto_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  merchantId: varchar("merchant_id").notNull().references(() => lotoMerchants.id),
+  consumerUserId: varchar("consumer_user_id").references(() => users.id),
+  fiscalCode: text("fiscal_code").notNull().unique(),
+  ticketNumber: text("ticket_number").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("XOF"),
+  category: text("category"),
+  itemCount: integer("item_count").default(1),
+  issuedAt: timestamp("issued_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLotoReceiptSchema = createInsertSchema(lotoReceipts).omit({ id: true, createdAt: true });
+export type InsertLotoReceipt = z.infer<typeof insertLotoReceiptSchema>;
+export type LotoReceipt = typeof lotoReceipts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Cross-Product Consents — explicit, time-bounded, revocable permissions
+// for any data flow between Credit Bureau, Collateral Registry, Loto Fiscal.
+// Distinct from `consentRecords` (which are bureau/lender data-pull receipts).
+// ---------------------------------------------------------------------------
+
+export const crossProductSourceEnum = pgEnum("cross_product_source", ["loto", "credit", "collateral"]);
+export const crossProductTargetEnum = pgEnum("cross_product_target", ["loto", "credit", "collateral"]);
+export const crossProductPurposeEnum = pgEnum("cross_product_purpose", [
+  "merchant_credit_profile",
+  "consumer_spending_credit",
+  "bureau_reputation_badge",
+  "collateral_credit_view",
+  "credit_collateral_view",
+]);
+export const crossProductConsentStatusEnum = pgEnum("cross_product_consent_status", ["active", "revoked", "expired"]);
+
+export const crossProductConsents = pgTable("cross_product_consents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Subject: one of these identifies the data subject
+  userId: varchar("user_id").references(() => users.id),
+  borrowerId: varchar("borrower_id").references(() => borrowers.id),
+  merchantId: varchar("merchant_id").references(() => lotoMerchants.id),
+  sourceProduct: crossProductSourceEnum("source_product").notNull(),
+  targetProduct: crossProductTargetEnum("target_product").notNull(),
+  purpose: crossProductPurposeEnum("purpose").notNull(),
+  status: crossProductConsentStatusEnum("status").notNull().default("active"),
+  scopeNote: text("scope_note"),
+  grantedAt: timestamp("granted_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  grantedByIp: text("granted_by_ip"),
+  revokedReason: text("revoked_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCrossProductConsentSchema = createInsertSchema(crossProductConsents).omit({
+  id: true, createdAt: true, revokedAt: true, grantedAt: true,
+});
+export type InsertCrossProductConsent = z.infer<typeof insertCrossProductConsentSchema>;
+export type CrossProductConsent = typeof crossProductConsents.$inferSelect;
