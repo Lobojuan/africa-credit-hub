@@ -288,3 +288,9 @@ id = "9g9C-bnn2A4Wp0XX9m9uw"
 uri = "file://exports/codebase.tar.gz"
 type = "unspecified"
 title = "Africa Credit Hub — Source Archive (13 MB)"
+
+[[outputs]]
+id = "7Be3s4y6h61v70bH--hmm"
+uri = "file://exports/codebase.zip"
+type = "unspecified"
+title = "Africa Credit Hub — Source Code (5 MB ZIP)"
