@@ -10,6 +10,7 @@ const pt = {
     administration: "Administração",
     dashboard: "Painel",
     portfolioIntelligence: "Inteligência de Portfólio IA",
+    portfolioTriggers: "Gatilhos de Portfólio",
     aiCommandCenter: "Centro de Comando IA",
     borrowers: "Mutuários",
     creditAccounts: "Contas de Crédito",

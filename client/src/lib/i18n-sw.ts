@@ -8,6 +8,7 @@ const sw: Record<string, any> = {
     administration: "Utawala",
     dashboard: "Dashibodi",
     portfolioIntelligence: "Akili ya Kwingineko ya AI",
+    portfolioTriggers: "Vichocheo vya Kwingineko",
     aiCommandCenter: "Kituo cha Amri cha AI",
     borrowers: "Wakopaji",
     consumers: "Watumiaji",

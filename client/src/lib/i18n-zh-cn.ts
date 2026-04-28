@@ -10,6 +10,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "administration": "管理",
     "dashboard": "仪表板",
     "portfolioIntelligence": "AI 投资组合分析",
+    "portfolioTriggers": "投资组合触发器",
     "aiCommandCenter": "AI 指挥中心",
     "borrowers": "借款人",
     "creditAccounts": "信贷账户",

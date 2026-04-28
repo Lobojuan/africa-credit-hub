@@ -362,6 +362,7 @@ export function DemoTour() {
       continuous
       showSkipButton
       showProgress
+      disableOverlay
       disableOverlayClose
       hideCloseButton={false}
       scrollToFirstStep
@@ -381,7 +382,23 @@ export function DemoTour() {
           textColor: "hsl(215, 30%, 18%)",
           arrowColor: "#ffffff",
           backgroundColor: "#ffffff",
-          overlayColor: "rgba(15, 23, 42, 0.55)",
+          overlayColor: "rgba(0, 0, 0, 0)",
+        },
+        overlay: {
+          backgroundColor: "rgba(0, 0, 0, 0)",
+          pointerEvents: "none",
+          mixBlendMode: "normal",
+        },
+        overlayLegacy: {
+          backgroundColor: "rgba(0, 0, 0, 0)",
+          pointerEvents: "none",
+        },
+        overlayLegacyCenter: {
+          backgroundColor: "rgba(0, 0, 0, 0)",
+          pointerEvents: "none",
+        },
+        spotlight: {
+          pointerEvents: "none",
         },
         tooltip: {
           borderRadius: 14,

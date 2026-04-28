@@ -8,6 +8,7 @@ const ar: Record<string, any> = {
     administration: "الإدارة",
     dashboard: "لوحة المعلومات",
     portfolioIntelligence: "ذكاء المحفظة بالذكاء الاصطناعي",
+    portfolioTriggers: "محفزات المحفظة",
     aiCommandCenter: "مركز قيادة الذكاء الاصطناعي",
     borrowers: "المقترضون",
     creditAccounts: "حسابات الائتمان",

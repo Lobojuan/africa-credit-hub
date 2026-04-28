@@ -20,6 +20,7 @@ const en = {
     administration: "Administration",
     dashboard: "Dashboard",
     portfolioIntelligence: "AI Portfolio Intelligence",
+    portfolioTriggers: "Portfolio Triggers",
     aiCommandCenter: "AI Command Center",
     borrowers: "Borrowers",
     consumers: "Consumers",

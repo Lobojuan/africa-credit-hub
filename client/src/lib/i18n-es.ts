@@ -10,6 +10,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       administration: "Administración",
       dashboard: "Panel de Control",
       portfolioIntelligence: "Inteligencia de Cartera IA",
+      portfolioTriggers: "Disparadores de Cartera",
       aiCommandCenter: "Centro de Comando IA",
       borrowers: "Prestatarios",
       creditAccounts: "Cuentas de Crédito",

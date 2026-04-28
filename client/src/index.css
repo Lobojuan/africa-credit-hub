@@ -1047,3 +1047,15 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
     clip-path: circle(0% at top right);
   }
 }
+
+#react-joyride-portal,
+#react-joyride-portal *,
+[id^="react-joyride-step-"],
+[id^="react-joyride-step-"] * {
+  pointer-events: none !important;
+}
+
+.react-joyride__tooltip,
+.react-joyride__tooltip * {
+  pointer-events: auto !important;
+}

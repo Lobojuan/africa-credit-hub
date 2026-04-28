@@ -10,6 +10,7 @@ const zhTW = {
     administration: "管理",
     dashboard: "控制面板",
     portfolioIntelligence: "人工智慧組合情報",
+    portfolioTriggers: "投資組合觸發器",
     aiCommandCenter: "人工智慧指揮中心",
     borrowers: "借款人",
     creditAccounts: "信用賬戶",
