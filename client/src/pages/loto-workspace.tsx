@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell } from "lucide-react";
+import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert } from "lucide-react";
 import { PRODUCT_REGISTRY } from "@/lib/products";
 
 interface MerchantPayload {
@@ -259,6 +259,8 @@ export default function LotoWorkspacePage() {
                   </CardContent>
                 </Card>
               )}
+
+              <DgiBureauReputationBadge merchantId={merchant.id} optedIn={merchant.creditOptInActive} />
             </>
           )}
         </TabsContent>
@@ -266,3 +268,93 @@ export default function LotoWorkspacePage() {
     </div>
   );
 }
+
+interface BureauBadgeResponse {
+  badge: {
+    tier: string;
+    score: number;
+    totalReceipts: number;
+    monthsWithActivity: number;
+    trend: string;
+    issuedAt: string;
+  };
+  consent: { id: string };
+}
+
+function DgiBureauReputationBadge({ merchantId, optedIn }: { merchantId: string; optedIn: boolean }) {
+  const { t } = useTranslation();
+  const { data, isLoading, error } = useQuery<BureauBadgeResponse>({
+    queryKey: ["/api/cross-product/bureau-badge", merchantId],
+    queryFn: () => fetch(`/api/cross-product/bureau-badge/${merchantId}`, { credentials: "include" }).then(async r => {
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed");
+      return r.json();
+    }),
+    enabled: optedIn,
+    retry: false,
+  });
+
+  if (!optedIn) {
+    return (
+      <Card className="mt-4 border-dashed" data-testid="card-bureau-badge-locked">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+            {t("merchantCredit.badgeLockedTitle", "DGI Bureau Reputation Badge")}
+          </CardTitle>
+          <CardDescription>
+            {t("merchantCredit.badgeLockedBody", "Turn on credit-profile sharing to issue your verified DGI / Loto Fiscal reputation badge through the bridge.")}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  const tierColor = (tier?: string) => {
+    switch (tier) {
+      case "platinum": return "bg-slate-100 text-slate-900 border-slate-400 dark:bg-slate-800 dark:text-slate-100";
+      case "gold": return "bg-amber-100 text-amber-900 border-amber-400 dark:bg-amber-900/40 dark:text-amber-100";
+      case "silver": return "bg-zinc-100 text-zinc-900 border-zinc-400 dark:bg-zinc-800 dark:text-zinc-100";
+      case "bronze": return "bg-orange-100 text-orange-900 border-orange-400 dark:bg-orange-900/40 dark:text-orange-100";
+      default: return "bg-muted text-muted-foreground";
+    }
+  };
+
+  return (
+    <Card className="mt-4" data-testid="card-bureau-badge">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <BadgeCheck className="w-5 h-5 text-emerald-600" />
+          {t("merchantCredit.badgeTitle", "DGI Bureau Reputation Badge")}
+        </CardTitle>
+        <CardDescription>
+          {t("merchantCredit.badgeSubtitle", "Verified by the Loto Fiscal → Credit Bureau bridge. Lenders see this badge on your merchant credit profile.")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <Skeleton className="h-24 w-full" />}
+        {error && (
+          <Alert variant="destructive" data-testid="alert-bureau-badge-error">
+            <AlertTitle>{t("common.error", "Error")}</AlertTitle>
+            <AlertDescription>{(error as Error).message}</AlertDescription>
+          </Alert>
+        )}
+        {data && (
+          <div className="flex items-center gap-4 flex-wrap" data-testid="content-bureau-badge">
+            <div className={`px-4 py-3 rounded-lg border-2 ${tierColor(data.badge.tier)}`} data-testid="badge-tier">
+              <div className="text-xs uppercase tracking-wide opacity-75">Tier</div>
+              <div className="text-2xl font-bold capitalize">{data.badge.tier}</div>
+            </div>
+            <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+              <div><div className="text-xs text-muted-foreground">Bureau score</div><div className="text-lg font-semibold" data-testid="badge-score">{data.badge.score}</div></div>
+              <div><div className="text-xs text-muted-foreground">Receipts</div><div className="text-lg font-semibold" data-testid="badge-receipts">{data.badge.totalReceipts}</div></div>
+              <div><div className="text-xs text-muted-foreground">Active months</div><div className="text-lg font-semibold" data-testid="badge-months">{data.badge.monthsWithActivity}</div></div>
+              <div><div className="text-xs text-muted-foreground">Trend</div><div className="text-lg font-semibold capitalize" data-testid="badge-trend">{data.badge.trend.replace("_", " ")}</div></div>
+              <div className="col-span-2"><div className="text-xs text-muted-foreground">Issued</div><div className="text-sm font-mono" data-testid="badge-issued">{new Date(data.badge.issuedAt).toLocaleString()}</div></div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+

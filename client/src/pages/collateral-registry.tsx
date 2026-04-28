@@ -26,6 +26,7 @@ import {
   Download, Shield, Zap, Star, TrendingUp, Package, Link2,
   Eye, CheckCircle, Building2, User, Tag, Calendar, ExternalLink, Copy, Check,
   Share2, Mail, MessageSquare, Printer, History, Send, Pencil, Car, Landmark,
+  ArrowLeftRight,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -469,6 +470,68 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
             </div>
           )}
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Borrower Credit Snapshot Dialog (Cross-Product Bridge) ──────────────────
+
+interface CreditSnapshotResponse {
+  summary: { score: number | null; activeAccounts: number; totalDebt: string };
+  consent: { id: string; expiresAt: string };
+}
+
+function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: string; itemId: string }) {
+  const [open, setOpen] = useState(false);
+  const { data, isLoading, error } = useQuery<CreditSnapshotResponse>({
+    queryKey: ["/api/cross-product/credit-snapshot", borrowerId],
+    queryFn: () => fetch(`/api/cross-product/credit-snapshot/${borrowerId}`, { credentials: "include" }).then(async r => {
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed to load snapshot");
+      return r.json();
+    }),
+    enabled: open,
+    retry: false,
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          title="Borrower credit snapshot via consent gateway"
+          data-testid={`btn-credit-snapshot-${itemId}`}
+          className="h-7 px-2"
+        >
+          <ArrowLeftRight className="w-3.5 h-3.5 text-primary" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md" data-testid={`dialog-credit-snapshot-${itemId}`}>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ArrowLeftRight className="w-4 h-4 text-primary" /> Borrower Credit Snapshot
+          </DialogTitle>
+        </DialogHeader>
+        {isLoading && <Skeleton className="h-32 w-full" />}
+        {error && (
+          <div className="text-sm text-muted-foreground space-y-2" data-testid="text-snapshot-no-consent">
+            <div className="font-medium text-amber-700 dark:text-amber-400">No active cross-product consent</div>
+            <div>The borrower has not granted the Collateral Registry permission to view their Credit Bureau profile. Request consent to surface this snapshot here.</div>
+          </div>
+        )}
+        {data && (
+          <div className="space-y-3 text-sm" data-testid="content-credit-snapshot">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-md border p-2"><div className="text-xs text-muted-foreground">Score</div><div className="text-lg font-semibold" data-testid="text-snapshot-score">{data.summary.score ?? "—"}</div></div>
+              <div className="rounded-md border p-2"><div className="text-xs text-muted-foreground">Active accts</div><div className="text-lg font-semibold" data-testid="text-snapshot-accounts">{data.summary.activeAccounts}</div></div>
+              <div className="rounded-md border p-2"><div className="text-xs text-muted-foreground">Total debt</div><div className="text-lg font-semibold" data-testid="text-snapshot-debt">{data.summary.totalDebt}</div></div>
+            </div>
+            <div className="text-xs text-muted-foreground border-t pt-2">
+              Served via cross-product gateway · consent <code className="font-mono">{data.consent.id.slice(0, 8)}…</code> · access logged.
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -2710,6 +2773,9 @@ function MyRegistrations() {
                       <TableCell>
                         <div className="flex gap-1 items-center flex-wrap">
                           <LienStatusTimelineDialog item={item} />
+                          {item.borrowerId && (
+                            <BorrowerCreditSnapshotDialog borrowerId={item.borrowerId} itemId={item.id} />
+                          )}
                           {item.approvalStatus === "approved" && (
                             <>
                               <div onClick={e => e.stopPropagation()}>

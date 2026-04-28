@@ -9,10 +9,13 @@ import { db } from "../db";
 import { eq, and, like } from "drizzle-orm";
 import {
   lotoMerchants, lotoReceipts, crossProductConsents, auditLogs, borrowers,
+  alternativeData,
 } from "@shared/schema";
 import {
   gateway, computeReceiptFeatures, CrossProductError,
+  syncMerchantReceiptsToAlternativeData,
 } from "../cross-product-gateway";
+import { storage } from "../storage";
 
 const TAG = "test-cpg-" + Date.now();
 
@@ -167,6 +170,65 @@ async function run() {
       if (!(e instanceof CrossProductError)) throw e;
       if (e.code !== "no_consent" && e.code !== "consent_expired") throw new Error("expected denial, got " + e.code);
     }
+  });
+
+  // ─── E2E: revocation immediately removes lender-visible VAT activity signal ──
+  await test("E2E: revocation purges fiscal_receipts alt-data and blocks subsequent gateway reads", async () => {
+    // Need a borrower row so the receipts can be linked into alternativeData.
+    const [borrower] = await db.insert(borrowers).values({
+      type: "individual",
+      firstName: "Test",
+      lastName: TAG,
+      nationalId: TAG + "-NID",
+    }).returning();
+
+    // Bind merchant to borrower for this scenario.
+    await db.update(lotoMerchants).set({ borrowerId: borrower.id }).where(eq(lotoMerchants.id, merchant.id));
+
+    // Grant a fresh consent and sync receipts → alternativeData.
+    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    const [grant] = await db.insert(crossProductConsents).values({
+      userId: undefined,
+      borrowerId: borrower.id,
+      merchantId: merchant.id,
+      sourceProduct: "loto",
+      targetProduct: "credit",
+      purpose: "merchant_credit_profile",
+      status: "active",
+      expiresAt: future,
+    }).returning();
+
+    const sync = await syncMerchantReceiptsToAlternativeData(merchant.id, { userId: undefined, ip: "127.0.0.1" });
+    if (!sync.inserted) throw new Error("expected fiscal_receipts row to be inserted");
+
+    const beforeRows = await db.select().from(alternativeData)
+      .where(and(eq(alternativeData.borrowerId, borrower.id), eq(alternativeData.source, "fiscal_receipts")));
+    if (beforeRows.length !== 1) throw new Error("expected exactly 1 fiscal_receipts row before revoke, got " + beforeRows.length);
+
+    // Revoke + purge through the centralized storage path the routes use.
+    await storage.revokeCrossProductConsent(grant.id, "test_revoke_e2e");
+    await storage.deleteAlternativeDataForBorrower(borrower.id, "fiscal_receipts");
+
+    const afterRows = await db.select().from(alternativeData)
+      .where(and(eq(alternativeData.borrowerId, borrower.id), eq(alternativeData.source, "fiscal_receipts")));
+    if (afterRows.length !== 0) throw new Error("expected fiscal_receipts row to be purged after revoke, got " + afterRows.length);
+
+    // Subsequent gateway read for the SAME purpose must now be denied — no silent data leakage.
+    try {
+      await gateway.getMerchantReceiptFeatures(merchant.id, { userId: undefined, ip: "127.0.0.1" });
+      throw new Error("gateway should deny after revoke");
+    } catch (e) {
+      if (!(e instanceof CrossProductError)) throw e;
+      if (e.code !== "no_consent" && e.code !== "consent_revoked") {
+        throw new Error("expected denial, got " + e.code);
+      }
+    }
+
+    // Cleanup borrower-bound rows.
+    await db.delete(alternativeData).where(eq(alternativeData.borrowerId, borrower.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.borrowerId, borrower.id));
+    await db.update(lotoMerchants).set({ borrowerId: null }).where(eq(lotoMerchants.id, merchant.id));
+    await db.delete(borrowers).where(eq(borrowers.id, borrower.id));
   });
 
   await cleanup(merchant.id);

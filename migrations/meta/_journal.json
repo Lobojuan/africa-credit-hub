@@ -71,6 +71,13 @@
       "when": 1775779206000,
       "tag": "0009_linked_open_banking_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1777419283336,
+      "tag": "0010_aspiring_namorita",
+      "breakpoints": true
     }
   ]
 }
