@@ -300,3 +300,9 @@ id = "C_bHQ1GpIUo1UcminFsn4"
 uri = "file://exports/africa-credit-hub-source.zip"
 type = "unspecified"
 title = "Africa Credit Hub — Source Code (10.4 MB, 469 files)"
+
+[[outputs]]
+id = "7Xv2jKb-ngSKffOaX4fr2"
+uri = "file://exports/ach-source-code.zip"
+type = "unspecified"
+title = "Africa Credit Hub — Source Code (4 MB)"
