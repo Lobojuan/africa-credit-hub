@@ -48,9 +48,6 @@ import {
   registryCountryConfig,
   collateralItems,
   collateralAmendmentRequests,
-  crossProductConsents,
-  lotoMerchants,
-  lotoReceipts,
   type InsertCollateralItem,
   type CollateralItem,
   type CrossProductConsent,
@@ -17147,6 +17144,27 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Single revoke-and-purge service used by both the explicit consent revoke endpoint
+  // and the merchant opt-out toggle. Guarantees that downstream contributions to
+  // alternative_data are removed when a merchant_credit_profile consent is revoked.
+  async function revokeConsentAndPurge(consentId: string, reason: string): Promise<CrossProductConsent | undefined> {
+    const existing = await storage.getCrossProductConsentById(consentId);
+    if (!existing) return undefined;
+    const row = await storage.revokeCrossProductConsent(consentId, reason);
+    if (!row) return undefined;
+    if (existing.purpose === "merchant_credit_profile" && existing.merchantId) {
+      try {
+        const m = await storage.getLotoMerchantById(existing.merchantId);
+        if (m?.borrowerId) {
+          await storage.deleteAlternativeDataForBorrower(m.borrowerId, "fiscal_receipts");
+        }
+      } catch (purgeErr) {
+        console.error("[cross-product] revoke purge failed", purgeErr);
+      }
+    }
+    return row;
+  }
+
   app.post("/api/cross-product/consents/:id/revoke", requireAuth, async (req, res) => {
     try {
       const reason = String(req.body?.reason ?? "user_revoked");
@@ -17163,22 +17181,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         if (m && (m.userId === userId)) owns = true;
       }
       if (!owns && !isAdmin) return res.status(403).json({ message: "forbidden" });
-      const row = await storage.revokeCrossProductConsent(req.params.id, reason);
+      const row = await revokeConsentAndPurge(req.params.id, reason);
       if (!row) return res.status(404).json({ message: "not_found" });
-
-      // Revocation is state-destructive: purge any downstream fiscal_receipts contribution
-      // so the borrower's credit profile no longer reflects merchant data after opt-out.
-      if (existing.purpose === "merchant_credit_profile" && existing.merchantId) {
-        try {
-          const m = await storage.getLotoMerchantById(existing.merchantId);
-          if (m?.borrowerId) {
-            await storage.deleteAlternativeDataForBorrower(m.borrowerId, "fiscal_receipts");
-          }
-        } catch (purgeErr) {
-          console.error("[cross-product] revoke purge failed", purgeErr);
-        }
-      }
-
       res.json(row);
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -17348,11 +17352,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           console.warn("[loto opt-in] alt-data sync skipped:", (err as Error).message);
         }
       } else {
-        // Revoke active merchant_credit_profile consents
+        // Revoke ALL active merchant_credit_profile consents for this merchant via
+        // the centralized revoke-and-purge service so fiscal_receipts contributions
+        // are immediately removed from downstream credit scoring state.
         const consents = await storage.getCrossProductConsents({ merchantId: merchant.id });
-        for (const c of consents as any[]) {
+        for (const c of consents) {
           if (c.status === "active" && c.purpose === "merchant_credit_profile") {
-            await storage.revokeCrossProductConsent(c.id, "merchant_opt_out");
+            await revokeConsentAndPurge(c.id, "merchant_opt_out");
           }
         }
       }
@@ -17390,9 +17396,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         return res.json({ optInActive: true, consent: row });
       }
       const consents = await storage.getCrossProductConsents({ userId });
-      for (const c of consents as any[]) {
+      for (const c of consents) {
         if (c.status === "active" && c.purpose === "consumer_spending_credit") {
-          await storage.revokeCrossProductConsent(c.id, "consumer_opt_out");
+          await revokeConsentAndPurge(c.id, "consumer_opt_out");
         }
       }
       res.json({ optInActive: false });
@@ -17404,24 +17410,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ════════════════════════════════════════════════════════════════════════
   app.get("/api/public/financial-inclusion-impact", async (_req, res) => {
     try {
-      const merchants = await storage.listLotoMerchants(500);
-      const optedIn = merchants.filter((m: any) => m.creditOptInActive).length;
-      const allReceiptsCount = await db.select({ c: sql<number>`count(*)::int` }).from(lotoReceipts);
-      const totalReceipts = (allReceiptsCount[0]?.c ?? 0) as number;
-      const turnoverRow = await db.select({ s: sql<string>`coalesce(sum(amount),0)::text` }).from(lotoReceipts);
-      const totalTurnover = parseFloat(turnoverRow[0]?.s ?? "0");
-      const consentsActive = await db.select({ c: sql<number>`count(*)::int` })
-        .from(crossProductConsents).where(eq(crossProductConsents.status, "active"));
-      const auditCount = await db.select({ c: sql<number>`count(*)::int` })
-        .from(auditLogs).where(eq(auditLogs.action, "cross_product_access"));
+      const stats = await storage.getCrossProductImpactStats();
       res.json({
-        merchantsRegistered: merchants.length,
-        merchantsOptedIn: optedIn,
-        verifiedReceipts: totalReceipts,
-        verifiedTurnover: totalTurnover,
+        ...stats,
         currency: "XOF",
-        activeCrossProductConsents: (consentsActive[0]?.c ?? 0) as number,
-        bridgeAccessesLogged: (auditCount[0]?.c ?? 0) as number,
         defaultConsentMonths: DEFAULT_CONSENT_DURATION_MONTHS,
         generatedAt: new Date().toISOString(),
       });

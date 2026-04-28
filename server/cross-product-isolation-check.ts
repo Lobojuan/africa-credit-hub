@@ -1,0 +1,84 @@
+import { readdirSync, readFileSync, statSync } from "fs";
+import { join, relative } from "path";
+
+const BRIDGE_TABLES = ["lotoMerchants", "lotoReceipts", "crossProductConsents"];
+
+const ALLOWLIST = new Set<string>([
+  "server/cross-product-gateway.ts",
+  "server/cross-product-isolation-check.ts",
+  "server/seed-cross-product.ts",
+  "server/storage.ts",
+  "shared/schema.ts",
+  "server/__tests__/cross-product-gateway.test.ts",
+]);
+
+const SCAN_ROOTS = ["server", "client/src", "shared"];
+const SKIP_DIRS = new Set(["node_modules", "dist", ".git", "__pycache__"]);
+const EXTS = [".ts", ".tsx", ".mts", ".cts"];
+
+function walk(root: string, files: string[]): void {
+  let entries: string[];
+  try {
+    entries = readdirSync(root);
+  } catch {
+    return;
+  }
+  for (const e of entries) {
+    const full = join(root, e);
+    if (SKIP_DIRS.has(e)) continue;
+    let st;
+    try { st = statSync(full); } catch { continue; }
+    if (st.isDirectory()) walk(full, files);
+    else if (EXTS.some((x) => e.endsWith(x))) files.push(full);
+  }
+}
+
+export function runCrossProductIsolationCheck(opts: { failOnViolation?: boolean } = {}): { violations: { file: string; symbol: string }[] } {
+  const cwd = process.cwd();
+  const files: string[] = [];
+  for (const r of SCAN_ROOTS) walk(join(cwd, r), files);
+
+  const violations: { file: string; symbol: string }[] = [];
+
+  // Match imports of the bridge tables from "@shared/schema" — the only legitimate
+  // way to reach the raw tables is via this import, so this catches all bypass attempts.
+  // Allows multiline imports.
+  for (const file of files) {
+    const rel = relative(cwd, file).replace(/\\/g, "/");
+    if (ALLOWLIST.has(rel)) continue;
+    let content: string;
+    try { content = readFileSync(file, "utf8"); } catch { continue; }
+    if (!content.includes("@shared/schema")) continue;
+
+    // Extract the imported symbols from "@shared/schema" import statements.
+    const importRegex = /import\s*(?:type\s+)?\{([\s\S]*?)\}\s*from\s*["']@shared\/schema["']/g;
+    let m: RegExpExecArray | null;
+    while ((m = importRegex.exec(content)) !== null) {
+      const symbols = m[1].split(",").map((s) => s.trim().replace(/^type\s+/, "").split(/\s+as\s+/)[0]);
+      for (const sym of symbols) {
+        if (BRIDGE_TABLES.includes(sym)) {
+          violations.push({ file: rel, symbol: sym });
+        }
+      }
+    }
+  }
+
+  if (violations.length > 0) {
+    const lines = violations.map((v) => `  - ${v.file} imports bridge table "${v.symbol}" directly`);
+    const msg =
+      `[cross-product] BRIDGE ISOLATION VIOLATION — ${violations.length} forbidden import(s):\n` +
+      lines.join("\n") +
+      `\n\nCross-product tables (lotoMerchants, lotoReceipts, crossProductConsents) MUST be accessed via\n` +
+      `the gateway (server/cross-product-gateway.ts) or the storage facade (server/storage.ts).\n` +
+      `Add the file to ALLOWLIST in server/cross-product-isolation-check.ts only if it is a sanctioned\n` +
+      `internal collaborator of the gateway.\n`;
+    if (opts.failOnViolation) {
+      console.error(msg);
+      process.exit(1);
+    } else {
+      console.warn(msg);
+    }
+  }
+
+  return { violations };
+}

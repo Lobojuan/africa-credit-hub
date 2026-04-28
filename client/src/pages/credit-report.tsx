@@ -490,6 +490,8 @@ export default function CreditReportPage() {
   const [purpose, setPurpose] = useState("new_credit");
   const [includeAI, setIncludeAI] = useState(true);
   const [includeXds, setIncludeXds] = useState(false);
+  // Lender opt-in: only fetch cross-product VAT/Collateral signals when explicitly requested.
+  const [includeCrossProduct, setIncludeCrossProduct] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -839,7 +841,25 @@ export default function CreditReportPage() {
             </Button>
           </div>
 
-          {borrowerId && <CrossProductCreditExtras borrowerId={borrowerId} />}
+          {borrowerId && (
+            <Card className="p-3 print:hidden" data-testid="card-cross-product-toggle">
+              <label className="flex items-center justify-between gap-3 text-sm">
+                <div>
+                  <div className="font-medium" data-testid="text-cross-product-toggle-title">Include verified VAT activity & collateral</div>
+                  <div className="text-xs text-muted-foreground">
+                    Pulls verified Loto Fiscal receipts and Collateral Registry data through the consent gateway. Only renders when the borrower has an active consent on file.
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={includeCrossProduct}
+                  onChange={(e) => setIncludeCrossProduct(e.target.checked)}
+                  data-testid="toggle-cross-product"
+                />
+              </label>
+            </Card>
+          )}
+          {borrowerId && includeCrossProduct && <CrossProductCreditExtras borrowerId={borrowerId} />}
 
           {aiSummary && (
             <Card className="border border-purple-200 dark:border-purple-800 overflow-visible print:hidden" data-testid="card-ai-summary">

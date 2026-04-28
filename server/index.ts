@@ -629,6 +629,12 @@ process.stderr.write = function (...args: any[]) {
   validateEncryptionConfig();
   validateExternalApiConfig();
 
+  // Build-time/boot-time guard: scan the source tree and refuse to start if any
+  // file outside the gateway+storage allowlist directly imports the cross-product
+  // tables. This makes bypassing the consent-first gateway a deploy-blocker.
+  const { runCrossProductIsolationCheck } = await import("./cross-product-isolation-check");
+  runCrossProductIsolationCheck({ failOnViolation: true });
+
   await registerRoutes(httpServer, app);
 
   const { sanitizeErrorForResponse } = await import("./security-hardening");
