@@ -286,6 +286,134 @@ async function seedPricingTiers() {
   console.log(`[Seed] Inserted ${tiers.length} default pricing tiers`);
 }
 
+/**
+ * Idempotently ensure the three one-click demo login accounts always exist
+ * with the passwords advertised on the /login page. Safe to run on every
+ * startup in dev or production. Never overwrites passwords for accounts that
+ * already exist (so this won't clobber a real `admin` account in production —
+ * we use a separate `demo_admin` username for the super-admin demo).
+ */
+export async function ensureDemoUsers() {
+  try {
+    const { organizations } = await import("@shared/schema");
+    const { eq } = await import("drizzle-orm");
+    const hash = (pw: string) => bcrypt.hashSync(pw, 12);
+
+    let [demoOrg] = await db.select().from(organizations).where(eq(organizations.slug, "demo-bank")).limit(1);
+    if (!demoOrg) {
+      const inserted = await db.insert(organizations).values({
+        name: "Demo Bank Ltd",
+        slug: "demo-bank",
+        type: "bank",
+        status: "active",
+        country: "Ghana",
+        contactEmail: "demo@africacredithub.com",
+        subscriptionTier: "standard",
+        maxUsers: 50,
+      }).returning();
+      demoOrg = inserted[0];
+      console.log("[Demo Seed] Created Demo Bank Ltd organization");
+    }
+
+    let [authorityOrg] = await db.select().from(organizations).where(eq(organizations.slug, "demo-authority")).limit(1);
+    if (!authorityOrg) {
+      const inserted = await db.insert(organizations).values({
+        name: "Bank of Ghana (Demo)",
+        slug: "demo-authority",
+        type: "regulator",
+        status: "active",
+        country: "Ghana",
+        contactEmail: "demo-authority@africacredithub.com",
+        subscriptionTier: "enterprise",
+        maxUsers: 25,
+      }).returning();
+      authorityOrg = inserted[0];
+      console.log("[Demo Seed] Created Bank of Ghana (Demo) organization");
+    }
+
+    let [platformOrg] = await db.select().from(organizations).where(eq(organizations.slug, "demo-platform")).limit(1);
+    if (!platformOrg) {
+      const inserted = await db.insert(organizations).values({
+        name: "Africa Credit Hub (Demo)",
+        slug: "demo-platform",
+        type: "other",
+        status: "active",
+        country: "Ghana",
+        contactEmail: "demo-platform@africacredithub.com",
+        subscriptionTier: "enterprise",
+        maxUsers: 100,
+      }).returning();
+      platformOrg = inserted[0];
+      console.log("[Demo Seed] Created Africa Credit Hub (Demo) organization");
+    }
+
+    const demoUsers = [
+      {
+        username: "johndoe",
+        password: "SecuredCreditor2026!",
+        fullName: "John Doe",
+        email: "john@demo-bank.test",
+        role: "admin" as const,
+        status: "active" as const,
+        institution: "Demo Bank Ltd",
+        organizationId: demoOrg.id,
+      },
+      {
+        username: "registry_admin",
+        password: "TestPass2026!",
+        fullName: "Registry Authority Administrator",
+        email: "registry-admin@demo-authority.test",
+        role: "admin" as const,
+        status: "active" as const,
+        institution: "Bank of Ghana (Demo)",
+        organizationId: authorityOrg.id,
+      },
+      {
+        username: "demo_admin",
+        password: "TestPass2026!",
+        fullName: "Demo Super Admin",
+        email: "demo-admin@africacredithub.test",
+        role: "super_admin" as const,
+        status: "active" as const,
+        institution: "Africa Credit Hub (Demo)",
+        organizationId: platformOrg.id,
+      },
+    ];
+
+    for (const u of demoUsers) {
+      const existing = await db.select().from(users).where(eq(users.username, u.username)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(users).values({
+          username: u.username,
+          password: hash(u.password),
+          fullName: u.fullName,
+          email: u.email,
+          role: u.role,
+          status: u.status,
+          institution: u.institution,
+          organizationId: u.organizationId,
+        });
+        console.log(`[Demo Seed] Created demo user: ${u.username}`);
+      } else {
+        const row = existing[0] as any;
+        const isLocked = row.lockedUntil && new Date(row.lockedUntil) > new Date();
+        const updates: Record<string, unknown> = {};
+        if (isLocked || (row.failedLoginAttempts ?? 0) > 0) {
+          updates.lockedUntil = null;
+          updates.failedLoginAttempts = 0;
+        }
+        if (row.status !== "active") updates.status = "active";
+        if (Object.keys(updates).length > 0) {
+          await db.update(users).set(updates as any).where(eq(users.username, u.username));
+          console.log(`[Demo Seed] Reset lock/status on demo user: ${u.username}`);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("[Demo Seed] ensureDemoUsers error (non-fatal):", e);
+  }
+}
+
 if (process.argv[1] && (process.argv[1].endsWith("seed.ts") || process.argv[1].endsWith("seed.js"))) {
   seedDatabase()
     .then(() => { console.log("Seed complete"); process.exit(0); })

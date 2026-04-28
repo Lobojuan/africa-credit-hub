@@ -529,6 +529,13 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
+    const { ensureDemoUsers } = await import("./seed");
+    await ensureDemoUsers();
+  } catch (e) {
+    console.error("[Startup] ensureDemoUsers error (non-fatal):", e);
+  }
+
+  try {
     const { runPortableMigrations } = await import('./stripeClient');
     const databaseUrl = process.env.DATABASE_URL;
     if (databaseUrl) {

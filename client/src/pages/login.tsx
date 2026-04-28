@@ -772,7 +772,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => quickDemoLogin("admin", "TestPass2026!", "super_admin")}
+                      onClick={() => quickDemoLogin("demo_admin", "TestPass2026!", "super_admin")}
                       className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
                       style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
                       data-testid="button-demo-super-admin"
