@@ -122,9 +122,12 @@ async function logAccess(
   reason?: string,
 ) {
   const subjectId = subject.borrowerId ?? subject.merchantId ?? subject.consumerUserId ?? "unknown";
+  // Convention (kept consistent with consent rows): source = data origin
+  // (the product whose data is being read = ctx.targetProduct), target =
+  // data consumer (the product asking = ctx.callerProduct).
   const details = JSON.stringify({
-    sourceProduct: ctx.callerProduct,
-    targetProduct: ctx.targetProduct,
+    sourceProduct: ctx.targetProduct,
+    targetProduct: ctx.callerProduct,
     purpose: ctx.purpose,
     consentId: consent?.id ?? null,
     outcome,
@@ -135,7 +138,7 @@ async function logAccess(
     await db.insert(auditLogs).values({
       userId: ctx.userId ?? null,
       action: "cross_product_access",
-      entity: ctx.targetProduct,
+      entity: ctx.targetProduct, // entity = the product whose data was accessed (origin)
       entityId: subjectId,
       details,
       ipAddress: ctx.ip ?? null,

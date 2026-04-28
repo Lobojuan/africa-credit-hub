@@ -172,6 +172,67 @@ async function run() {
     }
   });
 
+  await test("audit log records source=data origin (loto), target=consumer (credit) for happy path", async () => {
+    // Fresh merchant + fresh consent so prior expire/revoke tests can't poison the row.
+    const [auditMerch] = await db.insert(lotoMerchants).values({
+      shopName: TAG + "-audit", countryCode: "CI", currency: "XOF", creditOptInActive: true,
+    }).returning();
+    await db.insert(lotoReceipts).values({
+      merchantId: auditMerch.id,
+      fiscalCode: TAG + "-audit-FC",
+      ticketNumber: TAG + "-audit-T",
+      amount: "5000", vatAmount: "900", currency: "XOF",
+      issuedAt: new Date(),
+    });
+    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    await db.insert(crossProductConsents).values({
+      userId: undefined,
+      merchantId: auditMerch.id,
+      sourceProduct: "loto",
+      targetProduct: "credit",
+      purpose: "merchant_credit_profile",
+      status: "active",
+      expiresAt: future,
+    });
+    const before = Date.now();
+    await gateway.getMerchantReceiptFeatures(auditMerch.id, { userId: undefined, ip: "127.0.0.1" });
+    const rows = await db.select().from(auditLogs).where(eq(auditLogs.entityId, auditMerch.id));
+    const okRow = rows.filter(r => {
+      try { return JSON.parse(r.details ?? "{}").outcome === "ok"; } catch { return false; }
+    }).slice(-1)[0];
+    if (!okRow) throw new Error("no ok audit row found");
+    const d = JSON.parse(okRow.details ?? "{}");
+    if (d.sourceProduct !== "loto") throw new Error(`expected sourceProduct=loto, got ${d.sourceProduct}`);
+    if (d.targetProduct !== "credit") throw new Error(`expected targetProduct=credit, got ${d.targetProduct}`);
+    if (okRow.entity !== "loto") throw new Error(`expected entity=loto (data origin), got ${okRow.entity}`);
+    if (new Date(okRow.createdAt!).getTime() < before - 5000) throw new Error("audit row too old");
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, auditMerch.id));
+    await db.delete(lotoReceipts).where(eq(lotoReceipts.merchantId, auditMerch.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.merchantId, auditMerch.id));
+    await db.delete(lotoMerchants).where(eq(lotoMerchants.id, auditMerch.id));
+  });
+
+  await test("audit log records source=data origin, target=consumer for denied path", async () => {
+    // Use a fresh merchant id with no consent so the gateway denies.
+    const [bare] = await db.insert(lotoMerchants).values({
+      shopName: TAG + "-bare", countryCode: "CI", currency: "XOF", creditOptInActive: false,
+    }).returning();
+    try {
+      await gateway.getMerchantReceiptFeatures(bare.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch { /* expected */ }
+    const rows = await db.select().from(auditLogs).where(eq(auditLogs.entityId, bare.id));
+    const denied = rows.find(r => {
+      try { return JSON.parse(r.details ?? "{}").outcome === "denied"; } catch { return false; }
+    });
+    if (!denied) throw new Error("no denied audit row found");
+    const d = JSON.parse(denied.details ?? "{}");
+    if (d.sourceProduct !== "loto") throw new Error(`denied sourceProduct=${d.sourceProduct}`);
+    if (d.targetProduct !== "credit") throw new Error(`denied targetProduct=${d.targetProduct}`);
+    if (!d.reason) throw new Error("denied audit row should record a reason");
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, bare.id));
+    await db.delete(lotoMerchants).where(eq(lotoMerchants.id, bare.id));
+  });
+
   // ─── E2E: revocation immediately removes lender-visible VAT activity signal ──
   await test("E2E: revocation purges fiscal_receipts alt-data and blocks subsequent gateway reads", async () => {
     // Need a borrower row so the receipts can be linked into alternativeData.
