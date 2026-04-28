@@ -2316,6 +2316,7 @@ const fr: typeof en = {
     administration: "Administration",
     dashboard: "Tableau de bord",
     portfolioIntelligence: "Intelligence du Portefeuille IA",
+    portfolioTriggers: "Déclencheurs de Portefeuille",
     aiCommandCenter: "Centre de Commande IA",
     borrowers: "Emprunteurs",
     creditAccounts: "Comptes de crédit",
