@@ -115,13 +115,7 @@ export default function LoginPage() {
       toast({ title: t('login.success') });
       sessionStorage.setItem("passkey_prompt", "1");
       if (window.location.pathname === "/login") {
-        const r = result as any;
-        let dest = "/dashboard";
-        if (r?.role === "super_admin") dest = "/command-center";
-        else if (r?.division === "corporate") dest = "/businesses";
-        else if (r?.division === "telco") dest = "/telco-scoring";
-        else if (r?.division === "retail") dest = "/consumers";
-        window.location.replace(dest);
+        window.location.replace("/choose-product");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -161,16 +155,10 @@ export default function LoginPage() {
       }
       toast({ title: t('login.success') });
       sessionStorage.setItem("passkey_prompt", "1");
-      const r = result as any;
-      let dest = "/dashboard";
-      if (r?.role === "super_admin") dest = "/command-center";
-      else if (r?.division === "corporate") dest = "/businesses";
-      else if (r?.division === "telco") dest = "/telco-scoring";
-      else if (r?.division === "retail") dest = "/consumers";
       if (tourRole) {
         startDemoTour(tourRole);
       }
-      window.location.replace(dest);
+      window.location.replace("/choose-product");
     } catch (err: any) {
       const msg = err.message || t('common.error');
       const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
@@ -199,12 +187,7 @@ export default function LoginPage() {
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        let dest = "/dashboard";
-        if (userData?.role === "super_admin") dest = "/command-center";
-        else if (userData?.division === "corporate") dest = "/businesses";
-        else if (userData?.division === "telco") dest = "/telco-scoring";
-        else if (userData?.division === "retail") dest = "/consumers";
-        window.location.replace(dest);
+        window.location.replace("/choose-product");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');

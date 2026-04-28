@@ -79,6 +79,13 @@ import { isGhanaMode, isSierraLeoneMode, isSingleCountryMode, getBrandTitle, get
 import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
 import { useCountryTheme } from "@/components/country-theme-provider";
 import { useTheme } from "@/components/theme-provider";
+import {
+  ACTIVE_PRODUCT_STORAGE_KEY,
+  PRODUCT_REGISTRY,
+  getProductForPath,
+  readActiveProduct,
+  type ProductId,
+} from "@/lib/products";
 
 function countryCodeToFlag(code: string): string {
   if (!code || code.length !== 2) return "🌍";
@@ -136,9 +143,13 @@ const intelligenceItems: NavItem[] = [
   { label: "Telco Scoring", tKey: "sidebar.telcoScoring", url: "/telco-scoring", icon: Smartphone, testId: "nav-telco-scoring", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Telco Lending", tKey: "sidebar.telcoLending", url: "/telco-lending", icon: Banknote, testId: "nav-telco-lending", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Loan Origination", tKey: "sidebar.loanOrigination", url: "/loan-origination", icon: Landmark, testId: "nav-loan-origination", roles: ["super_admin", "admin", "lender"] },
-  { label: "Collateral Registry", tKey: "sidebar.collateralRegistry", url: "/collateral-registry", icon: Package, testId: "nav-collateral-registry", roles: ["super_admin", "admin", "lender"] },
   { label: "Institution Analytics", tKey: "sidebar.institutionAnalytics", url: "/institution-analytics", icon: TrendingUp, testId: "nav-institution-analytics", roles: ["admin", "super_admin"] },
   { label: "White-Label Branding", tKey: "sidebar.institutionBranding", url: "/institution-branding", icon: Palette, testId: "nav-institution-branding", roles: ["admin", "super_admin"] },
+];
+
+const collateralItems: NavItem[] = [
+  { label: "Collateral Registry", tKey: "sidebar.collateralRegistry", url: "/collateral-registry", icon: Package, testId: "nav-collateral-registry", roles: ["super_admin", "admin", "lender"] },
+  { label: "Registry Authority Portal", tKey: "sidebar.registryAuthorityPortal", url: "/registry-authority-portal", icon: Landmark, testId: "nav-registry-authority-portal", roles: ["super_admin", "admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [
@@ -300,20 +311,28 @@ function CollapsibleSection({
   );
 }
 
-const SECTION_ITEMS_MAP = [
+type SectionConfig = { label: string; items: NavItem[]; productIds?: ProductId[] };
+
+const SECTION_ITEMS_MAP: SectionConfig[] = [
   { label: "Overview", items: overviewItems },
-  { label: "Credit Data", items: creditDataItems },
-  { label: "Reports & Scoring", items: reportsScoringItems },
-  { label: "Data Management", items: dataManagementItems },
-  { label: "Workflows", items: workflowItems },
-  { label: "Intelligence", items: intelligenceItems },
-  { label: "Oversight & Compliance", items: [] as NavItem[] },
-  { label: "Cross-Border", items: crossBorderItems },
+  { label: "Credit Data", items: creditDataItems, productIds: ["credit"] },
+  { label: "Reports & Scoring", items: reportsScoringItems, productIds: ["credit"] },
+  { label: "Data Management", items: dataManagementItems, productIds: ["credit"] },
+  { label: "Workflows", items: workflowItems, productIds: ["credit"] },
+  { label: "Intelligence", items: intelligenceItems, productIds: ["credit"] },
+  { label: "Collateral", items: collateralItems, productIds: ["collateral"] },
+  { label: "Oversight & Compliance", items: [] as NavItem[], productIds: ["credit"] },
+  { label: "Cross-Border", items: crossBorderItems, productIds: ["credit"] },
   { label: "Administration", items: adminItems },
   { label: "API & Integrations", items: apiIntegrationItems },
   { label: "Infrastructure", items: infrastructureItems },
   { label: "Help & Resources", items: [] as NavItem[] },
 ];
+
+function sectionMatchesProduct(productIds: ProductId[] | undefined, active: ProductId): boolean {
+  if (!productIds || productIds.length === 0) return true;
+  return productIds.includes(active);
+}
 
 function getActiveSectionLabel(location: string): string | null {
   for (const sec of SECTION_ITEMS_MAP) {
@@ -332,11 +351,35 @@ export function AppSidebar() {
   const role = user?.role;
 
   const [openSection, setOpenSection] = useState<string | null>(() => getActiveSectionLabel(location));
+  const [activeProduct, setActiveProduct] = useState<ProductId>(() => {
+    const fromUrl = getProductForPath(location);
+    return fromUrl?.id || readActiveProduct();
+  });
 
   React.useEffect(() => {
     const active = getActiveSectionLabel(location);
     if (active) setOpenSection(active);
+    const fromUrl = getProductForPath(location);
+    if (fromUrl) setActiveProduct(fromUrl.id);
   }, [location]);
+
+  React.useEffect(() => {
+    const onChange = (e: Event) => {
+      const id = (e as CustomEvent<ProductId>).detail;
+      if (id) setActiveProduct(id);
+    };
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === ACTIVE_PRODUCT_STORAGE_KEY && e.newValue) {
+        setActiveProduct(e.newValue as ProductId);
+      }
+    };
+    window.addEventListener("ach:active-product-changed", onChange);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("ach:active-product-changed", onChange);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   function handleToggle(label: string) {
     setOpenSection(prev => prev === label ? null : label);
@@ -350,20 +393,22 @@ export function AppSidebar() {
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
   const dynamicTheme = countryTheme?.activeTheme;
 
+  const productMatch = (ids?: ProductId[]) => sectionMatchesProduct(ids, activeProduct);
   const visibleOverview = filterByRole(overviewItems, role);
-  const visibleCreditData = filterByRole(creditDataItems, role);
-  const visibleReportsScoring = filterByRole(reportsScoringItems, role);
-  const visibleDataMgmt = filterByRole(dataManagementItems, role);
-  const visibleWorkflows = filterByRole(workflowItems, role);
-  const visibleIntelligence = filterByRole(intelligenceItems, role);
+  const visibleCreditData = productMatch(["credit"]) ? filterByRole(creditDataItems, role) : [];
+  const visibleReportsScoring = productMatch(["credit"]) ? filterByRole(reportsScoringItems, role) : [];
+  const visibleDataMgmt = productMatch(["credit"]) ? filterByRole(dataManagementItems, role) : [];
+  const visibleWorkflows = productMatch(["credit"]) ? filterByRole(workflowItems, role) : [];
+  const visibleIntelligence = productMatch(["credit"]) ? filterByRole(intelligenceItems, role) : [];
+  const visibleCollateral = productMatch(["collateral"]) ? filterByRole(collateralItems, role) : [];
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
-  const visibleOversight = filterByRole(oversightItems, role);
+  const visibleOversight = productMatch(["credit"]) ? filterByRole(oversightItems, role) : [];
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
     queryKey: ["/api/sata/access-check"],
     enabled: !!user,
   });
   const hasCrossBorderAccess = crossBorderAccess?.hasAccess ?? false;
-  const visibleCrossBorder = hasCrossBorderAccess ? filterByRole(crossBorderItems, role) : [];
+  const visibleCrossBorder = (hasCrossBorderAccess && productMatch(["credit"])) ? filterByRole(crossBorderItems, role) : [];
   const visibleAdmin = filterByRole(adminItems, role);
   const visibleApiIntegration = filterByRole(apiIntegrationItems, role);
   const visibleInfrastructure = filterByRole(infrastructureItems, role);
@@ -473,6 +518,18 @@ export function AppSidebar() {
             location={location}
             icon={Sparkles}
             isOpen={openSection === "Intelligence"}
+            onToggle={handleToggle}
+          />
+        )}
+
+        {visibleCollateral.length > 0 && (
+          <CollapsibleSection
+            label="Collateral"
+            tKey="products.collateral.name"
+            items={visibleCollateral}
+            location={location}
+            icon={Package}
+            isOpen={openSection === "Collateral"}
             onToggle={handleToggle}
           />
         )}

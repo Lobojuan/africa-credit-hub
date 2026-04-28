@@ -78,6 +78,7 @@ const zhTW = {
     complianceQueue: "合規隊列",
     loanOrigination: "貸款發放",
     collateralRegistry: "抵押品登記",
+    registryAuthorityPortal: "登記機關入口",
     institutionAnalytics: "機構分析",
     institutionBranding: "白標設置",
     brandTitle: "信用登記系統",
@@ -3169,6 +3170,45 @@ const zhTW = {
   compliance: {
     title: "監管合規儀表板",
     description: "SRS 可追溯性、司法管轄區對齊以及對全部 54 個非洲國家的監管差距分析。",
+  },
+  platform: {
+    brand: { name: "Africa Credit Hub", tagline: "一個平台，三大支柱。信貸與稅收基礎設施。" },
+    headerProduct: "產品", switchProduct: "切換產品", backToChooser: "返回產品選擇",
+  },
+  products: {
+    credit: { name: "信用局", tagline: "全面的消費者與企業信用情報", desc: "對非洲大陸每一位借款人進行評分、監控和報告。", enter: "進入信用局", learnMore: "了解信用局" },
+    collateral: { name: "擔保品登記處", tagline: "具有 PMSI 優先權的泛非抵押資產登記處", desc: "登記抵押資產，按借款人查詢留置權，並簽發可通過 QR 驗證的證書。", enter: "進入擔保品登記處", learnMore: "了解擔保品登記處" },
+    loto: { name: "Loto Fiscal", tagline: "增值稅發票彩票 — 每張發票都是中獎機會", desc: "財政動員試點：公民掃描發票，每週抽獎獎勵合規商戶，稅務機關獲得即時可見性。", enter: "進入 Loto Fiscal", learnMore: "了解 Loto Fiscal", badge: "試點定於 2026 年第三季", comingSoon: "即將推出" },
+  },
+  chooser: { welcome: "歡迎回來", subtitle: "請選擇您要進入的工作空間。", tip: "您可以隨時透過頂部產品選單切換。", locked: "您的帳戶無權存取", pilotNotice: "Loto Fiscal 是 2026 年試點。稅務機關與監管帳戶可以今天預覽框架。" },
+  landingShell: {
+    masterHero: { eyebrow: "非洲信貸與稅收基礎設施", title: "一個平台。\n三大支柱。", subtitle: "{{brand}} 將信用情報、泛非擔保品登記和增值稅發票動員融為一體。", ctaPrimary: "登入", ctaSecondary: "查看價格" },
+    pillarsTitle: "平台運行內容", howTitle: "三大支柱如何協同工作",
+    howSubtitle: "一個身份、一次國家切換、一份同意紀錄 — 三個具備監管級別的工作空間共享同一真相之源。",
+    howStep1Title: "借款人只需錄入一次", howStep1Body: "信用局採集的身份資訊可立即用於擔保品登記處和 Loto Fiscal。",
+    howStep2Title: "一鍵交叉查詢", howStep2Body: "拉取信用報告時即可看到登記處的活躍留置權。",
+    howStep3Title: "一份監管匯出", howStep3Body: "為中央銀行、公司登記處和稅務機關提供合併儀表板。",
+    trustTitle: "為非洲監管機構構建",
+    trustSubtitle: "符合 BoG、CBN、BCEAO、BEAC、BSL、CBK 以及 AfCFTA 跨境資料共享原則。",
+    footerLine: "© {{year}} {{brand}}。新興市場的通用信貸基礎設施。",
+  },
+  loto: {
+    pageTitle: "Loto Fiscal", pageSubtitle: "增值稅發票彩票 — 試點框架",
+    comingSoonTitle: "試點定於 2026 年第三季", comingSoonBody: "Loto Fiscal 讓每張增值稅發票都成為中獎機會。",
+    feature1Title: "掃描參與", feature1Body: "消費者掃描每張發票上的 QR 碼以參加每週抽獎。",
+    feature2Title: "即時發票流", feature2Body: "稅務機關即時查看每個商戶的發票開立量。",
+    feature3Title: "合規獎勵", feature3Body: "開立發票最多的商戶可獲得類別獎金和公開表彰。",
+    notifyMe: "上線時通知我", backHome: "返回平台首頁",
+  },
+  collateralLanding: {
+    eyebrow: "泛非擔保品登記處",
+    heroTitle: "每一項抵押資產。\n一個可搜尋的登記處。",
+    heroSubtitle: "針對動產和不動產的 PPSR 式備案 — 具備 PMSI 超級優先權、QR 驗證證書以及在全部 54 個司法管轄區的跨境留置權搜尋。",
+    ctaPrimary: "登入登記", ctaSecondary: "驗證登記",
+    feature1Title: "首登優先", feature1Body: "您的備案獲得時間戳的瞬間即建立留置權優先級。",
+    feature2Title: "PMSI 超級優先", feature2Body: "PMSI 自動優先於先前的全面留置權。",
+    feature3Title: "可驗證證書", feature3Body: "每次登記都附帶防篡改證書和 QR 碼。",
+    feature4Title: "跨境搜尋", feature4Body: "一次查詢即可在所有參與登記處搜尋同一借款人。",
   },
 };
 

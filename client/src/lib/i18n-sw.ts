@@ -76,6 +76,7 @@ const sw: Record<string, any> = {
     complianceQueue: "Foleni ya Utiifu",
     loanOrigination: "Uanzishaji wa Mkopo",
     collateralRegistry: "Daftari la Dhamana",
+    registryAuthorityPortal: "Mlango wa Mamlaka ya Daftari",
     institutionAnalytics: "Uchanganuzi wa Taasisi",
     institutionBranding: "Chapa Nyeupe",
     brandTitle: "Sajili ya Mikopo",
@@ -2483,6 +2484,45 @@ const sw: Record<string, any> = {
   compliance: {
     title: "Dashibodi ya Utiifu wa Udhibiti",
     description: "Ufuatiliaji wa SRS, upatanishi wa mamlaka, na uchambuzi wa mapungufu ya udhibiti katika nchi zote 54 za Afrika.",
+  },
+  platform: {
+    brand: { name: "Africa Credit Hub", tagline: "Jukwaa moja. Nguzo tatu za miundombinu ya mikopo na mapato." },
+    headerProduct: "Bidhaa", switchProduct: "Badilisha bidhaa", backToChooser: "Rudi kwenye uchaguzi wa bidhaa",
+  },
+  products: {
+    credit: { name: "Ofisi ya Mikopo", tagline: "Akili kamili ya mikopo kwa watumiaji na biashara", desc: "Tathmini, fuatilia na ripoti kila mkopaji barani.", enter: "Ingia Ofisi ya Mikopo", learnMore: "Jifunze zaidi kuhusu Ofisi ya Mikopo" },
+    collateral: { name: "Daftari la Dhamana", tagline: "Daftari la pan-Afrika la mali zilizowekwa rehani", desc: "Sajili mali za rehani, tafuta madeni kwa mkopaji, na toa vyeti vinavyothibitishwa kwa QR.", enter: "Ingia Daftari la Dhamana", learnMore: "Jifunze zaidi kuhusu Daftari la Dhamana" },
+    loto: { name: "Loto Fiscal", tagline: "Bahati nasibu ya risiti za VAT", desc: "Jaribio la kuongeza mapato: raia wanachanganua risiti za VAT, sherehe za kila wiki zinatuza wafanyabiashara watiifu.", enter: "Ingia Loto Fiscal", learnMore: "Jifunze zaidi kuhusu Loto Fiscal", badge: "Jaribio linaanza Robo ya 3 ya 2026", comingSoon: "Hivi karibuni" },
+  },
+  chooser: { welcome: "Karibu tena", subtitle: "Chagua eneo la kazi unalotaka kuingia.", tip: "Unaweza kubadilisha wakati wowote kwa kutumia menyu ya bidhaa juu.", locked: "Haipatikani kwa akaunti yako", pilotNotice: "Loto Fiscal ni jaribio la 2026. Akaunti za mamlaka ya kodi na wadhibiti zinaweza kuona leo." },
+  landingShell: {
+    masterHero: { eyebrow: "Miundombinu ya Afrika ya mikopo na mapato", title: "Jukwaa moja.\nNguzo tatu.", subtitle: "{{brand}} inaleta akili ya mikopo, usajili wa dhamana wa pan-Afrika, na uhamasishaji wa mapato kwa risiti za VAT chini ya paa moja.", ctaPrimary: "Ingia", ctaSecondary: "Tazama bei" },
+    pillarsTitle: "Kinachoendesha jukwaa", howTitle: "Jinsi nguzo tatu zinavyofanya kazi pamoja",
+    howSubtitle: "Utambulisho mmoja, kubadilisha nchi mara moja, rekodi moja ya idhini — maeneo matatu ya kazi yenye kiwango cha udhibiti yanayoshiriki chanzo kimoja cha ukweli.",
+    howStep1Title: "Mkopaji anaorodheshwa mara moja", howStep1Body: "Kitambulisho kilichochukuliwa na Ofisi ya Mikopo kinapatikana mara moja kwa Daftari la Dhamana na Loto Fiscal.",
+    howStep2Title: "Kumbukumbu ya msalaba kwa kubofya moja", howStep2Body: "Omba ripoti ya mikopo na utaona madeni hai kutoka Daftari.",
+    howStep3Title: "Hifadhi moja ya mdhibiti", howStep3Body: "Dashibodi zilizounganishwa kwa benki kuu, msajili wa makampuni na mamlaka ya kodi.",
+    trustTitle: "Imejengwa kwa wadhibiti wa Afrika",
+    trustSubtitle: "Inaambatana na BoG, CBN, BCEAO, BEAC, BSL, CBK na kanuni za kushiriki data za AfCFTA.",
+    footerLine: "© {{year}} {{brand}}. Miundombinu ya mikopo ya ulimwenguni kwa masoko yanayochipuka.",
+  },
+  loto: {
+    pageTitle: "Loto Fiscal", pageSubtitle: "Bahati nasibu ya risiti za VAT — kiunzi cha jaribio",
+    comingSoonTitle: "Jaribio linaanza Robo ya 3 ya 2026", comingSoonBody: "Loto Fiscal hubadilisha kila risiti ya VAT kuwa nafasi ya kushinda.",
+    feature1Title: "Changanua na ingia", feature1Body: "Watumiaji huchanganua QR ya kila risiti kuingia kwenye sherehe za kila wiki.",
+    feature2Title: "Mtiririko wa risiti wa wakati halisi", feature2Body: "Mamlaka ya kodi huona kiasi cha utoaji wa kila mfanyabiashara wakati huo huo.",
+    feature3Title: "Bonasi ya utiifu", feature3Body: "Wafanyabiashara wanaotoa risiti nyingi zaidi hufungua bonasi za kategoria.",
+    notifyMe: "Nijulishe wakati wa kuzindua", backHome: "Rudi kwenye ukurasa wa nyumbani",
+  },
+  collateralLanding: {
+    eyebrow: "Daftari la pan-Afrika la dhamana",
+    heroTitle: "Kila mali iliyowekwa rehani.\nDaftari moja linaloweza kutafutwa.",
+    heroSubtitle: "Uwasilishaji wa notisi wa mtindo wa PPSR — na kipaumbele cha PMSI, vyeti vilivyothibitishwa na utafutaji wa madeni katika nchi zote 54.",
+    ctaPrimary: "Ingia kusajili", ctaSecondary: "Thibitisha usajili",
+    feature1Title: "Kipaumbele cha mtu wa kwanza", feature1Body: "Kipaumbele cha deni kinathibitishwa wakati wa muhuri wa muda wa uwasilishaji wako.",
+    feature2Title: "Kipaumbele cha PMSI", feature2Body: "PMSI zinapata kipaumbele cha kiotomatiki juu ya madeni ya jumla ya awali.",
+    feature3Title: "Vyeti vinavyothibitishwa", feature3Body: "Kila usajili huja na cheti kisichoweza kuvurugwa na msimbo wa QR.",
+    feature4Title: "Utafutaji wa kuvuka mipaka", feature4Body: "Tafuta mkopaji huyo huyo kwenye daftari zote zinazoshiriki katika ombi moja.",
   },
 };
 

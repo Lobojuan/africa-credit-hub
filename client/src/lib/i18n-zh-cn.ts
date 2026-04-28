@@ -78,6 +78,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "complianceQueue": "合规队列",
     "loanOrigination": "贷款发起",
     "collateralRegistry": "担保品登记",
+    "registryAuthorityPortal": "登记机关门户",
     "institutionAnalytics": "机构分析",
     "institutionBranding": "机构品牌",
     "brandTitle": "信贷登记系统",
@@ -2686,6 +2687,45 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
   "compliance": {
     "title": "监管合规仪表板",
     "description": "SRS 可追溯性、司法管辖区对齐以及对全部 54 个非洲国家的监管差距分析。",
+  },
+  "platform": {
+    "brand": { "name": "Africa Credit Hub", "tagline": "一个平台，三大支柱。信贷与税收基础设施。" },
+    "headerProduct": "产品", "switchProduct": "切换产品", "backToChooser": "返回产品选择",
+  },
+  "products": {
+    "credit": { "name": "信用局", "tagline": "全面的消费者与企业信用情报", "desc": "对非洲大陆每一位借款人进行评分、监控和报告。", "enter": "进入信用局", "learnMore": "了解信用局" },
+    "collateral": { "name": "担保品登记处", "tagline": "具有 PMSI 优先权的泛非抵押资产登记处", "desc": "登记抵押资产，按借款人查询留置权，并签发可通过 QR 验证的证书。", "enter": "进入担保品登记处", "learnMore": "了解担保品登记处" },
+    "loto": { "name": "Loto Fiscal", "tagline": "增值税发票彩票 — 每张发票都是中奖机会", "desc": "财政动员试点：公民扫描发票，每周抽奖奖励合规商户，税务机关获得实时可见性。", "enter": "进入 Loto Fiscal", "learnMore": "了解 Loto Fiscal", "badge": "试点定于 2026 年第三季度", "comingSoon": "即将推出" },
+  },
+  "chooser": { "welcome": "欢迎回来", "subtitle": "请选择您要进入的工作空间。", "tip": "您可以随时通过顶部产品菜单切换。", "locked": "您的账户无权访问", "pilotNotice": "Loto Fiscal 是 2026 年试点。税务机关与监管账户可以今天预览框架。" },
+  "landingShell": {
+    "masterHero": { "eyebrow": "非洲信贷与税收基础设施", "title": "一个平台。\n三大支柱。", "subtitle": "{{brand}} 将信用情报、泛非担保品登记和增值税发票动员融为一体。", "ctaPrimary": "登录", "ctaSecondary": "查看价格" },
+    "pillarsTitle": "平台运行内容", "howTitle": "三大支柱如何协同工作",
+    "howSubtitle": "一个身份、一次国家切换、一份同意记录 — 三个具备监管级别的工作空间共享同一真相之源。",
+    "howStep1Title": "借款人只需录入一次", "howStep1Body": "信用局采集的身份信息可立即用于担保品登记处和 Loto Fiscal。",
+    "howStep2Title": "一键交叉查询", "howStep2Body": "拉取信用报告时即可看到登记处的活跃留置权。",
+    "howStep3Title": "一份监管导出", "howStep3Body": "为中央银行、公司登记处和税务机关提供合并仪表板。",
+    "trustTitle": "为非洲监管机构构建",
+    "trustSubtitle": "符合 BoG、CBN、BCEAO、BEAC、BSL、CBK 以及 AfCFTA 跨境数据共享原则。",
+    "footerLine": "© {{year}} {{brand}}。新兴市场的通用信贷基础设施。",
+  },
+  "loto": {
+    "pageTitle": "Loto Fiscal", "pageSubtitle": "增值税发票彩票 — 试点框架",
+    "comingSoonTitle": "试点定于 2026 年第三季度", "comingSoonBody": "Loto Fiscal 让每张增值税发票都成为中奖机会。",
+    "feature1Title": "扫描参与", "feature1Body": "消费者扫描每张发票上的二维码以参加每周抽奖。",
+    "feature2Title": "实时发票流", "feature2Body": "税务机关实时查看每个商户的发票开具量。",
+    "feature3Title": "合规奖励", "feature3Body": "开具发票最多的商户可获得类别奖金和公开表彰。",
+    "notifyMe": "上线时通知我", "backHome": "返回平台首页",
+  },
+  "collateralLanding": {
+    "eyebrow": "泛非担保品登记处",
+    "heroTitle": "每一项抵押资产。\n一个可搜索的登记处。",
+    "heroSubtitle": "针对动产和不动产的 PPSR 式备案 — 具备 PMSI 超级优先权、QR 验证证书以及在全部 54 个司法管辖区的跨境留置权搜索。",
+    "ctaPrimary": "登录登记", "ctaSecondary": "验证登记",
+    "feature1Title": "首登优先", "feature1Body": "您的备案获得时间戳的瞬间即建立留置权优先级。",
+    "feature2Title": "PMSI 超级优先", "feature2Body": "PMSI 自动优先于先前的全面留置权。",
+    "feature3Title": "可验证证书", "feature3Body": "每次登记都附带防篡改证书和二维码。",
+    "feature4Title": "跨境搜索", "feature4Body": "一次查询即可在所有参与登记处搜索同一借款人。",
   },
 };
 

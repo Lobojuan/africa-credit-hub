@@ -937,6 +937,7 @@ export const countrySettings = pgTable("country_settings", {
   dataProtectionStatus: text("data_protection_status").notNull().default("none"),
   sataReadiness: text("sata_readiness").notNull().default("planned"),
   enabledFeatures: text("enabled_features").array().default(sql`ARRAY[]::TEXT[]`),
+  enabledProducts: text("enabled_products").array().default(sql`ARRAY['credit','collateral','loto']::TEXT[]`),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 export const insertCountrySettingsSchema = createInsertSchema(countrySettings).omit({ id: true, updatedAt: true });

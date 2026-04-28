@@ -1,6 +1,6 @@
 import "./lib/i18n";
 import { lazy, Suspense, useEffect, useState, Component, type ReactNode, type ErrorInfo } from "react";
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -46,8 +46,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
+import { ProductSwitcher } from "@/components/product-switcher";
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
+const MasterLandingPage = lazy(() => import("@/pages/master-landing"));
+const CreditLandingPage = lazy(() => import("@/pages/credit-landing"));
+const CollateralLandingPage = lazy(() => import("@/pages/collateral-landing"));
+const LotoLandingPage = lazy(() => import("@/pages/loto-landing"));
+const ProductChooserPage = lazy(() => import("@/pages/product-chooser"));
 const CountrySelectionPage = lazy(() => import("@/pages/country-selection"));
 const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
@@ -263,6 +269,7 @@ function Router() {
             </Suspense>
           )}
         </Route>
+        <Route path="/choose-product" component={ProductChooserPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -442,7 +449,7 @@ function AuthenticatedApp() {
     return <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>;
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -454,13 +461,7 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    let dest = "/dashboard";
-    if (user.role === "super_admin") dest = "/command-center";
-    else if (user?.organization?.type === "registry_authority") dest = "/registry-authority-portal";
-    else if (user.division === "corporate") dest = "/businesses";
-    else if (user.division === "telco") dest = "/telco-scoring";
-    else if (user.division === "retail") dest = "/consumers";
-    return doRedirect(dest);
+    return doRedirect("/choose-product");
   }
 
   if (accountSuspended) {
@@ -655,6 +656,7 @@ function AuthenticatedApp() {
               )}
               {user.role === "super_admin" && <CountrySelector />}
               {user.role === "super_admin" && <OrgSwitcher />}
+              <ProductSwitcher />
               {user?.organization?.name && user.role !== "super_admin" && (
                 <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
                   <Building2 className="w-5 h-5" />
@@ -838,7 +840,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -849,9 +851,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><InvestorLandingPage /></Suspense>} />
-            <Route path="/investor" component={() => <Suspense fallback={<LazyFallback />}><InvestorLandingPage /></Suspense>} />
-            <Route path="/solutions" component={() => <Suspense fallback={<LazyFallback />}><InvestorLandingPage /></Suspense>} />
+            <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><MasterLandingPage /></Suspense>} />
+            <Route path="/investor" component={() => <Redirect to="/" />} />
+            <Route path="/solutions" component={() => <Redirect to="/" />} />
+            <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
+            <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
+            <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
             <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />

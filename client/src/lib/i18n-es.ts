@@ -78,6 +78,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       complianceQueue: "Cola de Cumplimiento",
       loanOrigination: "Originación de Préstamos",
       collateralRegistry: "Registro de Garantías",
+      registryAuthorityPortal: "Portal de la Autoridad del Registro",
       institutionAnalytics: "Analítica de la Institución",
       institutionBranding: "Marca Blanca",
       brandTitle: "Registro de Crédito",
@@ -2519,6 +2520,45 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     compliance: {
       title: "Panel de Cumplimiento Regulatorio",
       description: "Trazabilidad SRS, alineación jurisdiccional y análisis de brechas regulatorias en 54 países africanos.",
+    },
+    platform: {
+      brand: { name: "Africa Credit Hub", tagline: "Una plataforma. Tres pilares de la infraestructura de crédito y recaudación." },
+      headerProduct: "Producto", switchProduct: "Cambiar de producto", backToChooser: "Volver al selector de producto",
+    },
+    products: {
+      credit: { name: "Buró de Crédito", tagline: "Inteligencia integral de crédito de consumidores y empresas", desc: "Califique, supervise e informe sobre cada prestatario del continente.", enter: "Entrar al Buró de Crédito", learnMore: "Conozca más sobre el Buró de Crédito" },
+      collateral: { name: "Registro de Garantías", tagline: "Registro panafricano de activos pignorados con prioridad PMSI", desc: "Registre activos, busque gravámenes por prestatario y emita certificados verificables por QR.", enter: "Entrar al Registro de Garantías", learnMore: "Conozca más sobre el Registro de Garantías" },
+      loto: { name: "Loto Fiscal", tagline: "Lotería de recibos de IVA — cada recibo es una oportunidad", desc: "Piloto de movilización de recaudación: ciudadanos escanean recibos, sorteos semanales premian a comerciantes en cumplimiento.", enter: "Entrar a Loto Fiscal", learnMore: "Conozca más sobre Loto Fiscal", badge: "Piloto previsto para Q3 2026", comingSoon: "Próximamente" },
+    },
+    chooser: { welcome: "Bienvenido de nuevo", subtitle: "Elija el espacio de trabajo en el que desea entrar.", tip: "Puede cambiar en cualquier momento usando el menú de productos.", locked: "No disponible para su cuenta", pilotNotice: "Loto Fiscal es un piloto 2026. Las cuentas de autoridad fiscal y reguladores pueden previsualizar hoy." },
+    landingShell: {
+      masterHero: { eyebrow: "Infraestructura africana de crédito y recaudación", title: "Una plataforma.\nTres pilares.", subtitle: "{{brand}} reúne inteligencia de crédito, registro de garantías panafricano y movilización de recaudación bajo un mismo techo.", ctaPrimary: "Iniciar sesión", ctaSecondary: "Ver precios" },
+      pillarsTitle: "Lo que se ejecuta en la plataforma", howTitle: "Cómo trabajan juntos los tres pilares",
+      howSubtitle: "Una sola identidad, un solo cambio de país, un solo registro de consentimiento — tres espacios de trabajo a nivel regulador que comparten la misma fuente de verdad.",
+      howStep1Title: "Prestatario registrado una sola vez", howStep1Body: "Una identificación capturada por el Buró de Crédito está disponible al instante para el Registro y Loto Fiscal.",
+      howStep2Title: "Referencia cruzada en un clic", howStep2Body: "Solicite un informe de crédito y verá los gravámenes activos del Registro.",
+      howStep3Title: "Una sola exportación reguladora", howStep3Body: "Tableros combinados para el banco central, el registro de empresas y la autoridad fiscal.",
+      trustTitle: "Construido para reguladores africanos",
+      trustSubtitle: "Alineado con BoG, CBN, BCEAO, BEAC, BSL, CBK y los principios de intercambio de datos transfronterizos del AfCFTA.",
+      footerLine: "© {{year}} {{brand}}. Infraestructura de crédito universal para mercados emergentes.",
+    },
+    loto: {
+      pageTitle: "Loto Fiscal", pageSubtitle: "Lotería de recibos de IVA — andamiaje piloto",
+      comingSoonTitle: "Piloto previsto para Q3 2026", comingSoonBody: "Loto Fiscal convierte cada recibo de IVA en una oportunidad de ganar.",
+      feature1Title: "Escanea y participa", feature1Body: "Los consumidores escanean el QR de cada recibo para participar en sorteos semanales.",
+      feature2Title: "Flujo de recibos en tiempo real", feature2Body: "La autoridad fiscal ve el volumen por comerciante en tiempo real.",
+      feature3Title: "Bono de cumplimiento", feature3Body: "Los comerciantes que más recibos emiten desbloquean bonos y reconocimiento público.",
+      notifyMe: "Avísame en el lanzamiento", backHome: "Volver al inicio de la plataforma",
+    },
+    collateralLanding: {
+      eyebrow: "Registro panafricano de garantías",
+      heroTitle: "Cada activo pignorado.\nUn solo registro consultable.",
+      heroSubtitle: "Presentación de avisos al estilo PPSR para bienes muebles e inmuebles, con superprioridad PMSI, certificados verificados por QR y búsqueda transfronteriza en las 54 jurisdicciones.",
+      ctaPrimary: "Iniciar sesión para registrar", ctaSecondary: "Verificar un registro",
+      feature1Title: "Prioridad del primer presentante", feature1Body: "La prioridad se establece en el momento del sello de tiempo de su presentación.",
+      feature2Title: "Superprioridad PMSI", feature2Body: "Los PMSI tienen prioridad automática sobre los gravámenes generales anteriores.",
+      feature3Title: "Certificados verificables", feature3Body: "Cada registro incluye un certificado a prueba de manipulaciones y un código QR.",
+      feature4Title: "Búsqueda transfronteriza", feature4Body: "Busque al mismo prestatario en todos los registros participantes con una sola consulta.",
     },
   };
 
