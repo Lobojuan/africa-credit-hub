@@ -10,6 +10,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isGhanaMode } from "@/lib/country-mode";
 import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
+import { startDemoTour } from "@/components/demo-tour";
 
 type LoginMode = "chooser" | "institution" | "consumer";
 
@@ -141,7 +142,11 @@ export default function LoginPage() {
     }
   };
 
-  const quickDemoLogin = async (demoUsername: string, demoPassword: string) => {
+  const quickDemoLogin = async (
+    demoUsername: string,
+    demoPassword: string,
+    tourRole?: "secured_creditor" | "registry_authority" | "super_admin",
+  ) => {
     if (loading || passkeyLoading) return;
     setError("");
     setLoading(true);
@@ -162,6 +167,9 @@ export default function LoginPage() {
       else if (r?.division === "corporate") dest = "/businesses";
       else if (r?.division === "telco") dest = "/telco-scoring";
       else if (r?.division === "retail") dest = "/consumers";
+      if (tourRole) {
+        startDemoTour(tourRole);
+      }
       window.location.replace(dest);
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -736,7 +744,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => quickDemoLogin("johndoe", "SecuredCreditor2026!")}
+                      onClick={() => quickDemoLogin("johndoe", "SecuredCreditor2026!", "secured_creditor")}
                       className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
                       style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
                       data-testid="button-demo-secured-creditor"
@@ -750,7 +758,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => quickDemoLogin("registry_admin", "TestPass2026!")}
+                      onClick={() => quickDemoLogin("registry_admin", "TestPass2026!", "registry_authority")}
                       className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
                       style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
                       data-testid="button-demo-registry-authority"
@@ -764,7 +772,7 @@ export default function LoginPage() {
                     <button
                       type="button"
                       disabled={loading}
-                      onClick={() => quickDemoLogin("admin", "TestPass2026!")}
+                      onClick={() => quickDemoLogin("admin", "TestPass2026!", "super_admin")}
                       className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
                       style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
                       data-testid="button-demo-super-admin"

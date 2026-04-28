@@ -8,6 +8,7 @@ import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/comp
 import { useTranslation } from "react-i18next";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
+import { DemoTour } from "@/components/demo-tour";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -721,6 +722,7 @@ function AuthenticatedApp() {
             </div>
             <AppFooter />
           </main>
+          <DemoTour />
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
           <MfaSetupDialog open={mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} />
         </div>
