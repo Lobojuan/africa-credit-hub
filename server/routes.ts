@@ -17828,7 +17828,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     countryCode: z.string().min(2).max(3).optional(),
   });
 
-  app.post("/api/loto/admin/draws/run-demo", requireAuth, requireRole("dgi", "loto_admin", "tax_admin", "admin"), async (req, res) => {
+  app.post("/api/loto/admin/draws/run-demo", requireAuth, requireRole("super_admin", "dgi", "loto_admin", "tax_admin", "admin"), async (req, res) => {
     try {
       const parsed = runDemoSchema.safeParse(req.body ?? {});
       if (!parsed.success) return res.status(400).json({ message: "invalid_payload", errors: parsed.error.flatten() });

@@ -111,9 +111,11 @@ export default function LotoVerifyDrawPage() {
       if (!draw.serverSeed || !draw.serverNonce) {
         throw new Error("Seed has not been revealed yet — cannot verify in-browser.");
       }
-      if (!eligibleReceiptIds || eligibleReceiptIds.length === 0) {
-        throw new Error("No eligible receipt IDs were published — cannot recompute the draw.");
-      }
+      // A zero-eligible draw is a valid deterministic outcome (no qualifying
+      // receipts in the period), not an error. We still recompute the
+      // commitment + pool hash and compare against an empty winner list so
+      // the citizen sees a fully verified "no winners" result.
+      const ids = eligibleReceiptIds ?? [];
 
       // 1. Recompute commitment hash from the revealed seed/nonce, BOUND to
       //    the specific draw context (drawId + periodEnd + countryCode) — same
@@ -126,7 +128,7 @@ export default function LotoVerifyDrawPage() {
       const commitmentValid = commitmentRecomputed === draw.commitmentHash;
 
       // 2. Recompute pool hash from the published eligible-ID list (sorted).
-      const sortedIds = [...eligibleReceiptIds].sort();
+      const sortedIds = [...ids].sort();
       const poolHashRecomputed = await sha256Hex(sortedIds.join("\n"));
       const poolHashValid = !!draw.poolHash && poolHashRecomputed === draw.poolHash;
 
@@ -156,9 +158,13 @@ export default function LotoVerifyDrawPage() {
             && expected.receiptId === w.receiptId,
         };
       });
+      // Verification PASSES when commitment + pool hash match AND every
+      // published winner maps to the deterministically-ranked entry at the
+      // same rank. A zero-eligible / zero-winner draw is a valid outcome:
+      // hashesMatchByRank is [], Array.prototype.every over [] returns true,
+      // so the draw verifies as "no winners" instead of an error.
       const allHashesMatch = commitmentValid
         && poolHashValid
-        && sortedWinners.length > 0
         && hashesMatchByRank.every((r) => r.match);
 
       setBrowserCheck({
