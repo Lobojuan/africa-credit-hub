@@ -17333,16 +17333,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       await storage.updateLotoMerchantOptIn(merchant.id, enable);
       if (enable) {
         const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + DEFAULT_CONSENT_DURATION_MONTHS);
-        await storage.createCrossProductConsent({
+        // The "Build my credit profile" toggle covers two distinct gateway
+        // purposes that both flow from the same merchant decision:
+        //   1. merchant_credit_profile  — lenders may pull verified VAT
+        //      receipt history into the bureau credit profile.
+        //   2. bureau_reputation_badge — the DGI Bureau Reputation Badge
+        //      (tier / receipts / active months) can be issued to the
+        //      merchant's own Loto workspace and exposed on lender views.
+        // Both are time-bounded with the same 12-month default expiry and
+        // revoked together when the merchant opts back out.
+        const baseConsent = {
           userId,
           borrowerId: merchant.borrowerId ?? null,
           merchantId: merchant.id,
-          sourceProduct: "loto",
-          targetProduct: "credit",
-          purpose: "merchant_credit_profile",
-          scopeNote: "Merchant opted in to share fiscal-receipt history with credit bureau",
+          sourceProduct: "loto" as const,
+          targetProduct: "credit" as const,
           expiresAt,
           grantedByIp: req.ip ?? null,
+        };
+        await storage.createCrossProductConsent({
+          ...baseConsent,
+          purpose: "merchant_credit_profile",
+          scopeNote: "Merchant opted in to share fiscal-receipt history with credit bureau",
+        });
+        await storage.createCrossProductConsent({
+          ...baseConsent,
+          purpose: "bureau_reputation_badge",
+          scopeNote: "Merchant opted in to issue the DGI Bureau Reputation Badge from verified VAT receipts",
         });
         // best-effort sync to alternative_data
         try {
@@ -17352,12 +17369,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           console.warn("[loto opt-in] alt-data sync skipped:", (err as Error).message);
         }
       } else {
-        // Revoke ALL active merchant_credit_profile consents for this merchant via
-        // the centralized revoke-and-purge service so fiscal_receipts contributions
-        // are immediately removed from downstream credit scoring state.
+        // Revoke BOTH merchant-side consent purposes the opt-in toggle granted
+        // (merchant_credit_profile + bureau_reputation_badge). Use the
+        // centralized revoke-and-purge service so fiscal_receipts contributions
+        // are immediately removed from downstream credit scoring state and the
+        // bureau badge endpoint stops returning data.
         const consents = await storage.getCrossProductConsents({ merchantId: merchant.id });
         for (const c of consents) {
-          if (c.status === "active" && c.purpose === "merchant_credit_profile") {
+          if (c.status === "active" && (c.purpose === "merchant_credit_profile" || c.purpose === "bureau_reputation_badge")) {
             await revokeConsentAndPurge(c.id, "merchant_opt_out");
           }
         }

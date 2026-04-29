@@ -233,6 +233,57 @@ async function run() {
     await db.delete(lotoMerchants).where(eq(lotoMerchants.id, bare.id));
   });
 
+  await test("E2E: merchant opt-in grants both merchant_credit_profile AND bureau_reputation_badge consents; opt-out revokes both", async () => {
+    // Mirror the route handler exactly: opt-in must create both consents so
+    // the bureau badge endpoint succeeds. We exercise the gateway entry
+    // points the badge route uses (getBureauBadgeForMerchant) plus the
+    // merchant-credit-profile entry, and assert behaviour on both grants.
+    const [m] = await db.insert(lotoMerchants).values({
+      shopName: TAG + "-optin",
+      countryCode: "CI", currency: "XOF", creditOptInActive: true,
+    }).returning();
+    await db.insert(lotoReceipts).values({
+      merchantId: m.id, fiscalCode: TAG + "-optin-FC", ticketNumber: TAG + "-optin-T",
+      amount: "5000", vatAmount: "900", currency: "XOF", issuedAt: new Date(),
+    });
+    const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const baseConsent = {
+      userId: undefined, borrowerId: null, merchantId: m.id,
+      sourceProduct: "loto" as const, targetProduct: "credit" as const,
+      expiresAt, grantedByIp: "127.0.0.1",
+    };
+    await storage.createCrossProductConsent({ ...baseConsent, purpose: "merchant_credit_profile", scopeNote: "test" });
+    await storage.createCrossProductConsent({ ...baseConsent, purpose: "bureau_reputation_badge", scopeNote: "test" });
+
+    // Both gateway calls should succeed.
+    const badge = await gateway.getBureauBadgeForMerchant(m.id, { userId: undefined, ip: "127.0.0.1" });
+    if (!badge.badge?.tier) throw new Error("badge endpoint returned no tier after opt-in");
+    const profile = await gateway.getMerchantReceiptFeatures(m.id, { userId: undefined, ip: "127.0.0.1" });
+    if (profile.features.totalReceipts !== 1) throw new Error("merchant credit profile failed after opt-in");
+
+    // Now opt-out: revoke BOTH purposes (mirrors the route handler).
+    const consents = await storage.getCrossProductConsents({ merchantId: m.id });
+    for (const c of consents) {
+      if (c.status === "active" && (c.purpose === "merchant_credit_profile" || c.purpose === "bureau_reputation_badge")) {
+        await storage.revokeCrossProductConsent(c.id, "merchant_opt_out");
+      }
+    }
+    let badgeDenied = false;
+    try { await gateway.getBureauBadgeForMerchant(m.id, { userId: undefined, ip: "127.0.0.1" }); }
+    catch (e: any) { if (e instanceof CrossProductError) badgeDenied = true; }
+    if (!badgeDenied) throw new Error("badge endpoint should be denied after opt-out");
+
+    let profileDenied = false;
+    try { await gateway.getMerchantReceiptFeatures(m.id, { userId: undefined, ip: "127.0.0.1" }); }
+    catch (e: any) { if (e instanceof CrossProductError) profileDenied = true; }
+    if (!profileDenied) throw new Error("merchant credit profile should be denied after opt-out");
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, m.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.merchantId, m.id));
+    await db.delete(lotoReceipts).where(eq(lotoReceipts.merchantId, m.id));
+    await db.delete(lotoMerchants).where(eq(lotoMerchants.id, m.id));
+  });
+
   // ─── E2E: revocation immediately removes lender-visible VAT activity signal ──
   await test("E2E: revocation purges fiscal_receipts alt-data and blocks subsequent gateway reads", async () => {
     // Need a borrower row so the receipts can be linked into alternativeData.

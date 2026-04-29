@@ -350,8 +350,14 @@ export const gateway = {
     };
     consent: CrossProductConsent;
   } | null> {
+    // Convention (kept consistent across the gateway): callerProduct = the
+    // product CONSUMING the data, targetProduct = the product where the data
+    // lives. The DGI Bureau Reputation Badge is issued by the credit bureau
+    // (the consumer) from loto-side receipt history (the origin), so caller
+    // is "credit" and target is "loto" — this matches the consent row tuple
+    // (sourceProduct=loto, targetProduct=credit) granted at merchant opt-in.
     const ctx: GatewayCallContext = {
-      callerProduct: "loto", targetProduct: "credit", purpose: "bureau_reputation_badge",
+      callerProduct: "credit", targetProduct: "loto", purpose: "bureau_reputation_badge",
       userId: callerCtx.userId, ip: callerCtx.ip,
     };
     const [merchant] = await db.select().from(lotoMerchants).where(eq(lotoMerchants.id, merchantId));
