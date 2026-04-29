@@ -461,6 +461,12 @@ export const gateway = {
       recentInquiries: number;
       recentInquiryWindowDays: number;
     };
+    recentInquiries: Array<{
+      id: string;
+      institution: string;
+      purpose: string;
+      inquiredAt: string | null;
+    }>;
     consent: CrossProductConsent;
   }> {
     const ctx: GatewayCallContext = {
@@ -477,7 +483,15 @@ export const gateway = {
     const recentWindowDays = 90;
     const since = new Date(Date.now() - recentWindowDays * 24 * 60 * 60 * 1000);
     const recentInquiriesRows = await db.select().from(creditInquiries)
-      .where(and(eq(creditInquiries.borrowerId, borrowerId), gte(creditInquiries.createdAt, since)));
+      .where(and(eq(creditInquiries.borrowerId, borrowerId), gte(creditInquiries.createdAt, since)))
+      .orderBy(desc(creditInquiries.createdAt));
+    const RECENT_INQUIRY_LIMIT = 5;
+    const recentInquiries = recentInquiriesRows.slice(0, RECENT_INQUIRY_LIMIT).map(r => ({
+      id: r.id,
+      institution: r.institution,
+      purpose: r.purpose,
+      inquiredAt: r.createdAt ? r.createdAt.toISOString() : null,
+    }));
     await logAccess(ctx, consent, { borrowerId }, "ok");
     return {
       summary: {
@@ -487,6 +501,7 @@ export const gateway = {
         recentInquiries: recentInquiriesRows.length,
         recentInquiryWindowDays: recentWindowDays,
       },
+      recentInquiries,
       consent,
     };
   },

@@ -477,6 +477,13 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
 
 // ─── Borrower Credit Snapshot (Cross-Product Bridge) ─────────────────────────
 
+interface CreditSnapshotInquiry {
+  id: string;
+  institution: string;
+  purpose: string;
+  inquiredAt: string | null;
+}
+
 interface CreditSnapshotResponse {
   summary: {
     score: number | null;
@@ -485,7 +492,20 @@ interface CreditSnapshotResponse {
     recentInquiries: number;
     recentInquiryWindowDays: number;
   };
+  recentInquiries: CreditSnapshotInquiry[];
   consent: { id: string; expiresAt: string };
+}
+
+const INQUIRY_PURPOSE_LABELS: Record<string, string> = {
+  new_credit: "New credit",
+  review: "Account review",
+  collection: "Collection",
+  regulatory: "Regulatory",
+  portfolio_monitoring: "Portfolio monitoring",
+};
+
+function formatInquiryPurpose(purpose: string): string {
+  return INQUIRY_PURPOSE_LABELS[purpose] ?? purpose.replace(/_/g, " ");
 }
 
 class CreditSnapshotError extends Error {
@@ -585,6 +605,50 @@ function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: stri
                 <div className="text-xs text-muted-foreground">Inquiries · {data.summary.recentInquiryWindowDays}d</div>
                 <div className="text-lg font-semibold" data-testid="text-snapshot-inquiries">{data.summary.recentInquiries}</div>
               </div>
+            </div>
+            <div className="space-y-1.5" data-testid="section-snapshot-recent-inquiries">
+              <div className="text-xs font-medium text-muted-foreground">
+                Recent inquiries · last {data.summary.recentInquiryWindowDays}d
+              </div>
+              {data.recentInquiries.length === 0 ? (
+                <div
+                  className="rounded-md border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground"
+                  data-testid="text-snapshot-inquiries-empty"
+                >
+                  No credit inquiries from any institution in this window.
+                </div>
+              ) : (
+                <ul className="rounded-md border divide-y">
+                  {data.recentInquiries.map(inq => (
+                    <li
+                      key={inq.id}
+                      className="flex items-start justify-between gap-2 p-2 text-xs"
+                      data-testid={`row-snapshot-inquiry-${inq.id}`}
+                    >
+                      <div className="min-w-0">
+                        <div
+                          className="font-medium truncate"
+                          data-testid={`text-snapshot-inquiry-institution-${inq.id}`}
+                        >
+                          {inq.institution}
+                        </div>
+                        <div
+                          className="text-muted-foreground"
+                          data-testid={`text-snapshot-inquiry-purpose-${inq.id}`}
+                        >
+                          {formatInquiryPurpose(inq.purpose)}
+                        </div>
+                      </div>
+                      <div
+                        className="text-muted-foreground shrink-0"
+                        data-testid={`text-snapshot-inquiry-date-${inq.id}`}
+                      >
+                        {inq.inquiredAt ? format(new Date(inq.inquiredAt), "dd MMM yyyy") : "—"}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
             <div className="text-xs text-muted-foreground border-t pt-2">
               Served via cross-product gateway · consent <code className="font-mono">{data.consent.id.slice(0, 8)}…</code> · access logged.
@@ -690,6 +754,50 @@ function BorrowerCreditSnapshotPanel({
                 {data.summary.recentInquiries}
               </div>
             </div>
+          </div>
+          <div className="space-y-1" data-testid="panel-snapshot-recent-inquiries">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Recent inquiries · last {data.summary.recentInquiryWindowDays}d
+            </div>
+            {data.recentInquiries.length === 0 ? (
+              <div
+                className="rounded-md border border-dashed bg-muted/30 p-2 text-[11px] text-muted-foreground"
+                data-testid="panel-snapshot-inquiries-empty"
+              >
+                No credit inquiries from any institution in this window.
+              </div>
+            ) : (
+              <ul className="rounded-md border divide-y">
+                {data.recentInquiries.map(inq => (
+                  <li
+                    key={inq.id}
+                    className="flex items-start justify-between gap-2 p-2 text-[11px]"
+                    data-testid={`panel-row-snapshot-inquiry-${inq.id}`}
+                  >
+                    <div className="min-w-0">
+                      <div
+                        className="font-medium leading-tight truncate"
+                        data-testid={`panel-text-snapshot-inquiry-institution-${inq.id}`}
+                      >
+                        {inq.institution}
+                      </div>
+                      <div
+                        className="text-muted-foreground leading-tight"
+                        data-testid={`panel-text-snapshot-inquiry-purpose-${inq.id}`}
+                      >
+                        {formatInquiryPurpose(inq.purpose)}
+                      </div>
+                    </div>
+                    <div
+                      className="text-muted-foreground shrink-0 leading-tight"
+                      data-testid={`panel-text-snapshot-inquiry-date-${inq.id}`}
+                    >
+                      {inq.inquiredAt ? format(new Date(inq.inquiredAt), "dd MMM yyyy") : "—"}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
           <p className="text-[11px] text-muted-foreground leading-snug" data-testid="snapshot-panel-footer">
             Served via the cross-product gateway · consent{" "}
