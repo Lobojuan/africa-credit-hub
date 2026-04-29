@@ -461,6 +461,7 @@ export interface IStorage {
     bridgeAccessesLogged: number;
     bridgeAccessesAllowed: number;
     bridgeAccessesDenied: number;
+    topDenialReasons: { reason: string; count: number }[];
   }>;
 }
 
@@ -3751,16 +3752,26 @@ export class DatabaseStorage implements IStorage {
       .where(eq(auditLogs.action, "cross_product_access"));
     let allowed = 0;
     let denied = 0;
+    const denialReasonCounts: Record<string, number> = {};
     for (const row of detailRows) {
       if (!row.details) continue;
       try {
-        const parsed = JSON.parse(row.details) as { outcome?: unknown };
+        const parsed = JSON.parse(row.details) as { outcome?: unknown; reason?: unknown };
         if (parsed.outcome === "ok") allowed++;
-        else if (parsed.outcome === "denied") denied++;
+        else if (parsed.outcome === "denied") {
+          denied++;
+          if (typeof parsed.reason === "string" && parsed.reason.length > 0) {
+            denialReasonCounts[parsed.reason] = (denialReasonCounts[parsed.reason] ?? 0) + 1;
+          }
+        }
       } catch {
         // malformed details — skip
       }
     }
+    const topDenialReasons = Object.entries(denialReasonCounts)
+      .map(([reason, count]) => ({ reason, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
     return {
       merchantsRegistered: merchants.length,
       merchantsOptedIn,
@@ -3770,6 +3781,7 @@ export class DatabaseStorage implements IStorage {
       bridgeAccessesLogged: auditStat?.c ?? 0,
       bridgeAccessesAllowed: allowed,
       bridgeAccessesDenied: denied,
+      topDenialReasons,
     };
   }
 }

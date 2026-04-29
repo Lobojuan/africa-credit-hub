@@ -18,6 +18,7 @@ interface ImpactPayload {
   bridgeAccessesLogged: number;
   bridgeAccessesAllowed: number;
   bridgeAccessesDenied: number;
+  topDenialReasons: { reason: string; count: number }[];
   defaultConsentMonths: number;
   generatedAt: string;
 }
@@ -61,6 +62,20 @@ function humanizePurpose(p: string | null): string {
 function humanizeProduct(p: string | null): string {
   if (!p) return "?";
   return p.charAt(0).toUpperCase() + p.slice(1);
+}
+
+function humanizeDenialReason(reason: string): string {
+  const known: Record<string, string> = {
+    no_consent: "No consent on file",
+    consent_revoked: "Consent revoked",
+    consent_expired: "Consent expired",
+    wrong_purpose: "Wrong purpose",
+    subject_not_found: "Subject not found",
+  };
+  if (known[reason]) return known[reason];
+  return reason
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export default function FinancialInclusionPage() {
@@ -274,6 +289,25 @@ export default function FinancialInclusionPage() {
                       <XCircle className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
                       {t("financialInclusion.outcomeDenied", "{{count}} denied (consent missing or revoked)", { count: denied })}
                     </Badge>
+                  </div>
+                )}
+                {denied > 0 && data.topDenialReasons && data.topDenialReasons.length > 0 && (
+                  <div className="pt-2" data-testid="denial-reasons-breakdown">
+                    <div className="text-xs text-muted-foreground mb-2" data-testid="text-denial-reasons-label">
+                      {t("financialInclusion.denialReasonsLabel", "Most common denial reasons:")}
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2 text-xs">
+                      {data.topDenialReasons.map((r) => (
+                        <Badge
+                          key={r.reason}
+                          variant="outline"
+                          className="border-amber-300 text-amber-700 dark:text-amber-400"
+                          data-testid={`badge-denial-reason-${r.reason}`}
+                        >
+                          {humanizeDenialReason(r.reason)} ({r.count})
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
