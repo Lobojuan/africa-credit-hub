@@ -191,6 +191,12 @@ export interface MerchantReceiptFeatures {
   trend: "growing" | "stable" | "declining" | "new";
   trendDelta: number; // pct change between first and last full month
   monthlyBreakdown: { month: string; receipts: number; turnover: number }[];
+  // Aggregated category mix (e.g. groceries / fuel / pharmacy / transport).
+  // Used by consumer alternative-data uplift so the bureau sees stable
+  // spending categories alongside totals/frequency. Fully derivable from
+  // receipt rows: no PII or merchant identifiers leak through.
+  categoryAggregates: { category: string; receipts: number; turnover: number; sharePct: number }[];
+  topCategory: string | null;
   reasonCodes: string[];
   currency: string;
   vatActivityScore: number; // 300-850 like a credit score
@@ -205,11 +211,14 @@ export function computeReceiptFeatures(receipts: LotoReceipt[]): MerchantReceipt
     return {
       totalReceipts: 0, totalTurnover: 0, averageMonthlyTurnover: 0, monthsWithActivity: 0,
       averageReceiptsPerMonth: 0, largestMonthlyTurnover: 0, smallestMonthlyTurnover: 0,
-      trend: "new", trendDelta: 0, monthlyBreakdown: [], reasonCodes: ["NO_RECEIPT_HISTORY"],
+      trend: "new", trendDelta: 0, monthlyBreakdown: [],
+      categoryAggregates: [], topCategory: null,
+      reasonCodes: ["NO_RECEIPT_HISTORY"],
       currency, vatActivityScore: 300, lastReceiptAt: null,
     };
   }
   const buckets: Record<string, { receipts: number; turnover: number }> = {};
+  const catBuckets: Record<string, { receipts: number; turnover: number }> = {};
   let totalTurnover = 0;
   for (const r of sorted) {
     const d = new Date(r.issuedAt);
@@ -219,6 +228,10 @@ export function computeReceiptFeatures(receipts: LotoReceipt[]): MerchantReceipt
     const amt = parseFloat(String(r.amount));
     buckets[key].turnover += amt;
     totalTurnover += amt;
+    const cat = (r.category && r.category.trim().length > 0) ? r.category.trim().toLowerCase() : "uncategorized";
+    if (!catBuckets[cat]) catBuckets[cat] = { receipts: 0, turnover: 0 };
+    catBuckets[cat].receipts++;
+    catBuckets[cat].turnover += amt;
   }
   const monthlyBreakdown = Object.entries(buckets)
     .map(([month, v]) => ({ month, receipts: v.receipts, turnover: v.turnover }))
@@ -265,6 +278,17 @@ export function computeReceiptFeatures(receipts: LotoReceipt[]): MerchantReceipt
   else if (totalTurnover > 1_000_000) score += 30;
   score = Math.max(300, Math.min(850, Math.round(score)));
 
+  const categoryAggregates = Object.entries(catBuckets)
+    .map(([category, v]) => ({
+      category,
+      receipts: v.receipts,
+      turnover: v.turnover,
+      sharePct: totalTurnover > 0 ? Math.round((v.turnover / totalTurnover) * 1000) / 10 : 0,
+    }))
+    .sort((a, b) => b.turnover - a.turnover);
+  const topCategory = categoryAggregates[0]?.category ?? null;
+  if (categoryAggregates.length >= 3) reasonCodes.push("DIVERSE_SPENDING_CATEGORIES");
+
   return {
     totalReceipts: sorted.length,
     totalTurnover,
@@ -275,6 +299,8 @@ export function computeReceiptFeatures(receipts: LotoReceipt[]): MerchantReceipt
     smallestMonthlyTurnover,
     trend,
     trendDelta,
+    categoryAggregates,
+    topCategory,
     monthlyBreakdown,
     reasonCodes,
     currency,
