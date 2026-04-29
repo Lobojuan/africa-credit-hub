@@ -17439,6 +17439,37 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // Public, redacted ticker of the most recent cross-product bridge accesses.
+  // PII (userId, ipAddress, subjectId/entityId) is intentionally stripped — only
+  // the structural fields (purpose, source -> target, outcome, timestamp) are exposed
+  // so visitors can see the consent log working in real time.
+  app.get("/api/public/financial-inclusion-recent-bridge-accesses", async (_req, res) => {
+    try {
+      const rows = await storage.getCrossProductAuditEntries(10);
+      const events = rows.map((r) => {
+        let purpose: string | null = null;
+        let sourceProduct: string | null = null;
+        let targetProduct: string | null = null;
+        let outcome: string | null = null;
+        try {
+          const d = JSON.parse(r.details ?? "{}");
+          purpose = typeof d.purpose === "string" ? d.purpose : null;
+          sourceProduct = typeof d.sourceProduct === "string" ? d.sourceProduct : null;
+          targetProduct = typeof d.targetProduct === "string" ? d.targetProduct : null;
+          outcome = typeof d.outcome === "string" ? d.outcome : null;
+        } catch { /* malformed details — leave fields null */ }
+        return {
+          purpose,
+          sourceProduct,
+          targetProduct,
+          outcome,
+          timestamp: r.createdAt ? r.createdAt.toISOString() : null,
+        };
+      });
+      res.json({ events, generatedAt: new Date().toISOString() });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   return httpServer;
 }
 

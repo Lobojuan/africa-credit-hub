@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldCheck, Receipt, TrendingUp, Banknote, ArrowRight, Lock, Globe, FileCheck, type LucideIcon } from "lucide-react";
+import { ShieldCheck, Receipt, TrendingUp, Banknote, ArrowRight, Lock, Globe, FileCheck, Activity, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
 
 interface ImpactPayload {
   merchantsRegistered: number;
@@ -18,6 +18,45 @@ interface ImpactPayload {
   bridgeAccessesLogged: number;
   defaultConsentMonths: number;
   generatedAt: string;
+}
+
+interface BridgeAccessEvent {
+  purpose: string | null;
+  sourceProduct: string | null;
+  targetProduct: string | null;
+  outcome: string | null;
+  timestamp: string | null;
+}
+
+interface BridgeAccessPayload {
+  events: BridgeAccessEvent[];
+  generatedAt: string;
+}
+
+const TICKER_REFRESH_MS = 30_000;
+
+function formatRelativeTime(ts: string | null): string {
+  if (!ts) return "—";
+  const t = new Date(ts).getTime();
+  if (Number.isNaN(t)) return "—";
+  const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+function humanizePurpose(p: string | null): string {
+  if (!p) return "—";
+  return p.replace(/_/g, " ");
+}
+
+function humanizeProduct(p: string | null): string {
+  if (!p) return "?";
+  return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
 export default function FinancialInclusionPage() {
@@ -33,6 +72,12 @@ export default function FinancialInclusionPage() {
 
   const { data, isLoading } = useQuery<ImpactPayload>({
     queryKey: ["/api/public/financial-inclusion-impact"],
+    refetchInterval: TICKER_REFRESH_MS,
+  });
+
+  const { data: bridgeData, isLoading: bridgeLoading } = useQuery<BridgeAccessPayload>({
+    queryKey: ["/api/public/financial-inclusion-recent-bridge-accesses"],
+    refetchInterval: TICKER_REFRESH_MS,
   });
 
   return (
@@ -83,6 +128,71 @@ export default function FinancialInclusionPage() {
             testid="kpi-opt-in"
           />
         </div>
+      </section>
+
+      {/* Live bridge ticker */}
+      <section className="px-4 md:px-8 py-8 max-w-6xl mx-auto">
+        <Card data-testid="card-bridge-ticker">
+          <CardContent className="p-5 md:p-6">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <Activity className="w-5 h-5 text-emerald-600" />
+                <h3 className="font-semibold" data-testid="text-ticker-title">
+                  {t("financialInclusion.tickerTitle", "Recent consent-bridge activity")}
+                </h3>
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground" data-testid="text-ticker-caption">
+                {t("financialInclusion.tickerCaption", "Last 10 events · refreshes every 30s · PII redacted")}
+              </div>
+            </div>
+
+            {bridgeLoading ? (
+              <div className="space-y-2" data-testid="ticker-loading">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} className="h-10 w-full" />
+                ))}
+              </div>
+            ) : !bridgeData || bridgeData.events.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-4 text-center" data-testid="text-ticker-empty">
+                {t("financialInclusion.tickerEmpty", "No bridge accesses yet. Events appear here as soon as a consented cross-product call is made.")}
+              </div>
+            ) : (
+              <ul className="divide-y" data-testid="list-ticker">
+                {bridgeData.events.map((ev, idx) => {
+                  const isOk = ev.outcome === "ok";
+                  return (
+                    <li
+                      key={`${ev.timestamp ?? "no-ts"}-${idx}`}
+                      className="py-2.5 flex items-center justify-between gap-3 text-sm"
+                      data-testid={`row-ticker-${idx}`}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        {isOk ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" aria-hidden="true" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-amber-600 shrink-0" aria-hidden="true" />
+                        )}
+                        <Badge variant="outline" className="font-mono text-xs shrink-0" data-testid={`badge-ticker-flow-${idx}`}>
+                          {humanizeProduct(ev.sourceProduct)} → {humanizeProduct(ev.targetProduct)}
+                        </Badge>
+                        <span className="text-muted-foreground truncate" data-testid={`text-ticker-purpose-${idx}`}>
+                          {humanizePurpose(ev.purpose)}
+                        </span>
+                      </div>
+                      <span className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-ticker-time-${idx}`}>
+                        {formatRelativeTime(ev.timestamp)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       {/* Story flow */}
