@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
   Trophy, Crown, Sparkles, Star, Zap, Flame, Calendar, Clock,
   Users, Coins, Gift, Award, Target, Rocket, MapPin, ScanLine,
-  CheckCircle2, Lock, TrendingUp, Ticket, PartyPopper, Medal,
+  CheckCircle2, Lock, TrendingUp, Ticket, PartyPopper, Medal, QrCode, Loader2,
 } from "lucide-react";
 
 const SEED_NAMES = [
@@ -114,6 +123,7 @@ interface LotoLotteryExperienceProps {
   monthsWithActivity?: number;
   currency?: string;
   isMerchant?: boolean;
+  onScanComplete?: () => void;
 }
 
 export function LotoLotteryExperience({
@@ -123,9 +133,11 @@ export function LotoLotteryExperience({
   monthsWithActivity = 0,
   currency = "XOF",
   isMerchant = false,
+  onScanComplete,
 }: LotoLotteryExperienceProps) {
   const { t } = useTranslation();
   const myTickets = receipts.length;
+  const [scanOpen, setScanOpen] = useState(false);
 
   const myVatContribution = useMemo(() => {
     if (typeof totalVatMobilised === "number" && totalVatMobilised > 0) return totalVatMobilised;
@@ -262,7 +274,12 @@ export function LotoLotteryExperience({
               <Ticket className="w-4 h-4 text-amber-300" />
               {t("loto.lottery.youHold", "You hold")} <span className="text-amber-300 font-black">{myTickets}</span> {myTickets === 1 ? t("loto.lottery.ticket", "ticket") : t("loto.lottery.tickets", "tickets")}
             </div>
-            <Button size="lg" className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-xl shadow-amber-900/30 border-0" data-testid="button-scan-receipt">
+            <Button
+              size="lg"
+              onClick={() => setScanOpen(true)}
+              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-xl shadow-amber-900/30 border-0"
+              data-testid="button-scan-receipt"
+            >
               <ScanLine className="w-4 h-4" />
               {t("loto.lottery.scanReceiptCta", "Scan a receipt to enter")}
             </Button>
@@ -347,9 +364,17 @@ export function LotoLotteryExperience({
           <CardContent className="p-8 text-center">
             <Ticket className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
             <h3 className="font-semibold mb-1" data-testid="text-no-tickets-title">{t("loto.lottery.noTicketsTitle", "No tickets yet — start scanning!")}</h3>
-            <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            <p className="text-sm text-muted-foreground max-w-md mx-auto mb-4">
               {t("loto.lottery.noTicketsBody", "Every verified VAT receipt becomes one ticket in this month's national draw. Scan a receipt at any participating merchant to enter.")}
             </p>
+            <Button
+              onClick={() => setScanOpen(true)}
+              className="gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white border-0"
+              data-testid="button-scan-receipt-empty"
+            >
+              <ScanLine className="w-4 h-4" />
+              {t("loto.lottery.scanReceiptCta", "Scan a receipt to enter")}
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -522,6 +547,228 @@ export function LotoLotteryExperience({
           </p>
         </CardContent>
       </Card>
+
+      <ScanReceiptModal
+        open={scanOpen}
+        onOpenChange={setScanOpen}
+        currency={currency}
+        onScanComplete={onScanComplete}
+      />
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ScanReceiptModal — pilot scan flow. Lets the user enter a tier (small /
+// medium / large) or paste a fiscal code; backend creates a synthetic verified
+// receipt and returns the new ticket. Real fiscalisation (camera + DGI/FIRS
+// QR verification) will replace this in the production pilot.
+// ─────────────────────────────────────────────────────────────────────────────
+interface ScanReceiptModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  currency: string;
+  onScanComplete?: () => void;
+}
+
+interface ScanResult {
+  ok: boolean;
+  ticketNumber: string;
+  ticketCount: number;
+  receipt: { id: string; amount: string; vatAmount: string; currency: string };
+  merchant: { id: string; shopName: string; city: string | null };
+}
+
+function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete }: ScanReceiptModalProps) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [manualCode, setManualCode] = useState("");
+  const [lastResult, setLastResult] = useState<ScanResult | null>(null);
+
+  const scanMutation = useMutation({
+    mutationFn: async (input: { kind?: "small" | "medium" | "large"; fiscalCode?: string }) => {
+      const res = await apiRequest("POST", "/api/loto/receipts/scan", input);
+      return (await res.json()) as ScanResult;
+    },
+    onSuccess: (data) => {
+      setLastResult(data);
+      onScanComplete?.();
+      toast({
+        title: t("loto.lottery.scanSuccessTitle", "Receipt verified — ticket #{{n}} added!", { n: data.ticketNumber }),
+        description: t(
+          "loto.lottery.scanSuccessBody",
+          "{{amount}} {{currency}} purchase from {{shop}}. You now hold {{count}} ticket(s).",
+          {
+            amount: fmtAmount(parseFloat(data.receipt.amount)),
+            currency: data.receipt.currency,
+            shop: data.merchant.shopName,
+            count: data.ticketCount,
+          },
+        ),
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: t("loto.lottery.scanErrorTitle", "Scan failed"),
+        description: err?.message ?? t("loto.lottery.scanErrorBody", "Could not verify the receipt. Please try again."),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleClose = (next: boolean) => {
+    if (!next) {
+      setManualCode("");
+      setLastResult(null);
+    }
+    onOpenChange(next);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-lg" data-testid="dialog-scan-receipt">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ScanLine className="w-5 h-5 text-amber-500" />
+            {t("loto.lottery.scanModalTitle", "Scan a fiscal receipt")}
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              "loto.lottery.scanModalSubtitle",
+              "Pick a sample receipt size to simulate a scan, or paste a fiscal code from a real receipt. Each verified receipt earns you one lottery ticket.",
+            )}
+          </DialogDescription>
+        </DialogHeader>
+
+        {lastResult ? (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 dark:border-emerald-800 p-5" data-testid="scan-result-card">
+            <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300 text-sm font-semibold mb-3">
+              <CheckCircle2 className="w-5 h-5" />
+              {t("loto.lottery.scanSuccessTitle", "Receipt verified — ticket #{{n}} added!", { n: lastResult.ticketNumber })}
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t("loto.lottery.scanResultMerchant", "Merchant")}</div>
+                <div className="font-semibold" data-testid="scan-result-merchant">{lastResult.merchant.shopName}</div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t("loto.lottery.scanResultAmount", "Amount")}</div>
+                <div className="font-semibold tabular-nums" data-testid="scan-result-amount">
+                  {fmtAmount(parseFloat(lastResult.receipt.amount))} {lastResult.receipt.currency}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t("loto.lottery.scanResultVat", "VAT verified")}</div>
+                <div className="font-semibold tabular-nums">
+                  {fmtAmount(parseFloat(lastResult.receipt.vatAmount))} {lastResult.receipt.currency}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{t("loto.lottery.scanResultTicketCount", "Total tickets")}</div>
+                <div className="font-semibold tabular-nums" data-testid="scan-result-ticket-count">{lastResult.ticketCount}</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <Tabs defaultValue="sample" className="w-full">
+            <TabsList className="grid grid-cols-2 w-full">
+              <TabsTrigger value="sample" data-testid="tab-scan-sample">
+                <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+                {t("loto.lottery.scanTabSample", "Sample receipt")}
+              </TabsTrigger>
+              <TabsTrigger value="manual" data-testid="tab-scan-manual">
+                <QrCode className="w-3.5 h-3.5 mr-1.5" />
+                {t("loto.lottery.scanTabManual", "Paste code")}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="sample" className="mt-4">
+              <p className="text-xs text-muted-foreground mb-3">
+                {t("loto.lottery.scanSampleHint", "Choose how big the demo purchase should be:")}
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { kind: "small" as const, label: t("loto.lottery.scanKindSmall", "Small"), range: `1k–5k ${currency}` },
+                    { kind: "medium" as const, label: t("loto.lottery.scanKindMedium", "Medium"), range: `5k–25k ${currency}` },
+                    { kind: "large" as const, label: t("loto.lottery.scanKindLarge", "Large"), range: `25k–120k ${currency}` },
+                  ]
+                ).map((opt) => (
+                  <Button
+                    key={opt.kind}
+                    variant="outline"
+                    disabled={scanMutation.isPending}
+                    onClick={() => scanMutation.mutate({ kind: opt.kind })}
+                    className="flex flex-col h-auto py-3 gap-1"
+                    data-testid={`button-scan-kind-${opt.kind}`}
+                  >
+                    <span className="text-sm font-semibold">{opt.label}</span>
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{opt.range}</span>
+                  </Button>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="manual" className="mt-4">
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="fiscal-code-input" className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {t("loto.lottery.scanManualLabel", "Fiscal code from receipt")}
+                  </Label>
+                  <Input
+                    id="fiscal-code-input"
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                    placeholder="ABC123XYZ"
+                    maxLength={32}
+                    disabled={scanMutation.isPending}
+                    className="mt-1 font-mono"
+                    data-testid="input-fiscal-code"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    {t("loto.lottery.scanManualHint", "Find the fiscal code printed at the bottom of any participating-merchant receipt. Min 6 characters.")}
+                  </p>
+                </div>
+                <Button
+                  className="w-full gap-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white border-0"
+                  disabled={scanMutation.isPending || manualCode.length < 6}
+                  onClick={() => scanMutation.mutate({ fiscalCode: manualCode })}
+                  data-testid="button-submit-fiscal-code"
+                >
+                  {scanMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+                  {t("loto.lottery.scanSubmit", "Verify receipt")}
+                </Button>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+
+        <DialogFooter className="sm:justify-between">
+          {lastResult ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setLastResult(null)}
+                data-testid="button-scan-another"
+              >
+                <ScanLine className="w-4 h-4 mr-2" />
+                {t("loto.lottery.scanAnother", "Scan another")}
+              </Button>
+              <Button
+                onClick={() => handleClose(false)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                data-testid="button-scan-done"
+              >
+                {t("common.done", "Done")}
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" onClick={() => handleClose(false)} data-testid="button-scan-cancel">
+              {t("common.cancel", "Cancel")}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

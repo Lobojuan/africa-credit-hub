@@ -82,6 +82,7 @@ import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import { getVapidPublicKey, sendPushToConsumerAccount } from "./push-notifications";
+import { getTaxAuthorityProfile } from "@shared/tax-authority";
 import type { BogFileType } from "@shared/bog-codes";
 import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_EMPLOYMENT_TYPE, BOG_OWNER_TENANT } from "@shared/bog-codes";
 import { BUSINESS_CREDIT_TYPES, inferCreditCategory, normalizeAccountType } from "@shared/credit-types";
@@ -17448,6 +17449,145 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       res.json({ optInActive: false });
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Receipt scan — demo flow that creates a synthetic verified receipt and
+  // grants the consumer one lottery ticket. Real fiscalisation integration
+  // (DGI/FIRS/KRA QR verification) will replace the synthetic generator.
+  // Hardening:
+  //  - Per-user rate limiter (30 scans / 5 min) prevents ticket spamming.
+  //  - Zod-validated body so malformed input is rejected at the edge.
+  //  - Country must resolve from session — no silent CI fallback (would
+  //    cross-contaminate countries when super-admin is in global view).
+  //  - Synthetic receipts are pinned to a dedicated demo merchant per
+  //    country (shopName="__loto_demo_scan__"). Real production merchants
+  //    are never selected, so their turnover/credit features cannot be
+  //    polluted by demo activity.
+  // ────────────────────────────────────────────────────────────────────────
+  const lotoScanLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 30,
+    message: { message: "Scan rate limit exceeded. Please slow down and try again shortly." },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: any) => req.session?.userId || rateLimitKeyGenerator(req),
+    validate: { keyGeneratorIpFallback: false },
+  });
+
+  const lotoScanBodySchema = z.object({
+    kind: z.enum(["small", "medium", "large"]).optional(),
+    fiscalCode: z.string().trim().min(6).max(32).regex(/^[A-Za-z0-9_-]+$/, "fiscalCode must be alphanumeric").optional(),
+  });
+
+  const DEMO_SCAN_MERCHANT_TAG = "__loto_demo_scan__";
+
+  app.post("/api/loto/receipts/scan", requireAuth, lotoScanLimiter, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+
+      const parsed = lotoScanBodySchema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({ message: "Invalid scan request", errors: parsed.error.flatten() });
+      }
+      const kind = parsed.data.kind ?? "medium";
+      const manualCode = parsed.data.fiscalCode?.toUpperCase() ?? null;
+
+      // Country MUST resolve — no silent fallback. Super-admins viewing in
+      // global mode have to pick a country before scanning.
+      const userCountry = await resolveUserCountry(req);
+      if (!userCountry) {
+        return res.status(400).json({
+          message: "Country scope required. Switch to a specific country before scanning a receipt.",
+        });
+      }
+      const profile = getTaxAuthorityProfile(userCountry);
+      if (!profile) {
+        return res.status(400).json({ message: `Loto Fiscal not configured for country: ${userCountry}` });
+      }
+      const { countryCode, currency } = profile;
+
+      // Direct (indexed) lookup for the dedicated demo merchant — no list
+      // scan, so we don't miss the row in large datasets.
+      let demoMerchant = await storage.getLotoMerchantByShopNameAndCountry(
+        DEMO_SCAN_MERCHANT_TAG,
+        countryCode,
+      );
+      if (!demoMerchant) {
+        demoMerchant = await storage.createLotoMerchant({
+          shopName: DEMO_SCAN_MERCHANT_TAG,
+          ownerName: "Loto Fiscal Demo",
+          vatRegistrationNumber: `${countryCode}-DEMO-SCAN`,
+          countryCode,
+          currency,
+          city: null,
+          category: "demo",
+          creditOptInActive: false,
+        });
+      }
+
+      const ranges: Record<typeof kind, [number, number]> = {
+        small: [1_000, 5_000],
+        medium: [5_000, 25_000],
+        large: [25_000, 120_000],
+      };
+      const [lo, hi] = ranges[kind];
+      const amountNum = Math.round(lo + Math.random() * (hi - lo));
+      const vatNum = Math.round(amountNum * 0.18);
+
+      // Manual codes are deterministic — `${countryCode}-MANUAL-${code}`.
+      // The DB unique constraint on lotoReceipts.fiscalCode then enforces
+      // single-use semantics: pasting the same code twice will be rejected
+      // (which mirrors real fiscal-receipt behavior). Sample-tier scans
+      // remain time-keyed because they're auto-generated demo entries.
+      const fiscalCode = manualCode
+        ? `${countryCode}-MANUAL-${manualCode}`
+        : `${countryCode}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      const ticketNumber = (Math.floor(Math.random() * 1_000_000)).toString().padStart(6, "0");
+
+      let receipt;
+      try {
+        receipt = await storage.createLotoReceipt({
+          merchantId: demoMerchant.id,
+          consumerUserId: userId,
+          fiscalCode,
+          ticketNumber,
+          amount: amountNum.toFixed(2),
+          vatAmount: vatNum.toFixed(2),
+          currency,
+          category: "retail",
+          itemCount: 1 + Math.floor(Math.random() * 5),
+          issuedAt: new Date(),
+        });
+      } catch (insertErr) {
+        // Postgres unique-violation on fiscalCode → friendly 409.
+        const msg = (insertErr as Error)?.message ?? "";
+        if (manualCode && /unique|duplicate/i.test(msg)) {
+          return res.status(409).json({
+            message: "This fiscal code has already been used for a lottery ticket.",
+          });
+        }
+        throw insertErr;
+      }
+
+      const ticketCount = await storage.countLotoReceiptsByConsumer(userId);
+      // Display-friendly merchant label — never leak the internal demo tag
+      // to the client.
+      res.json({
+        ok: true,
+        receipt,
+        merchant: {
+          id: demoMerchant.id,
+          shopName: "Boutique Démo Loto",
+          city: null,
+        },
+        ticketNumber,
+        ticketCount,
+      });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
   });
 
   // ════════════════════════════════════════════════════════════════════════

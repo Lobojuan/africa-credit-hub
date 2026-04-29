@@ -448,6 +448,8 @@ export interface IStorage {
   getLotoMerchantByUserId(userId: string): Promise<LotoMerchant | undefined>;
   getLotoMerchantByBorrowerId(borrowerId: string): Promise<LotoMerchant | undefined>;
   createLotoMerchant(input: InsertLotoMerchant): Promise<LotoMerchant>;
+  getLotoMerchantByShopNameAndCountry(shopName: string, countryCode: string): Promise<LotoMerchant | undefined>;
+  countLotoReceiptsByConsumer(userId: string): Promise<number>;
   updateLotoMerchantOptIn(id: string, optIn: boolean): Promise<LotoMerchant | undefined>;
   listLotoMerchants(limit?: number): Promise<LotoMerchant[]>;
   listLotoReceiptsByMerchant(merchantId: string, limit?: number): Promise<LotoReceipt[]>;
@@ -3670,6 +3672,17 @@ export class DatabaseStorage implements IStorage {
   }
   async listLotoMerchants(limit = 50): Promise<LotoMerchant[]> {
     return db.select().from(lotoMerchants).orderBy(desc(lotoMerchants.registeredAt)).limit(limit);
+  }
+  async getLotoMerchantByShopNameAndCountry(shopName: string, countryCode: string): Promise<LotoMerchant | undefined> {
+    const [row] = await db.select().from(lotoMerchants)
+      .where(and(eq(lotoMerchants.shopName, shopName), eq(lotoMerchants.countryCode, countryCode)))
+      .limit(1);
+    return row;
+  }
+  async countLotoReceiptsByConsumer(userId: string): Promise<number> {
+    const [row] = await db.select({ n: sql<number>`count(*)::int` }).from(lotoReceipts)
+      .where(eq(lotoReceipts.consumerUserId, userId));
+    return row?.n ?? 0;
   }
   async listLotoReceiptsByMerchant(merchantId: string, limit = 200): Promise<LotoReceipt[]> {
     return db.select().from(lotoReceipts).where(eq(lotoReceipts.merchantId, merchantId)).orderBy(desc(lotoReceipts.issuedAt)).limit(limit);

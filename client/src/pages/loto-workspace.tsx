@@ -124,16 +124,33 @@ export default function LotoWorkspacePage() {
 
         <TabsContent value="lottery" className="mt-4">
           <LotoLotteryExperience
-            receipts={(merchantQ.data?.receipts ?? consumerQ.data?.receipts ?? []).map((r) => ({
-              id: r.id,
-              amount: r.amount,
-              vatAmount: (r as { vatAmount?: string }).vatAmount,
-              issuedAt: r.issuedAt,
-            }))}
+            receipts={(() => {
+              // Lottery tickets = receipts the user has scanned as a consumer
+              // PLUS receipts their own merchant issued (if any). Each receipt
+              // is one ticket regardless of which side they're on. Dedupe by
+              // id so a self-purchase isn't double-counted.
+              const all = [
+                ...(consumerQ.data?.receipts ?? []),
+                ...(merchantQ.data?.receipts ?? []),
+              ];
+              const seen = new Set<string>();
+              return all
+                .filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)))
+                .map((r) => ({
+                  id: r.id,
+                  amount: r.amount,
+                  vatAmount: (r as { vatAmount?: string }).vatAmount,
+                  issuedAt: r.issuedAt,
+                }));
+            })()}
             totalTurnover={merchantQ.data?.features?.totalTurnover ?? consumerQ.data?.features?.totalTurnover ?? 0}
             monthsWithActivity={merchantQ.data?.features?.monthsWithActivity ?? consumerQ.data?.features?.monthsWithActivity ?? 0}
             currency={merchantQ.data?.features?.currency ?? consumerQ.data?.features?.currency ?? "XOF"}
             isMerchant={!!merchant}
+            onScanComplete={() => {
+              queryClient.invalidateQueries({ queryKey: ["/api/loto/consumers/me/spending"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/loto/merchants/me/receipts"] });
+            }}
           />
         </TabsContent>
 
