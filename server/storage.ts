@@ -77,6 +77,11 @@ import {
   lotoMerchants, lotoReceipts, crossProductConsents, alternativeData,
   type LotoMerchant, type LotoReceipt, type CrossProductConsent,
   type InsertLotoMerchant, type InsertLotoReceipt, type InsertCrossProductConsent,
+  lotoCountryDrawConfig, lotoDraws, lotoDrawPrizeTiers, lotoDrawWinners, lotoPayouts,
+  type LotoCountryDrawConfig, type InsertLotoCountryDrawConfig,
+  type LotoDraw, type InsertLotoDraw,
+  type LotoDrawPrizeTier, type InsertLotoDrawPrizeTier,
+  type LotoDrawWinner, type LotoPayout,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
   consumerMonitoringPrefs, consumerMonitoringAlerts, consumerAccounts,
   type PortfolioTriggerSubscription, type InsertPortfolioTriggerSubscription,
@@ -455,6 +460,37 @@ export interface IStorage {
   listLotoReceiptsByMerchant(merchantId: string, limit?: number): Promise<LotoReceipt[]>;
   listLotoReceiptsByConsumer(userId: string, limit?: number): Promise<LotoReceipt[]>;
   createLotoReceipt(input: InsertLotoReceipt): Promise<LotoReceipt>;
+  // ── Loto Draw Engine (Task #283) ─────────────────────────────────────
+  getLotoCountryDrawConfig(countryCode: string): Promise<LotoCountryDrawConfig | undefined>;
+  upsertLotoCountryDrawConfig(input: InsertLotoCountryDrawConfig): Promise<LotoCountryDrawConfig>;
+  listLotoCountryDrawConfigs(): Promise<LotoCountryDrawConfig[]>;
+  getLotoDraw(id: string): Promise<LotoDraw | undefined>;
+  listLotoDraws(filter?: { countryCode?: string; limit?: number }): Promise<LotoDraw[]>;
+  listScheduledLotoDrawsDue(now: Date): Promise<LotoDraw[]>;
+  getNextLotoDrawNumber(countryCode: string): Promise<number>;
+  createLotoDrawWithTiers(input: {
+    draw: InsertLotoDraw & { serverSeed: string; serverNonce: string };
+    tiers: Omit<InsertLotoDrawPrizeTier, "drawId">[];
+  }): Promise<{ draw: LotoDraw; tiers: LotoDrawPrizeTier[] }>;
+  listLotoDrawPrizeTiers(drawId: string): Promise<LotoDrawPrizeTier[]>;
+  listLotoDrawWinners(drawId: string): Promise<LotoDrawWinner[]>;
+  getEligibleReceiptsForDraw(countryCode: string, periodStart: Date, periodEnd: Date): Promise<LotoReceipt[]>;
+  persistLotoDrawResults(input: {
+    drawId: string;
+    poolHash: string;
+    eligibleTicketCount: number;
+    totalPool: string;
+    winners: Array<{
+      drawId: string; receiptId: string; consumerUserId: string | null;
+      tier: string; prizeAmount: string; currency: string;
+      selectionRank: number; selectionHash: string;
+    }>;
+  }): Promise<{ draw: LotoDraw; winners: LotoDrawWinner[] }>;
+  recordLotoPayout(input: {
+    winnerId: string; provider: string; status: "pending" | "succeeded" | "failed" | "skipped";
+    providerRef: string | null; lastError: string | null; amount: string; currency: string;
+  }): Promise<LotoPayout>;
+  listLotoPayoutsForDraw(drawId: string): Promise<LotoPayout[]>;
   getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }): Promise<CrossProductConsent[]>;
   getCrossProductConsentById(id: string): Promise<CrossProductConsent | undefined>;
   createCrossProductConsent(input: InsertCrossProductConsent): Promise<CrossProductConsent>;
@@ -3696,6 +3732,154 @@ export class DatabaseStorage implements IStorage {
   async createLotoReceipt(input: InsertLotoReceipt): Promise<LotoReceipt> {
     const [row] = await db.insert(lotoReceipts).values(input).returning();
     return row;
+  }
+  // ── Loto Draw Engine (Task #283) ──────────────────────────────────────
+  async getLotoCountryDrawConfig(countryCode: string): Promise<LotoCountryDrawConfig | undefined> {
+    const [row] = await db.select().from(lotoCountryDrawConfig).where(eq(lotoCountryDrawConfig.countryCode, countryCode));
+    return row;
+  }
+  async upsertLotoCountryDrawConfig(input: InsertLotoCountryDrawConfig): Promise<LotoCountryDrawConfig> {
+    const existing = await this.getLotoCountryDrawConfig(input.countryCode);
+    if (existing) {
+      const [row] = await db.update(lotoCountryDrawConfig)
+        .set({ ...input, updatedAt: new Date() })
+        .where(eq(lotoCountryDrawConfig.id, existing.id))
+        .returning();
+      return row;
+    }
+    const [row] = await db.insert(lotoCountryDrawConfig).values(input).returning();
+    return row;
+  }
+  async listLotoCountryDrawConfigs(): Promise<LotoCountryDrawConfig[]> {
+    return db.select().from(lotoCountryDrawConfig).orderBy(lotoCountryDrawConfig.countryCode);
+  }
+  async getLotoDraw(id: string): Promise<LotoDraw | undefined> {
+    const [row] = await db.select().from(lotoDraws).where(eq(lotoDraws.id, id));
+    return row;
+  }
+  async listLotoDraws(filter: { countryCode?: string; limit?: number } = {}): Promise<LotoDraw[]> {
+    const limit = filter.limit ?? 25;
+    if (filter.countryCode) {
+      return db.select().from(lotoDraws).where(eq(lotoDraws.countryCode, filter.countryCode))
+        .orderBy(desc(lotoDraws.drawNumber)).limit(limit);
+    }
+    return db.select().from(lotoDraws).orderBy(desc(lotoDraws.scheduledFor)).limit(limit);
+  }
+  async listScheduledLotoDrawsDue(now: Date): Promise<LotoDraw[]> {
+    return db.select().from(lotoDraws)
+      .where(and(eq(lotoDraws.status, "scheduled"), sql`${lotoDraws.scheduledFor} <= ${now}`))
+      .orderBy(lotoDraws.scheduledFor)
+      .limit(25);
+  }
+  async getNextLotoDrawNumber(countryCode: string): Promise<number> {
+    const [row] = await db.select({ n: sql<number>`coalesce(max(${lotoDraws.drawNumber}), 0)::int` })
+      .from(lotoDraws).where(eq(lotoDraws.countryCode, countryCode));
+    return (row?.n ?? 0) + 1;
+  }
+  async createLotoDrawWithTiers(input: {
+    draw: InsertLotoDraw & { serverSeed: string; serverNonce: string };
+    tiers: Omit<InsertLotoDrawPrizeTier, "drawId">[];
+  }): Promise<{ draw: LotoDraw; tiers: LotoDrawPrizeTier[] }> {
+    return db.transaction(async (tx) => {
+      const [draw] = await tx.insert(lotoDraws).values(input.draw).returning();
+      if (input.tiers.length === 0) {
+        return { draw, tiers: [] as LotoDrawPrizeTier[] };
+      }
+      const tierRows = await tx.insert(lotoDrawPrizeTiers)
+        .values(input.tiers.map((t) => ({ ...t, drawId: draw.id })))
+        .returning();
+      return { draw, tiers: tierRows };
+    });
+  }
+  async listLotoDrawPrizeTiers(drawId: string): Promise<LotoDrawPrizeTier[]> {
+    return db.select().from(lotoDrawPrizeTiers).where(eq(lotoDrawPrizeTiers.drawId, drawId))
+      .orderBy(lotoDrawPrizeTiers.position);
+  }
+  async listLotoDrawWinners(drawId: string): Promise<LotoDrawWinner[]> {
+    return db.select().from(lotoDrawWinners).where(eq(lotoDrawWinners.drawId, drawId))
+      .orderBy(lotoDrawWinners.selectionRank);
+  }
+  async getEligibleReceiptsForDraw(countryCode: string, periodStart: Date, periodEnd: Date): Promise<LotoReceipt[]> {
+    // Deterministic order is part of the provably-fair contract: pool hash
+    // and selection ranking must be reproducible regardless of who calls
+    // this method, so always sort by primary key in the storage layer.
+    return db.select().from(lotoReceipts)
+      .innerJoin(lotoMerchants, eq(lotoReceipts.merchantId, lotoMerchants.id))
+      .where(and(
+        eq(lotoMerchants.countryCode, countryCode),
+        sql`${lotoReceipts.issuedAt} >= ${periodStart}`,
+        sql`${lotoReceipts.issuedAt} < ${periodEnd}`,
+      ))
+      .orderBy(lotoReceipts.id)
+      .then((rows) => rows.map((r: any) => r.loto_receipts));
+  }
+  async persistLotoDrawResults(input: {
+    drawId: string;
+    poolHash: string;
+    eligibleTicketCount: number;
+    totalPool: string;
+    winners: Array<{
+      drawId: string; receiptId: string; consumerUserId: string | null;
+      tier: string; prizeAmount: string; currency: string;
+      selectionRank: number; selectionHash: string;
+    }>;
+  }): Promise<{ draw: LotoDraw; winners: LotoDrawWinner[] }> {
+    return db.transaction(async (tx) => {
+      // Idempotent guard: only flip "scheduled" → "closed" with reveal data.
+      const [draw] = await tx.update(lotoDraws)
+        .set({
+          status: "closed",
+          poolHash: input.poolHash,
+          eligibleTicketCount: input.eligibleTicketCount,
+          totalPool: input.totalPool,
+          drawnAt: new Date(),
+        })
+        .where(and(eq(lotoDraws.id, input.drawId), sql`${lotoDraws.status} <> 'closed'`, sql`${lotoDraws.status} <> 'verified'`))
+        .returning();
+      if (!draw) {
+        const [existing] = await tx.select().from(lotoDraws).where(eq(lotoDraws.id, input.drawId));
+        const existingWinners = await tx.select().from(lotoDrawWinners).where(eq(lotoDrawWinners.drawId, input.drawId));
+        return { draw: existing!, winners: existingWinners };
+      }
+      let winnerRows: LotoDrawWinner[] = [];
+      if (input.winners.length > 0) {
+        winnerRows = await tx.insert(lotoDrawWinners).values(input.winners).returning();
+      }
+      return { draw, winners: winnerRows };
+    });
+  }
+  async recordLotoPayout(input: {
+    winnerId: string; provider: string; status: "pending" | "succeeded" | "failed" | "skipped";
+    providerRef: string | null; lastError: string | null; amount: string; currency: string;
+  }): Promise<LotoPayout> {
+    return db.transaction(async (tx) => {
+      const [payout] = await tx.insert(lotoPayouts).values({
+        winnerId: input.winnerId,
+        provider: input.provider,
+        status: input.status,
+        providerRef: input.providerRef,
+        lastError: input.lastError,
+        amount: input.amount,
+        currency: input.currency,
+        attemptCount: 1,
+        completedAt: input.status === "succeeded" || input.status === "skipped" ? new Date() : null,
+      }).returning();
+      await tx.update(lotoDrawWinners)
+        .set({ payoutStatus: input.status })
+        .where(eq(lotoDrawWinners.id, input.winnerId));
+      return payout;
+    });
+  }
+  async listLotoPayoutsForDraw(drawId: string): Promise<LotoPayout[]> {
+    return db.select({
+      id: lotoPayouts.id, winnerId: lotoPayouts.winnerId, provider: lotoPayouts.provider,
+      attemptCount: lotoPayouts.attemptCount, status: lotoPayouts.status,
+      providerRef: lotoPayouts.providerRef, lastError: lotoPayouts.lastError,
+      amount: lotoPayouts.amount, currency: lotoPayouts.currency,
+      createdAt: lotoPayouts.createdAt, completedAt: lotoPayouts.completedAt,
+    }).from(lotoPayouts)
+      .innerJoin(lotoDrawWinners, eq(lotoPayouts.winnerId, lotoDrawWinners.id))
+      .where(eq(lotoDrawWinners.drawId, drawId));
   }
   async getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }): Promise<CrossProductConsent[]> {
     const ors = [];

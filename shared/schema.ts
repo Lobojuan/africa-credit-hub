@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb, AnyPgColumn, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, jsonb, AnyPgColumn, serial, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -2135,6 +2135,125 @@ export const lotoReceipts = pgTable("loto_receipts", {
 export const insertLotoReceiptSchema = createInsertSchema(lotoReceipts).omit({ id: true, createdAt: true });
 export type InsertLotoReceipt = z.infer<typeof insertLotoReceiptSchema>;
 export type LotoReceipt = typeof lotoReceipts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Loto Draw Engine — provably-fair commit-reveal lottery
+// Per Task #283: anyone with the revealed seed can re-run the deterministic
+// HMAC-SHA256 selection and reproduce the published winner list.
+// ---------------------------------------------------------------------------
+
+export const lotoDrawStatusEnum = pgEnum("loto_draw_status", [
+  "scheduled", "open", "drawing", "closed", "verified",
+]);
+export const lotoPayoutStatusEnum = pgEnum("loto_payout_status", [
+  "pending", "succeeded", "failed", "skipped",
+]);
+
+// Per-country draw configuration. Cadence + tiers + payout provider are
+// driven entirely by this row — no hard-coded country defaults anywhere.
+export const lotoCountryDrawConfig = pgTable("loto_country_draw_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: text("country_code").notNull().unique(),
+  cadence: text("cadence").notNull(),                       // "weekly" | "monthly" | "annual"
+  drawTimeUtc: text("draw_time_utc").notNull(),             // "20:00"
+  defaultTiers: jsonb("default_tiers").notNull(),           // [{tier,label,prizeAmount,slotCount}]
+  payoutProvider: text("payout_provider").notNull().default("simulated"),
+  currency: text("currency").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertLotoCountryDrawConfigSchema = createInsertSchema(lotoCountryDrawConfig).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertLotoCountryDrawConfig = z.infer<typeof insertLotoCountryDrawConfigSchema>;
+export type LotoCountryDrawConfig = typeof lotoCountryDrawConfig.$inferSelect;
+
+// One row per draw. commitmentHash is published at scheduling; serverSeed +
+// serverNonce stay null until status flips to "closed" — that is the reveal.
+// poolHash is computed at draw run-time from the sorted eligible-receipt IDs.
+export const lotoDraws = pgTable("loto_draws", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: text("country_code").notNull(),
+  drawNumber: integer("draw_number").notNull(),
+  status: lotoDrawStatusEnum("status").notNull().default("scheduled"),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  // Commit-reveal RNG fields
+  commitmentHash: text("commitment_hash").notNull(),
+  serverSeed: text("server_seed"),
+  serverNonce: text("server_nonce"),
+  poolHash: text("pool_hash"),
+  eligibleTicketCount: integer("eligible_ticket_count").notNull().default(0),
+  totalPool: decimal("total_pool", { precision: 18, scale: 2 }).notNull().default("0"),
+  currency: text("currency").notNull(),
+  openedAt: timestamp("opened_at").defaultNow(),
+  drawnAt: timestamp("drawn_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // Race-safe sequence: at most one draw per (countryCode, drawNumber).
+  // Concurrent schedule calls will fail the loser instead of producing
+  // duplicate draw numbers.
+  countryDrawNumberUnique: uniqueIndex("loto_draws_country_draw_number_uq").on(table.countryCode, table.drawNumber),
+}));
+export const insertLotoDrawSchema = createInsertSchema(lotoDraws).omit({
+  id: true, createdAt: true, openedAt: true, drawnAt: true,
+  serverSeed: true, serverNonce: true, poolHash: true,
+  eligibleTicketCount: true, totalPool: true,
+});
+export type InsertLotoDraw = z.infer<typeof insertLotoDrawSchema>;
+export type LotoDraw = typeof lotoDraws.$inferSelect;
+
+// Frozen prize-tier snapshot for a specific draw. Always copied from the
+// country config at scheduling so changes to the config never alter past draws.
+export const lotoDrawPrizeTiers = pgTable("loto_draw_prize_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  drawId: varchar("draw_id").notNull().references(() => lotoDraws.id, { onDelete: "cascade" }),
+  tier: text("tier").notNull(),
+  label: text("label").notNull(),
+  prizeAmount: decimal("prize_amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  slotCount: integer("slot_count").notNull(),
+  position: integer("position").notNull().default(0),
+});
+export const insertLotoDrawPrizeTierSchema = createInsertSchema(lotoDrawPrizeTiers).omit({ id: true });
+export type InsertLotoDrawPrizeTier = z.infer<typeof insertLotoDrawPrizeTierSchema>;
+export type LotoDrawPrizeTier = typeof lotoDrawPrizeTiers.$inferSelect;
+
+// Persisted winners — one row per (draw, tier slot). selectionHash is the
+// HMAC-SHA256 value used for sort ordering; published so verifiers can
+// confirm the deterministic ranking matches.
+export const lotoDrawWinners = pgTable("loto_draw_winners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  drawId: varchar("draw_id").notNull().references(() => lotoDraws.id, { onDelete: "cascade" }),
+  receiptId: varchar("receipt_id").notNull().references(() => lotoReceipts.id),
+  consumerUserId: varchar("consumer_user_id").references(() => users.id),
+  tier: text("tier").notNull(),
+  prizeAmount: decimal("prize_amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  selectionRank: integer("selection_rank").notNull(),
+  selectionHash: text("selection_hash").notNull(),
+  payoutStatus: lotoPayoutStatusEnum("payout_status").notNull().default("pending"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export type LotoDrawWinner = typeof lotoDrawWinners.$inferSelect;
+
+// Payout attempts to mobile-money providers (currently simulated by default).
+export const lotoPayouts = pgTable("loto_payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  winnerId: varchar("winner_id").notNull().references(() => lotoDrawWinners.id, { onDelete: "cascade" }),
+  provider: text("provider").notNull(),
+  attemptCount: integer("attempt_count").notNull().default(0),
+  status: lotoPayoutStatusEnum("status").notNull().default("pending"),
+  providerRef: text("provider_ref"),
+  lastError: text("last_error"),
+  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+export type LotoPayout = typeof lotoPayouts.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Cross-Product Consents — explicit, time-bounded, revocable permissions

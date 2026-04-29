@@ -1031,6 +1031,14 @@ export async function registerRoutes(
 
   app.use("/api", apiLimiter, (req, res, next) => {
     if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control") || req.path.startsWith("/registry-sandbox") || req.path.startsWith("/consent/respond")) return next();
+    // Loto Fiscal public draw transparency endpoints — anyone can audit a closed draw.
+    // Admin Loto routes (/loto/admin/...) still require auth via per-route requireAuth.
+    if (
+      (req.method === "GET" && /^\/loto\/draws(\/[^/]+)?$/.test(req.path)) ||
+      (req.method === "POST" && /^\/loto\/draws\/[^/]+\/verify$/.test(req.path))
+    ) {
+      return next();
+    }
     requireAuth(req, res, next);
   });
 
@@ -17719,6 +17727,247 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         ticketNumber,
         ticketCount,
       });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LOTO DRAW ENGINE (Task #283) — provably-fair commit-reveal lottery
+  // ════════════════════════════════════════════════════════════════════════
+  const { generateCommitment, runDraw, verifyDraw } = await import("./services/loto-draw-engine");
+  const { listSupportedProviders } = await import("./services/loto-payout-adapter");
+
+  const tierInputSchema = z.object({
+    tier: z.string().min(1),
+    label: z.string().min(1),
+    prizeAmount: z.union([z.string(), z.number()]).transform((v) => String(v)),
+    slotCount: z.number().int().positive(),
+  });
+
+  const countryConfigSchema = z.object({
+    countryCode: z.string().min(2).max(3),
+    cadence: z.enum(["weekly", "monthly", "annual"]),
+    drawTimeUtc: z.string().regex(/^\d{2}:\d{2}$/),
+    currency: z.string().min(3).max(3),
+    payoutProvider: z.string().optional(),
+    defaultTiers: z.array(tierInputSchema).min(1),
+    active: z.boolean().optional(),
+  });
+
+  app.post("/api/loto/admin/country-config", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const parsed = countryConfigSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "invalid_payload", errors: parsed.error.flatten() });
+      const supported = listSupportedProviders();
+      const provider = parsed.data.payoutProvider ?? "simulated";
+      if (!supported.includes(provider)) {
+        return res.status(400).json({ message: `unsupported_provider`, supported });
+      }
+      const row = await storage.upsertLotoCountryDrawConfig({
+        countryCode: parsed.data.countryCode.toUpperCase(),
+        cadence: parsed.data.cadence,
+        drawTimeUtc: parsed.data.drawTimeUtc,
+        currency: parsed.data.currency.toUpperCase(),
+        payoutProvider: provider,
+        defaultTiers: parsed.data.defaultTiers,
+        active: parsed.data.active ?? true,
+      });
+      res.json({ config: row });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/loto/admin/country-config", requireAuth, requireRole("admin", "super_admin"), async (_req, res) => {
+    try {
+      const configs = await storage.listLotoCountryDrawConfigs();
+      res.json({ configs, supportedProviders: listSupportedProviders() });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // Helper used by both schedule and run-demo: builds a draw with a fresh
+  // commitment + frozen tier snapshot copied from the country config.
+  async function scheduleNewDraw(args: {
+    countryCode: string; periodStart: Date; periodEnd: Date; scheduledFor: Date;
+    tiersOverride?: { tier: string; label: string; prizeAmount: string | number; slotCount: number }[];
+    currencyOverride?: string;
+  }) {
+    const config = await storage.getLotoCountryDrawConfig(args.countryCode);
+    const tierSrc = args.tiersOverride ?? (config?.defaultTiers as any[] | undefined) ?? [];
+    if (!tierSrc.length) throw new Error("no_tiers_configured");
+    const currency = args.currencyOverride ?? config?.currency;
+    if (!currency) throw new Error("no_currency_configured");
+    const drawNumber = await storage.getNextLotoDrawNumber(args.countryCode);
+    const commitment = generateCommitment();
+    const tiers = tierSrc.map((t, idx) => ({
+      tier: t.tier,
+      label: t.label,
+      prizeAmount: String(t.prizeAmount),
+      currency,
+      slotCount: Number(t.slotCount),
+      position: idx,
+    }));
+    const result = await storage.createLotoDrawWithTiers({
+      draw: {
+        countryCode: args.countryCode,
+        drawNumber,
+        status: "scheduled",
+        periodStart: args.periodStart,
+        periodEnd: args.periodEnd,
+        scheduledFor: args.scheduledFor,
+        commitmentHash: commitment.commitmentHash,
+        currency,
+        serverSeed: commitment.serverSeed,
+        serverNonce: commitment.serverNonce,
+      } as any,
+      tiers,
+    });
+    return result;
+  }
+
+  const scheduleDrawSchema = z.object({
+    countryCode: z.string().min(2).max(3),
+    periodStart: z.string().datetime(),
+    periodEnd: z.string().datetime(),
+    scheduledFor: z.string().datetime().optional(),
+  });
+
+  app.post("/api/loto/admin/draws/schedule", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const parsed = scheduleDrawSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "invalid_payload", errors: parsed.error.flatten() });
+      const periodStart = new Date(parsed.data.periodStart);
+      const periodEnd = new Date(parsed.data.periodEnd);
+      if (periodEnd <= periodStart) return res.status(400).json({ message: "period_end_must_be_after_period_start" });
+      const scheduledFor = parsed.data.scheduledFor ? new Date(parsed.data.scheduledFor) : periodEnd;
+      const result = await scheduleNewDraw({
+        countryCode: parsed.data.countryCode.toUpperCase(),
+        periodStart, periodEnd, scheduledFor,
+      });
+      res.json({
+        draw: { ...result.draw, serverSeed: null, serverNonce: null },
+        tiers: result.tiers,
+      });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  const runDemoSchema = z.object({
+    countryCode: z.string().min(2).max(3),
+  });
+
+  app.post("/api/loto/admin/draws/run-demo", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const parsed = runDemoSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "invalid_payload", errors: parsed.error.flatten() });
+      const countryCode = parsed.data.countryCode.toUpperCase();
+      let config = await storage.getLotoCountryDrawConfig(countryCode);
+      if (!config) {
+        // Auto-seed a sensible demo config so the button works out-of-the-box.
+        const profile = getTaxAuthorityProfile(countryCode);
+        if (!profile) return res.status(400).json({ message: `loto_not_configured_for_country:${countryCode}` });
+        config = await storage.upsertLotoCountryDrawConfig({
+          countryCode,
+          cadence: "monthly",
+          drawTimeUtc: "20:00",
+          currency: profile.currency,
+          payoutProvider: "simulated",
+          active: true,
+          defaultTiers: [
+            { tier: "grand", label: "Grand Prize", prizeAmount: "25000000", slotCount: 1 },
+            { tier: "gold",  label: "Gold Prize",  prizeAmount: "5000000",  slotCount: 5 },
+            { tier: "silver",label: "Silver Prize",prizeAmount: "500000",   slotCount: 25 },
+            { tier: "bronze",label: "Bronze Prize",prizeAmount: "50000",    slotCount: 100 },
+          ] as any,
+        });
+      }
+      const now = new Date();
+      const periodStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      const periodEnd = new Date(now.getTime() + 1000);
+      const scheduled = await scheduleNewDraw({
+        countryCode, periodStart, periodEnd, scheduledFor: now,
+      });
+      const result = await runDraw(scheduled.draw.id);
+      res.json({
+        draw: result.draw,
+        winners: result.winners,
+        tiers: result.tiers,
+        verifyUrl: `/loto/draws/verify/${result.draw.id}`,
+      });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/loto/admin/draws/:id/run", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const result = await runDraw(req.params.id);
+      res.json({ draw: result.draw, winners: result.winners, tiers: result.tiers, alreadyRun: result.alreadyRun });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // PUBLIC routes — no auth required so journalists / regulators / citizens
+  // can independently audit any past draw.
+  app.get("/api/loto/draws", async (req, res) => {
+    try {
+      const countryCode = typeof req.query.country === "string" ? req.query.country.toUpperCase() : undefined;
+      const limit = Math.min(50, parseInt(String(req.query.limit ?? "10"), 10) || 10);
+      const draws = await storage.listLotoDraws({ countryCode, limit });
+      // Hide seed/nonce for any draw still in scheduled/open status (commitment phase).
+      res.json({
+        draws: draws.map((d) => ({
+          ...d,
+          serverSeed: d.status === "closed" || d.status === "verified" ? d.serverSeed : null,
+          serverNonce: d.status === "closed" || d.status === "verified" ? d.serverNonce : null,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/loto/draws/:id", async (req, res) => {
+    try {
+      const draw = await storage.getLotoDraw(req.params.id);
+      if (!draw) return res.status(404).json({ message: "not_found" });
+      const tiers = await storage.listLotoDrawPrizeTiers(draw.id);
+      const winners = await storage.listLotoDrawWinners(draw.id);
+      const isRevealed = draw.status === "closed" || draw.status === "verified";
+      res.json({
+        draw: {
+          ...draw,
+          serverSeed: isRevealed ? draw.serverSeed : null,
+          serverNonce: isRevealed ? draw.serverNonce : null,
+        },
+        tiers,
+        winners: winners.map((w) => ({
+          id: w.id,
+          tier: w.tier,
+          prizeAmount: w.prizeAmount,
+          currency: w.currency,
+          selectionRank: w.selectionRank,
+          selectionHash: w.selectionHash,
+          // Anonymise consumer/receipt for the public view; only an opaque hint.
+          receiptIdSuffix: w.receiptId.slice(-6),
+          consumerHint: w.consumerUserId ? `user_${w.consumerUserId.slice(-4)}` : "anonymous",
+          payoutStatus: w.payoutStatus,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/loto/draws/:id/verify", async (req, res) => {
+    try {
+      const report = await verifyDraw(req.params.id);
+      res.json({ report });
     } catch (e) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }

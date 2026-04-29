@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { useAuth } from "@/hooks/use-auth";
+import { ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -197,7 +200,30 @@ export function LotoLotteryExperience({
     }, 0);
   }, [receipts, totalVatMobilised]);
 
-  const nationalJackpot = 50_000_000 + Math.floor(totalTurnover * 0.05) + (myTickets * 1_250);
+  // Real backend draws — replaces hard-coded jackpot + winners feed (Task #283).
+  type RealDraw = {
+    id: string; countryCode: string; drawNumber: number; status: string;
+    scheduledFor: string; commitmentHash: string;
+    eligibleTicketCount: number; totalPool: string; currency: string; drawnAt: string | null;
+  };
+  type RealWinner = {
+    id: string; tier: string; prizeAmount: string; currency: string;
+    selectionRank: number; selectionHash: string;
+    receiptIdSuffix: string; consumerHint: string; payoutStatus: string;
+  };
+  const drawsQ = useQuery<{ draws: RealDraw[] }>({ queryKey: ["/api/loto/draws"] });
+  const draws = drawsQ.data?.draws ?? [];
+  const latestClosed = draws.find((d) => d.status === "closed" || d.status === "verified");
+  const nextScheduled = [...draws].reverse().find((d) => d.status === "scheduled" || d.status === "open");
+  const latestWinnersQ = useQuery<{ winners: RealWinner[]; tiers: any[] }>({
+    queryKey: ["/api/loto/draws", latestClosed?.id],
+    enabled: !!latestClosed?.id,
+  });
+  const realWinners = latestWinnersQ.data?.winners ?? [];
+
+  const nationalJackpot = nextScheduled
+    ? Number(nextScheduled.totalPool) || (50_000_000 + Math.floor(totalTurnover * 0.05) + (myTickets * 1_250))
+    : 50_000_000 + Math.floor(totalTurnover * 0.05) + (myTickets * 1_250);
   const animatedJackpot = useCountUp(nationalJackpot, 2000);
   const draw = useNextDrawCountdown();
   const drawDate = new Date(draw.drawAt);
@@ -213,6 +239,25 @@ export function LotoLotteryExperience({
   }, [receipts]);
 
   const winnersFeed = useMemo(() => {
+    // Prefer real winners from the latest closed draw (Task #283).
+    if (realWinners.length > 0) {
+      return realWinners.slice(0, 12).map((w, i) => {
+        const hint = (w.consumerHint || "Winner").trim();
+        const parts = hint.split(/\s+/);
+        const first = parts[0] || "Winner";
+        const last = parts[1] || w.receiptIdSuffix.toUpperCase();
+        return {
+          first,
+          last,
+          city: w.tier.toUpperCase(),
+          prize: Number(w.prizeAmount) || 0,
+          tierLabel: w.tier === "jackpot" ? "Jackpot" : w.tier === "second" ? "Second Prize" : w.tier === "third" ? "Third Prize" : "Consolation",
+          ago: i === 0 ? "just now" : `${i * 3} min`,
+          initials: (first[0] + (last[0] || "•")).toUpperCase(),
+        };
+      });
+    }
+    // Pre-launch fallback (no real draws yet).
     const tiers = [
       { amt: 5_000, label: "Daily Win" },
       { amt: 50_000, label: "Bronze Prize" },
@@ -228,7 +273,7 @@ export function LotoLotteryExperience({
       ago: ["just now", "2 min", "5 min", "11 min", "18 min", "27 min", "38 min", "52 min", "1 h", "2 h", "3 h", "5 h"][i],
       initials: (n.first[0] + n.last[0]).toUpperCase(),
     }));
-  }, []);
+  }, [realWinners]);
 
   const leaderboard = useMemo(() => {
     return SEED_NAMES.slice(0, 10).map((n, i) => {
@@ -263,6 +308,8 @@ export function LotoLotteryExperience({
         .marquee-track { animation: marquee-scroll 38s linear infinite; }
         .marquee-track:hover { animation-play-state: paused; }
       `}</style>
+
+      <RealDrawsBanner draws={draws} latestClosed={latestClosed} nextScheduled={nextScheduled} />
 
       <div className="relative overflow-hidden rounded-3xl jackpot-hero" data-testid="card-jackpot-hero">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-emerald-950 to-amber-950" />
@@ -863,5 +910,67 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete, onWatc
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface RealDrawsBannerProps {
+  draws: Array<{ id: string; countryCode: string; drawNumber: number; status: string; scheduledFor: string; commitmentHash: string; eligibleTicketCount: number; totalPool: string; currency: string; drawnAt: string | null }>;
+  latestClosed: any;
+  nextScheduled: any;
+}
+
+function RealDrawsBanner({ draws, latestClosed, nextScheduled }: RealDrawsBannerProps) {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const isSuperAdmin = user?.role === "super_admin";
+  const runDemo = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/loto/admin/draws/run-demo", {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/draws"] });
+    },
+  });
+
+  if (draws.length === 0 && !isSuperAdmin) return null;
+
+  return (
+    <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/60 dark:bg-emerald-950/30 p-4 flex flex-wrap items-center gap-3" data-testid="real-draws-banner">
+      <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+      <div className="flex-1 min-w-[180px]">
+        <div className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-300 font-semibold">
+          Provably-fair draw engine
+        </div>
+        <div className="text-sm text-foreground">
+          {latestClosed ? (
+            <>Last draw <strong>#{latestClosed.drawNumber}</strong> ({latestClosed.countryCode}) closed — {latestClosed.eligibleTicketCount.toLocaleString()} eligible tickets, pool {latestClosed.currency} {Number(latestClosed.totalPool).toLocaleString()}.</>
+          ) : nextScheduled ? (
+            <>Next draw <strong>#{nextScheduled.drawNumber}</strong> ({nextScheduled.countryCode}) scheduled for {new Date(nextScheduled.scheduledFor).toLocaleString()}.</>
+          ) : (
+            <>No draws yet — schedule one from the Loto admin workspace.</>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {latestClosed && (
+          <Link href={`/loto/draws/verify/${latestClosed.id}`}>
+            <Button size="sm" variant="outline" data-testid="button-verify-latest-draw">
+              Verify last draw
+            </Button>
+          </Link>
+        )}
+        {isSuperAdmin && (
+          <Button size="sm" onClick={() => runDemo.mutate()} disabled={runDemo.isPending} data-testid="button-run-demo-draw">
+            {runDemo.isPending ? "Running…" : "Run Demo Draw Now"}
+          </Button>
+        )}
+      </div>
+      {runDemo.data?.draw?.id && (
+        <div className="w-full text-xs text-emerald-700 dark:text-emerald-300 font-mono">
+          Demo draw {runDemo.data.draw.id} ran successfully — commitment {String(runDemo.data.draw.commitmentHash).slice(0, 16)}…
+        </div>
+      )}
+    </div>
   );
 }

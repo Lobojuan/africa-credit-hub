@@ -666,6 +666,9 @@ process.stderr.write = function (...args: any[]) {
     const { startExchangeRateScheduler } = await import("./exchange-rate-scheduler");
     startExchangeRateScheduler();
 
+    const { startLotoDrawScheduler } = await import("./services/loto-draw-scheduler");
+    startLotoDrawScheduler();
+
     const { startAnchorScheduler } = await import("./blockchain-anchor");
     startAnchorScheduler(6);
 

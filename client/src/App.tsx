@@ -56,6 +56,7 @@ const MasterLandingPage = lazy(() => import("@/pages/master-landing"));
 const CreditLandingPage = lazy(() => import("@/pages/credit-landing"));
 const CollateralLandingPage = lazy(() => import("@/pages/collateral-landing"));
 const LotoLandingPage = lazy(() => import("@/pages/loto-landing"));
+const LotoVerifyDrawPage = lazy(() => import("@/pages/loto-verify-draw"));
 const ProductChooserPage = lazy(() => import("@/pages/product-chooser"));
 const ChooseWorkspacePage = lazy(() => import("@/pages/choose-workspace"));
 const CountrySelectionPage = lazy(() => import("@/pages/country-selection"));
@@ -247,6 +248,7 @@ function Router() {
         <Route path="/collateral-registry" component={CollateralRegistryPage} />
         <Route path="/registry-authority-portal" component={RegistryAuthorityPortalPage} />
         <Route path="/loto-fiscal" component={LotoWorkspacePage} />
+        <Route path="/loto/draws/verify/:drawId" component={LotoVerifyDrawPage} />
         <Route path="/data-sharing" component={DataSharingPage} />
         <Route path="/merchant-credit-profile/:merchantId" component={MerchantCreditProfilePage} />
         <Route path="/financial-inclusion" component={FinancialInclusionPage} />
