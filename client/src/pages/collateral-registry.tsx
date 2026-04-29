@@ -475,24 +475,69 @@ function ShareVerificationLinkDialog({ item }: { item: CollateralRegistryItem })
   );
 }
 
-// ─── Borrower Credit Snapshot Dialog (Cross-Product Bridge) ──────────────────
+// ─── Borrower Credit Snapshot (Cross-Product Bridge) ─────────────────────────
 
 interface CreditSnapshotResponse {
-  summary: { score: number | null; activeAccounts: number; totalDebt: string };
+  summary: {
+    score: number | null;
+    activeAccounts: number;
+    totalDebt: string;
+    recentInquiries: number;
+    recentInquiryWindowDays: number;
+  };
   consent: { id: string; expiresAt: string };
+}
+
+class CreditSnapshotError extends Error {
+  code: "no_consent" | "consent_expired" | "consent_revoked" | "wrong_purpose" | "subject_not_found" | "forbidden" | "unknown";
+  status: number;
+  constructor(code: CreditSnapshotError["code"], status: number, message: string) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+function useBorrowerCreditSnapshot(borrowerId: string | undefined, enabled: boolean) {
+  return useQuery<CreditSnapshotResponse, CreditSnapshotError>({
+    queryKey: ["/api/cross-product/credit-snapshot", borrowerId],
+    queryFn: async () => {
+      const r = await fetch(`/api/cross-product/credit-snapshot/${borrowerId}`, { credentials: "include" });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({} as { error?: string; code?: string; message?: string }));
+        const known = ["no_consent", "consent_expired", "consent_revoked", "wrong_purpose", "subject_not_found"] as const;
+        const rawCode = typeof body.error === "string" ? body.error : typeof body.code === "string" ? body.code : "";
+        let code: CreditSnapshotError["code"];
+        if ((known as readonly string[]).includes(rawCode)) {
+          code = rawCode as CreditSnapshotError["code"];
+        } else if (r.status === 403) {
+          code = "forbidden";
+        } else {
+          code = "unknown";
+        }
+        throw new CreditSnapshotError(code, r.status, body.message || "Failed to load snapshot");
+      }
+      return r.json();
+    },
+    enabled: enabled && !!borrowerId,
+    retry: false,
+  });
+}
+
+function isConsentMissingError(error: CreditSnapshotError | null | undefined): boolean {
+  if (!error) return false;
+  return (
+    error.code === "no_consent" ||
+    error.code === "consent_expired" ||
+    error.code === "consent_revoked" ||
+    error.code === "wrong_purpose" ||
+    error.code === "subject_not_found"
+  );
 }
 
 function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: string; itemId: string }) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading, error } = useQuery<CreditSnapshotResponse>({
-    queryKey: ["/api/cross-product/credit-snapshot", borrowerId],
-    queryFn: () => fetch(`/api/cross-product/credit-snapshot/${borrowerId}`, { credentials: "include" }).then(async r => {
-      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed to load snapshot");
-      return r.json();
-    }),
-    enabled: open,
-    retry: false,
-  });
+  const { data, isLoading, error } = useBorrowerCreditSnapshot(borrowerId, open);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -514,18 +559,32 @@ function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: stri
           </DialogTitle>
         </DialogHeader>
         {isLoading && <Skeleton className="h-32 w-full" />}
-        {error && (
+        {error && isConsentMissingError(error) && (
           <div className="text-sm text-muted-foreground space-y-2" data-testid="text-snapshot-no-consent">
             <div className="font-medium text-amber-700 dark:text-amber-400">No active cross-product consent</div>
             <div>The borrower has not granted the Collateral Registry permission to view their Credit Bureau profile. Request consent to surface this snapshot here.</div>
           </div>
         )}
+        {error && !isConsentMissingError(error) && (
+          <div className="text-sm text-muted-foreground space-y-2" data-testid="text-snapshot-error">
+            <div className="font-medium text-destructive">Couldn't load the credit snapshot</div>
+            <div>
+              {error.code === "forbidden"
+                ? "Your role doesn't have access to the cross-product gateway."
+                : "The cross-product gateway returned an unexpected error. Please try again later."}
+            </div>
+          </div>
+        )}
         {data && (
           <div className="space-y-3 text-sm" data-testid="content-credit-snapshot">
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <div className="rounded-md border p-2"><div className="text-xs text-muted-foreground">Score</div><div className="text-lg font-semibold" data-testid="text-snapshot-score">{data.summary.score ?? "—"}</div></div>
               <div className="rounded-md border p-2"><div className="text-xs text-muted-foreground">Active accts</div><div className="text-lg font-semibold" data-testid="text-snapshot-accounts">{data.summary.activeAccounts}</div></div>
               <div className="rounded-md border p-2"><div className="text-xs text-muted-foreground">Total debt</div><div className="text-lg font-semibold" data-testid="text-snapshot-debt">{data.summary.totalDebt}</div></div>
+              <div className="rounded-md border p-2">
+                <div className="text-xs text-muted-foreground">Inquiries · {data.summary.recentInquiryWindowDays}d</div>
+                <div className="text-lg font-semibold" data-testid="text-snapshot-inquiries">{data.summary.recentInquiries}</div>
+              </div>
             </div>
             <div className="text-xs text-muted-foreground border-t pt-2">
               Served via cross-product gateway · consent <code className="font-mono">{data.consent.id.slice(0, 8)}…</code> · access logged.
@@ -534,6 +593,112 @@ function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: stri
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function BorrowerCreditSnapshotPanel({
+  borrowerId,
+  enabled,
+}: {
+  borrowerId: string | undefined;
+  enabled: boolean;
+}) {
+  const { data, isLoading, error } = useBorrowerCreditSnapshot(borrowerId, enabled);
+
+  return (
+    <div data-testid="panel-borrower-credit-snapshot">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1.5">
+        <ArrowLeftRight className="w-3.5 h-3.5 text-primary" />
+        Borrower Credit Snapshot
+        <Badge variant="outline" className="text-[10px] font-normal ml-auto">
+          <Shield className="w-3 h-3 mr-1" /> Bridge
+        </Badge>
+      </p>
+
+      {!borrowerId && (
+        <div
+          className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground"
+          data-testid="snapshot-panel-no-borrower"
+        >
+          This registration is not linked to a registered borrower in the Credit Bureau, so no credit snapshot is available.
+        </div>
+      )}
+
+      {borrowerId && isLoading && (
+        <div className="space-y-2" data-testid="snapshot-panel-loading">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-3 w-2/3" />
+        </div>
+      )}
+
+      {borrowerId && !isLoading && error && isConsentMissingError(error) && (
+        <div
+          className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300 space-y-1"
+          data-testid="snapshot-panel-no-consent"
+        >
+          <div className="font-medium">No active cross-product consent</div>
+          <div className="text-amber-700/90 dark:text-amber-400/90">
+            The borrower has not granted the Collateral Registry permission to view their Credit Bureau profile. Once consent is captured, the headline score and recent inquiries will appear here.
+          </div>
+        </div>
+      )}
+
+      {borrowerId && !isLoading && error && !isConsentMissingError(error) && (
+        <div
+          className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive space-y-1"
+          data-testid="snapshot-panel-error"
+        >
+          <div className="font-medium">
+            {error.code === "forbidden"
+              ? "You don't have permission to view this snapshot"
+              : "Couldn't load the credit snapshot"}
+          </div>
+          <div className="text-destructive/80">
+            {error.code === "forbidden"
+              ? "Only lenders, regulators, and admins can request a borrower credit snapshot through the cross-product gateway."
+              : "Something went wrong while contacting the cross-product gateway. Please try again, and if it keeps failing, ask an administrator to check the gateway logs."}
+          </div>
+        </div>
+      )}
+
+      {borrowerId && !isLoading && !error && data && (
+        <div className="space-y-2" data-testid="snapshot-panel-content">
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-md border p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Score</div>
+              <div className="text-lg font-semibold leading-tight" data-testid="panel-snapshot-score">
+                {data.summary.score ?? "—"}
+              </div>
+            </div>
+            <div className="rounded-md border p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Active accts</div>
+              <div className="text-lg font-semibold leading-tight" data-testid="panel-snapshot-accounts">
+                {data.summary.activeAccounts}
+              </div>
+            </div>
+            <div className="rounded-md border p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total debt</div>
+              <div className="text-lg font-semibold leading-tight" data-testid="panel-snapshot-debt">
+                {data.summary.totalDebt}
+              </div>
+            </div>
+            <div className="rounded-md border p-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Inquiries · {data.summary.recentInquiryWindowDays}d
+              </div>
+              <div className="text-lg font-semibold leading-tight" data-testid="panel-snapshot-inquiries">
+                {data.summary.recentInquiries}
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug" data-testid="snapshot-panel-footer">
+            Served via the cross-product gateway · consent{" "}
+            <code className="font-mono">{data.consent.id.slice(0, 8)}…</code>{" "}
+            · access logged as <code className="font-mono">cross_product_access</code>.
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -2303,6 +2468,11 @@ function CertificateDetailSheet({
               <DetailRow label="Grantor ID" value={item.borrowerId} />
             </div>
           </div>
+
+          <Separator />
+
+          {/* Borrower Credit Snapshot (Cross-Product Bridge) */}
+          <BorrowerCreditSnapshotPanel borrowerId={item.borrowerId} enabled={open} />
 
           <Separator />
 

@@ -25,6 +25,7 @@ import {
   collateralItems,
   creditAccounts,
   creditScoreHistory,
+  creditInquiries,
   type CrossProductConsent,
   type LotoMerchant,
   type LotoReceipt,
@@ -452,7 +453,16 @@ export const gateway = {
   async getCreditSnapshotForBorrower(
     borrowerId: string,
     callerCtx: { userId?: string; ip?: string },
-  ): Promise<{ summary: { score: number | null; activeAccounts: number; totalDebt: string }; consent: CrossProductConsent }> {
+  ): Promise<{
+    summary: {
+      score: number | null;
+      activeAccounts: number;
+      totalDebt: string;
+      recentInquiries: number;
+      recentInquiryWindowDays: number;
+    };
+    consent: CrossProductConsent;
+  }> {
     const ctx: GatewayCallContext = {
       callerProduct: "collateral", targetProduct: "credit", purpose: "collateral_credit_view",
       userId: callerCtx.userId, ip: callerCtx.ip,
@@ -464,8 +474,21 @@ export const gateway = {
       .orderBy(desc(creditScoreHistory.createdAt)).limit(1);
     const activeAccounts = accounts.filter(a => a.status !== "closed").length;
     const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0).toFixed(2);
+    const recentWindowDays = 90;
+    const since = new Date(Date.now() - recentWindowDays * 24 * 60 * 60 * 1000);
+    const recentInquiriesRows = await db.select().from(creditInquiries)
+      .where(and(eq(creditInquiries.borrowerId, borrowerId), gte(creditInquiries.createdAt, since)));
     await logAccess(ctx, consent, { borrowerId }, "ok");
-    return { summary: { score: latestScore?.score ?? null, activeAccounts, totalDebt }, consent };
+    return {
+      summary: {
+        score: latestScore?.score ?? null,
+        activeAccounts,
+        totalDebt,
+        recentInquiries: recentInquiriesRows.length,
+        recentInquiryWindowDays: recentWindowDays,
+      },
+      consent,
+    };
   },
 
   /** Internal helper exposed for tests and routes — does NOT bypass consent. */
