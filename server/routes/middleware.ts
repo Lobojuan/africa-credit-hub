@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import rateLimit from "express-rate-limit";
-import { storage } from "../storage";
+import { storage, GLOBAL_SCOPE } from "../storage";
 import { getActiveCountryName } from "../country-mode";
 import { pool, db } from "../db";
 import { sql, and, or, eq } from "drizzle-orm";
@@ -247,8 +247,9 @@ export function getCountryFilter(req?: Request): string | undefined {
   if (req?.session?.userRole === "super_admin") {
     if (hasExplicit) return explicitCountry;
     if (req.session.viewingCountry && req.session.viewingCountry !== "global") return req.session.viewingCountry;
-    // Global/unset super_admin view: fall back to the platform's active country
-    return getActiveCountryName() || undefined;
+    // Global/unset super_admin view: return GLOBAL_SCOPE so storage layer
+    // skips country filtering and returns all records across all countries.
+    return GLOBAL_SCOPE;
   }
   if (req?.session?.userCountry) {
     return req.session.userCountry;

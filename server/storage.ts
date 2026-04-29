@@ -586,7 +586,7 @@ export interface OverdueAssignmentDetail {
 
 export class DatabaseStorage implements IStorage {
   async getOrganizations(country?: string): Promise<Organization[]> {
-    if (country) {
+    if (country && !isGlobalScope(country)) {
       return db.select().from(organizations).where(eq(organizations.country, country)).orderBy(desc(organizations.createdAt));
     }
     return db.select().from(organizations).orderBy(desc(organizations.createdAt));
@@ -977,7 +977,7 @@ export class DatabaseStorage implements IStorage {
 
   async getLinkClustersForBorrower(borrowerId: string, country?: string): Promise<LinkCluster[]> {
     const filters: any[] = [sql`${borrowerId} = ANY(${linkClusters.memberBorrowerIds})`];
-    if (country) filters.push(eq(linkClusters.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(linkClusters.country, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(linkClusters).where(where).orderBy(desc(linkClusters.memberCount)).limit(100);
   }
@@ -1215,7 +1215,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getAllCreditAccounts");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(creditAccounts.createdAt, cutoff), gte(creditAccounts.updatedAt, cutoff)));
@@ -1275,7 +1275,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getAllCreditInquiries");
     const filters: any[] = [];
     if (organizationId) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
-    if (country) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    if (country && !isGlobalScope(country)) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(creditInquiries).where(where).orderBy(desc(creditInquiries.createdAt)).limit(limit).offset(offset);
   }
@@ -1289,7 +1289,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getAuditLogs");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(auditLogs.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(auditLogs, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(auditLogs, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(auditLogs).where(where).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
   }
@@ -1314,7 +1314,7 @@ export class DatabaseStorage implements IStorage {
   async getAuditStats(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(auditLogs.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(auditLogs, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(auditLogs, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const todayStart = new Date();
@@ -1592,7 +1592,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getPendingApprovals");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(pendingApprovals.organizationId, organizationId));
-    if (country) filters.push(eq(pendingApprovals.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(pendingApprovals.country, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(gte(pendingApprovals.createdAt, cutoff));
@@ -1625,7 +1625,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getDisputes");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(disputes.organizationId, organizationId));
-    if (country) filters.push(eq(disputes.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(disputes.country, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(disputes.createdAt, cutoff), gte(disputes.updatedAt, cutoff)));
@@ -1735,7 +1735,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getAllCourtJudgments");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(courtJudgments.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(courtJudgments, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(courtJudgments, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(gte(courtJudgments.createdAt, cutoff));
@@ -1757,7 +1757,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getAllConsentRecords");
     const filters: any[] = [];
     if (organizationId) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
-    if (country) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    if (country && !isGlobalScope(country)) filters.push(sql`${consentRecords.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(consentRecords).where(where).orderBy(desc(consentRecords.createdAt)).limit(200);
   }
@@ -1798,7 +1798,7 @@ export class DatabaseStorage implements IStorage {
     const offset = (page - 1) * safeLimit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(institutions.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(institutions, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(institutions, country));
     const whereClause = filters.length > 1 ? and(...filters) : filters[0];
     const [totalResult] = await db.select({ value: count() }).from(institutions).where(whereClause);
     const data = await db.select().from(institutions).where(whereClause).orderBy(desc(institutions.createdAt)).limit(safeLimit).offset(offset);
@@ -1833,7 +1833,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getBillingRecords");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(billingRecords.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(billingRecords, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(billingRecords, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(gte(billingRecords.createdAt, cutoff));
@@ -1869,7 +1869,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getCreditReportLogs");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditReportLogs.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(creditReportLogs, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditReportLogs, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     return db.select().from(creditReportLogs).where(where).orderBy(desc(creditReportLogs.createdAt)).limit(200);
   }
@@ -2089,7 +2089,7 @@ export class DatabaseStorage implements IStorage {
   async getPortfolioAggregates(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [[totals], statusBreakdown, typeBreakdown, institutionCount] = await Promise.all([
@@ -2134,7 +2134,7 @@ export class DatabaseStorage implements IStorage {
   async getBorrowerAggregates(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowers.organizationId, organizationId));
-    if (country) filters.push(eq(borrowers.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(borrowers.country, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [totals] = await db.select({
@@ -2170,7 +2170,7 @@ export class DatabaseStorage implements IStorage {
   async getConcentrationData(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [totalRow] = await db.select({
@@ -2277,7 +2277,7 @@ export class DatabaseStorage implements IStorage {
 
   async getRetentionPolicies(country?: string): Promise<RetentionPolicy[]> {
     requireCountryScope(country, "getRetentionPolicies");
-    if (country) {
+    if (country && !isGlobalScope(country)) {
       return db.select().from(retentionPolicies).where(eq(retentionPolicies.country, country)).orderBy(retentionPolicies.country);
     }
     return db.select().from(retentionPolicies).orderBy(retentionPolicies.country);
@@ -2370,7 +2370,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getBorrowerAlerts");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(borrowerAlerts.organizationId, organizationId));
-    if (country) filters.push(this.countryOrgFilter(borrowerAlerts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(borrowerAlerts, country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(gte(borrowerAlerts.createdAt, cutoff));
@@ -2454,7 +2454,7 @@ export class DatabaseStorage implements IStorage {
     const offset = (page - 1) * limit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoProfiles.organizationId, organizationId));
-    if (country) filters.push(eq(telcoProfiles.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(telcoProfiles.country, country));
     if (options?.search) filters.push(ilike(telcoProfiles.msisdn, `%${options.search}%`));
     if (options?.provider) filters.push(eq(telcoProfiles.provider, options.provider as any));
     if (options?.kycLevel) filters.push(eq(telcoProfiles.kycLevel, options.kycLevel as any));
@@ -2498,7 +2498,7 @@ export class DatabaseStorage implements IStorage {
     const needsJoin = !!(options?.search || options?.provider);
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoCreditScores.organizationId, organizationId));
-    if (country) filters.push(eq(telcoCreditScores.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(telcoCreditScores.country, country));
     if (options?.riskTier) filters.push(eq(telcoCreditScores.riskTier, options.riskTier as any));
     if (options?.approved === "true") filters.push(eq(telcoCreditScores.approvalRecommendation, true));
     if (options?.approved === "false") filters.push(eq(telcoCreditScores.approvalRecommendation, false));
@@ -2640,7 +2640,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getAllTelcoProfileIds");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoProfiles.organizationId, organizationId));
-    if (country) filters.push(eq(telcoProfiles.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(telcoProfiles.country, country));
     if (kycLevel) filters.push(eq(telcoProfiles.kycLevel, kycLevel as any));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const rows = await db.select({ id: telcoProfiles.id }).from(telcoProfiles).where(where);
@@ -2703,7 +2703,7 @@ export class DatabaseStorage implements IStorage {
     const offset = (page - 1) * limit;
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoLoans.organizationId, organizationId));
-    if (country) filters.push(eq(telcoLoans.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(telcoLoans.country, country));
     if (options?.status) filters.push(eq(telcoLoans.status, options.status as any));
     if (options?.profileId) filters.push(eq(telcoLoans.profileId, options.profileId));
     if (options?.profileIds && options.profileIds.length > 0) filters.push(inArray(telcoLoans.profileId, options.profileIds));
@@ -2743,7 +2743,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getTelcoLoanPortfolioStats");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoLoans.organizationId, organizationId));
-    if (country) filters.push(eq(telcoLoans.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(telcoLoans.country, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const rows = await db.select({
@@ -2820,7 +2820,7 @@ export class DatabaseStorage implements IStorage {
     requireCountryScope(country, "getTelcoConsentSummary");
     const filters: any[] = [];
     if (organizationId) filters.push(eq(telcoConsentEvents.organizationId, organizationId));
-    if (country) filters.push(eq(telcoConsentEvents.country, country));
+    if (country && !isGlobalScope(country)) filters.push(eq(telcoConsentEvents.country, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
     const rows = await db.select({ action: telcoConsentEvents.action, method: telcoConsentEvents.method }).from(telcoConsentEvents).where(where);
     let active = 0, revoked = 0;
