@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  computeCommitmentHash,
   generateCommitment,
   sha256Hex,
   hmacSha256Hex,
@@ -8,12 +9,32 @@ import {
 } from "../services/loto-draw-engine";
 
 describe("Loto draw engine — provably-fair RNG", () => {
-  it("generateCommitment produces a deterministic SHA-256(seed:nonce)", () => {
+  it("generateCommitment returns a fresh seed/nonce pair", () => {
     const c = generateCommitment();
     expect(c.serverSeed).toMatch(/^[0-9a-f]{64}$/);
     expect(c.serverNonce).toMatch(/^[0-9a-f]{32}$/);
-    expect(c.commitmentHash).toMatch(/^[0-9a-f]{64}$/);
-    expect(c.commitmentHash).toBe(sha256Hex(`${c.serverSeed}:${c.serverNonce}`));
+    expect(generateCommitment().serverSeed).not.toBe(c.serverSeed);
+  });
+
+  it("computeCommitmentHash binds seed/nonce to drawId+periodEnd+countryCode", () => {
+    const seed = generateCommitment();
+    const drawId = "11111111-1111-1111-1111-111111111111";
+    const periodEndIso = "2026-05-01T00:00:00.000Z";
+    const h = computeCommitmentHash({ ...seed, drawId, periodEndIso, countryCode: "SN" });
+    expect(h).toMatch(/^[0-9a-f]{64}$/);
+    // Same inputs → same hash
+    expect(h).toBe(computeCommitmentHash({ ...seed, drawId, periodEndIso, countryCode: "SN" }));
+    // Different drawId → different hash (commitment cannot be transplanted)
+    expect(h).not.toBe(computeCommitmentHash({
+      ...seed,
+      drawId: "22222222-2222-2222-2222-222222222222",
+      periodEndIso,
+      countryCode: "SN",
+    }));
+    // Different country → different hash
+    expect(h).not.toBe(computeCommitmentHash({ ...seed, drawId, periodEndIso, countryCode: "CI" }));
+    // Direct hash matches the documented formula
+    expect(h).toBe(sha256Hex(`${seed.serverSeed}:${seed.serverNonce}:${drawId}:${periodEndIso}:SN`));
   });
 
   it("hmacSha256Hex is deterministic and produces 64-char hex", () => {
@@ -73,8 +94,17 @@ describe("Loto draw engine — provably-fair RNG", () => {
   });
 
   it("commitment is broken when seed or nonce is tampered with", () => {
-    const c = generateCommitment();
-    const wrong = sha256Hex(`${c.serverSeed}tampered:${c.serverNonce}`);
-    expect(wrong).not.toBe(c.commitmentHash);
+    const seed = generateCommitment();
+    const drawId = "33333333-3333-3333-3333-333333333333";
+    const periodEndIso = "2026-06-01T00:00:00.000Z";
+    const original = computeCommitmentHash({ ...seed, drawId, periodEndIso, countryCode: "SN" });
+    const tampered = computeCommitmentHash({
+      serverSeed: seed.serverSeed + "X",
+      serverNonce: seed.serverNonce,
+      drawId,
+      periodEndIso,
+      countryCode: "SN",
+    });
+    expect(tampered).not.toBe(original);
   });
 });

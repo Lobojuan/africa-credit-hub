@@ -3821,9 +3821,13 @@ export class DatabaseStorage implements IStorage {
         sql`${lotoReceipts.issuedAt} < ${periodEnd}`,
         sql`${lotoReceipts.consumerUserId} IS NOT NULL`,
         eq(users.status, "active"),
+        // Phone-verified consumer requirement (Task #283): the consumer must
+        // have completed phone-OTP verification — prevents fake-account
+        // farming and matches the published eligibility contract.
+        sql`${users.phoneVerifiedAt} IS NOT NULL`,
       ))
       .orderBy(lotoReceipts.id)
-      .then((rows) => rows.map((r: any) => r.loto_receipts));
+      .then((rows: { loto_receipts: LotoReceipt }[]) => rows.map((r) => r.loto_receipts));
   }
   async persistLotoDrawResults(input: {
     drawId: string;

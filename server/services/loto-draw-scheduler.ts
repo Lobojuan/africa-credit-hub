@@ -15,20 +15,28 @@
  * every schedule + execution event without trusting the engine code.
  */
 
+import { randomUUID } from "crypto";
 import { storage } from "../storage";
-import { generateCommitment, runDraw } from "./loto-draw-engine";
-import type { LotoCountryDrawConfig, LotoDraw } from "@shared/schema";
+import { computeCommitmentHash, generateCommitment, runDraw } from "./loto-draw-engine";
+import type { InsertAuditLog, LotoCountryDrawConfig, LotoDraw } from "@shared/schema";
 
 const TICK_MS = 60_000;
 let timer: NodeJS.Timeout | null = null;
 let busy = false;
+
+interface DefaultTier {
+  tier: string;
+  label: string;
+  prizeAmount: string | number;
+  slotCount: number;
+}
 
 interface ScheduleArgs {
   countryCode: string;
   periodStart: Date;
   periodEnd: Date;
   scheduledFor: Date;
-  tiersOverride?: { tier: string; label: string; prizeAmount: string | number; slotCount: number }[];
+  tiersOverride?: DefaultTier[];
   currencyOverride?: string;
 }
 
@@ -39,12 +47,26 @@ interface ScheduleArgs {
  */
 export async function scheduleNewDraw(args: ScheduleArgs) {
   const config = await storage.getLotoCountryDrawConfig(args.countryCode);
-  const tierSrc = args.tiersOverride ?? (config?.defaultTiers as any[] | undefined) ?? [];
+  const tierSrc: DefaultTier[] =
+    args.tiersOverride ?? ((config?.defaultTiers as DefaultTier[] | undefined) ?? []);
   if (!tierSrc.length) throw new Error("no_tiers_configured");
   const currency = args.currencyOverride ?? config?.currency;
   if (!currency) throw new Error("no_currency_configured");
   const drawNumber = await storage.getNextLotoDrawNumber(args.countryCode);
-  const commitment = generateCommitment();
+
+  // Pre-generate the draw id so the commitment can be bound to drawId +
+  // periodEnd + countryCode (Task #283 spec). This makes the published
+  // commitment one-time-use against this specific draw and nothing else.
+  const drawId = randomUUID();
+  const seed = generateCommitment();
+  const commitmentHash = computeCommitmentHash({
+    serverSeed: seed.serverSeed,
+    serverNonce: seed.serverNonce,
+    drawId,
+    periodEndIso: args.periodEnd.toISOString(),
+    countryCode: args.countryCode,
+  });
+
   const tiers = tierSrc.map((t, idx) => ({
     tier: t.tier,
     label: t.label,
@@ -55,38 +77,40 @@ export async function scheduleNewDraw(args: ScheduleArgs) {
   }));
   const result = await storage.createLotoDrawWithTiers({
     draw: {
+      id: drawId,
       countryCode: args.countryCode,
       drawNumber,
       status: "scheduled",
       periodStart: args.periodStart,
       periodEnd: args.periodEnd,
       scheduledFor: args.scheduledFor,
-      commitmentHash: commitment.commitmentHash,
+      commitmentHash,
       currency,
-      serverSeed: commitment.serverSeed,
-      serverNonce: commitment.serverNonce,
-    } as any,
+      serverSeed: seed.serverSeed,
+      serverNonce: seed.serverNonce,
+    },
     tiers,
   });
   // Audit trail (Task #283 transparency requirement). Failure here must not
   // block the draw — audit storage hiccups should never lose a scheduled draw.
   try {
-    await storage.createAuditLog({
+    const auditLog: InsertAuditLog = {
       action: "loto_draw_scheduled",
       entity: "loto_draw",
       entityId: result.draw.id,
-      userId: null as any,
+      userId: null,
       details: JSON.stringify({
         countryCode: args.countryCode,
         drawNumber,
         scheduledFor: args.scheduledFor.toISOString(),
-        commitmentHash: commitment.commitmentHash,
+        commitmentHash,
         tiers: tiers.length,
       }),
-      ipAddress: null as any,
-      userAgent: null as any,
-      organizationId: null as any,
-    } as any);
+      ipAddress: null,
+      userAgent: null,
+      organizationId: null,
+    };
+    await storage.createAuditLog(auditLog);
   } catch { /* swallow */ }
   return result;
 }

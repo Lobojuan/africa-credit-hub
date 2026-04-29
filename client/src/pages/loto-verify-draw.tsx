@@ -115,8 +115,14 @@ export default function LotoVerifyDrawPage() {
         throw new Error("No eligible receipt IDs were published — cannot recompute the draw.");
       }
 
-      // 1. Recompute commitment hash from the revealed seed/nonce.
-      const commitmentRecomputed = await sha256Hex(`${draw.serverSeed}:${draw.serverNonce}`);
+      // 1. Recompute commitment hash from the revealed seed/nonce, BOUND to
+      //    the specific draw context (drawId + periodEnd + countryCode) — same
+      //    formula the server uses (computeCommitmentHash). Binding prevents
+      //    operators from re-using a single commitment across multiple draws.
+      const periodEndIso = new Date(draw.periodEnd).toISOString();
+      const commitmentRecomputed = await sha256Hex(
+        `${draw.serverSeed}:${draw.serverNonce}:${draw.id}:${periodEndIso}:${draw.countryCode}`,
+      );
       const commitmentValid = commitmentRecomputed === draw.commitmentHash;
 
       // 2. Recompute pool hash from the published eligible-ID list (sorted).

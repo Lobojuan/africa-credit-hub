@@ -3,38 +3,49 @@
  *
  * Algorithm (verifiable by anyone):
  *   1. At schedule time we generate a random 256-bit serverSeed and 128-bit
- *      serverNonce. We publish ONLY commitmentHash = SHA-256(serverSeed || ":" || serverNonce).
+ *      serverNonce. We publish ONLY:
+ *        commitmentHash = SHA-256(serverSeed ":" serverNonce ":" drawId
+ *                                 ":" periodEnd-ISO ":" countryCode)
+ *      Binding the commitment to drawId + periodEnd + countryCode means
+ *      a published commitment can only ever apply to one specific draw —
+ *      operators cannot retroactively shop a seed against a different draw.
  *   2. At draw time we snapshot the eligible receipts (deterministically
  *      sorted by id) and compute poolHash = SHA-256(receiptIds joined by '\n').
  *   3. We reveal serverSeed + serverNonce. For every eligible receipt we
- *      compute selectionHash = HMAC-SHA256(serverSeed || ":" || serverNonce,
- *                                          drawNumber || ":" || receiptId).
+ *      compute selectionHash = HMAC-SHA256(serverSeed ":" serverNonce,
+ *                                          drawNumber ":" receiptId).
  *      Receipts are then sorted ascending by selectionHash; the top
  *      (sum of slotCounts) receipts win, allocated to tiers in published
  *      `position` order, top-tier first.
- *   4. Verifiers re-run steps 2 and 3 with the published seed/nonce and
+ *   4. Verifiers re-run steps 1, 2 and 3 with the published seed/nonce and
  *      eligible receipt list and confirm the resulting winner list matches.
  */
 
 import { createHash, createHmac, randomBytes } from "crypto";
 import { storage } from "../storage";
 import type {
+  InsertAuditLog,
   LotoDraw, LotoDrawPrizeTier, LotoDrawWinner, LotoReceipt,
 } from "@shared/schema";
 import { adapterFor } from "./loto-payout-adapter";
 
-async function writeAudit(action: string, draw: { id: string; countryCode: string; drawNumber: number }, details: Record<string, unknown>) {
+async function writeAudit(
+  action: string,
+  draw: { id: string; countryCode: string; drawNumber: number },
+  details: Record<string, unknown>,
+): Promise<void> {
   try {
-    await storage.createAuditLog({
+    const log: InsertAuditLog = {
       action,
       entity: "loto_draw",
       entityId: draw.id,
-      userId: null as any,
+      userId: null,
       details: JSON.stringify({ countryCode: draw.countryCode, drawNumber: draw.drawNumber, ...details }),
-      ipAddress: null as any,
-      userAgent: null as any,
-      organizationId: null as any,
-    } as any);
+      ipAddress: null,
+      userAgent: null,
+      organizationId: null,
+    };
+    await storage.createAuditLog(log);
   } catch {
     // Audit log failure must never abort a draw run.
   }
@@ -46,11 +57,33 @@ export interface Commitment {
   commitmentHash: string;
 }
 
-export function generateCommitment(): Commitment {
-  const serverSeed = randomBytes(32).toString("hex");
-  const serverNonce = randomBytes(16).toString("hex");
-  const commitmentHash = sha256Hex(`${serverSeed}:${serverNonce}`);
-  return { serverSeed, serverNonce, commitmentHash };
+/**
+ * Compute the commitment hash binding a (seed, nonce) pair to a specific
+ * draw context. Exposed so the public verification page can recompute and
+ * compare against the published value.
+ */
+export function computeCommitmentHash(input: {
+  serverSeed: string;
+  serverNonce: string;
+  drawId: string;
+  periodEndIso: string;
+  countryCode: string;
+}): string {
+  return sha256Hex(
+    `${input.serverSeed}:${input.serverNonce}:${input.drawId}:${input.periodEndIso}:${input.countryCode}`,
+  );
+}
+
+/**
+ * Generate a fresh seed/nonce pair. The commitmentHash is *not* computed
+ * here because we don't yet know the drawId/periodEnd at this point —
+ * callers compute it via computeCommitmentHash() once those are decided.
+ */
+export function generateCommitment(): { serverSeed: string; serverNonce: string } {
+  return {
+    serverSeed: randomBytes(32).toString("hex"),
+    serverNonce: randomBytes(16).toString("hex"),
+  };
 }
 
 export function sha256Hex(input: string): string {
@@ -115,7 +148,13 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
   }
 
   // Verify the commitment is consistent with the stored seed before reveal.
-  const recomputedCommitment = sha256Hex(`${existing.serverSeed}:${existing.serverNonce}`);
+  const recomputedCommitment = computeCommitmentHash({
+    serverSeed: existing.serverSeed,
+    serverNonce: existing.serverNonce,
+    drawId: existing.id,
+    periodEndIso: existing.periodEnd.toISOString(),
+    countryCode: existing.countryCode,
+  });
   if (recomputedCommitment !== existing.commitmentHash) {
     throw new Error(`Draw ${drawId} commitment hash mismatch — refusing to run.`);
   }
@@ -269,7 +308,13 @@ export async function verifyDraw(drawId: string): Promise<VerificationReport> {
     };
   }
 
-  const commitmentRecomputed = sha256Hex(`${draw.serverSeed}:${draw.serverNonce}`);
+  const commitmentRecomputed = computeCommitmentHash({
+    serverSeed: draw.serverSeed,
+    serverNonce: draw.serverNonce,
+    drawId: draw.id,
+    periodEndIso: draw.periodEnd.toISOString(),
+    countryCode: draw.countryCode,
+  });
   const commitmentValid = commitmentRecomputed === draw.commitmentHash;
 
   const eligible = await storage.getEligibleReceiptsForDraw(
