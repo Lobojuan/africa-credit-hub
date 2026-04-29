@@ -671,6 +671,109 @@ async function run() {
     await db.delete(users).where(eq(users.id, bareUser.id));
   });
 
+  await test("getConsumerSpendingFeatures with revoked consent throws consent_revoked and writes denied audit row", async () => {
+    // Fresh user with a single, ACTIVE consent that we then revoke through
+    // the storage path the routes use. This isolates the test from any
+    // other consent rows so requireConsent's "latest" lookup deterministically
+    // returns the revoked row.
+    const [revokedUser] = await db.insert(users).values({
+      username: TAG + "-spend-revoked",
+      password: "x",
+      fullName: "Revoked Spender",
+      email: TAG + "-spend-rev@example.com",
+    }).returning();
+    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    const [grant] = await db.insert(crossProductConsents).values({
+      userId: revokedUser.id,
+      sourceProduct: "loto",
+      targetProduct: "credit",
+      purpose: "consumer_spending_credit",
+      status: "active",
+      expiresAt: future,
+    }).returning();
+    await storage.revokeCrossProductConsent(grant.id, "test_revoke_consumer_spending");
+
+    let caught: any = null;
+    try {
+      await gateway.getConsumerSpendingFeatures(revokedUser.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected throw with revoked consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "consent_revoked") throw new Error(`expected code=consent_revoked, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, revokedUser.id)));
+    const denied = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "consumer_spending_credit" && d.reason === "consent_revoked";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!))[0];
+    if (!denied) throw new Error("no denied audit row with reason=consent_revoked");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (denied.entity !== "loto") throw new Error(`expected denied audit entity=loto, got ${denied.entity}`);
+    if (dd.subjectKind !== "consumer") throw new Error(`expected subjectKind=consumer, got ${dd.subjectKind}`);
+    if (dd.consentId !== grant.id) throw new Error(`expected consentId=${grant.id}, got ${dd.consentId}`);
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, revokedUser.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.userId, revokedUser.id));
+    await db.delete(users).where(eq(users.id, revokedUser.id));
+  });
+
+  await test("getConsumerSpendingFeatures with expired consent throws consent_expired and writes denied audit row", async () => {
+    const [expiredUser] = await db.insert(users).values({
+      username: TAG + "-spend-expired",
+      password: "x",
+      fullName: "Expired Spender",
+      email: TAG + "-spend-exp@example.com",
+    }).returning();
+    // expiresAt in the past, status still "active" so revoked-check doesn't
+    // fire first — exercises requireConsent's expiry branch directly.
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [grant] = await db.insert(crossProductConsents).values({
+      userId: expiredUser.id,
+      sourceProduct: "loto",
+      targetProduct: "credit",
+      purpose: "consumer_spending_credit",
+      status: "active",
+      expiresAt: past,
+    }).returning();
+
+    let caught: any = null;
+    try {
+      await gateway.getConsumerSpendingFeatures(expiredUser.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected throw with expired consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "consent_expired") throw new Error(`expected code=consent_expired, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, expiredUser.id)));
+    const denied = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "consumer_spending_credit" && d.reason === "consent_expired";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!))[0];
+    if (!denied) throw new Error("no denied audit row with reason=consent_expired");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (denied.entity !== "loto") throw new Error(`expected denied audit entity=loto, got ${denied.entity}`);
+    if (dd.subjectKind !== "consumer") throw new Error(`expected subjectKind=consumer, got ${dd.subjectKind}`);
+    if (dd.consentId !== grant.id) throw new Error(`expected consentId=${grant.id}, got ${dd.consentId}`);
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, expiredUser.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.userId, expiredUser.id));
+    await db.delete(users).where(eq(users.id, expiredUser.id));
+  });
+
   // Cleanup consumer spending fixtures.
   await db.delete(auditLogs).where(eq(auditLogs.entityId, spendUser.id));
   await db.delete(crossProductConsents).where(eq(crossProductConsents.userId, spendUser.id));
@@ -788,6 +891,106 @@ async function run() {
 
     await db.delete(auditLogs).where(eq(auditLogs.entityId, bareBorrower.id));
     await db.delete(borrowers).where(eq(borrowers.id, bareBorrower.id));
+  });
+
+  await test("getCollateralForBorrower with revoked consent throws consent_revoked and writes denied audit row", async () => {
+    // Fresh borrower with a single ACTIVE credit_collateral_view consent
+    // we then revoke. requireConsent's "latest" lookup returns this row,
+    // exercising the revoked branch deterministically.
+    const [revBorrower] = await db.insert(borrowers).values({
+      type: "individual",
+      firstName: "RevokedColl",
+      lastName: TAG,
+      nationalId: TAG + "-COLL-REVOKED-NID",
+    }).returning();
+    const future = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+    const [grant] = await db.insert(crossProductConsents).values({
+      borrowerId: revBorrower.id,
+      sourceProduct: "collateral",
+      targetProduct: "credit",
+      purpose: "credit_collateral_view",
+      status: "active",
+      expiresAt: future,
+    }).returning();
+    await storage.revokeCrossProductConsent(grant.id, "test_revoke_collateral");
+
+    let caught: any = null;
+    try {
+      await gateway.getCollateralForBorrower(revBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected throw with revoked consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "consent_revoked") throw new Error(`expected code=consent_revoked, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, revBorrower.id)));
+    const denied = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "credit_collateral_view" && d.reason === "consent_revoked";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!))[0];
+    if (!denied) throw new Error("no denied audit row with reason=consent_revoked");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (denied.entity !== "collateral") throw new Error(`expected denied audit entity=collateral, got ${denied.entity}`);
+    if (dd.subjectKind !== "borrower") throw new Error(`expected subjectKind=borrower, got ${dd.subjectKind}`);
+    if (dd.consentId !== grant.id) throw new Error(`expected consentId=${grant.id}, got ${dd.consentId}`);
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, revBorrower.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.borrowerId, revBorrower.id));
+    await db.delete(borrowers).where(eq(borrowers.id, revBorrower.id));
+  });
+
+  await test("getCollateralForBorrower with expired consent throws consent_expired and writes denied audit row", async () => {
+    const [expBorrower] = await db.insert(borrowers).values({
+      type: "individual",
+      firstName: "ExpiredColl",
+      lastName: TAG,
+      nationalId: TAG + "-COLL-EXPIRED-NID",
+    }).returning();
+    const past = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const [grant] = await db.insert(crossProductConsents).values({
+      borrowerId: expBorrower.id,
+      sourceProduct: "collateral",
+      targetProduct: "credit",
+      purpose: "credit_collateral_view",
+      status: "active",
+      expiresAt: past,
+    }).returning();
+
+    let caught: any = null;
+    try {
+      await gateway.getCollateralForBorrower(expBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected throw with expired consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "consent_expired") throw new Error(`expected code=consent_expired, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, expBorrower.id)));
+    const denied = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "credit_collateral_view" && d.reason === "consent_expired";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!))[0];
+    if (!denied) throw new Error("no denied audit row with reason=consent_expired");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (denied.entity !== "collateral") throw new Error(`expected denied audit entity=collateral, got ${denied.entity}`);
+    if (dd.subjectKind !== "borrower") throw new Error(`expected subjectKind=borrower, got ${dd.subjectKind}`);
+    if (dd.consentId !== grant.id) throw new Error(`expected consentId=${grant.id}, got ${dd.consentId}`);
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, expBorrower.id));
+    await db.delete(crossProductConsents).where(eq(crossProductConsents.borrowerId, expBorrower.id));
+    await db.delete(borrowers).where(eq(borrowers.id, expBorrower.id));
   });
 
   // Cleanup collateral fixtures.
