@@ -9,7 +9,7 @@ import { db } from "../db";
 import { eq, and, like } from "drizzle-orm";
 import {
   lotoMerchants, lotoReceipts, crossProductConsents, auditLogs, borrowers,
-  alternativeData,
+  alternativeData, creditInquiries, users,
 } from "@shared/schema";
 import {
   gateway, computeReceiptFeatures, CrossProductError,
@@ -342,6 +342,152 @@ async function run() {
     await db.update(lotoMerchants).set({ borrowerId: null }).where(eq(lotoMerchants.id, merchant.id));
     await db.delete(borrowers).where(eq(borrowers.id, borrower.id));
   });
+
+  // ─── Credit snapshot: recentInquiries + recentInquiryWindowDays + audit/consent ──
+  // Setup shared between the next two tests: a borrower with a known mix of
+  // recent (within 90 days) and old (outside the window) credit inquiries,
+  // plus an active collateral_credit_view consent.
+  const [snapUser] = await db.insert(users).values({
+    username: TAG + "-snap-user",
+    password: "x",
+    fullName: "Snapshot Test User",
+    email: TAG + "-snap@example.com",
+  }).returning();
+  const [snapBorrower] = await db.insert(borrowers).values({
+    type: "individual",
+    firstName: "Snap",
+    lastName: TAG,
+    nationalId: TAG + "-SNAP-NID",
+  }).returning();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  // 3 recent inquiries (1, 30, 89 days ago — all within the 90-day window)
+  for (const days of [1, 30, 89]) {
+    await db.insert(creditInquiries).values({
+      borrowerId: snapBorrower.id,
+      inquiredBy: snapUser.id,
+      purpose: "new_credit",
+      institution: "test_bank",
+      consentProvided: true,
+      isSoftPull: true,
+      createdAt: new Date(nowMs - days * dayMs),
+    });
+  }
+  // 2 old inquiries (120 and 365 days ago — outside the 90-day window)
+  for (const days of [120, 365]) {
+    await db.insert(creditInquiries).values({
+      borrowerId: snapBorrower.id,
+      inquiredBy: snapUser.id,
+      purpose: "review",
+      institution: "test_bank",
+      consentProvided: true,
+      isSoftPull: true,
+      createdAt: new Date(nowMs - days * dayMs),
+    });
+  }
+  // Consent: collateral (caller) -> credit (origin), purpose=collateral_credit_view.
+  // Mirrors the convention used by gateway.getCreditSnapshotForBorrower:
+  // requireConsent looks up sourceProduct=ctx.targetProduct=credit,
+  // targetProduct=ctx.callerProduct=collateral.
+  const snapExpires = new Date(nowMs + 90 * dayMs);
+  await db.insert(crossProductConsents).values({
+    borrowerId: snapBorrower.id,
+    sourceProduct: "credit",
+    targetProduct: "collateral",
+    purpose: "collateral_credit_view",
+    status: "active",
+    expiresAt: snapExpires,
+  });
+
+  await test("getCreditSnapshotForBorrower returns recent-inquiry count and 90-day window", async () => {
+    const result = await gateway.getCreditSnapshotForBorrower(snapBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    if (result.summary.recentInquiries !== 3) {
+      throw new Error(`expected recentInquiries=3, got ${result.summary.recentInquiries}`);
+    }
+    if (result.summary.recentInquiryWindowDays !== 90) {
+      throw new Error(`expected recentInquiryWindowDays=90, got ${result.summary.recentInquiryWindowDays}`);
+    }
+  });
+
+  await test("getCreditSnapshotForBorrower writes cross_product_access audit row with outcome=ok", async () => {
+    // Self-contained: invoke the gateway here so the assertion does not depend
+    // on a row written by an earlier test, then assert against the *most
+    // recent* audit row for this borrower/action to avoid false positives
+    // from incidental prior rows.
+    const before = Date.now();
+    await gateway.getCreditSnapshotForBorrower(snapBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, snapBorrower.id)));
+    const okLogs = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "ok" && d.purpose === "collateral_credit_view";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!));
+    const okRow = okLogs[0];
+    if (!okRow) throw new Error("no ok audit row written for getCreditSnapshotForBorrower");
+    if (new Date(okRow.createdAt!).getTime() < before - 5000) {
+      throw new Error("most recent ok audit row predates this test invocation");
+    }
+    const d = JSON.parse(okRow.details ?? "{}");
+    // entity = data origin (credit); sourceProduct/targetProduct mirror the
+    // gateway's convention (source = data origin, target = caller).
+    if (okRow.entity !== "credit") throw new Error(`expected audit entity=credit, got ${okRow.entity}`);
+    if (d.sourceProduct !== "credit") throw new Error(`expected sourceProduct=credit, got ${d.sourceProduct}`);
+    if (d.targetProduct !== "collateral") throw new Error(`expected targetProduct=collateral, got ${d.targetProduct}`);
+    if (d.subjectKind !== "borrower") throw new Error(`expected subjectKind=borrower, got ${d.subjectKind}`);
+  });
+
+  await test("getCreditSnapshotForBorrower without consent throws no_consent and writes denied audit row", async () => {
+    // Fresh borrower with no consent on file at all.
+    const [bareBorrower] = await db.insert(borrowers).values({
+      type: "individual",
+      firstName: "NoConsent",
+      lastName: TAG,
+      nationalId: TAG + "-NOCONSENT-NID",
+    }).returning();
+
+    let caught: any = null;
+    try {
+      await gateway.getCreditSnapshotForBorrower(bareBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected getCreditSnapshotForBorrower to throw without consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "no_consent") throw new Error(`expected code=no_consent, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, bareBorrower.id)));
+    // Bare borrower is freshly created above, so the most recent (and only)
+    // matching row is the one we expect.
+    const deniedLogs = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "collateral_credit_view";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!));
+    const denied = deniedLogs[0];
+    if (!denied) throw new Error("no denied audit row written for no-consent snapshot call");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (dd.reason !== "no_consent") throw new Error(`expected denied reason=no_consent, got ${dd.reason}`);
+    if (denied.entity !== "credit") throw new Error(`expected denied audit entity=credit, got ${denied.entity}`);
+
+    // Cleanup the bare borrower + its denied audit row.
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, bareBorrower.id));
+    await db.delete(borrowers).where(eq(borrowers.id, bareBorrower.id));
+  });
+
+  // Cleanup snapshot test fixtures.
+  await db.delete(auditLogs).where(eq(auditLogs.entityId, snapBorrower.id));
+  await db.delete(crossProductConsents).where(eq(crossProductConsents.borrowerId, snapBorrower.id));
+  await db.delete(creditInquiries).where(eq(creditInquiries.borrowerId, snapBorrower.id));
+  await db.delete(borrowers).where(eq(borrowers.id, snapBorrower.id));
+  await db.delete(users).where(eq(users.id, snapUser.id));
 
   await cleanup(merchant.id);
 
