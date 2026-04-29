@@ -1,5 +1,6 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -550,94 +551,6 @@ function inquiryPurposeBadgeClass(purpose: string): string {
   return INQUIRY_PURPOSE_TONE[purpose] ?? "border-border bg-muted text-muted-foreground";
 }
 
-/**
- * Shared row used by both the in-sheet snapshot panel and the popup dialog so
- * the highlight treatment for competing-lender inquiries stays consistent.
- *
- * Highlights at a glance:
- *  - purpose=new_credit from a different org than the viewer => "Competing"
- *    badge + amber/red row tint + flame icon.
- *  - inquiries older than 30 days => muted, faded out, marked "older".
- *  - every row carries a colored purpose pill so the panel is scannable
- *    without reading each line.
- */
-function InquiryRow({
-  inq,
-  viewerOrgId,
-  variant,
-}: {
-  inq: CreditSnapshotInquiry;
-  viewerOrgId: string | null;
-  variant: "dialog" | "panel";
-}) {
-  const competing = isCompetingInquiry(inq, viewerOrgId);
-  const stale = isStaleInquiry(inq);
-  const testIdPrefix = variant === "dialog" ? "" : "panel-";
-  const textSize = variant === "dialog" ? "text-xs" : "text-[11px]";
-
-  const rowTone = competing
-    ? "border-l-2 border-l-amber-500 bg-amber-50/70 dark:bg-amber-950/30"
-    : "";
-  // De-emphasize anything older than the 30-day competing-window so the
-  // freshest pulls stand out — even competing rows fade once they're stale,
-  // because the actionable signal is "another lender just pulled credit".
-  const fade = stale ? "opacity-60" : "";
-
-  return (
-    <li
-      key={inq.id}
-      className={`flex items-start justify-between gap-2 p-2 ${textSize} ${rowTone} ${fade}`.trim()}
-      data-testid={`${testIdPrefix}row-snapshot-inquiry-${inq.id}`}
-      data-competing={competing ? "true" : "false"}
-      data-stale={stale ? "true" : "false"}
-    >
-      <div className="min-w-0 space-y-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span
-            className={`font-medium ${variant === "panel" ? "leading-tight" : ""} truncate`}
-            data-testid={`${testIdPrefix}text-snapshot-inquiry-institution-${inq.id}`}
-          >
-            {inq.institution}
-          </span>
-          {competing && (
-            <Badge
-              variant="outline"
-              className="shrink-0 h-4 px-1 text-[9px] uppercase tracking-wide font-semibold border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
-              data-testid={`${testIdPrefix}badge-snapshot-inquiry-competing-${inq.id}`}
-              title="Another lender pulled this borrower's credit for a new facility"
-            >
-              <Flame className="w-2.5 h-2.5 mr-0.5" />
-              Competing
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span
-            className={`inline-flex items-center rounded-sm border px-1 py-px text-[9px] font-medium uppercase tracking-wide ${inquiryPurposeBadgeClass(inq.purpose)}`}
-            data-testid={`${testIdPrefix}text-snapshot-inquiry-purpose-${inq.id}`}
-          >
-            {formatInquiryPurpose(inq.purpose)}
-          </span>
-          {stale && (
-            <span
-              className="text-[9px] uppercase tracking-wide text-muted-foreground"
-              data-testid={`${testIdPrefix}text-snapshot-inquiry-stale-${inq.id}`}
-            >
-              · older
-            </span>
-          )}
-        </div>
-      </div>
-      <div
-        className={`text-muted-foreground shrink-0 ${variant === "panel" ? "leading-tight" : ""}`}
-        data-testid={`${testIdPrefix}text-snapshot-inquiry-date-${inq.id}`}
-      >
-        {inq.inquiredAt ? format(new Date(inq.inquiredAt), "dd MMM yyyy") : "—"}
-      </div>
-    </li>
-  );
-}
-
 class CreditSnapshotError extends Error {
   code: "no_consent" | "consent_expired" | "consent_revoked" | "wrong_purpose" | "subject_not_found" | "forbidden" | "unknown";
   status: number;
@@ -685,9 +598,172 @@ function isConsentMissingError(error: CreditSnapshotError | null | undefined): b
   );
 }
 
+/**
+ * Lender click-through from a "recent inquiry" row in the Borrower Credit
+ * Snapshot panel/dialog to the borrower's full bureau profile. The POST
+ * routes through the cross-product gateway so the click is consent-checked
+ * AND audited (action=inquiry_clickthrough) before navigation, keeping
+ * access logged the same way the snapshot read itself is logged.
+ */
+function useInquiryClickThrough(onNavigate?: () => void) {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  return useMutation<
+    { borrowerId: string; profilePath: string; inquiry: CreditSnapshotInquiry },
+    Error,
+    { borrowerId: string; inquiryId: string }
+  >({
+    mutationFn: async ({ borrowerId, inquiryId }) => {
+      const res = await apiRequest(
+        "POST",
+        `/api/cross-product/credit-snapshot/${borrowerId}/inquiries/${inquiryId}/profile-link`,
+      );
+      return (await res.json()) as {
+        borrowerId: string;
+        profilePath: string;
+        inquiry: CreditSnapshotInquiry;
+      };
+    },
+    onSuccess: (data) => {
+      onNavigate?.();
+      navigate(data.profilePath);
+    },
+    onError: (err) => {
+      toast({
+        variant: "destructive",
+        title: "Couldn't open the bureau profile",
+        description:
+          err?.message ||
+          "The cross-product gateway rejected the click-through. Please try again, or ask an administrator if it keeps failing.",
+      });
+    },
+  });
+}
+
+interface SnapshotInquiryRowProps {
+  borrowerId: string | undefined;
+  inquiry: CreditSnapshotInquiry;
+  viewerOrgId: string | null;
+  variant: "panel" | "dialog";
+  onNavigate?: () => void;
+}
+
+/**
+ * Shared row used by both the in-sheet snapshot panel and the popup dialog.
+ * The whole row is a click-through button that routes through the
+ * cross-product gateway (consent-checked + audited as
+ * `inquiry_clickthrough`) to the borrower's full bureau profile.
+ *
+ * Highlights at a glance:
+ *  - purpose=new_credit from a different org than the viewer => "Competing"
+ *    badge + amber row tint + flame icon.
+ *  - inquiries older than 30 days => muted, faded out, marked "older".
+ *  - every row carries a colored purpose pill so the panel is scannable
+ *    without reading each line.
+ */
+function SnapshotInquiryRow({ borrowerId, inquiry, viewerOrgId, variant, onNavigate }: SnapshotInquiryRowProps) {
+  const clickThrough = useInquiryClickThrough(onNavigate);
+  const isPanel = variant === "panel";
+  const idPrefix = isPanel ? "panel-" : "";
+  const isPending = clickThrough.isPending;
+  const canClick = !!borrowerId && !isPending;
+
+  const competing = isCompetingInquiry(inquiry, viewerOrgId);
+  const stale = isStaleInquiry(inquiry);
+
+  const rowTone = competing
+    ? "border-l-2 border-l-amber-500 bg-amber-50/70 dark:bg-amber-950/30"
+    : "";
+  // De-emphasize anything older than the 30-day competing-window so the
+  // freshest pulls stand out — even competing rows fade once they're stale,
+  // because the actionable signal is "another lender just pulled credit".
+  const fade = stale ? "opacity-60" : "";
+
+  const handleClick = () => {
+    if (!borrowerId) return;
+    clickThrough.mutate({ borrowerId, inquiryId: inquiry.id });
+  };
+
+  return (
+    <li
+      className={`p-0 ${rowTone} ${fade}`.trim()}
+      data-testid={`${idPrefix}row-snapshot-inquiry-${inquiry.id}`}
+      data-competing={competing ? "true" : "false"}
+      data-stale={stale ? "true" : "false"}
+    >
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={!canClick}
+        title="View this borrower's full bureau profile"
+        aria-label={`View bureau profile for inquiry by ${inquiry.institution}`}
+        className={
+          "w-full flex items-start justify-between gap-2 p-2 text-left " +
+          (isPanel ? "text-[11px]" : "text-xs") +
+          " transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
+        }
+        data-testid={`${idPrefix}btn-snapshot-inquiry-view-${inquiry.id}`}
+      >
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={`font-medium truncate${isPanel ? " leading-tight" : ""}`}
+              data-testid={`${idPrefix}text-snapshot-inquiry-institution-${inquiry.id}`}
+            >
+              {inquiry.institution}
+            </span>
+            {competing && (
+              <Badge
+                variant="outline"
+                className="shrink-0 h-4 px-1 text-[9px] uppercase tracking-wide font-semibold border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                data-testid={`${idPrefix}badge-snapshot-inquiry-competing-${inquiry.id}`}
+                title="Another lender pulled this borrower's credit for a new facility"
+              >
+                <Flame className="w-2.5 h-2.5 mr-0.5" />
+                Competing
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`inline-flex items-center rounded-sm border px-1 py-px text-[9px] font-medium uppercase tracking-wide ${inquiryPurposeBadgeClass(inquiry.purpose)}`}
+              data-testid={`${idPrefix}text-snapshot-inquiry-purpose-${inquiry.id}`}
+            >
+              {formatInquiryPurpose(inquiry.purpose)}
+            </span>
+            {stale && (
+              <span
+                className="text-[9px] uppercase tracking-wide text-muted-foreground"
+                data-testid={`${idPrefix}text-snapshot-inquiry-stale-${inquiry.id}`}
+              >
+                · older
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span
+            className={
+              "text-muted-foreground" + (isPanel ? " leading-tight" : "")
+            }
+            data-testid={`${idPrefix}text-snapshot-inquiry-date-${inquiry.id}`}
+          >
+            {inquiry.inquiredAt ? format(new Date(inquiry.inquiredAt), "dd MMM yyyy") : "—"}
+          </span>
+          <ExternalLink
+            className="w-3 h-3 text-primary/70"
+            aria-hidden="true"
+          />
+        </div>
+      </button>
+    </li>
+  );
+}
+
 function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: string; itemId: string }) {
   const [open, setOpen] = useState(false);
   const { data, isLoading, error } = useBorrowerCreditSnapshot(borrowerId, open);
+  const closeDialog = () => setOpen(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -750,18 +826,20 @@ function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: stri
               ) : (
                 <ul className="rounded-md border divide-y">
                   {data.recentInquiries.map(inq => (
-                    <InquiryRow
+                    <SnapshotInquiryRow
                       key={inq.id}
-                      inq={inq}
+                      borrowerId={borrowerId}
+                      inquiry={inq}
                       viewerOrgId={data.viewerOrganizationId}
                       variant="dialog"
+                      onNavigate={closeDialog}
                     />
                   ))}
                 </ul>
               )}
             </div>
             <div className="text-xs text-muted-foreground border-t pt-2">
-              Served via cross-product gateway · consent <code className="font-mono">{data.consent.id.slice(0, 8)}…</code> · access logged.
+              Served via cross-product gateway · consent <code className="font-mono">{data.consent.id.slice(0, 8)}…</code> · access logged. Click an inquiry to open the borrower's full bureau profile.
             </div>
           </div>
         )}
@@ -879,9 +957,10 @@ function BorrowerCreditSnapshotPanel({
             ) : (
               <ul className="rounded-md border divide-y">
                 {data.recentInquiries.map(inq => (
-                  <InquiryRow
+                  <SnapshotInquiryRow
                     key={inq.id}
-                    inq={inq}
+                    borrowerId={borrowerId}
+                    inquiry={inq}
                     viewerOrgId={data.viewerOrganizationId}
                     variant="panel"
                   />
@@ -892,7 +971,7 @@ function BorrowerCreditSnapshotPanel({
           <p className="text-[11px] text-muted-foreground leading-snug" data-testid="snapshot-panel-footer">
             Served via the cross-product gateway · consent{" "}
             <code className="font-mono">{data.consent.id.slice(0, 8)}…</code>{" "}
-            · access logged as <code className="font-mono">cross_product_access</code>.
+            · access logged as <code className="font-mono">cross_product_access</code>. Click any inquiry to open the borrower's full bureau profile (audited as <code className="font-mono">inquiry_clickthrough</code>).
           </p>
         </div>
       )}

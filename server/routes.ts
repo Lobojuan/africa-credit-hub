@@ -17271,6 +17271,24 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e) { handleGatewayError(res, e); }
   });
 
+  // Lender click-through bridge: lenders investigating a recent inquiry from
+  // the Borrower Credit Snapshot panel can resolve a deep link to the full
+  // bureau profile for that borrower. Same role gate as the snapshot read,
+  // routed through the cross-product gateway so the click is consent-checked
+  // and audited (action=inquiry_clickthrough) before navigation.
+  app.post("/api/cross-product/credit-snapshot/:borrowerId/inquiries/:inquiryId/profile-link", requireAuth, async (req, res) => {
+    try {
+      const auth = requireLenderOnly(req);
+      if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
+      const result = await gateway.getInquiryProfileLink(
+        req.params.borrowerId,
+        req.params.inquiryId,
+        gatewayCallerCtx(req),
+      );
+      res.json(result);
+    } catch (e) { handleGatewayError(res, e); }
+  });
+
   app.get("/api/cross-product/bureau-badge/:merchantId", requireAuth, async (req, res) => {
     try {
       const auth = await requireMerchantAccess(req, req.params.merchantId);

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -341,6 +341,37 @@ export default function BorrowerDetailPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  // Cross-product deep link: when navigated here from the Borrower Credit
+  // Snapshot panel in the Collateral Registry (/borrowers/:id?inquiry=:id),
+  // scroll the matching credit-inquiry row into view and visually highlight
+  // it for ~2.4s so lenders land in the right context immediately.
+  const focusedInquiryId = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const sp = new URLSearchParams(window.location.search);
+    return sp.get("inquiry");
+  }, []);
+  const [highlightInquiry, setHighlightInquiry] = useState<string | null>(
+    focusedInquiryId,
+  );
+  useEffect(() => {
+    if (!focusedInquiryId) return;
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    let highlightTimer: ReturnType<typeof setTimeout> | null = null;
+    // Wait for the credit report query to render the inquiry list.
+    scrollTimer = setTimeout(() => {
+      const el = document.getElementById(`inquiry-${focusedInquiryId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        (el as HTMLElement).focus?.({ preventScroll: true });
+      }
+    }, 600);
+    highlightTimer = setTimeout(() => setHighlightInquiry(null), 3200);
+    return () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      if (highlightTimer) clearTimeout(highlightTimer);
+    };
+  }, [focusedInquiryId]);
   const [aiRisk, setAiRisk] = useState<any>(null);
   const [aiExpanded, setAiExpanded] = useState(false);
   const [expandedAccountId, setExpandedAccountId] = useState<string | null>(null);
@@ -1860,22 +1891,41 @@ export default function BorrowerDetailPage() {
         <CardContent className="px-0 pb-0">
           {inquiries.length > 0 ? (
             <div className="divide-y">
-              {inquiries.map((inquiry) => (
-                <div key={inquiry.id} className="flex items-center justify-between gap-3 px-5 py-3">
-                  <div>
-                    <p className="text-sm font-medium">{inquiry.institution}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{inquiry.purpose.replace(/_/g, " ")}</p>
+              {inquiries.map((inquiry) => {
+                const isHighlighted = highlightInquiry === inquiry.id;
+                return (
+                  <div
+                    key={inquiry.id}
+                    id={`inquiry-${inquiry.id}`}
+                    tabIndex={isHighlighted ? -1 : undefined}
+                    className={
+                      "flex items-center justify-between gap-3 px-5 py-3 transition-colors scroll-mt-24 " +
+                      (isHighlighted
+                        ? "bg-primary/10 ring-2 ring-primary/40 rounded-md outline-none"
+                        : "")
+                    }
+                    data-testid={`row-credit-inquiry-${inquiry.id}`}
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{inquiry.institution}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{inquiry.purpose.replace(/_/g, " ")}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isHighlighted && (
+                        <Badge variant="outline" className="text-[10px] border-primary/40 text-primary" data-testid={`badge-inquiry-from-collateral-${inquiry.id}`}>
+                          From Collateral Registry
+                        </Badge>
+                      )}
+                      <Badge variant={inquiry.consentProvided ? "default" : "destructive"} className="text-[10px]">
+                        {inquiry.consentProvided ? t("borrowerDetail.consentGiven") : t("borrowerDetail.noConsent")}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {inquiry.createdAt ? new Date(inquiry.createdAt).toLocaleDateString("en-GB") : ""}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={inquiry.consentProvided ? "default" : "destructive"} className="text-[10px]">
-                      {inquiry.consentProvided ? t("borrowerDetail.consentGiven") : t("borrowerDetail.noConsent")}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {inquiry.createdAt ? new Date(inquiry.createdAt).toLocaleDateString("en-GB") : ""}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="p-8 text-center text-sm text-muted-foreground">{t("borrowerDetail.noInquiries")}</div>

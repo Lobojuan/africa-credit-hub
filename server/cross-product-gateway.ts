@@ -122,6 +122,7 @@ async function logAccess(
   subject: SubjectRef,
   outcome: "ok" | "denied",
   reason?: string,
+  extra?: Record<string, unknown>,
 ) {
   const subjectId = subject.borrowerId ?? subject.merchantId ?? subject.consumerUserId ?? "unknown";
   // Convention (kept consistent with consent rows): source = data origin
@@ -135,6 +136,7 @@ async function logAccess(
     outcome,
     reason: reason ?? null,
     subjectKind: subject.borrowerId ? "borrower" : subject.merchantId ? "merchant" : "consumer",
+    ...(extra ?? {}),
   });
   try {
     await db.insert(auditLogs).values({
@@ -529,6 +531,64 @@ export const gateway = {
       },
       recentInquiries,
       viewerOrganizationId,
+      consent,
+    };
+  },
+
+  /**
+   * Collateral -> Credit: audit a lender click-through from a recent inquiry
+   * row in the Borrower Credit Snapshot panel to the borrower's full bureau
+   * profile. Validates consent (same purpose/tuple as the snapshot read),
+   * confirms the inquiry exists and belongs to the borrower, and writes a
+   * dedicated `cross_product_access` audit row tagged with the inquiry id.
+   * Returns the borrower id, the resolved inquiry, and the deep link the
+   * client should navigate to.
+   */
+  async getInquiryProfileLink(
+    borrowerId: string,
+    inquiryId: string,
+    callerCtx: { userId?: string; ip?: string },
+  ): Promise<{
+    borrowerId: string;
+    inquiry: {
+      id: string;
+      institution: string;
+      purpose: string;
+      inquiredAt: string | null;
+    };
+    profilePath: string;
+    consent: CrossProductConsent;
+  }> {
+    const ctx: GatewayCallContext = {
+      callerProduct: "collateral", targetProduct: "credit", purpose: "collateral_credit_view",
+      userId: callerCtx.userId, ip: callerCtx.ip,
+    };
+    const consent = await requireConsent(ctx, { borrowerId });
+    const [inquiry] = await db.select().from(creditInquiries)
+      .where(and(eq(creditInquiries.id, inquiryId), eq(creditInquiries.borrowerId, borrowerId)))
+      .limit(1);
+    if (!inquiry) {
+      await logAccess(ctx, consent, { borrowerId }, "denied", "subject_not_found", {
+        action: "inquiry_clickthrough",
+        inquiryId,
+      });
+      throw new CrossProductError("subject_not_found", "inquiry not found for this borrower");
+    }
+    await logAccess(ctx, consent, { borrowerId }, "ok", undefined, {
+      action: "inquiry_clickthrough",
+      inquiryId: inquiry.id,
+      inquiryInstitution: inquiry.institution,
+      inquiryPurpose: inquiry.purpose,
+    });
+    return {
+      borrowerId,
+      inquiry: {
+        id: inquiry.id,
+        institution: inquiry.institution,
+        purpose: inquiry.purpose,
+        inquiredAt: inquiry.createdAt ? inquiry.createdAt.toISOString() : null,
+      },
+      profilePath: `/borrowers/${borrowerId}?inquiry=${inquiry.id}#inquiry-${inquiry.id}`,
       consent,
     };
   },
