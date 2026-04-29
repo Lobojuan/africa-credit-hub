@@ -3739,46 +3739,60 @@ export class DatabaseStorage implements IStorage {
     }).from(lotoReceipts);
     const [consentStat] = await db.select({ c: sql<number>`count(*)::int` })
       .from(crossProductConsents).where(eq(crossProductConsents.status, "active"));
-    const [auditStat] = await db.select({ c: sql<number>`count(*)::int` })
-      .from(auditLogs).where(eq(auditLogs.action, "cross_product_access"));
-    // Group bridge accesses by outcome. We pull just the `details` text column
-    // for cross_product_access rows and parse in JS so a single legacy row
-    // with malformed JSON can never crash the public endpoint (a SQL-side
-    // `details::jsonb` cast would hard-fail on the whole query). Rows whose
-    // details aren't valid JSON or don't carry an outcome are silently skipped
-    // — neither allowed nor denied is over-reported.
-    const detailRows = await db.select({ details: auditLogs.details })
-      .from(auditLogs)
-      .where(eq(auditLogs.action, "cross_product_access"));
-    let allowed = 0;
-    let denied = 0;
-    const denialReasonCounts: Record<string, number> = {};
-    for (const row of detailRows) {
-      if (!row.details) continue;
-      try {
-        const parsed = JSON.parse(row.details) as { outcome?: unknown; reason?: unknown };
-        if (parsed.outcome === "ok") allowed++;
-        else if (parsed.outcome === "denied") {
-          denied++;
-          if (typeof parsed.reason === "string" && parsed.reason.length > 0) {
-            denialReasonCounts[parsed.reason] = (denialReasonCounts[parsed.reason] ?? 0) + 1;
-          }
-        }
-      } catch {
-        // malformed details — skip
-      }
-    }
-    const topDenialReasons = Object.entries(denialReasonCounts)
-      .map(([reason, count]) => ({ reason, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
+    // Aggregate cross_product_access bridge metrics in a single SQL pass so the
+    // unauthenticated /api/public/financial-inclusion-impact endpoint stays fast
+    // as audit_logs grows. The inner CASE guards against malformed JSON in
+    // `details` (a bare `details::jsonb` would hard-fail the whole query on a
+    // single legacy/garbage row); CASE is the one PG construct guaranteed to
+    // short-circuit, so the cast only runs when pg_input_is_valid passes. Rows
+    // whose details aren't valid JSON or don't carry an outcome are silently
+    // skipped — they count toward total `bridgeAccessesLogged` but neither
+    // allowed nor denied, matching the previous JS behavior.
+    const outcomeAgg = await db.execute(sql`
+      SELECT
+        COUNT(*)::int AS total,
+        COUNT(*) FILTER (WHERE outcome = 'ok')::int AS allowed,
+        COUNT(*) FILTER (WHERE outcome = 'denied')::int AS denied
+      FROM (
+        SELECT CASE WHEN pg_input_is_valid(details, 'jsonb')
+                    THEN (details::jsonb)->>'outcome' END AS outcome
+        FROM audit_logs
+        WHERE action = 'cross_product_access'
+      ) sub
+    `);
+    const outcomeRow = (outcomeAgg.rows[0] ?? {}) as { total?: number; allowed?: number; denied?: number };
+    const totalLogged = outcomeRow.total ?? 0;
+    const allowed = outcomeRow.allowed ?? 0;
+    const denied = outcomeRow.denied ?? 0;
+
+    // Top denial reasons — also computed in SQL with the same JSON-validity
+    // guard so a malformed row can't crash the aggregation.
+    const reasonAgg = await db.execute(sql`
+      SELECT reason, COUNT(*)::int AS c
+      FROM (
+        SELECT
+          CASE WHEN pg_input_is_valid(details, 'jsonb')
+               THEN (details::jsonb)->>'outcome' END AS outcome,
+          CASE WHEN pg_input_is_valid(details, 'jsonb')
+               THEN (details::jsonb)->>'reason' END AS reason
+        FROM audit_logs
+        WHERE action = 'cross_product_access'
+      ) sub
+      WHERE outcome = 'denied' AND reason IS NOT NULL AND length(reason) > 0
+      GROUP BY reason
+      ORDER BY c DESC
+      LIMIT 3
+    `);
+    const topDenialReasons = (reasonAgg.rows as { reason: string; c: number }[])
+      .map((r) => ({ reason: r.reason, count: r.c }));
+
     return {
       merchantsRegistered: merchants.length,
       merchantsOptedIn,
       verifiedReceipts: receiptStat?.c ?? 0,
       verifiedTurnover: parseFloat(receiptStat?.s ?? "0"),
       activeCrossProductConsents: consentStat?.c ?? 0,
-      bridgeAccessesLogged: auditStat?.c ?? 0,
+      bridgeAccessesLogged: totalLogged,
       bridgeAccessesAllowed: allowed,
       bridgeAccessesDenied: denied,
       topDenialReasons,
