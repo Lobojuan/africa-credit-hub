@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShieldCheck, Receipt, TrendingUp, Banknote, ArrowRight, Lock, Globe, FileCheck } from "lucide-react";
+import { ShieldCheck, Receipt, TrendingUp, Banknote, ArrowRight, Lock, Globe, FileCheck, type LucideIcon } from "lucide-react";
 
 interface ImpactPayload {
   merchantsRegistered: number;
@@ -130,7 +130,7 @@ export default function FinancialInclusionPage() {
   );
 }
 
-function KpiTile({ icon: Icon, value, label, testid }: { icon: any; value: string | null; label: string; testid: string }) {
+function KpiTile({ icon: Icon, value, label, testid }: { icon: LucideIcon; value: string | null; label: string; testid: string }) {
   return (
     <Card data-testid={testid}>
       <CardContent className="p-6 text-center">
@@ -144,7 +144,7 @@ function KpiTile({ icon: Icon, value, label, testid }: { icon: any; value: strin
   );
 }
 
-function StoryStep({ n, icon: Icon, title, body, testid }: { n: number; icon: any; title: string; body: string; testid: string }) {
+function StoryStep({ n, icon: Icon, title, body, testid }: { n: number; icon: LucideIcon; title: string; body: string; testid: string }) {
   return (
     <Card data-testid={testid}>
       <CardContent className="p-5">
@@ -159,7 +159,7 @@ function StoryStep({ n, icon: Icon, title, body, testid }: { n: number; icon: an
   );
 }
 
-function TrustCard({ icon: Icon, title, body, testid }: { icon: any; title: string; body: string; testid: string }) {
+function TrustCard({ icon: Icon, title, body, testid }: { icon: LucideIcon; title: string; body: string; testid: string }) {
   return (
     <Card data-testid={testid}>
       <CardContent className="p-5">

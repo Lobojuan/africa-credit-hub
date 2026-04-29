@@ -74,7 +74,7 @@ async function run() {
 
   await test("computeReceiptFeatures returns sensible values", async () => {
     const receipts = await db.select().from(lotoReceipts).where(eq(lotoReceipts.merchantId, merchant.id));
-    const f = computeReceiptFeatures(receipts as any);
+    const f = computeReceiptFeatures(receipts);
     if (f.totalReceipts !== 12) throw new Error("expected 12 receipts, got " + f.totalReceipts);
     if (f.monthsWithActivity !== 3) throw new Error("expected 3 months active, got " + f.monthsWithActivity);
     if (f.vatActivityScore < 300 || f.vatActivityScore > 850) throw new Error("score out of range");

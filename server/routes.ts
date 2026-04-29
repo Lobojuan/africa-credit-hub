@@ -17318,7 +17318,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const merchant = await storage.getLotoMerchantByUserId(userId);
       if (!merchant) return res.json({ merchant: null, receipts: [], features: null });
       const receipts = await storage.listLotoReceiptsByMerchant(merchant.id);
-      const features = computeReceiptFeatures(receipts as any);
+      const features = computeReceiptFeatures(receipts);
       res.json({ merchant, receipts, features });
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -17372,7 +17372,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const userId = req.session?.userId;
       if (!userId) return res.status(401).json({ message: "unauthenticated" });
       const receipts = await storage.listLotoReceiptsByConsumer(userId);
-      const features = computeReceiptFeatures(receipts as any);
+      const features = computeReceiptFeatures(receipts);
       res.json({ receipts, features });
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });

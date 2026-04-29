@@ -78,6 +78,13 @@
       "when": 1777419283336,
       "tag": "0010_aspiring_namorita",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1777419283337,
+      "tag": "0011_cross_product_bridge",
+      "breakpoints": true
     }
   ]
 }

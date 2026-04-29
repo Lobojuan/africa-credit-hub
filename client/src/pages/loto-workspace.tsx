@@ -33,6 +33,18 @@ interface ConsumerPayload {
   };
 }
 
+// Slim shape of a cross-product consent row for client-side filtering.
+// Mirrors the fields the consents endpoint returns; kept narrow so the Loto
+// page does not depend on credit-bureau internals.
+interface ConsentRow {
+  id: string;
+  status: "active" | "revoked" | "expired";
+  purpose: string;
+  sourceProduct: string;
+  targetProduct: string;
+  expiresAt: string | null;
+}
+
 export default function LotoWorkspacePage() {
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -44,7 +56,7 @@ export default function LotoWorkspacePage() {
 
   const merchantQ = useQuery<MerchantPayload>({ queryKey: ["/api/loto/merchants/me/receipts"] });
   const consumerQ = useQuery<ConsumerPayload>({ queryKey: ["/api/loto/consumers/me/spending"] });
-  const consentsQ = useQuery<any[]>({ queryKey: ["/api/cross-product/consents"] });
+  const consentsQ = useQuery<ConsentRow[]>({ queryKey: ["/api/cross-product/consents"] });
 
   const merchantOptInMutation = useMutation({
     mutationFn: (enable: boolean) => apiRequest("POST", "/api/loto/merchants/me/credit-opt-in", { enable }),
@@ -70,7 +82,7 @@ export default function LotoWorkspacePage() {
   });
 
   const merchant = merchantQ.data?.merchant ?? null;
-  const consumerOptedIn = (consentsQ.data ?? []).some((c: any) => c.status === "active" && c.purpose === "consumer_spending_credit");
+  const consumerOptedIn = (consentsQ.data ?? []).some((c) => c.status === "active" && c.purpose === "consumer_spending_credit");
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto" data-testid="page-loto-workspace">
@@ -269,10 +281,16 @@ export default function LotoWorkspacePage() {
   );
 }
 
-interface BureauBadgeResponse {
+// Loto-side projection of the bridge response. We deliberately omit any
+// credit-bureau-domain fields the server may include (`score`, `bureauScore`,
+// `hasBureauProfile`) so the merchant's Loto product UI cannot bleed
+// credit-side data through. The Loto badge surfaces only Loto-derived
+// reputation signals: tier label, receipt counts, active months, and trend.
+// Credit-side scoring detail lives in the lender-facing Merchant Credit
+// Profile page inside the Credit Hub.
+interface LotoBadgeProjection {
   badge: {
     tier: string;
-    score: number;
     totalReceipts: number;
     monthsWithActivity: number;
     trend: string;
@@ -283,11 +301,23 @@ interface BureauBadgeResponse {
 
 function DgiBureauReputationBadge({ merchantId, optedIn }: { merchantId: string; optedIn: boolean }) {
   const { t } = useTranslation();
-  const { data, isLoading, error } = useQuery<BureauBadgeResponse>({
+  const { data, isLoading, error } = useQuery<LotoBadgeProjection>({
     queryKey: ["/api/cross-product/bureau-badge", merchantId],
     queryFn: () => fetch(`/api/cross-product/bureau-badge/${merchantId}`, { credentials: "include" }).then(async r => {
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).message || "Failed");
-      return r.json();
+      const raw = await r.json();
+      // Strip any credit-bureau-domain fields the server may include so the
+      // Loto UI literally cannot render them. Keep only Loto-derived signals.
+      return {
+        badge: {
+          tier: raw?.badge?.tier ?? "unranked",
+          totalReceipts: raw?.badge?.totalReceipts ?? 0,
+          monthsWithActivity: raw?.badge?.monthsWithActivity ?? 0,
+          trend: raw?.badge?.trend ?? "new",
+          issuedAt: raw?.badge?.issuedAt ?? new Date().toISOString(),
+        },
+        consent: raw?.consent ?? { id: "" },
+      };
     }),
     enabled: optedIn,
     retry: false,
@@ -345,11 +375,10 @@ function DgiBureauReputationBadge({ merchantId, optedIn }: { merchantId: string;
               <div className="text-2xl font-bold capitalize">{data.badge.tier}</div>
             </div>
             <div className="flex-1 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-              <div><div className="text-xs text-muted-foreground">Bureau score</div><div className="text-lg font-semibold" data-testid="badge-score">{data.badge.score}</div></div>
-              <div><div className="text-xs text-muted-foreground">Receipts</div><div className="text-lg font-semibold" data-testid="badge-receipts">{data.badge.totalReceipts}</div></div>
-              <div><div className="text-xs text-muted-foreground">Active months</div><div className="text-lg font-semibold" data-testid="badge-months">{data.badge.monthsWithActivity}</div></div>
-              <div><div className="text-xs text-muted-foreground">Trend</div><div className="text-lg font-semibold capitalize" data-testid="badge-trend">{data.badge.trend.replace("_", " ")}</div></div>
-              <div className="col-span-2"><div className="text-xs text-muted-foreground">Issued</div><div className="text-sm font-mono" data-testid="badge-issued">{new Date(data.badge.issuedAt).toLocaleString()}</div></div>
+              <div><div className="text-xs text-muted-foreground">{t("merchantCredit.badgeReceipts", "Receipts")}</div><div className="text-lg font-semibold" data-testid="badge-receipts">{data.badge.totalReceipts}</div></div>
+              <div><div className="text-xs text-muted-foreground">{t("merchantCredit.badgeActiveMonths", "Active months")}</div><div className="text-lg font-semibold" data-testid="badge-months">{data.badge.monthsWithActivity}</div></div>
+              <div><div className="text-xs text-muted-foreground">{t("merchantCredit.badgeTrend", "Trend")}</div><div className="text-lg font-semibold capitalize" data-testid="badge-trend">{data.badge.trend.replace("_", " ")}</div></div>
+              <div className="col-span-2 md:col-span-3"><div className="text-xs text-muted-foreground">{t("merchantCredit.badgeIssued", "Issued")}</div><div className="text-sm font-mono" data-testid="badge-issued">{new Date(data.badge.issuedAt).toLocaleString()}</div></div>
             </div>
           </div>
         )}
