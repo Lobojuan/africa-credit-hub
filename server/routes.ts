@@ -17934,6 +17934,38 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
       }
 
+      // Phone-tail-style anonymization (Task #283 spec): emit the same
+      // ***XXXX masking shape that SMS/bank/telco operators use, so a
+      // citizen verifying a draw immediately recognises the format. If
+      // the winner's user record carries a phone we use the real last-4
+      // digits; otherwise (the users table is operator-centric and rarely
+      // populated with consumer phones — those live on consumer_accounts
+      // keyed by national_id, with no direct FK from users) we fall back
+      // to a deterministic 4-hex pseudo-tail derived from the user id so
+      // winners remain distinguishable while NEVER leaking the raw id.
+      const winnerUserIds = Array.from(new Set(winners
+        .map((w) => w.consumerUserId)
+        .filter((x): x is string => Boolean(x))));
+      const phoneByUserId = new Map<string, string | null>();
+      await Promise.all(winnerUserIds.map(async (uid) => {
+        try {
+          const u = await storage.getUser(uid);
+          phoneByUserId.set(uid, (u as { phone?: string | null } | undefined)?.phone ?? null);
+        } catch {
+          phoneByUserId.set(uid, null);
+        }
+      }));
+      const tailFor = (uid: string | null): string => {
+        if (!uid) return "anonymous";
+        const phone = phoneByUserId.get(uid);
+        if (phone) {
+          const digits = phone.replace(/\D/g, "");
+          if (digits.length >= 4) return `***${digits.slice(-4)}`;
+        }
+        const fallback = crypto.createHash("sha256").update(uid).digest("hex").slice(-4).toUpperCase();
+        return `***${fallback}`;
+      };
+
       res.json({
         draw: {
           ...draw,
@@ -17950,16 +17982,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           selectionHash: w.selectionHash,
           // The receiptId is published in full so the browser can verify
           // it against the HMAC-recomputed winner list. Consumer identity
-          // remains anonymised — only an opaque last-4-char hint.
+          // remains anonymised — only the phone-tail hint.
           receiptId: w.receiptId,
           receiptIdSuffix: w.receiptId.slice(-6),
-          // Phone-tail-style anonymization (Task #283 spec): never reveal a
-          // user id; show a 4-character pseudo-tail derived deterministically
-          // from the consumer id so the same person sees the same hint across
-          // draws but observers cannot reverse-engineer identity.
-          consumerHint: w.consumerUserId
-            ? `***${crypto.createHash("sha256").update(w.consumerUserId).digest("hex").slice(-4).toUpperCase()}`
-            : "anonymous",
+          consumerHint: tailFor(w.consumerUserId),
           payoutStatus: w.payoutStatus,
         })),
         eligibleReceiptIds,

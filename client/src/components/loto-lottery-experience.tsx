@@ -936,7 +936,7 @@ interface RealDrawsBannerProps {
 function RealDrawsBanner({ draws, latestClosed, nextScheduled }: RealDrawsBannerProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const isSuperAdmin = user?.role === "super_admin";
+  const canRunDemoDraw = ["super_admin", "dgi", "loto_admin", "tax_admin", "admin"].includes(user?.role ?? "");
   const runDemo = useMutation({
     mutationFn: async () => {
       // Send the country of the most recently scheduled/closed draw if known,
@@ -950,7 +950,7 @@ function RealDrawsBanner({ draws, latestClosed, nextScheduled }: RealDrawsBanner
     },
   });
 
-  if (draws.length === 0 && !isSuperAdmin) return null;
+  if (draws.length === 0 && !canRunDemoDraw) return null;
 
   return (
     <div className="rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-emerald-50/60 dark:bg-emerald-950/30 p-4 flex flex-wrap items-center gap-3" data-testid="real-draws-banner">
@@ -977,7 +977,7 @@ function RealDrawsBanner({ draws, latestClosed, nextScheduled }: RealDrawsBanner
             </Button>
           </Link>
         )}
-        {isSuperAdmin && (
+        {canRunDemoDraw && (
           <Button size="sm" onClick={() => runDemo.mutate()} disabled={runDemo.isPending} data-testid="button-run-demo-draw">
             {runDemo.isPending ? "Running…" : "Run Demo Draw Now"}
           </Button>

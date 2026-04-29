@@ -474,7 +474,7 @@ function AuthenticatedApp() {
     if (currentPath === "/login") {
       return <LoginPage />;
     }
-    if (publicPaths.includes(currentPath) || currentPath.startsWith("/verify/")) {
+    if (publicPaths.includes(currentPath) || currentPath.startsWith("/verify/") || currentPath.startsWith("/loto/draws/verify/")) {
       return doRedirect(currentPath);
     }
     return doRedirect("/login");
