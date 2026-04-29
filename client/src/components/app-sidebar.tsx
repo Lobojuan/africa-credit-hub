@@ -159,6 +159,7 @@ const collateralItems: NavItem[] = [
 
 const lotoItems: NavItem[] = [
   { label: "Loto Fiscal Workspace", tKey: "sidebar.lotoFiscalWorkspace", url: "/loto-fiscal", icon: Receipt, testId: "nav-loto-fiscal", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
+  { label: "DGI Admin Dashboard", tKey: "sidebar.lotoDgiAdmin", url: "/admin/loto-fiscal", icon: Shield, testId: "nav-loto-admin", roles: ["super_admin", "dgi_officer", "tax_authority_admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [

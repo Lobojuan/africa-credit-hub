@@ -24,6 +24,7 @@ import dashboardRouter from "./routes/dashboard";
 import telcoRouter from "./routes/telco";
 import walletRouter from "./routes/wallet";
 import webauthnRouter from "./routes/webauthn";
+import lotoAdminRouter from "./routes/loto-admin";
 import { registerPlatformControlRoutes } from "./routes/platform-control";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
@@ -1124,6 +1125,7 @@ export async function registerRoutes(
   app.use(telcoRouter);
   app.use(walletRouter);
   app.use(webauthnRouter);
+  app.use("/api/loto/admin", lotoAdminRouter);
   registerPlatformControlRoutes(app);
 
 

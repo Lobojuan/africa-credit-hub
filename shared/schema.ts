@@ -3,7 +3,7 @@ import { pgTable, text, varchar, integer, decimal, boolean, timestamp, pgEnum, j
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin", "regulator", "lender", "viewer"]);
+export const userRoleEnum = pgEnum("user_role", ["super_admin", "admin", "regulator", "lender", "viewer", "dgi_officer", "tax_authority_admin"]);
 export const userStatusEnum = pgEnum("user_status", ["active", "suspended", "deactivated"]);
 export const organizationTypeEnum = pgEnum("organization_type", ["bank", "microfinance", "insurance", "telecom", "fintech", "utility", "government", "regulator", "real_estate", "investment", "other", "registry_authority"]);
 export const organizationStatusEnum = pgEnum("organization_status", ["active", "suspended", "pending", "deactivated"]);
@@ -2490,3 +2490,53 @@ export const lotoUssdSessions = pgTable("loto_ussd_sessions", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 export type LotoUssdSession = typeof lotoUssdSessions.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Loto Fiscal — DGI / tax-authority fraud flags.
+// One row per (rule, subject) detection. The triage state is mutable so the
+// dashboard's dismiss/escalate actions can be persisted and audited via the
+// audit_logs trail. Country-scoped so a CI officer never sees KE rows.
+// ---------------------------------------------------------------------------
+export const lotoFraudFlagStatusEnum = pgEnum("loto_fraud_flag_status", [
+  "open", "dismissed", "escalated", "resolved",
+]);
+export const lotoFraudFlagSeverityEnum = pgEnum("loto_fraud_flag_severity", [
+  "low", "medium", "high", "critical",
+]);
+
+export const lotoFraudFlags = pgTable("loto_fraud_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: text("country_code").notNull(),
+  ruleCode: text("rule_code").notNull(), // DUPLICATE_FISCAL_CODE | STRUCTURED_SUBTHRESHOLD | GHOST_MERCHANT | ABNORMAL_HOUR | SINGLE_DEVICE_BURST
+  severity: lotoFraudFlagSeverityEnum("severity").notNull().default("medium"),
+  merchantId: varchar("merchant_id").references(() => lotoMerchants.id),
+  receiptId: varchar("receipt_id").references(() => lotoReceipts.id),
+  deviceId: varchar("device_id").references(() => lotoFiscalDevices.id),
+  // Free-form description with everything the triager needs to act on.
+  summary: text("summary").notNull(),
+  // Stable detection identity: same (rule, signature) is upserted instead of duplicated.
+  signature: text("signature").notNull(),
+  status: lotoFraudFlagStatusEnum("status").notNull().default("open"),
+  triageNote: text("triage_note"),
+  triagedBy: varchar("triaged_by").references(() => users.id),
+  triagedAt: timestamp("triaged_at"),
+  // Snapshot of the receipts / amounts involved so the row stays auditable
+  // even if underlying receipts are deleted.
+  evidence: jsonb("evidence").$type<Record<string, unknown>>(),
+  detectedAt: timestamp("detected_at").notNull().defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  // One open flag per (rule, signature, country). Re-detections within a
+  // window upsert the existing row; closed/escalated rows do NOT block new
+  // detections (so a ghost merchant flagged then resolved can be re-flagged).
+  ruleSignatureIdx: uniqueIndex("loto_fraud_flags_rule_signature_uq").on(
+    table.countryCode, table.ruleCode, table.signature,
+  ),
+}));
+
+export const insertLotoFraudFlagSchema = createInsertSchema(lotoFraudFlags).omit({
+  id: true, createdAt: true, detectedAt: true, triagedAt: true, triagedBy: true,
+});
+export type InsertLotoFraudFlag = z.infer<typeof insertLotoFraudFlagSchema>;
+export type LotoFraudFlag = typeof lotoFraudFlags.$inferSelect;
+

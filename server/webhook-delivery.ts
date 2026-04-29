@@ -15,6 +15,13 @@ export const WEBHOOK_EVENTS = [
   "payment.recorded",
   "alert.triggered",
   "batch.completed",
+  // Loto Fiscal — DGI / tax-authority subscriptions for direct
+  // ingestion into the ministry's own systems. Emitted by the Loto
+  // admin endpoints when a merchant is flagged, a receipt is verified
+  // by the cryptographic verifier, or a draw is closed.
+  "merchant.flagged",
+  "receipt.verified",
+  "draw.closed",
 ] as const;
 
 export type WebhookEvent = typeof WEBHOOK_EVENTS[number];

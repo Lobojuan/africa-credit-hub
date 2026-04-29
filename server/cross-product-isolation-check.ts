@@ -10,6 +10,12 @@ const ALLOWLIST = new Set<string>([
   "server/storage.ts",
   "shared/schema.ts",
   "server/__tests__/cross-product-gateway.test.ts",
+  // Loto Fiscal — DGI/tax-authority admin internals. These files are
+  // sanctioned collaborators of the loto product and only ever query
+  // loto_merchants / loto_receipts within a single country scope; they
+  // do NOT bridge to credit/collateral, so the gateway is not required.
+  "server/loto-fraud-rules.ts",
+  "server/routes/loto-admin.ts",
 ]);
 
 const SCAN_ROOTS = ["server", "client/src", "shared"];
