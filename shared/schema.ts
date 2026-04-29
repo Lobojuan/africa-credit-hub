@@ -2272,6 +2272,93 @@ export const lotoPayouts = pgTable("loto_payouts", {
 export type LotoPayout = typeof lotoPayouts.$inferSelect;
 
 // ---------------------------------------------------------------------------
+// Loto Notifications, USSD & SMS fallback (Task #286)
+// Adapter-pattern messaging: simulated by default, plug-in real providers
+// (Africa's Talking, Twilio, MTN/Orange) via per-country config without code
+// changes. Every outbound message is persisted with retry metadata.
+// ---------------------------------------------------------------------------
+
+export const lotoMessageChannelEnum = pgEnum("loto_message_channel", ["sms", "push", "ussd"]);
+export const lotoMessageStatusEnum = pgEnum("loto_message_status", [
+  "pending", "dispatched", "failed", "opted_out", "skipped",
+]);
+export const lotoMessageTemplateEnum = pgEnum("loto_message_template", [
+  "winner_sms",
+  "draw_reminder_sms",
+  "merchant_inactive_sms",
+  "ussd_session",
+]);
+export const lotoMessageLanguageEnum = pgEnum("loto_message_language", ["en", "fr"]);
+
+export const lotoOutboundMessages = pgTable("loto_outbound_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: text("country_code").notNull(),
+  channel: lotoMessageChannelEnum("channel").notNull(),
+  templateKey: lotoMessageTemplateEnum("template_key").notNull(),
+  language: lotoMessageLanguageEnum("language").notNull().default("en"),
+  // E.164 for SMS/USSD; for push channel this holds the user id.
+  recipient: text("recipient").notNull(),
+  recipientUserId: varchar("recipient_user_id").references(() => users.id),
+  // Linked draw/winner/merchant when applicable — useful for audit + replay.
+  drawId: varchar("draw_id").references(() => lotoDraws.id),
+  winnerId: varchar("winner_id").references(() => lotoDrawWinners.id),
+  merchantId: varchar("merchant_id").references(() => lotoMerchants.id),
+  payload: jsonb("payload").$type<{ body: string; vars: Record<string, string> }>().notNull(),
+  status: lotoMessageStatusEnum("status").notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  lastError: text("last_error"),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  dispatchedAt: timestamp("dispatched_at"),
+  providerRef: text("provider_ref"),
+  provider: text("provider").notNull().default("simulated"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+export const insertLotoOutboundMessageSchema = createInsertSchema(lotoOutboundMessages).omit({
+  id: true, createdAt: true, dispatchedAt: true, lastAttemptAt: true,
+  attempts: true, status: true, lastError: true, providerRef: true,
+});
+export type InsertLotoOutboundMessage = z.infer<typeof insertLotoOutboundMessageSchema>;
+export type LotoOutboundMessage = typeof lotoOutboundMessages.$inferSelect;
+
+export const lotoConsumerMessagingPrefs = pgTable("loto_consumer_messaging_prefs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  // Reminders (T-24h, marketing-style nudges) can be opted out independently.
+  // Winner SMS is mandatory and ignores this flag (legal/audit obligation).
+  optOutReminders: boolean("opt_out_reminders").notNull().default(false),
+  language: lotoMessageLanguageEnum("language").notNull().default("en"),
+  // Phone is normalised to E.164 before persistence; null until verified.
+  verifiedPhone: text("verified_phone"),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export const insertLotoConsumerMessagingPrefsSchema = createInsertSchema(lotoConsumerMessagingPrefs).omit({
+  id: true, createdAt: true, updatedAt: true, verifiedAt: true,
+});
+export type InsertLotoConsumerMessagingPrefs = z.infer<typeof insertLotoConsumerMessagingPrefsSchema>;
+export type LotoConsumerMessagingPrefs = typeof lotoConsumerMessagingPrefs.$inferSelect;
+
+// USSD session state — short-lived rows persisted by gateway sessionId.
+// State machine itself is pure-functional; this table only carries the
+// minimal context needed to resume across requests (current node + small
+// JSON context bag like fiscal_code-being-entered).
+export const lotoUssdSessions = pgTable("loto_ussd_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Gateway session id (Africa's Talking, Hubtel, etc.)
+  sessionId: text("session_id").notNull().unique(),
+  msisdn: text("msisdn").notNull(),
+  countryCode: text("country_code").notNull(),
+  language: lotoMessageLanguageEnum("language").notNull().default("en"),
+  state: text("state").notNull().default("root"),
+  context: jsonb("context").$type<Record<string, string>>().notNull().default({} as Record<string, string>),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+export type LotoUssdSession = typeof lotoUssdSessions.$inferSelect;
+
+// ---------------------------------------------------------------------------
 // Cross-Product Consents — explicit, time-bounded, revocable permissions
 // for any data flow between Credit Bureau, Collateral Registry, Loto Fiscal.
 // Distinct from `consentRecords` (which are bureau/lender data-pull receipts).

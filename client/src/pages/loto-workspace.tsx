@@ -14,6 +14,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles } from "lucide-react";
 import { PRODUCT_REGISTRY } from "@/lib/products";
 import { LotoLotteryExperience } from "@/components/loto-lottery-experience";
+import { LotoMessagingPreferences } from "@/components/loto-messaging-preferences";
 import { getTaxAuthorityProfile } from "@shared/tax-authority";
 
 interface MerchantPayload {
@@ -152,6 +153,12 @@ export default function LotoWorkspacePage() {
               queryClient.invalidateQueries({ queryKey: ["/api/loto/merchants/me/receipts"] });
             }}
           />
+
+          <div className="mt-6 max-w-xl">
+            <LotoMessagingPreferences
+              countryCode={merchant?.countryCode ?? (consumerQ.data?.features?.currency === "KES" ? "KE" : "CI")}
+            />
+          </div>
         </TabsContent>
 
         <TabsContent value="overview" className="mt-4">

@@ -82,6 +82,10 @@ import {
   type LotoDraw, type InsertLotoDraw,
   type LotoDrawPrizeTier, type InsertLotoDrawPrizeTier,
   type LotoDrawWinner, type LotoPayout,
+  lotoOutboundMessages, lotoConsumerMessagingPrefs, lotoUssdSessions,
+  type LotoOutboundMessage, type InsertLotoOutboundMessage,
+  type LotoConsumerMessagingPrefs, type InsertLotoConsumerMessagingPrefs,
+  type LotoUssdSession,
   portfolioTriggerSubscriptions, portfolioTriggerEvents,
   consumerMonitoringPrefs, consumerMonitoringAlerts, consumerAccounts,
   type PortfolioTriggerSubscription, type InsertPortfolioTriggerSubscription,
@@ -492,6 +496,34 @@ export interface IStorage {
     providerRef: string | null; lastError: string | null; amount: string; currency: string;
   }): Promise<LotoPayout>;
   listLotoPayoutsForDraw(drawId: string): Promise<LotoPayout[]>;
+  // ── Loto Notifications & USSD (Task #286) ────────────────────────────
+  createLotoOutboundMessage(input: InsertLotoOutboundMessage): Promise<LotoOutboundMessage>;
+  markLotoOutboundMessageDispatched(id: string, providerRef: string | null): Promise<LotoOutboundMessage | undefined>;
+  markLotoOutboundMessageFailed(id: string, error: string): Promise<LotoOutboundMessage | undefined>;
+  markLotoOutboundMessageSkipped(id: string, reason: string): Promise<LotoOutboundMessage | undefined>;
+  listLotoOutboundMessagesForRetry(now: Date, opts: { maxAttempts: number; limit: number }): Promise<LotoOutboundMessage[]>;
+  listLotoOutboundMessagesRecent(filter: { countryCode?: string; limit?: number }): Promise<LotoOutboundMessage[]>;
+  getLotoOutboundMessageById(id: string): Promise<LotoOutboundMessage | undefined>;
+  getLotoOutboundMessageStats(filter: { countryCode?: string; sinceDays?: number }): Promise<Array<{
+    countryCode: string;
+    templateKey: string;
+    channel: string;
+    total: number;
+    dispatched: number;
+    failed: number;
+    pending: number;
+    optedOut: number;
+    deliveryRate: number;
+  }>>;
+  getLotoConsumerMessagingPrefs(userId: string): Promise<LotoConsumerMessagingPrefs | undefined>;
+  upsertLotoConsumerMessagingPrefs(input: InsertLotoConsumerMessagingPrefs & { verifiedAt?: Date | null }): Promise<LotoConsumerMessagingPrefs>;
+  getConsumerPhoneFallback(userId: string): Promise<{ phone: string | null; ambiguous: boolean }>;
+  createLotoUssdSession(input: { sessionId: string; msisdn: string; countryCode: string; language: "en" | "fr" }): Promise<LotoUssdSession>;
+  getLotoUssdSession(sessionId: string): Promise<LotoUssdSession | undefined>;
+  updateLotoUssdSession(sessionId: string, patch: { state?: string; context?: Record<string, string>; endedAt?: Date | null }): Promise<LotoUssdSession | undefined>;
+  // Helpers used by the dispatcher to find target audiences.
+  listConsumersWithReceiptsInPeriod(countryCode: string, periodStart: Date, periodEnd: Date): Promise<Array<{ userId: string; phone: string | null; ticketCount: number }>>;
+  listMerchantsInactiveSince(countryCode: string, since: Date): Promise<Array<{ merchantId: string; ownerName: string | null; shopName: string; phone: string | null; userId: string | null }>>;
   getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }): Promise<CrossProductConsent[]>;
   getCrossProductConsentById(id: string): Promise<CrossProductConsent | undefined>;
   createCrossProductConsent(input: InsertCrossProductConsent): Promise<CrossProductConsent>;
@@ -3902,6 +3934,231 @@ export class DatabaseStorage implements IStorage {
     }).from(lotoPayouts)
       .innerJoin(lotoDrawWinners, eq(lotoPayouts.winnerId, lotoDrawWinners.id))
       .where(eq(lotoDrawWinners.drawId, drawId));
+  }
+  // ── Loto Notifications & USSD (Task #286) ────────────────────────────
+  async createLotoOutboundMessage(input: InsertLotoOutboundMessage): Promise<LotoOutboundMessage> {
+    const [row] = await db.insert(lotoOutboundMessages).values(input).returning();
+    return row;
+  }
+  async markLotoOutboundMessageDispatched(id: string, providerRef: string | null): Promise<LotoOutboundMessage | undefined> {
+    const now = new Date();
+    const [row] = await db.update(lotoOutboundMessages).set({
+      status: "dispatched",
+      providerRef,
+      dispatchedAt: now,
+      lastAttemptAt: now,
+      attempts: sql`${lotoOutboundMessages.attempts} + 1`,
+      lastError: null,
+    }).where(eq(lotoOutboundMessages.id, id)).returning();
+    return row;
+  }
+  async markLotoOutboundMessageFailed(id: string, error: string): Promise<LotoOutboundMessage | undefined> {
+    const now = new Date();
+    const [row] = await db.update(lotoOutboundMessages).set({
+      status: "failed",
+      lastAttemptAt: now,
+      attempts: sql`${lotoOutboundMessages.attempts} + 1`,
+      lastError: error.slice(0, 500),
+    }).where(eq(lotoOutboundMessages.id, id)).returning();
+    return row;
+  }
+  async markLotoOutboundMessageSkipped(id: string, reason: string): Promise<LotoOutboundMessage | undefined> {
+    // Terminal status — never retried by listLotoOutboundMessagesForRetry
+    // (which only picks pending+failed). Used when there is no recipient
+    // phone, the consumer has opted out, or the template is not applicable.
+    const [row] = await db.update(lotoOutboundMessages).set({
+      status: "skipped",
+      lastError: reason.slice(0, 500),
+    }).where(eq(lotoOutboundMessages.id, id)).returning();
+    return row;
+  }
+  async getLotoOutboundMessageById(id: string): Promise<LotoOutboundMessage | undefined> {
+    const [row] = await db.select().from(lotoOutboundMessages).where(eq(lotoOutboundMessages.id, id)).limit(1);
+    return row;
+  }
+  async listLotoOutboundMessagesForRetry(now: Date, opts: { maxAttempts: number; limit: number }): Promise<LotoOutboundMessage[]> {
+    // Exponential backoff: row eligible for retry once
+    //   (now - lastAttemptAt) >= 2^attempts minutes
+    // (i.e. 1m, 2m, 4m, 8m...). pending+failed both retried; opted_out and
+    // dispatched are terminal.
+    return db.select().from(lotoOutboundMessages).where(and(
+      or(
+        eq(lotoOutboundMessages.status, "pending"),
+        eq(lotoOutboundMessages.status, "failed"),
+      ),
+      sql`${lotoOutboundMessages.attempts} < ${opts.maxAttempts}`,
+      or(
+        sql`${lotoOutboundMessages.lastAttemptAt} IS NULL`,
+        sql`(EXTRACT(EPOCH FROM (${now} - ${lotoOutboundMessages.lastAttemptAt})) / 60) >= POWER(2, ${lotoOutboundMessages.attempts})`,
+      ),
+    )).orderBy(lotoOutboundMessages.createdAt).limit(opts.limit);
+  }
+  async listLotoOutboundMessagesRecent(filter: { countryCode?: string; limit?: number }): Promise<LotoOutboundMessage[]> {
+    const limit = filter.limit ?? 100;
+    if (filter.countryCode) {
+      return db.select().from(lotoOutboundMessages)
+        .where(eq(lotoOutboundMessages.countryCode, filter.countryCode))
+        .orderBy(desc(lotoOutboundMessages.createdAt)).limit(limit);
+    }
+    return db.select().from(lotoOutboundMessages)
+      .orderBy(desc(lotoOutboundMessages.createdAt)).limit(limit);
+  }
+  async getLotoOutboundMessageStats(filter: { countryCode?: string; sinceDays?: number }): Promise<Array<{
+    countryCode: string;
+    templateKey: string;
+    channel: string;
+    total: number;
+    dispatched: number;
+    failed: number;
+    pending: number;
+    optedOut: number;
+    deliveryRate: number;
+  }>> {
+    const sinceDays = filter.sinceDays ?? 30;
+    const since = new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000);
+    const conditions = [sql`${lotoOutboundMessages.createdAt} >= ${since}`];
+    if (filter.countryCode) conditions.push(eq(lotoOutboundMessages.countryCode, filter.countryCode));
+    const rows = await db.select({
+      countryCode: lotoOutboundMessages.countryCode,
+      templateKey: lotoOutboundMessages.templateKey,
+      channel: lotoOutboundMessages.channel,
+      total: sql<number>`count(*)::int`,
+      dispatched: sql<number>`sum(case when ${lotoOutboundMessages.status} = 'dispatched' then 1 else 0 end)::int`,
+      failed: sql<number>`sum(case when ${lotoOutboundMessages.status} = 'failed' then 1 else 0 end)::int`,
+      pending: sql<number>`sum(case when ${lotoOutboundMessages.status} = 'pending' then 1 else 0 end)::int`,
+      optedOut: sql<number>`sum(case when ${lotoOutboundMessages.status} = 'opted_out' then 1 else 0 end)::int`,
+    }).from(lotoOutboundMessages)
+      .where(and(...conditions))
+      .groupBy(lotoOutboundMessages.countryCode, lotoOutboundMessages.templateKey, lotoOutboundMessages.channel)
+      .orderBy(lotoOutboundMessages.countryCode, lotoOutboundMessages.templateKey);
+    return rows.map((r) => ({
+      countryCode: r.countryCode,
+      templateKey: r.templateKey as string,
+      channel: r.channel as string,
+      total: r.total,
+      dispatched: r.dispatched,
+      failed: r.failed,
+      pending: r.pending,
+      optedOut: r.optedOut,
+      deliveryRate: r.total > 0 ? r.dispatched / r.total : 0,
+    }));
+  }
+  async getLotoConsumerMessagingPrefs(userId: string): Promise<LotoConsumerMessagingPrefs | undefined> {
+    const [row] = await db.select().from(lotoConsumerMessagingPrefs)
+      .where(eq(lotoConsumerMessagingPrefs.userId, userId));
+    return row;
+  }
+  async upsertLotoConsumerMessagingPrefs(input: InsertLotoConsumerMessagingPrefs & { verifiedAt?: Date | null }): Promise<LotoConsumerMessagingPrefs> {
+    const now = new Date();
+    const [row] = await db.insert(lotoConsumerMessagingPrefs)
+      .values({ ...input, verifiedAt: input.verifiedAt ?? null })
+      .onConflictDoUpdate({
+        target: lotoConsumerMessagingPrefs.userId,
+        set: {
+          optOutReminders: input.optOutReminders ?? false,
+          language: input.language ?? "en",
+          verifiedPhone: input.verifiedPhone ?? null,
+          verifiedAt: input.verifiedAt ?? null,
+          updatedAt: now,
+        },
+      })
+      .returning();
+    return row;
+  }
+  async getConsumerPhoneFallback(userId: string): Promise<{ phone: string | null; ambiguous: boolean }> {
+    // Identity-safe fallback resolver for mandatory winner SMS.
+    //
+    // Contract:
+    //   - phone=string, ambiguous=false  → safe to send; deterministic 1:1:1 match
+    //     (one user → one shared-email user → one consumer account with phone).
+    //   - phone=null,   ambiguous=false  → no fallback exists (no user / no email
+    //     / no consumer account / consumer account has null phone). Caller may
+    //     simply skip with reason "no_recipient_phone"; this is NOT a leak risk.
+    //   - phone=null,   ambiguous=true   → a fallback candidate exists but the
+    //     identity link is non-deterministic (>1 user shares the email, or >1
+    //     consumer account shares it). Caller MUST refuse to send and skip with
+    //     reason "ambiguous_fallback_identity" to avoid leaking winner data.
+    //
+    // We adopt this conservative contract because neither users.email nor
+    // consumer_accounts.email are unique in the current schema.
+    const [u] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId));
+    if (!u || !u.email) return { phone: null, ambiguous: false };
+    const sharedUsers = await db.select({ id: users.id }).from(users).where(eq(users.email, u.email));
+    if (sharedUsers.length > 1) return { phone: null, ambiguous: true };
+    const matches = await db.select({ phone: consumerAccounts.phone })
+      .from(consumerAccounts)
+      .where(eq(consumerAccounts.email, u.email));
+    if (matches.length === 0) return { phone: null, ambiguous: false };
+    if (matches.length > 1) return { phone: null, ambiguous: true };
+    return { phone: matches[0].phone ?? null, ambiguous: false };
+  }
+  async createLotoUssdSession(input: { sessionId: string; msisdn: string; countryCode: string; language: "en" | "fr" }): Promise<LotoUssdSession> {
+    const [row] = await db.insert(lotoUssdSessions).values({
+      sessionId: input.sessionId,
+      msisdn: input.msisdn,
+      countryCode: input.countryCode,
+      language: input.language,
+      state: "root",
+      context: {},
+    }).returning();
+    return row;
+  }
+  async getLotoUssdSession(sessionId: string): Promise<LotoUssdSession | undefined> {
+    const [row] = await db.select().from(lotoUssdSessions)
+      .where(eq(lotoUssdSessions.sessionId, sessionId));
+    return row;
+  }
+  async updateLotoUssdSession(sessionId: string, patch: { state?: string; context?: Record<string, string>; endedAt?: Date | null }): Promise<LotoUssdSession | undefined> {
+    const setClause: Partial<typeof lotoUssdSessions.$inferInsert> & { updatedAt: Date } = { updatedAt: new Date() };
+    if (patch.state !== undefined) setClause.state = patch.state;
+    if (patch.context !== undefined) setClause.context = patch.context;
+    if (patch.endedAt !== undefined) setClause.endedAt = patch.endedAt;
+    const [row] = await db.update(lotoUssdSessions).set(setClause)
+      .where(eq(lotoUssdSessions.sessionId, sessionId)).returning();
+    return row;
+  }
+  async listConsumersWithReceiptsInPeriod(countryCode: string, periodStart: Date, periodEnd: Date): Promise<Array<{ userId: string; phone: string | null; ticketCount: number }>> {
+    const rows = await db.select({
+      userId: users.id,
+      phone: users.phone,
+      ticketCount: sql<number>`count(${lotoReceipts.id})::int`,
+    }).from(lotoReceipts)
+      .innerJoin(lotoMerchants, eq(lotoReceipts.merchantId, lotoMerchants.id))
+      .innerJoin(users, eq(lotoReceipts.consumerUserId, users.id))
+      .where(and(
+        eq(lotoMerchants.countryCode, countryCode),
+        sql`${lotoReceipts.issuedAt} >= ${periodStart}`,
+        sql`${lotoReceipts.issuedAt} < ${periodEnd}`,
+        sql`${lotoReceipts.consumerUserId} IS NOT NULL`,
+        eq(users.status, "active"),
+      ))
+      .groupBy(users.id, users.phone);
+    return rows;
+  }
+  async listMerchantsInactiveSince(countryCode: string, since: Date): Promise<Array<{ merchantId: string; ownerName: string | null; shopName: string; phone: string | null; userId: string | null }>> {
+    // Active merchants in the country whose most-recent receipt is older
+    // than `since` (or who have never issued one).
+    const rows = await db.select({
+      merchantId: lotoMerchants.id,
+      ownerName: lotoMerchants.ownerName,
+      shopName: lotoMerchants.shopName,
+      phone: users.phone,
+      userId: lotoMerchants.userId,
+      lastReceiptAt: sql<Date | null>`max(${lotoReceipts.issuedAt})`,
+    }).from(lotoMerchants)
+      .leftJoin(lotoReceipts, eq(lotoReceipts.merchantId, lotoMerchants.id))
+      .leftJoin(users, eq(lotoMerchants.userId, users.id))
+      .where(eq(lotoMerchants.countryCode, countryCode))
+      .groupBy(lotoMerchants.id, users.phone);
+    return rows
+      .filter((r) => r.lastReceiptAt === null || new Date(r.lastReceiptAt).getTime() < since.getTime())
+      .map((r) => ({
+        merchantId: r.merchantId,
+        ownerName: r.ownerName,
+        shopName: r.shopName,
+        phone: r.phone,
+        userId: r.userId,
+      }));
   }
   async getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }): Promise<CrossProductConsent[]> {
     const ors = [];

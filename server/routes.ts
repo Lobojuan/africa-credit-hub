@@ -1035,7 +1035,10 @@ export async function registerRoutes(
     // Admin Loto routes (/loto/admin/...) still require auth via per-route requireAuth.
     if (
       (req.method === "GET" && /^\/loto\/draws(\/[^/]+)?$/.test(req.path)) ||
-      (req.method === "POST" && /^\/loto\/draws\/[^/]+\/verify$/.test(req.path))
+      (req.method === "POST" && /^\/loto\/draws\/[^/]+\/verify$/.test(req.path)) ||
+      // USSD gateway POST — auth is via X-USSD-Partner-Token shared secret
+      // (LOTO_USSD_PARTNER_TOKEN env). Open in DEMO when env is unset.
+      (req.method === "POST" && req.path === "/loto/ussd/session")
     ) {
       return next();
     }
@@ -17738,6 +17741,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   const { generateCommitment, runDraw, verifyDraw } = await import("./services/loto-draw-engine");
   const { scheduleNewDraw } = await import("./services/loto-draw-scheduler");
   const { listSupportedProviders } = await import("./services/loto-payout-adapter");
+  const { normalisePhoneE164 } = await import("./services/loto-messaging-adapter");
+  const ussdModule = await import("./services/loto-ussd-state-machine");
+  const ussdStep = ussdModule.step;
+  type UssdStateType = import("./services/loto-ussd-state-machine").UssdState;
+  type UssdContextType = import("./services/loto-ussd-state-machine").UssdContext;
 
   const tierInputSchema = z.object({
     tier: z.string().min(1),
@@ -18000,6 +18008,216 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const report = await verifyDraw(req.params.id);
       res.json({ report });
     } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ════════════════════════════════════════════════════════════════════════
+  // Loto Notifications & USSD (Task #286)
+  // ════════════════════════════════════════════════════════════════════════
+
+  // Admin: aggregate stats for the messaging dashboard.
+  app.get(
+    "/api/loto/admin/messaging/stats",
+    requireAuth,
+    requireRole("super_admin", "dgi", "loto_admin", "tax_admin", "admin"),
+    async (req, res) => {
+      try {
+        const countryCode = typeof req.query.country === "string" ? req.query.country : undefined;
+        const sinceDays = typeof req.query.sinceDays === "string"
+          ? Math.max(1, Math.min(365, parseInt(req.query.sinceDays, 10) || 30))
+          : 30;
+        const stats = await storage.getLotoOutboundMessageStats({ countryCode, sinceDays });
+        res.json({ stats, sinceDays, countryCode: countryCode ?? null, generatedAt: new Date().toISOString() });
+      } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+      }
+    },
+  );
+
+  app.get(
+    "/api/loto/admin/messaging/recent",
+    requireAuth,
+    requireRole("super_admin", "dgi", "loto_admin", "tax_admin", "admin"),
+    async (req, res) => {
+      try {
+        const countryCode = typeof req.query.country === "string" ? req.query.country : undefined;
+        const limit = typeof req.query.limit === "string"
+          ? Math.max(1, Math.min(500, parseInt(req.query.limit, 10) || 100))
+          : 100;
+        const rows = await storage.listLotoOutboundMessagesRecent({ countryCode, limit });
+        // Mask recipient phone in the API response — last 4 digits only.
+        const masked = rows.map((r) => ({
+          ...r,
+          recipient: r.recipient.length > 4
+            ? `${"*".repeat(Math.max(0, r.recipient.length - 4))}${r.recipient.slice(-4)}`
+            : r.recipient,
+        }));
+        res.json({ messages: masked });
+      } catch (e) {
+        res.status(500).json({ message: safeErrorMessage(e) });
+      }
+    },
+  );
+
+  // Consumer messaging preferences.
+  app.get("/api/loto/consumer/messaging-prefs", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const prefs = await storage.getLotoConsumerMessagingPrefs(userId);
+      res.json({
+        prefs: prefs ?? {
+          userId,
+          optOutReminders: false,
+          language: "en",
+          verifiedPhone: null,
+          verifiedAt: null,
+        },
+      });
+    } catch (e) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.put("/api/loto/consumer/messaging-prefs", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const schema = z.object({
+        optOutReminders: z.boolean().optional(),
+        language: z.enum(["en", "fr"]).optional(),
+        phone: z.string().min(8).max(32).optional().nullable(),
+        countryCode: z.string().length(2),
+      });
+      const parsed = schema.parse(req.body ?? {});
+      const existing = await storage.getLotoConsumerMessagingPrefs(userId);
+      const normalised = parsed.phone
+        ? normalisePhoneE164(parsed.phone, parsed.countryCode)
+        : existing?.verifiedPhone ?? null;
+      if (parsed.phone && !normalised) {
+        return res.status(400).json({ message: "phone_invalid_e164" });
+      }
+      const next = await storage.upsertLotoConsumerMessagingPrefs({
+        userId,
+        optOutReminders: parsed.optOutReminders ?? existing?.optOutReminders ?? false,
+        language: parsed.language ?? (existing?.language as "en" | "fr" | undefined) ?? "en",
+        verifiedPhone: normalised,
+        // In production a real OTP flow gates verifiedAt. For demo we accept
+        // the client-provided number once it parses to E.164.
+        verifiedAt: normalised ? new Date() : null,
+      });
+      res.json({ prefs: next });
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "validation_error", details: e.errors });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // Public USSD gateway endpoint. Aggregator (Africa's Talking, Hubtel,
+  // MTN/Orange direct) POSTs the standard form fields. We respond with the
+  // body the aggregator must echo back to the user's handset, prefixed
+  // with "CON " (continue) or "END " (terminate).
+  //
+  // Auth model: optional shared secret in the `X-USSD-Partner-Token`
+  // header — if LOTO_USSD_PARTNER_TOKEN env is set we require a match,
+  // otherwise the endpoint is open (DEMO).
+  app.post("/api/loto/ussd/session", async (req, res) => {
+    try {
+      // Auth model:
+      //  - In DEMO (LOTO_MESSAGING_LIVE!=true) the endpoint is open so the
+      //    pilot is testable without a partner integration.
+      //  - In production (LOTO_MESSAGING_LIVE=true) the X-USSD-Partner-Token
+      //    header is REQUIRED and must match LOTO_USSD_PARTNER_TOKEN. Fail
+      //    CLOSED — never accept production USSD traffic without the secret.
+      const live = process.env.LOTO_MESSAGING_LIVE === "true";
+      const expected = process.env.LOTO_USSD_PARTNER_TOKEN;
+      if (live) {
+        if (!expected) return res.status(503).json({ message: "ussd_partner_token_unconfigured" });
+        const got = req.header("x-ussd-partner-token");
+        if (got !== expected) return res.status(401).json({ message: "unauthorised_partner" });
+      } else if (expected) {
+        // Even in DEMO, if a partner token is configured, honour it.
+        const got = req.header("x-ussd-partner-token");
+        if (got !== expected) return res.status(401).json({ message: "unauthorised_partner" });
+      }
+      const schema = z.object({
+        sessionId: z.string().min(4).max(128),
+        phoneNumber: z.string().min(6).max(32),
+        text: z.string().default(""),
+        countryCode: z.string().length(2).default("CI"),
+        language: z.enum(["en", "fr"]).default("fr"),
+      });
+      const parsed = schema.parse(req.body ?? {});
+      const msisdn = normalisePhoneE164(parsed.phoneNumber, parsed.countryCode);
+      if (!msisdn) return res.status(400).json({ message: "phone_invalid_e164" });
+
+      let session = await storage.getLotoUssdSession(parsed.sessionId);
+      if (!session) {
+        session = await storage.createLotoUssdSession({
+          sessionId: parsed.sessionId,
+          msisdn,
+          countryCode: parsed.countryCode,
+          language: parsed.language,
+        });
+      }
+      // Replay-safe: the aggregator sends the FULL cumulative trail every
+      // request (e.g. "1*87654321"). We re-execute the state machine from
+      // "root" and apply each input in order, so a duplicate POST with the
+      // same trail produces identical state — a hard idempotency guarantee
+      // against gateway retries.
+      const trail = parsed.text.split("*").filter((p) => p.length > 0);
+      let result = ussdStep({
+        state: "root",
+        context: {},
+        language: parsed.language,
+        input: "",
+      });
+      for (const segment of trail) {
+        result = ussdStep({
+          state: result.state,
+          context: result.context,
+          language: parsed.language,
+          input: segment,
+        });
+      }
+      const lastInput = trail.length === 0 ? "" : trail[trail.length - 1];
+
+      await storage.updateLotoUssdSession(parsed.sessionId, {
+        state: result.state,
+        // UssdContext is a typed shape (fiscalCode/ticketCount/...) that
+        // serialises losslessly into the Record<string,string> column.
+        context: Object.fromEntries(
+          Object.entries(result.context).filter(([, v]) => typeof v === "string"),
+        ) as Record<string, string>,
+        endedAt: result.endSession ? new Date() : null,
+      });
+
+      // Persist an outbound row for audit (channel=ussd, body=display).
+      await storage.createLotoOutboundMessage({
+        countryCode: parsed.countryCode,
+        channel: "ussd",
+        templateKey: "ussd_session",
+        language: parsed.language,
+        recipient: msisdn,
+        recipientUserId: null,
+        drawId: null,
+        winnerId: null,
+        merchantId: null,
+        payload: { body: result.displayText, vars: { state: result.state, input: lastInput } },
+        provider: "simulated",
+      });
+
+      const prefix = result.endSession ? "END " : "CON ";
+      // Many aggregators want plain text, not JSON; offer both.
+      const accept = req.header("accept") ?? "";
+      if (accept.includes("application/json")) {
+        res.json({ body: prefix + result.displayText, endSession: result.endSession, state: result.state });
+      } else {
+        res.type("text/plain").send(prefix + result.displayText);
+      }
+    } catch (e) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "validation_error", details: e.errors });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });

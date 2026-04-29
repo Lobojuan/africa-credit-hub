@@ -57,7 +57,7 @@ The system employs a modern full-stack architecture built for scalability and co
 -   **Backend Libraries**: Express.js, bcryptjs, express-session, Drizzle ORM, compression, jsonwebtoken, otpauth, pdfkit, ws, @simplewebauthn/server
 -   **Payments**: Stripe
 -   **Email**: SendGrid, Gmail SMTP
--   **SMS**: Twilio, Africa's Talking
+-   **SMS**: Twilio, Africa's Talking (Loto Fiscal messaging uses an adapter pattern; default is a simulated adapter that writes to `loto_outbound_messages`. AT/Twilio adapters are stubbed and selected per country payout provider. PII-masking, exponential-backoff retry, identity-safe winner fallback, and a USSD aggregator endpoint at `POST /api/loto/ussd/session` are included.)
 -   **AI / LLM Providers**: Anthropic (Claude Opus), OpenAI (GPT-4o)
 -   **Excel Export/Import**: `exceljs`, `xlsx` (SheetJS)
 -   **Third-Party APIs**: open.er-api.com (exchange rates), DiceBear (avatars)

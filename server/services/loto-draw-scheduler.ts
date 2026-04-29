@@ -18,6 +18,11 @@
 import { randomUUID } from "crypto";
 import { storage } from "../storage";
 import { computeCommitmentHash, generateCommitment, runDraw } from "./loto-draw-engine";
+import {
+  dispatchDrawReminders,
+  dispatchMerchantInactivityAlerts,
+  retryPendingMessages,
+} from "./loto-notification-dispatcher";
 import type { InsertAuditLog, LotoCountryDrawConfig, LotoDefaultTier, LotoDraw } from "@shared/schema";
 
 const TICK_MS = 60_000;
@@ -204,6 +209,59 @@ async function tick() {
         // eslint-disable-next-line no-console
         console.error(`[loto-scheduler] failed to run draw ${draw.id}:`, err instanceof Error ? err.message : err);
       }
+    }
+
+    // Phase 3: T-24h reminders + merchant inactivity (Task #286). Each
+    // dispatch is best-effort and idempotent on the outbound table.
+    try {
+      const allDraws = await storage.listLotoDraws({ limit: 50 });
+      const now = new Date();
+      for (const d of allDraws) {
+        if (d.status !== "scheduled" && d.status !== "open") continue;
+        const hoursToClose = (new Date(d.periodEnd).getTime() - now.getTime()) / (1000 * 60 * 60);
+        if (hoursToClose <= 0 || hoursToClose > 24) continue;
+        try {
+          const summary = await dispatchDrawReminders(d, now);
+          if (summary.queued > 0) {
+            // eslint-disable-next-line no-console
+            console.info(`[loto-scheduler] draw reminders for ${d.countryCode} #${d.drawNumber}: queued=${summary.queued} skipped=${summary.skipped}`);
+          }
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[loto-scheduler] reminder dispatch failed for ${d.id}:`, err instanceof Error ? err.message : err);
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[loto-scheduler] reminder phase failed:", err instanceof Error ? err.message : err);
+    }
+
+    // Phase 4: retry pending/failed outbound messages.
+    try {
+      const r = await retryPendingMessages(new Date());
+      if (r.retried > 0) {
+        // eslint-disable-next-line no-console
+        console.info(`[loto-scheduler] retried ${r.retried} outbound messages`);
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[loto-scheduler] retry phase failed:", err instanceof Error ? err.message : err);
+    }
+
+    // Phase 5: daily merchant-inactivity sweep — cheap dedupe handled in dispatcher.
+    try {
+      const configs = await storage.listLotoCountryDrawConfigs();
+      for (const cfg of configs) {
+        try {
+          await dispatchMerchantInactivityAlerts(cfg.countryCode, 7);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[loto-scheduler] inactivity dispatch failed for ${cfg.countryCode}:`, err instanceof Error ? err.message : err);
+        }
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[loto-scheduler] inactivity phase failed:", err instanceof Error ? err.message : err);
     }
   } catch (err) {
     // eslint-disable-next-line no-console

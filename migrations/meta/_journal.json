@@ -92,6 +92,13 @@
       "when": 1777488644399,
       "tag": "0012_loto_fiscal_pilot",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1777488644400,
+      "tag": "0013_loto_messaging_ussd",
+      "breakpoints": true
     }
   ]
 }
