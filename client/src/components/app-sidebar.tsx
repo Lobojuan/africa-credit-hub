@@ -157,6 +157,10 @@ const collateralItems: NavItem[] = [
   { label: "Registry Authority Portal", tKey: "sidebar.registryAuthorityPortal", url: "/registry-authority-portal", icon: Landmark, testId: "nav-registry-authority-portal", roles: ["super_admin", "admin"] },
 ];
 
+const lotoItems: NavItem[] = [
+  { label: "Loto Fiscal Workspace", tKey: "sidebar.lotoFiscalWorkspace", url: "/loto-fiscal", icon: Receipt, testId: "nav-loto-fiscal", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
+];
+
 const baseOversightItems: NavItem[] = [
   { label: "Regulatory Dashboard", tKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
   { label: "Audit Trail", tKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
@@ -408,8 +412,9 @@ export function AppSidebar() {
   const visibleWorkflows = !isShared && productMatch(["credit"]) ? filterByRole(workflowItems, role) : [];
   const visibleIntelligence = !isShared && productMatch(["credit"]) ? filterByRole(intelligenceItems, role) : [];
   const visibleCollateral = !isShared && productMatch(["collateral"]) ? filterByRole(collateralItems, role) : [];
+  const visibleLoto = !isShared && productMatch(["loto"]) ? filterByRole(lotoItems, role) : [];
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
-  const visibleOversight = !isShared && productMatch(["credit"]) ? filterByRole(oversightItems, role) : [];
+  const visibleOversight = !isShared ? filterByRole(oversightItems, role) : [];
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
     queryKey: ["/api/sata/access-check"],
     enabled: !!user,
@@ -541,6 +546,18 @@ export function AppSidebar() {
             location={location}
             icon={Package}
             isOpen={openSection === "Collateral"}
+            onToggle={handleToggle}
+          />
+        )}
+
+        {visibleLoto.length > 0 && (
+          <CollapsibleSection
+            label="Loto Fiscal"
+            tKey="products.loto.name"
+            items={visibleLoto}
+            location={location}
+            icon={Receipt}
+            isOpen={openSection === "Loto Fiscal"}
             onToggle={handleToggle}
           />
         )}
