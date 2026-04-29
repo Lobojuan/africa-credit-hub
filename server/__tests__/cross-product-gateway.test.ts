@@ -797,6 +797,99 @@ async function run() {
   await db.delete(borrowers).where(eq(borrowers.id, collBorrower.id));
   await db.delete(organizations).where(eq(organizations.id, collOrg.id));
 
+  // ─── Public stats: outcome split (allowed/denied) on financial-inclusion-impact ──
+  // Guards the bridgeAccessesAllowed / bridgeAccessesDenied breakdown surfaced by
+  // GET /api/public/financial-inclusion-impact. A future refactor of
+  // getCrossProductImpactStats or of the cross_product_access `details` JSON
+  // shape would otherwise silently flatten the breakdown to 0/0.
+  await test("getCrossProductImpactStats returns outcome split (allowed/denied) from audit log", async () => {
+    // The stats method aggregates the entire audit_logs table, so we snapshot
+    // baseline counts and assert against the delta after seeding a known mix.
+    const before = await storage.getCrossProductImpactStats();
+
+    const seeded = [
+      { outcome: "ok", purpose: "merchant_credit_profile", sourceProduct: "loto", targetProduct: "credit" },
+      { outcome: "ok", purpose: "merchant_credit_profile", sourceProduct: "loto", targetProduct: "credit" },
+      { outcome: "ok", purpose: "bureau_reputation_badge", sourceProduct: "loto", targetProduct: "credit" },
+      { outcome: "denied", purpose: "merchant_credit_profile", sourceProduct: "loto", targetProduct: "credit", reason: "no_consent" },
+      { outcome: "denied", purpose: "merchant_credit_profile", sourceProduct: "loto", targetProduct: "credit", reason: "consent_revoked" },
+    ];
+    const insertedIds: string[] = [];
+    try {
+      for (const d of seeded) {
+        const [row] = await db.insert(auditLogs).values({
+          action: "cross_product_access",
+          entity: "loto",
+          entityId: TAG + "-impact-stats",
+          details: JSON.stringify(d),
+        }).returning();
+        insertedIds.push(row.id);
+      }
+      // Row missing `outcome` — must be skipped (counted as neither allowed nor denied).
+      const [noOutcomeRow] = await db.insert(auditLogs).values({
+        action: "cross_product_access",
+        entity: "loto",
+        entityId: TAG + "-impact-stats",
+        details: JSON.stringify({ purpose: "merchant_credit_profile" }),
+      }).returning();
+      insertedIds.push(noOutcomeRow.id);
+      // Row with malformed JSON details — must not crash the query and must be skipped.
+      const [malformedRow] = await db.insert(auditLogs).values({
+        action: "cross_product_access",
+        entity: "loto",
+        entityId: TAG + "-impact-stats",
+        details: "{not valid json",
+      }).returning();
+      insertedIds.push(malformedRow.id);
+
+      const after = await storage.getCrossProductImpactStats();
+
+      const allowedDelta = after.bridgeAccessesAllowed - before.bridgeAccessesAllowed;
+      const deniedDelta = after.bridgeAccessesDenied - before.bridgeAccessesDenied;
+      const loggedDelta = after.bridgeAccessesLogged - before.bridgeAccessesLogged;
+
+      if (allowedDelta !== 3) throw new Error(`expected +3 allowed, got +${allowedDelta}`);
+      if (deniedDelta !== 2) throw new Error(`expected +2 denied, got +${deniedDelta}`);
+      // Total bridgeAccessesLogged counts every cross_product_access row,
+      // including the no-outcome and malformed rows (5 + 2 = 7).
+      if (loggedDelta !== 7) throw new Error(`expected +7 logged total, got +${loggedDelta}`);
+
+      for (const key of ["bridgeAccessesAllowed", "bridgeAccessesDenied", "bridgeAccessesLogged"] as const) {
+        if (typeof after[key] !== "number") throw new Error(`expected ${key} to be a number, got ${typeof after[key]}`);
+      }
+    } finally {
+      for (const id of insertedIds) {
+        await db.delete(auditLogs).where(eq(auditLogs.id, id));
+      }
+    }
+  });
+
+  await test("getCrossProductImpactStats response shape matches the public endpoint contract", async () => {
+    // The /api/public/financial-inclusion-impact route is a thin pass-through:
+    //   res.json({ ...stats, currency, defaultConsentMonths, generatedAt })
+    // so verifying the storage object's shape is equivalent to verifying the
+    // fields the public JSON response exposes. This catches a refactor that
+    // drops bridgeAccessesAllowed / bridgeAccessesDenied from the payload.
+    const stats = await storage.getCrossProductImpactStats();
+    const requiredNumericFields = [
+      "merchantsRegistered", "merchantsOptedIn",
+      "verifiedReceipts", "verifiedTurnover",
+      "activeCrossProductConsents", "bridgeAccessesLogged",
+      "bridgeAccessesAllowed", "bridgeAccessesDenied",
+    ] as const satisfies readonly (keyof typeof stats)[];
+    for (const key of requiredNumericFields) {
+      if (!(key in stats)) throw new Error(`public impact stats missing field: ${key}`);
+      if (typeof stats[key] !== "number") {
+        throw new Error(`field ${key} should be a number, got ${typeof stats[key]}`);
+      }
+    }
+    // Allowed + denied can never exceed the total logged count — sanity check
+    // that prevents a future double-count regression.
+    if (stats.bridgeAccessesAllowed + stats.bridgeAccessesDenied > stats.bridgeAccessesLogged) {
+      throw new Error("allowed + denied exceeds total logged accesses");
+    }
+  });
+
   await cleanup(merchant.id);
 
   const passed = results.filter(r => r.passed).length;
