@@ -148,15 +148,15 @@ export function computeNextDrawSlot(cadence: string, drawTimeUtc: string, now: D
  */
 export async function ensureNextDrawForCountry(config: LotoCountryDrawConfig, now: Date = new Date()): Promise<LotoDraw | null> {
   if (!config.active) return null;
-  // Look at the most recent draws for this country; if any are open or
-  // scheduled with scheduledFor still in the future, we already have one
-  // queued and we shouldn't pile up duplicates.
+  // Look at the most recent draws for this country; if ANY draw is still
+  // scheduled or open we don't queue another one — even if it's already
+  // past its scheduledFor (it just hasn't run yet). The Phase-2 executor
+  // tick will pick it up and only after it transitions to closed/verified
+  // will the next slot be allowed. This prevents back-to-back duplicates
+  // when a single tick is delayed.
   const recent = await storage.listLotoDraws({ countryCode: config.countryCode, limit: 5 });
-  const hasUpcoming = recent.some((d) =>
-    (d.status === "scheduled" || d.status === "open") &&
-    new Date(d.scheduledFor).getTime() > now.getTime(),
-  );
-  if (hasUpcoming) return null;
+  const hasUnresolved = recent.some((d) => d.status === "scheduled" || d.status === "open" || d.status === "drawing");
+  if (hasUnresolved) return null;
   const slot = computeNextDrawSlot(config.cadence, config.drawTimeUtc, now);
   const result = await scheduleNewDraw({
     countryCode: config.countryCode,

@@ -215,7 +215,14 @@ export function LotoLotteryExperience({
   const drawsQ = useQuery<{ draws: RealDraw[] }>({ queryKey: ["/api/loto/draws"] });
   const draws = drawsQ.data?.draws ?? [];
   const latestClosed = draws.find((d) => d.status === "closed" || d.status === "verified");
-  const nextScheduled = [...draws].reverse().find((d) => d.status === "scheduled" || d.status === "open");
+  // Pick the NEAREST upcoming draw (smallest scheduledFor that is still in
+  // the future) rather than just any open/scheduled row — reversing the
+  // list could otherwise surface a stale older draw and mis-display the
+  // jackpot/next-draw summary on the consumer page.
+  const nowMs = Date.now();
+  const nextScheduled = draws
+    .filter((d) => (d.status === "scheduled" || d.status === "open") && new Date(d.scheduledFor).getTime() >= nowMs)
+    .sort((a, b) => new Date(a.scheduledFor).getTime() - new Date(b.scheduledFor).getTime())[0];
   // The default queryFn fetches queryKey[0] only, so per-draw fetches need an
   // explicit queryFn pointing at the /:id sub-route. Cache key remains the
   // hierarchical pair so invalidating ["/api/loto/draws"] still bubbles down.
