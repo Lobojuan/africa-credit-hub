@@ -395,6 +395,34 @@ export default function AuditTrailPage() {
               />
             </div>
 
+            <div className="flex items-center gap-2 flex-wrap" data-testid="quick-filter-chips">
+              <span className="text-xs text-muted-foreground mr-1">Quick filter:</span>
+              <Button
+                variant={actionFilter === "cross_product_access" ? "default" : "outline"}
+                size="sm"
+                className="h-7 rounded-full text-xs"
+                data-testid="chip-cross-product-accesses"
+                onClick={() =>
+                  setActionFilter(actionFilter === "cross_product_access" ? "all" : "cross_product_access")
+                }
+              >
+                <Activity className="w-3 h-3 mr-1.5" />
+                Cross-Product Accesses
+              </Button>
+              <Button
+                variant={actionFilter === "TRACE_*" ? "default" : "outline"}
+                size="sm"
+                className="h-7 rounded-full text-xs"
+                data-testid="chip-trace-activity"
+                onClick={() =>
+                  setActionFilter(actionFilter === "TRACE_*" ? "all" : "TRACE_*")
+                }
+              >
+                <Eye className="w-3 h-3 mr-1.5" />
+                Trace activity
+              </Button>
+            </div>
+
             <div className="flex items-end gap-2 flex-wrap">
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Action</Label>
