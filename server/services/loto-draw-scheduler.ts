@@ -18,25 +18,18 @@
 import { randomUUID } from "crypto";
 import { storage } from "../storage";
 import { computeCommitmentHash, generateCommitment, runDraw } from "./loto-draw-engine";
-import type { InsertAuditLog, LotoCountryDrawConfig, LotoDraw } from "@shared/schema";
+import type { InsertAuditLog, LotoCountryDrawConfig, LotoDefaultTier, LotoDraw } from "@shared/schema";
 
 const TICK_MS = 60_000;
 let timer: NodeJS.Timeout | null = null;
 let busy = false;
-
-interface DefaultTier {
-  tier: string;
-  label: string;
-  prizeAmount: string | number;
-  slotCount: number;
-}
 
 interface ScheduleArgs {
   countryCode: string;
   periodStart: Date;
   periodEnd: Date;
   scheduledFor: Date;
-  tiersOverride?: DefaultTier[];
+  tiersOverride?: LotoDefaultTier[];
   currencyOverride?: string;
 }
 
@@ -47,8 +40,7 @@ interface ScheduleArgs {
  */
 export async function scheduleNewDraw(args: ScheduleArgs) {
   const config = await storage.getLotoCountryDrawConfig(args.countryCode);
-  const tierSrc: DefaultTier[] =
-    args.tiersOverride ?? ((config?.defaultTiers as DefaultTier[] | undefined) ?? []);
+  const tierSrc: LotoDefaultTier[] = args.tiersOverride ?? (config?.defaultTiers ?? []);
   if (!tierSrc.length) throw new Error("no_tiers_configured");
   const currency = args.currencyOverride ?? config?.currency;
   if (!currency) throw new Error("no_currency_configured");

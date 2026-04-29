@@ -211,6 +211,7 @@ export function LotoLotteryExperience({
     selectionRank: number; selectionHash: string;
     receiptIdSuffix: string; consumerHint: string; payoutStatus: string;
   };
+  type RealTier = { id: string; tier: string; label: string; prizeAmount: string; slotCount: number; position: number };
   const drawsQ = useQuery<{ draws: RealDraw[] }>({ queryKey: ["/api/loto/draws"] });
   const draws = drawsQ.data?.draws ?? [];
   const latestClosed = draws.find((d) => d.status === "closed" || d.status === "verified");
@@ -218,7 +219,7 @@ export function LotoLotteryExperience({
   // The default queryFn fetches queryKey[0] only, so per-draw fetches need an
   // explicit queryFn pointing at the /:id sub-route. Cache key remains the
   // hierarchical pair so invalidating ["/api/loto/draws"] still bubbles down.
-  const latestWinnersQ = useQuery<{ winners: RealWinner[]; tiers: any[] }>({
+  const latestWinnersQ = useQuery<{ winners: RealWinner[]; tiers: RealTier[] }>({
     queryKey: ["/api/loto/draws", latestClosed?.id],
     enabled: !!latestClosed?.id,
     queryFn: async () => {
@@ -921,10 +922,15 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete, onWatc
   );
 }
 
+type RealDrawSummary = {
+  id: string; countryCode: string; drawNumber: number; status: string;
+  scheduledFor: string; commitmentHash: string;
+  eligibleTicketCount: number; totalPool: string; currency: string; drawnAt: string | null;
+};
 interface RealDrawsBannerProps {
-  draws: Array<{ id: string; countryCode: string; drawNumber: number; status: string; scheduledFor: string; commitmentHash: string; eligibleTicketCount: number; totalPool: string; currency: string; drawnAt: string | null }>;
-  latestClosed: any;
-  nextScheduled: any;
+  draws: RealDrawSummary[];
+  latestClosed: RealDrawSummary | undefined;
+  nextScheduled: RealDrawSummary | undefined;
 }
 
 function RealDrawsBanner({ draws, latestClosed, nextScheduled }: RealDrawsBannerProps) {

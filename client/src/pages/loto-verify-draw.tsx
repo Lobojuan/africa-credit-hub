@@ -361,7 +361,7 @@ export default function LotoVerifyDrawPage() {
   );
 }
 
-function CryptoRow({ icon: Icon, label, value, testid }: { icon: any; label: string; value: string; testid?: string }) {
+function CryptoRow({ icon: Icon, label, value, testid }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string; testid?: string }) {
   return (
     <div className="grid sm:grid-cols-[200px_1fr] gap-2 items-start">
       <div className="text-xs text-muted-foreground flex items-center gap-1.5">

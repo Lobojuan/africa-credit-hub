@@ -209,10 +209,13 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
   }
 
   // Atomic persistence — flips status to "closed" with the reveal in the same txn.
+  // The eligibleReceiptIdsSnapshot is the canonical immutable pool list used
+  // for all future verification; we never re-derive eligibility live.
   const persisted = await storage.persistLotoDrawResults({
     drawId,
     poolHash,
     eligibleTicketCount: eligibleIds.length,
+    eligibleReceiptIdsSnapshot: eligibleIds,
     totalPool: String(totalPool),
     winners: winnersToInsert,
   });
@@ -317,10 +320,13 @@ export async function verifyDraw(drawId: string): Promise<VerificationReport> {
   });
   const commitmentValid = commitmentRecomputed === draw.commitmentHash;
 
-  const eligible = await storage.getEligibleReceiptsForDraw(
-    draw.countryCode, draw.periodStart, draw.periodEnd,
-  );
-  const eligibleIds = [...eligible].map((r) => r.id).sort();
+  // Replay against the immutable snapshot captured at draw-close (Task #283
+  // immutability requirement). Falling back to a live re-query is only done
+  // for legacy draws closed before the snapshot column existed.
+  const eligibleIds = draw.eligibleReceiptIdsSnapshot
+    ?? (await storage.getEligibleReceiptsForDraw(
+      draw.countryCode, draw.periodStart, draw.periodEnd,
+    )).map((r) => r.id).sort();
   const poolHashRecomputed = computePoolHash(eligibleIds);
   const poolHashValid = poolHashRecomputed === draw.poolHash;
 

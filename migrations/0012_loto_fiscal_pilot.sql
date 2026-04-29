@@ -53,6 +53,7 @@ CREATE TABLE "loto_draws" (
 	"server_nonce" text,
 	"pool_hash" text,
 	"eligible_ticket_count" integer DEFAULT 0 NOT NULL,
+	"eligible_receipt_ids_snapshot" jsonb,
 	"total_pool" numeric(18, 2) DEFAULT '0' NOT NULL,
 	"currency" text NOT NULL,
 	"opened_at" timestamp DEFAULT now(),

@@ -1,5 +1,5 @@
 {
-  "id": "aa011528-9ccf-4a63-aca4-3209b0883ae0",
+  "id": "d5d884fb-f025-466f-8bc5-3e7802763367",
   "prevId": "361884e0-d653-4a24-9ae8-86943efed79f",
   "version": "7",
   "dialect": "postgresql",
@@ -7665,6 +7665,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "eligible_receipt_ids_snapshot": {
+          "name": "eligible_receipt_ids_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
         },
         "total_pool": {
           "name": "total_pool",

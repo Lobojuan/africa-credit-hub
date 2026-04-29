@@ -17832,30 +17832,27 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const parsed = runDemoSchema.safeParse(req.body ?? {});
       if (!parsed.success) return res.status(400).json({ message: "invalid_payload", errors: parsed.error.flatten() });
+      // Country MUST come from a persisted config — never hardcoded. If the
+      // caller doesn't pass one we use the first ACTIVE configured country;
+      // if no active config exists we surface a clear setup error so an
+      // operator wires up loto_country_draw_config before running a draw.
       let countryCode = parsed.data.countryCode?.toUpperCase();
       if (!countryCode) {
         const configs = await storage.listLotoCountryDrawConfigs();
-        const active = configs.find((c) => c.active) ?? configs[0];
-        countryCode = active?.countryCode ?? "CI"; // CI = Côte d'Ivoire pilot default
+        const active = configs.find((c) => c.active);
+        if (!active) {
+          return res.status(400).json({
+            message: "no_active_loto_country_config",
+            detail: "Configure at least one country via POST /api/loto/admin/country-config before running a demo draw.",
+          });
+        }
+        countryCode = active.countryCode;
       }
-      let config = await storage.getLotoCountryDrawConfig(countryCode);
+      const config = await storage.getLotoCountryDrawConfig(countryCode);
       if (!config) {
-        // Auto-seed a sensible demo config so the button works out-of-the-box.
-        const profile = getTaxAuthorityProfile(countryCode);
-        if (!profile) return res.status(400).json({ message: `loto_not_configured_for_country:${countryCode}` });
-        config = await storage.upsertLotoCountryDrawConfig({
-          countryCode,
-          cadence: "monthly",
-          drawTimeUtc: "20:00",
-          currency: profile.currency,
-          payoutProvider: "simulated",
-          active: true,
-          defaultTiers: [
-            { tier: "grand", label: "Grand Prize", prizeAmount: "25000000", slotCount: 1 },
-            { tier: "gold",  label: "Gold Prize",  prizeAmount: "5000000",  slotCount: 5 },
-            { tier: "silver",label: "Silver Prize",prizeAmount: "500000",   slotCount: 25 },
-            { tier: "bronze",label: "Bronze Prize",prizeAmount: "50000",    slotCount: 100 },
-          ] as any,
+        return res.status(400).json({
+          message: "loto_not_configured_for_country",
+          detail: `No loto_country_draw_config row exists for ${countryCode}. Upsert one before running a draw — tiers/cadence/currency MUST be persisted, never inferred.`,
         });
       }
       const now = new Date();
@@ -17916,14 +17913,25 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Eligible-receipt IDs — opaque internal UUIDs (NOT PII; no consumer
       // info is leaked) — are exposed only after the draw is closed so any
       // citizen can re-run the HMAC selection algorithm in their browser
-      // and confirm the winner ranking exactly. Without these, the page
-      // could only do an ordering check, which is not a real proof.
+      // and confirm the winner ranking exactly. We always serve the IMMUTABLE
+      // snapshot captured at draw-close (loto_draws.eligible_receipt_ids_snapshot)
+      // so the published commitment + pool hash stay verifiable forever, even
+      // if a consumer later changes status or has phone-verification revoked.
+      // Legacy draws closed before the snapshot column existed fall back to a
+      // live re-query (read-only, deterministic).
       let eligibleReceiptIds: string[] = [];
       if (isRevealed) {
-        const eligible = await storage.getEligibleReceiptsForDraw(
-          draw.countryCode, draw.periodStart, draw.periodEnd,
-        );
-        eligibleReceiptIds = [...eligible].map((r) => r.id).sort();
+        if (Array.isArray(draw.eligibleReceiptIdsSnapshot)) {
+          // Authoritative path: any present snapshot (including an empty
+          // array for a zero-eligible draw) wins. Live re-query is reserved
+          // strictly for legacy pre-snapshot draws (snapshot column null).
+          eligibleReceiptIds = draw.eligibleReceiptIdsSnapshot;
+        } else {
+          const eligible = await storage.getEligibleReceiptsForDraw(
+            draw.countryCode, draw.periodStart, draw.periodEnd,
+          );
+          eligibleReceiptIds = [...eligible].map((r) => r.id).sort();
+        }
       }
 
       res.json({
@@ -17945,7 +17953,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           // remains anonymised — only an opaque last-4-char hint.
           receiptId: w.receiptId,
           receiptIdSuffix: w.receiptId.slice(-6),
-          consumerHint: w.consumerUserId ? `user_${w.consumerUserId.slice(-4)}` : "anonymous",
+          // Phone-tail-style anonymization (Task #283 spec): never reveal a
+          // user id; show a 4-character pseudo-tail derived deterministically
+          // from the consumer id so the same person sees the same hint across
+          // draws but observers cannot reverse-engineer identity.
+          consumerHint: w.consumerUserId
+            ? `***${crypto.createHash("sha256").update(w.consumerUserId).digest("hex").slice(-4).toUpperCase()}`
+            : "anonymous",
           payoutStatus: w.payoutStatus,
         })),
         eligibleReceiptIds,

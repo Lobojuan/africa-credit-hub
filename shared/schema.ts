@@ -2155,12 +2155,18 @@ export const lotoPayoutStatusEnum = pgEnum("loto_payout_status", [
 
 // Per-country draw configuration. Cadence + tiers + payout provider are
 // driven entirely by this row — no hard-coded country defaults anywhere.
+export interface LotoDefaultTier {
+  tier: string;
+  label: string;
+  prizeAmount: string;
+  slotCount: number;
+}
 export const lotoCountryDrawConfig = pgTable("loto_country_draw_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   countryCode: text("country_code").notNull().unique(),
   cadence: text("cadence").notNull(),                       // "weekly" | "monthly" | "annual"
   drawTimeUtc: text("draw_time_utc").notNull(),             // "20:00"
-  defaultTiers: jsonb("default_tiers").notNull(),           // [{tier,label,prizeAmount,slotCount}]
+  defaultTiers: jsonb("default_tiers").$type<LotoDefaultTier[]>().notNull(),
   payoutProvider: text("payout_provider").notNull().default("simulated"),
   currency: text("currency").notNull(),
   active: boolean("active").notNull().default(true),
@@ -2190,6 +2196,12 @@ export const lotoDraws = pgTable("loto_draws", {
   serverNonce: text("server_nonce"),
   poolHash: text("pool_hash"),
   eligibleTicketCount: integer("eligible_ticket_count").notNull().default(0),
+  // Immutable snapshot of the eligible receipt IDs (sorted) captured at
+  // draw-close time. Verifiers replay the algorithm against this canonical
+  // list — never against a live re-query — so the published commitment hash
+  // stays verifiable even if the underlying receipt or user records change
+  // afterwards (status flips, account deletions, etc).
+  eligibleReceiptIdsSnapshot: jsonb("eligible_receipt_ids_snapshot").$type<string[]>(),
   totalPool: decimal("total_pool", { precision: 18, scale: 2 }).notNull().default("0"),
   currency: text("currency").notNull(),
   openedAt: timestamp("opened_at").defaultNow(),

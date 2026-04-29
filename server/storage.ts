@@ -479,6 +479,7 @@ export interface IStorage {
     drawId: string;
     poolHash: string;
     eligibleTicketCount: number;
+    eligibleReceiptIdsSnapshot: string[];
     totalPool: string;
     winners: Array<{
       drawId: string; receiptId: string; consumerUserId: string | null;
@@ -3833,6 +3834,7 @@ export class DatabaseStorage implements IStorage {
     drawId: string;
     poolHash: string;
     eligibleTicketCount: number;
+    eligibleReceiptIdsSnapshot: string[];
     totalPool: string;
     winners: Array<{
       drawId: string; receiptId: string; consumerUserId: string | null;
@@ -3842,11 +3844,15 @@ export class DatabaseStorage implements IStorage {
   }): Promise<{ draw: LotoDraw; winners: LotoDrawWinner[] }> {
     return db.transaction(async (tx) => {
       // Idempotent guard: only flip "scheduled" → "closed" with reveal data.
+      // The eligibleReceiptIdsSnapshot column is the immutable canonical
+      // pool list — verifiers replay against it forever, even if user/receipt
+      // records mutate later (Task #283 transparency requirement).
       const [draw] = await tx.update(lotoDraws)
         .set({
           status: "closed",
           poolHash: input.poolHash,
           eligibleTicketCount: input.eligibleTicketCount,
+          eligibleReceiptIdsSnapshot: input.eligibleReceiptIdsSnapshot,
           totalPool: input.totalPool,
           drawnAt: new Date(),
         })
