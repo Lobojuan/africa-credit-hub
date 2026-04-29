@@ -3803,12 +3803,24 @@ export class DatabaseStorage implements IStorage {
     // Deterministic order is part of the provably-fair contract: pool hash
     // and selection ranking must be reproducible regardless of who calls
     // this method, so always sort by primary key in the storage layer.
+    //
+    // Eligibility rules (Task #283):
+    //   1. Receipt issued by an active merchant in the target country.
+    //   2. Receipt issued within [periodStart, periodEnd).
+    //   3. Receipt has been claimed by a registered consumer (consumerUserId
+    //      IS NOT NULL) — prevents merchants from auto-winning on unclaimed
+    //      paper receipts.
+    //   4. That consumer's user account is `active` — banned/locked users
+    //      cannot win.
     return db.select().from(lotoReceipts)
       .innerJoin(lotoMerchants, eq(lotoReceipts.merchantId, lotoMerchants.id))
+      .innerJoin(users, eq(lotoReceipts.consumerUserId, users.id))
       .where(and(
         eq(lotoMerchants.countryCode, countryCode),
         sql`${lotoReceipts.issuedAt} >= ${periodStart}`,
         sql`${lotoReceipts.issuedAt} < ${periodEnd}`,
+        sql`${lotoReceipts.consumerUserId} IS NOT NULL`,
+        eq(users.status, "active"),
       ))
       .orderBy(lotoReceipts.id)
       .then((rows) => rows.map((r: any) => r.loto_receipts));

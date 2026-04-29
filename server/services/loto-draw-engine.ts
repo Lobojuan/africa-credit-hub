@@ -23,6 +23,23 @@ import type {
 } from "@shared/schema";
 import { adapterFor } from "./loto-payout-adapter";
 
+async function writeAudit(action: string, draw: { id: string; countryCode: string; drawNumber: number }, details: Record<string, unknown>) {
+  try {
+    await storage.createAuditLog({
+      action,
+      entity: "loto_draw",
+      entityId: draw.id,
+      userId: null as any,
+      details: JSON.stringify({ countryCode: draw.countryCode, drawNumber: draw.drawNumber, ...details }),
+      ipAddress: null as any,
+      userAgent: null as any,
+      organizationId: null as any,
+    } as any);
+  } catch {
+    // Audit log failure must never abort a draw run.
+  }
+}
+
 export interface Commitment {
   serverSeed: string;
   serverNonce: string;
@@ -161,11 +178,22 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
     winners: winnersToInsert,
   });
 
+  // Tamper-evident audit trail (Task #283 transparency requirement).
+  await writeAudit("loto_draw_completed", existing, {
+    eligibleTicketCount: eligibleIds.length,
+    totalPool,
+    winners: persisted.winners.length,
+    poolHash,
+    commitmentHash: existing.commitmentHash,
+  });
+
   // Fire-and-forget payout dispatch — adapter is plug-and-play.
   const config = await storage.getLotoCountryDrawConfig(existing.countryCode);
   const provider = config?.payoutProvider ?? "simulated";
   const adapter = adapterFor(provider);
   for (const winner of persisted.winners) {
+    let payoutStatus = "failed";
+    let providerRef: string | null = null;
     try {
       const result = await adapter.disburse({
         winnerId: winner.id,
@@ -174,6 +202,8 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
         countryCode: existing.countryCode,
         consumerUserId: winner.consumerUserId,
       });
+      payoutStatus = result.status;
+      providerRef = result.providerRef;
       await storage.recordLotoPayout({
         winnerId: winner.id,
         provider,
@@ -194,6 +224,15 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
         currency: winner.currency,
       });
     }
+    await writeAudit("loto_payout_dispatched", existing, {
+      winnerId: winner.id,
+      tier: winner.tier,
+      amount: winner.prizeAmount,
+      currency: winner.currency,
+      provider,
+      status: payoutStatus,
+      providerRef,
+    });
   }
 
   return { draw: persisted.draw, winners: persisted.winners, tiers, alreadyRun: false };

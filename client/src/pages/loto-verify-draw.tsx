@@ -17,7 +17,7 @@ type Tier = {
 type WinnerView = {
   id: string; tier: string; prizeAmount: string; currency: string;
   selectionRank: number; selectionHash: string;
-  receiptIdSuffix: string; consumerHint: string; payoutStatus: string;
+  receiptId: string; receiptIdSuffix: string; consumerHint: string; payoutStatus: string;
 };
 type DrawView = {
   id: string; countryCode: string; drawNumber: number; status: string;
@@ -26,7 +26,12 @@ type DrawView = {
   poolHash: string | null; eligibleTicketCount: number; totalPool: string;
   currency: string; openedAt: string | null; drawnAt: string | null;
 };
-type DrawResp = { draw: DrawView; tiers: Tier[]; winners: WinnerView[] };
+type DrawResp = {
+  draw: DrawView;
+  tiers: Tier[];
+  winners: WinnerView[];
+  eligibleReceiptIds: string[];
+};
 type ServerVerifyReport = {
   drawId: string; status: "match" | "mismatch" | "pending_reveal";
   commitmentValid: boolean; commitmentRecomputed: string | null;
@@ -56,14 +61,28 @@ async function hmacSha256Hex(key: string, message: string): Promise<string> {
 interface BrowserVerificationResult {
   commitmentValid: boolean;
   commitmentRecomputed: string;
+  poolHashValid: boolean;
+  poolHashRecomputed: string;
   hashesMatchByRank: Array<{ rank: number; expected: string; published: string; match: boolean }>;
   allHashesMatch: boolean;
+  eligibleCount: number;
 }
 
 export default function LotoVerifyDrawPage() {
   const [, params] = useRoute<{ drawId: string }>("/loto/draws/verify/:drawId");
   const drawId = params?.drawId ?? "";
-  const drawQ = useQuery<DrawResp>({ queryKey: ["/api/loto/draws", drawId], enabled: !!drawId });
+  // The default queryFn only fetches queryKey[0], so we must supply an
+  // explicit queryFn that targets the per-draw sub-route. Keeping the
+  // hierarchical key means invalidating ["/api/loto/draws"] still works.
+  const drawQ = useQuery<DrawResp>({
+    queryKey: ["/api/loto/draws", drawId],
+    enabled: !!drawId,
+    queryFn: async () => {
+      const res = await fetch(`/api/loto/draws/${drawId}`, { credentials: "include" });
+      if (!res.ok) throw new Error(`failed_to_load_draw_${res.status}`);
+      return await res.json();
+    },
+  });
 
   useEffect(() => {
     document.title = drawId
@@ -88,29 +107,63 @@ export default function LotoVerifyDrawPage() {
     setBrowserBusy(true);
     setBrowserError(null);
     try {
-      const { draw, winners } = drawQ.data;
+      const { draw, winners, eligibleReceiptIds } = drawQ.data;
       if (!draw.serverSeed || !draw.serverNonce) {
         throw new Error("Seed has not been revealed yet — cannot verify in-browser.");
       }
-      // 1. Verify commitment
+      if (!eligibleReceiptIds || eligibleReceiptIds.length === 0) {
+        throw new Error("No eligible receipt IDs were published — cannot recompute the draw.");
+      }
+
+      // 1. Recompute commitment hash from the revealed seed/nonce.
       const commitmentRecomputed = await sha256Hex(`${draw.serverSeed}:${draw.serverNonce}`);
       const commitmentValid = commitmentRecomputed === draw.commitmentHash;
-      // 2. Recompute selectionHash for every published winner using the same
-      //    HMAC-SHA256(serverSeed:serverNonce, drawNumber:receiptId) recipe.
-      //    Note: the page hides full receiptIds; the server provides the
-      //    published selectionHash for each winner so we re-prove rank
-      //    ordering monotonically increases — the strong cryptographic
-      //    check happens server-side via the verify endpoint.
-      const hashesMatchByRank = winners
-        .sort((a, b) => a.selectionRank - b.selectionRank)
-        .map((w, i) => ({
+
+      // 2. Recompute pool hash from the published eligible-ID list (sorted).
+      const sortedIds = [...eligibleReceiptIds].sort();
+      const poolHashRecomputed = await sha256Hex(sortedIds.join("\n"));
+      const poolHashValid = !!draw.poolHash && poolHashRecomputed === draw.poolHash;
+
+      // 3. Run the actual selection algorithm in the browser:
+      //    selection_hash = HMAC-SHA256(seed:nonce, drawNumber:receiptId)
+      //    Sort ascending by selection_hash; the top N receipts are winners.
+      const seedKey = `${draw.serverSeed}:${draw.serverNonce}`;
+      const ranked = await Promise.all(sortedIds.map(async (receiptId) => ({
+        receiptId,
+        selectionHash: await hmacSha256Hex(seedKey, `${draw.drawNumber}:${receiptId}`),
+      })));
+      ranked.sort((a, b) =>
+        a.selectionHash < b.selectionHash ? -1 :
+        a.selectionHash > b.selectionHash ? 1 : 0,
+      );
+
+      // 4. Compare against published winners by rank.
+      const sortedWinners = [...winners].sort((a, b) => a.selectionRank - b.selectionRank);
+      const hashesMatchByRank = sortedWinners.map((w, i) => {
+        const expected = ranked[i];
+        return {
           rank: w.selectionRank,
-          expected: w.selectionHash,
+          expected: expected ? expected.selectionHash : "(missing)",
           published: w.selectionHash,
-          match: i === 0 || winners[i].selectionHash >= winners[i - 1].selectionHash,
-        }));
-      const allHashesMatch = hashesMatchByRank.every((r) => r.match);
-      setBrowserCheck({ commitmentValid, commitmentRecomputed, hashesMatchByRank, allHashesMatch });
+          match: !!expected
+            && expected.selectionHash === w.selectionHash
+            && expected.receiptId === w.receiptId,
+        };
+      });
+      const allHashesMatch = commitmentValid
+        && poolHashValid
+        && sortedWinners.length > 0
+        && hashesMatchByRank.every((r) => r.match);
+
+      setBrowserCheck({
+        commitmentValid,
+        commitmentRecomputed,
+        poolHashValid,
+        poolHashRecomputed,
+        hashesMatchByRank,
+        allHashesMatch,
+        eligibleCount: sortedIds.length,
+      });
     } catch (err) {
       setBrowserError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -314,21 +367,29 @@ function CryptoRow({ icon: Icon, label, value, testid }: { icon: any; label: str
 }
 
 function BrowserResultPanel({ result, commitmentHash }: { result: BrowserVerificationResult; commitmentHash: string }) {
-  const ok = result.commitmentValid && result.allHashesMatch;
+  const ok = result.allHashesMatch;
+  const winnerMatchCount = result.hashesMatchByRank.filter((r) => r.match).length;
   return (
     <Alert variant={ok ? "default" : "destructive"} data-testid="alert-browser-result">
       {ok ? <ShieldCheck className="h-4 w-4" /> : <ShieldAlert className="h-4 w-4" />}
       <AlertTitle>{ok ? "Browser verification passed" : "Browser verification mismatch"}</AlertTitle>
       <AlertDescription className="text-xs space-y-1 mt-2">
         <div>
-          <strong>Commitment recomputed in browser:</strong>{" "}
+          <strong>Commitment:</strong>{" "}
           <code className="font-mono">{result.commitmentRecomputed.slice(0, 16)}…</code>
-          {" "}{result.commitmentValid ? "matches" : "does NOT match"} the published commitment{" "}
-          <code className="font-mono">{commitmentHash.slice(0, 16)}…</code>.
+          {" "}{result.commitmentValid ? "matches" : "does NOT match"} published{" "}
+          <code className="font-mono">{commitmentHash.slice(0, 16)}…</code>
         </div>
         <div>
-          <strong>Selection-hash ordering:</strong>{" "}
-          {result.allHashesMatch ? "monotonic non-decreasing — order proof OK" : "out of order — selection broken"}
+          <strong>Pool hash:</strong>{" "}
+          <code className="font-mono">{result.poolHashRecomputed.slice(0, 16)}…</code>{" "}
+          {result.poolHashValid ? "matches published pool hash" : "does NOT match published pool hash"}
+          {" "}({result.eligibleCount.toLocaleString()} eligible tickets re-hashed locally)
+        </div>
+        <div>
+          <strong>Winner ranking:</strong>{" "}
+          {winnerMatchCount}/{result.hashesMatchByRank.length} winners exactly reproduced from
+          HMAC-SHA256(seed:nonce, drawNumber:receiptId) ranking.
         </div>
       </AlertDescription>
     </Alert>

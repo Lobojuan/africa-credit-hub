@@ -17736,6 +17736,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // LOTO DRAW ENGINE (Task #283) — provably-fair commit-reveal lottery
   // ════════════════════════════════════════════════════════════════════════
   const { generateCommitment, runDraw, verifyDraw } = await import("./services/loto-draw-engine");
+  const { scheduleNewDraw } = await import("./services/loto-draw-scheduler");
   const { listSupportedProviders } = await import("./services/loto-payout-adapter");
 
   const tierInputSchema = z.object({
@@ -17788,45 +17789,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  // Helper used by both schedule and run-demo: builds a draw with a fresh
-  // commitment + frozen tier snapshot copied from the country config.
-  async function scheduleNewDraw(args: {
-    countryCode: string; periodStart: Date; periodEnd: Date; scheduledFor: Date;
-    tiersOverride?: { tier: string; label: string; prizeAmount: string | number; slotCount: number }[];
-    currencyOverride?: string;
-  }) {
-    const config = await storage.getLotoCountryDrawConfig(args.countryCode);
-    const tierSrc = args.tiersOverride ?? (config?.defaultTiers as any[] | undefined) ?? [];
-    if (!tierSrc.length) throw new Error("no_tiers_configured");
-    const currency = args.currencyOverride ?? config?.currency;
-    if (!currency) throw new Error("no_currency_configured");
-    const drawNumber = await storage.getNextLotoDrawNumber(args.countryCode);
-    const commitment = generateCommitment();
-    const tiers = tierSrc.map((t, idx) => ({
-      tier: t.tier,
-      label: t.label,
-      prizeAmount: String(t.prizeAmount),
-      currency,
-      slotCount: Number(t.slotCount),
-      position: idx,
-    }));
-    const result = await storage.createLotoDrawWithTiers({
-      draw: {
-        countryCode: args.countryCode,
-        drawNumber,
-        status: "scheduled",
-        periodStart: args.periodStart,
-        periodEnd: args.periodEnd,
-        scheduledFor: args.scheduledFor,
-        commitmentHash: commitment.commitmentHash,
-        currency,
-        serverSeed: commitment.serverSeed,
-        serverNonce: commitment.serverNonce,
-      } as any,
-      tiers,
-    });
-    return result;
-  }
+  // scheduleNewDraw lives in the scheduler service so the cadence-based
+  // background scheduler and the HTTP admin routes share one canonical
+  // implementation (incl. commitment generation + audit-log write).
 
   const scheduleDrawSchema = z.object({
     countryCode: z.string().min(2).max(3),
@@ -17857,14 +17822,22 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   const runDemoSchema = z.object({
-    countryCode: z.string().min(2).max(3),
+    // countryCode is optional — when omitted we fall back to the first active
+    // configured country so the "Run Demo Draw Now" button works with a
+    // single click straight from the consumer experience.
+    countryCode: z.string().min(2).max(3).optional(),
   });
 
   app.post("/api/loto/admin/draws/run-demo", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const parsed = runDemoSchema.safeParse(req.body);
+      const parsed = runDemoSchema.safeParse(req.body ?? {});
       if (!parsed.success) return res.status(400).json({ message: "invalid_payload", errors: parsed.error.flatten() });
-      const countryCode = parsed.data.countryCode.toUpperCase();
+      let countryCode = parsed.data.countryCode?.toUpperCase();
+      if (!countryCode) {
+        const configs = await storage.listLotoCountryDrawConfigs();
+        const active = configs.find((c) => c.active) ?? configs[0];
+        countryCode = active?.countryCode ?? "CI"; // CI = Côte d'Ivoire pilot default
+      }
       let config = await storage.getLotoCountryDrawConfig(countryCode);
       if (!config) {
         // Auto-seed a sensible demo config so the button works out-of-the-box.
@@ -17939,6 +17912,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const tiers = await storage.listLotoDrawPrizeTiers(draw.id);
       const winners = await storage.listLotoDrawWinners(draw.id);
       const isRevealed = draw.status === "closed" || draw.status === "verified";
+
+      // Eligible-receipt IDs — opaque internal UUIDs (NOT PII; no consumer
+      // info is leaked) — are exposed only after the draw is closed so any
+      // citizen can re-run the HMAC selection algorithm in their browser
+      // and confirm the winner ranking exactly. Without these, the page
+      // could only do an ordering check, which is not a real proof.
+      let eligibleReceiptIds: string[] = [];
+      if (isRevealed) {
+        const eligible = await storage.getEligibleReceiptsForDraw(
+          draw.countryCode, draw.periodStart, draw.periodEnd,
+        );
+        eligibleReceiptIds = [...eligible].map((r) => r.id).sort();
+      }
+
       res.json({
         draw: {
           ...draw,
@@ -17953,11 +17940,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           currency: w.currency,
           selectionRank: w.selectionRank,
           selectionHash: w.selectionHash,
-          // Anonymise consumer/receipt for the public view; only an opaque hint.
+          // The receiptId is published in full so the browser can verify
+          // it against the HMAC-recomputed winner list. Consumer identity
+          // remains anonymised — only an opaque last-4-char hint.
+          receiptId: w.receiptId,
           receiptIdSuffix: w.receiptId.slice(-6),
           consumerHint: w.consumerUserId ? `user_${w.consumerUserId.slice(-4)}` : "anonymous",
           payoutStatus: w.payoutStatus,
         })),
+        eligibleReceiptIds,
       });
     } catch (e) {
       res.status(500).json({ message: safeErrorMessage(e) });

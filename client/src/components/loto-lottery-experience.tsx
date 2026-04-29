@@ -215,9 +215,17 @@ export function LotoLotteryExperience({
   const draws = drawsQ.data?.draws ?? [];
   const latestClosed = draws.find((d) => d.status === "closed" || d.status === "verified");
   const nextScheduled = [...draws].reverse().find((d) => d.status === "scheduled" || d.status === "open");
+  // The default queryFn fetches queryKey[0] only, so per-draw fetches need an
+  // explicit queryFn pointing at the /:id sub-route. Cache key remains the
+  // hierarchical pair so invalidating ["/api/loto/draws"] still bubbles down.
   const latestWinnersQ = useQuery<{ winners: RealWinner[]; tiers: any[] }>({
     queryKey: ["/api/loto/draws", latestClosed?.id],
     enabled: !!latestClosed?.id,
+    queryFn: async () => {
+      const res = await fetch(`/api/loto/draws/${latestClosed!.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error(`failed_to_load_draw_${res.status}`);
+      return await res.json();
+    },
   });
   const realWinners = latestWinnersQ.data?.winners ?? [];
 
@@ -925,7 +933,10 @@ function RealDrawsBanner({ draws, latestClosed, nextScheduled }: RealDrawsBanner
   const isSuperAdmin = user?.role === "super_admin";
   const runDemo = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/loto/admin/draws/run-demo", {});
+      // Send the country of the most recently scheduled/closed draw if known,
+      // otherwise let the server fall back to the first active country config.
+      const countryCode = (draws[0]?.countryCode || "").toUpperCase() || undefined;
+      const res = await apiRequest("POST", "/api/loto/admin/draws/run-demo", countryCode ? { countryCode } : {});
       return await res.json();
     },
     onSuccess: () => {
