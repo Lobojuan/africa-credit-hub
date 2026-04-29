@@ -221,6 +221,20 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
   });
 
   // Tamper-evident audit trail (Task #283 transparency requirement).
+  // Per-winner pick rows are written FIRST so that, even if the summary
+  // event fails to persist, every individual selection is independently
+  // attested in the audit log.
+  for (const winner of persisted.winners) {
+    await writeAudit("loto_winner_picked", existing, {
+      winnerId: winner.id,
+      receiptId: winner.receiptId,
+      tier: winner.tier,
+      selectionRank: winner.selectionRank,
+      selectionHash: winner.selectionHash,
+      prizeAmount: winner.prizeAmount,
+      currency: winner.currency,
+    });
+  }
   await writeAudit("loto_draw_completed", existing, {
     eligibleTicketCount: eligibleIds.length,
     totalPool,
