@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Building2, Layers, Shield, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Building2, Layers, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PRODUCT_ORDER, PRODUCT_REGISTRY } from "@/lib/products";
@@ -121,6 +121,64 @@ export default function MasterLandingPage() {
               </Card>
             );
           })}
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 md:px-6 pb-16">
+        <h2 className="text-xs uppercase tracking-widest font-semibold text-slate-500 dark:text-slate-400 text-center mb-6" data-testid="text-audiences-title">
+          {t("landingShell.audiencesTitle")}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Card className="border-slate-200/80 dark:border-slate-800 hover-elevate transition-all" data-testid="card-audience-government">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-sm shrink-0">
+                  <Landmark className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50" data-testid="text-audience-government-title">
+                    {t("landingShell.audienceGovTitle")}
+                  </h3>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1" data-testid="text-audience-government-tagline">
+                    {t("landingShell.audienceGovTagline")}
+                  </p>
+                </div>
+              </div>
+              <ul className="space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
+                {[1, 2, 3, 4].map((i) => (
+                  <li key={i} className="flex gap-2.5" data-testid={`text-audience-gov-bullet-${i}`}>
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>{t(`landingShell.audienceGovBullet${i}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-200/80 dark:border-slate-800 hover-elevate transition-all" data-testid="card-audience-banks">
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-emerald-600 to-teal-500 text-white shadow-sm shrink-0">
+                  <Banknote className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50" data-testid="text-audience-banks-title">
+                    {t("landingShell.audienceBanksTitle")}
+                  </h3>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1" data-testid="text-audience-banks-tagline">
+                    {t("landingShell.audienceBanksTagline")}
+                  </p>
+                </div>
+              </div>
+              <ul className="space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
+                {[1, 2, 3, 4].map((i) => (
+                  <li key={i} className="flex gap-2.5" data-testid={`text-audience-banks-bullet-${i}`}>
+                    <CheckCircle2 className="w-4 h-4 mt-0.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>{t(`landingShell.audienceBanksBullet${i}`)}</span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
