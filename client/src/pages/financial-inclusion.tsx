@@ -32,6 +32,7 @@ interface BridgeAccessPayload {
   events: BridgeAccessEvent[];
   generatedAt: string;
   windowDays?: number;
+  lastActivityAt?: string | null;
 }
 
 const TICKER_REFRESH_MS = 30_000;
@@ -162,6 +163,13 @@ export default function FinancialInclusionPage() {
                 <div className="text-sm font-medium" data-testid="text-ticker-empty-title">
                   {t("financialInclusion.tickerEmptyTitle", "Quiet right now")}
                 </div>
+                {bridgeData?.lastActivityAt ? (
+                  <div className="text-xs text-muted-foreground" data-testid="text-ticker-last-activity">
+                    {t("financialInclusion.tickerLastActivity", "Last activity: {{when}}", {
+                      when: formatRelativeTime(bridgeData.lastActivityAt),
+                    })}
+                  </div>
+                ) : null}
                 <div className="text-xs text-muted-foreground max-w-md mx-auto" data-testid="text-ticker-empty-body">
                   {t("financialInclusion.tickerEmptyBody", "No consent-bridge accesses in the last 7 days. New events appear here as soon as a consented cross-product call is made.")}
                 </div>

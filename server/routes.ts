@@ -17449,6 +17449,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const MAX_EVENTS = 10;
       const since = new Date(Date.now() - RECENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
       const rows = await storage.getCrossProductAuditEntries(MAX_EVENTS, { since });
+      // Always surface the most recent cross-product audit timestamp (even if it's
+      // outside the 7-day window) so the empty state can show "Last activity: N days ago".
+      // Only an ISO timestamp is exposed — no PII.
+      const latestAt = await storage.getLatestCrossProductAuditTimestamp();
       const events = rows.map((r) => {
         let purpose: string | null = null;
         let sourceProduct: string | null = null;
@@ -17469,7 +17473,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           timestamp: r.createdAt ? r.createdAt.toISOString() : null,
         };
       });
-      res.json({ events, generatedAt: new Date().toISOString(), windowDays: RECENCY_WINDOW_DAYS });
+      res.json({
+        events,
+        generatedAt: new Date().toISOString(),
+        windowDays: RECENCY_WINDOW_DAYS,
+        lastActivityAt: latestAt ? latestAt.toISOString() : null,
+      });
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

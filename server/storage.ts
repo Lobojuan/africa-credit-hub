@@ -450,6 +450,7 @@ export interface IStorage {
   createCrossProductConsent(input: InsertCrossProductConsent): Promise<CrossProductConsent>;
   revokeCrossProductConsent(id: string, reason?: string): Promise<CrossProductConsent | undefined>;
   getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]>;
+  getLatestCrossProductAuditTimestamp(): Promise<Date | null>;
   deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number>;
   getCrossProductImpactStats(): Promise<{
     merchantsRegistered: number;
@@ -3708,6 +3709,14 @@ export class DatabaseStorage implements IStorage {
         return true;
       } catch { return false; }
     });
+  }
+  async getLatestCrossProductAuditTimestamp(): Promise<Date | null> {
+    const [row] = await db.select({ createdAt: auditLogs.createdAt })
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "cross_product_access"))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(1);
+    return row?.createdAt ?? null;
   }
   async deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number> {
     const result = await db.delete(alternativeData).where(
