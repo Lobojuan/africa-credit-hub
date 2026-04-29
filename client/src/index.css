@@ -1059,3 +1059,79 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 .react-joyride__tooltip * {
   pointer-events: auto !important;
 }
+
+/* ===================================================================
+   Per-Workspace Theme Overrides (Sandbox UI)
+   Wrapping a subtree in <div data-workspace="credit|collateral|loto|shared">
+   shifts the brand accent colours so each workspace feels visually distinct
+   without disturbing the country-level palette injected on :root.
+   =================================================================== */
+
+[data-workspace="credit"] {
+  --primary: 215 75% 45%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 215 75% 45%;
+  --sidebar-primary: 215 75% 55%;
+  --sidebar-ring: 215 75% 55%;
+  --chart-1: 215 75% 50%;
+  --chart-2: 220 65% 45%;
+}
+.dark [data-workspace="credit"] {
+  --primary: 215 75% 60%;
+  --ring: 215 75% 60%;
+  --sidebar-primary: 215 75% 65%;
+  --sidebar-ring: 215 75% 65%;
+}
+
+[data-workspace="collateral"] {
+  --primary: 32 85% 45%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 32 85% 45%;
+  --sidebar-primary: 38 90% 55%;
+  --sidebar-ring: 38 90% 55%;
+  --chart-1: 32 85% 50%;
+  --chart-2: 28 80% 45%;
+}
+.dark [data-workspace="collateral"] {
+  --primary: 32 85% 60%;
+  --ring: 32 85% 60%;
+  --sidebar-primary: 38 90% 60%;
+  --sidebar-ring: 38 90% 60%;
+}
+
+[data-workspace="loto"] {
+  --primary: 142 60% 35%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 142 60% 35%;
+  --sidebar-primary: 142 65% 45%;
+  --sidebar-ring: 142 65% 45%;
+  --chart-1: 142 60% 40%;
+  --chart-2: 152 55% 35%;
+}
+.dark [data-workspace="loto"] {
+  --primary: 142 60% 50%;
+  --ring: 142 60% 50%;
+  --sidebar-primary: 142 65% 55%;
+  --sidebar-ring: 142 65% 55%;
+}
+
+[data-workspace="shared"] {
+  --primary: 220 14% 32%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 220 14% 32%;
+  --sidebar-primary: 220 14% 50%;
+  --sidebar-ring: 220 14% 50%;
+}
+.dark [data-workspace="shared"] {
+  --primary: 220 14% 60%;
+  --ring: 220 14% 60%;
+  --sidebar-primary: 220 14% 65%;
+  --sidebar-ring: 220 14% 65%;
+}
+
+/* Subtle brand stripe at the very top of the workspace surface — gives every page
+   a 3px coloured edge that confirms which sandbox you're in at a glance. */
+[data-workspace="credit"]    > .ws-strip { background: linear-gradient(90deg, hsl(215 75% 50%), hsl(220 65% 45%)); }
+[data-workspace="collateral"]> .ws-strip { background: linear-gradient(90deg, hsl(38 90% 52%), hsl(28 85% 45%)); }
+[data-workspace="loto"]      > .ws-strip { background: linear-gradient(90deg, hsl(142 65% 42%), hsl(152 55% 38%)); }
+[data-workspace="shared"]    > .ws-strip { background: linear-gradient(90deg, hsl(220 14% 50%), hsl(220 14% 35%)); }

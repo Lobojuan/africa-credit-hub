@@ -87,6 +87,8 @@ import {
   readActiveProduct,
   type ProductId,
 } from "@/lib/products";
+import { useActiveWorkspace } from "@/hooks/use-active-workspace";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 
 function countryCodeToFlag(code: string): string {
   if (!code || code.length !== 2) return "🌍";
@@ -396,25 +398,27 @@ export function AppSidebar() {
   const dynamicBrandTitle = dynamicCountryConfig?.brandTitle || (isGhanaMode() ? getBrandTitle() : t('sidebar.brandTitle'));
   const dynamicTheme = countryTheme?.activeTheme;
 
+  const { workspaceId: activeWorkspace } = useActiveWorkspace();
+  const isShared = activeWorkspace === "shared";
   const productMatch = (ids?: ProductId[]) => sectionMatchesProduct(ids, activeProduct);
-  const visibleOverview = filterByRole(overviewItems, role);
-  const visibleCreditData = productMatch(["credit"]) ? filterByRole(creditDataItems, role) : [];
-  const visibleReportsScoring = productMatch(["credit"]) ? filterByRole(reportsScoringItems, role) : [];
-  const visibleDataMgmt = productMatch(["credit"]) ? filterByRole(dataManagementItems, role) : [];
-  const visibleWorkflows = productMatch(["credit"]) ? filterByRole(workflowItems, role) : [];
-  const visibleIntelligence = productMatch(["credit"]) ? filterByRole(intelligenceItems, role) : [];
-  const visibleCollateral = productMatch(["collateral"]) ? filterByRole(collateralItems, role) : [];
+  const visibleOverview = !isShared ? filterByRole(overviewItems, role) : [];
+  const visibleCreditData = !isShared && productMatch(["credit"]) ? filterByRole(creditDataItems, role) : [];
+  const visibleReportsScoring = !isShared && productMatch(["credit"]) ? filterByRole(reportsScoringItems, role) : [];
+  const visibleDataMgmt = !isShared && productMatch(["credit"]) ? filterByRole(dataManagementItems, role) : [];
+  const visibleWorkflows = !isShared && productMatch(["credit"]) ? filterByRole(workflowItems, role) : [];
+  const visibleIntelligence = !isShared && productMatch(["credit"]) ? filterByRole(intelligenceItems, role) : [];
+  const visibleCollateral = !isShared && productMatch(["collateral"]) ? filterByRole(collateralItems, role) : [];
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
-  const visibleOversight = productMatch(["credit"]) ? filterByRole(oversightItems, role) : [];
+  const visibleOversight = !isShared && productMatch(["credit"]) ? filterByRole(oversightItems, role) : [];
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({
     queryKey: ["/api/sata/access-check"],
     enabled: !!user,
   });
   const hasCrossBorderAccess = crossBorderAccess?.hasAccess ?? false;
-  const visibleCrossBorder = (hasCrossBorderAccess && productMatch(["credit"])) ? filterByRole(crossBorderItems, role) : [];
-  const visibleAdmin = filterByRole(adminItems, role);
-  const visibleApiIntegration = filterByRole(apiIntegrationItems, role);
-  const visibleInfrastructure = filterByRole(infrastructureItems, role);
+  const visibleCrossBorder = (!isShared && hasCrossBorderAccess && productMatch(["credit"])) ? filterByRole(crossBorderItems, role) : [];
+  const visibleAdmin = isShared ? filterByRole(adminItems, role) : [];
+  const visibleApiIntegration = isShared ? filterByRole(apiIntegrationItems, role) : [];
+  const visibleInfrastructure = isShared ? filterByRole(infrastructureItems, role) : [];
   const visibleHelp = filterByRole(getHelpItems(), role);
   const isSuperAdmin = role === "super_admin";
   const orgName = (user as any)?.organization?.name;
@@ -440,6 +444,10 @@ export function AppSidebar() {
           </div>
         </Link>
       </SidebarHeader>
+      {/* Prominent workspace switcher — sandbox boundary indicator */}
+      <div className="px-4 pb-3" data-testid="sidebar-workspace-switcher">
+        <WorkspaceSwitcher variant="full" />
+      </div>
       {/* Prominent country indicator */}
       <div className="px-4 pb-3" data-testid="sidebar-country-indicator">
         {countryTheme?.isGlobalView ? (

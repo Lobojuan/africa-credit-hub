@@ -2151,7 +2151,7 @@ export const crossProductPurposeEnum = pgEnum("cross_product_purpose", [
   "collateral_credit_view",
   "credit_collateral_view",
 ]);
-export const crossProductConsentStatusEnum = pgEnum("cross_product_consent_status", ["active", "revoked", "expired"]);
+export const crossProductConsentStatusEnum = pgEnum("cross_product_consent_status", ["pending", "active", "revoked", "expired"]);
 
 export const crossProductConsents = pgTable("cross_product_consents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

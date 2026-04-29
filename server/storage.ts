@@ -459,6 +459,9 @@ export interface IStorage {
   getCrossProductConsentById(id: string): Promise<CrossProductConsent | undefined>;
   createCrossProductConsent(input: InsertCrossProductConsent): Promise<CrossProductConsent>;
   revokeCrossProductConsent(id: string, reason?: string): Promise<CrossProductConsent | undefined>;
+  approveCrossProductConsent(id: string): Promise<CrossProductConsent | undefined>;
+  denyPendingCrossProductConsent(id: string, reason?: string): Promise<CrossProductConsent | undefined>;
+  getIncomingPendingConsents(filter: { userId?: string; merchantId?: string }): Promise<CrossProductConsent[]>;
   getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]>;
   getLatestCrossProductAuditTimestamp(): Promise<Date | null>;
   deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number>;
@@ -3716,6 +3719,29 @@ export class DatabaseStorage implements IStorage {
       .where(eq(crossProductConsents.id, id))
       .returning();
     return row;
+  }
+  async denyPendingCrossProductConsent(id: string, reason?: string): Promise<CrossProductConsent | undefined> {
+    const [row] = await db.update(crossProductConsents)
+      .set({ status: "revoked", revokedAt: new Date(), revokedReason: reason ?? "denied_by_owner" })
+      .where(and(eq(crossProductConsents.id, id), eq(crossProductConsents.status, "pending")))
+      .returning();
+    return row;
+  }
+  async approveCrossProductConsent(id: string): Promise<CrossProductConsent | undefined> {
+    const [row] = await db.update(crossProductConsents)
+      .set({ status: "active", grantedAt: new Date() })
+      .where(and(eq(crossProductConsents.id, id), eq(crossProductConsents.status, "pending")))
+      .returning();
+    return row;
+  }
+  async getIncomingPendingConsents(filter: { userId?: string; merchantId?: string }): Promise<CrossProductConsent[]> {
+    const ors: any[] = [];
+    if (filter.userId) ors.push(eq(crossProductConsents.userId, filter.userId));
+    if (filter.merchantId) ors.push(eq(crossProductConsents.merchantId, filter.merchantId));
+    if (ors.length === 0) return [];
+    return db.select().from(crossProductConsents)
+      .where(and(eq(crossProductConsents.status, "pending"), or(...ors)))
+      .orderBy(desc(crossProductConsents.createdAt));
   }
   async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]> {
     const conditions = [eq(auditLogs.action, "cross_product_access")];

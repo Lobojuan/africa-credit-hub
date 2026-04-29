@@ -17183,12 +17183,146 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       let owns = false;
       if (existing.userId && userId && existing.userId === userId) owns = true;
       if (!owns && existing.merchantId && userId) {
-        const m = await storage.getLotoMerchantById(existing.merchantId);
-        if (m && (m.userId === userId)) owns = true;
+        const m = await storage.getLotoMerchantByUserId(userId);
+        if (m && m.id === existing.merchantId) owns = true;
       }
       if (!owns && !isAdmin) return res.status(403).json({ message: "forbidden" });
       const row = await revokeConsentAndPurge(req.params.id, reason);
       if (!row) return res.status(404).json({ message: "not_found" });
+      res.json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ----- Cross-workspace approval inbox -----
+  // A workspace user can REQUEST access to data owned by another subject. The request is created
+  // with status="pending" and the data owner (subject) must approve via /approve before any
+  // gateway-protected read returns data. Pending rows are filtered out by `requireConsent`,
+  // which only honours status="active".
+
+  const requestConsentSchema = z.object({
+    sourceProduct: z.enum(["loto", "credit", "collateral"]),
+    targetProduct: z.enum(["loto", "credit", "collateral"]),
+    purpose: z.enum(["merchant_credit_profile","consumer_spending_credit","bureau_reputation_badge","collateral_credit_view","credit_collateral_view"]),
+    subjectUserId: z.string().optional(),
+    subjectMerchantId: z.string().optional(),
+    subjectBorrowerId: z.string().optional(),
+    durationMonths: z.number().int().min(1).max(60).optional(),
+    scopeNote: z.string().min(1).max(500),
+  }).refine(
+    (d) => !!(d.subjectUserId || d.subjectMerchantId || d.subjectBorrowerId),
+    { message: "subject_required" },
+  );
+
+  app.post("/api/cross-product/consents/request", requireAuth, async (req, res) => {
+    try {
+      const parsed = requestConsentSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: parsed.error.issues[0].message });
+      // Borrower-subject approval flow not yet supported (no owner-resolution path).
+      if (parsed.data.subjectBorrowerId && !parsed.data.subjectUserId && !parsed.data.subjectMerchantId) {
+        return res.status(400).json({ message: "borrower_subject_requests_not_supported_yet" });
+      }
+      const months = parsed.data.durationMonths ?? DEFAULT_CONSENT_DURATION_MONTHS;
+      const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + months);
+      // Validate referenced subjects exist (best-effort)
+      if (parsed.data.subjectMerchantId) {
+        const m = await storage.getLotoMerchantById(parsed.data.subjectMerchantId);
+        if (!m) return res.status(404).json({ message: "merchant_not_found" });
+      }
+      const row = await storage.createCrossProductConsent({
+        userId: parsed.data.subjectUserId ?? null,
+        borrowerId: parsed.data.subjectBorrowerId ?? null,
+        merchantId: parsed.data.subjectMerchantId ?? null,
+        sourceProduct: parsed.data.sourceProduct,
+        targetProduct: parsed.data.targetProduct,
+        purpose: parsed.data.purpose,
+        scopeNote: parsed.data.scopeNote,
+        status: "pending",
+        expiresAt,
+        grantedByIp: req.ip ?? null,
+      });
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_requested",
+          entity: "cross_product_consents",
+          entityId: row.id,
+          userId: (req.session?.userId as string | undefined) ?? null,
+          metadata: { sourceProduct: row.sourceProduct, targetProduct: row.targetProduct, purpose: row.purpose },
+          ipAddress: req.ip ?? null,
+        } as any);
+      } catch {}
+      res.status(201).json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/cross-product/consents/incoming", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId as string | undefined;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const merchant = await storage.getLotoMerchantByUserId(userId);
+      const rows = await storage.getIncomingPendingConsents({
+        userId,
+        merchantId: merchant?.id,
+      });
+      res.json(rows);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  async function callerOwnsConsentSubject(req: Request, consent: CrossProductConsent): Promise<boolean> {
+    const userId = req.session?.userId as string | undefined;
+    const userRole = req.session?.userRole as string | undefined;
+    if (!userId) return false;
+    if (userRole === "admin" || userRole === "super_admin") return true;
+    if (consent.userId && consent.userId === userId) return true;
+    if (consent.merchantId) {
+      const m = await storage.getLotoMerchantByUserId(userId);
+      if (m && m.id === consent.merchantId) return true;
+    }
+    return false;
+  }
+
+  app.post("/api/cross-product/consents/:id/approve", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getCrossProductConsentById(req.params.id);
+      if (!existing) return res.status(404).json({ message: "not_found" });
+      if (existing.status !== "pending") return res.status(400).json({ message: "not_pending" });
+      const owns = await callerOwnsConsentSubject(req, existing);
+      if (!owns) return res.status(403).json({ message: "forbidden" });
+      const row = await storage.approveCrossProductConsent(req.params.id);
+      if (!row) return res.status(409).json({ message: "not_pending" });
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_approved",
+          entity: "cross_product_consents",
+          entityId: row.id,
+          userId: (req.session?.userId as string | undefined) ?? null,
+          metadata: { sourceProduct: row.sourceProduct, targetProduct: row.targetProduct, purpose: row.purpose },
+          ipAddress: req.ip ?? null,
+        } as any);
+      } catch {}
+      res.json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/cross-product/consents/:id/deny", requireAuth, async (req, res) => {
+    try {
+      const existing = await storage.getCrossProductConsentById(req.params.id);
+      if (!existing) return res.status(404).json({ message: "not_found" });
+      if (existing.status !== "pending") return res.status(400).json({ message: "not_pending" });
+      const owns = await callerOwnsConsentSubject(req, existing);
+      if (!owns) return res.status(403).json({ message: "forbidden" });
+      const reason = String(req.body?.reason ?? "denied_by_owner");
+      const row = await storage.denyPendingCrossProductConsent(req.params.id, reason);
+      if (!row) return res.status(409).json({ message: "not_pending" });
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_denied",
+          entity: "cross_product_consents",
+          entityId: row.id,
+          userId: (req.session?.userId as string | undefined) ?? null,
+          metadata: { reason, sourceProduct: row.sourceProduct, targetProduct: row.targetProduct, purpose: row.purpose },
+          ipAddress: req.ip ?? null,
+        } as any);
+      } catch {}
       res.json(row);
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });

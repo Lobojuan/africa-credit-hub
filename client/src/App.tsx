@@ -47,6 +47,9 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { ProductSwitcher } from "@/components/product-switcher";
+import { WorkspaceSwitcher } from "@/components/workspace-switcher";
+import { WorkspaceThemeProvider } from "@/components/workspace-theme-provider";
+import { CrossProductInbox } from "@/components/cross-product-inbox";
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
 const MasterLandingPage = lazy(() => import("@/pages/master-landing"));
@@ -535,6 +538,7 @@ function AuthenticatedApp() {
 
   return (
     <SidebarProvider style={style as React.CSSProperties}>
+     <WorkspaceThemeProvider>
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 min-w-0">
@@ -545,6 +549,7 @@ function AuthenticatedApp() {
                 <span className="text-sm font-bold tracking-tight truncate max-w-[140px]" data-testid="text-mobile-brand">Africa Credit Hub</span>
               </div>
               <div className="flex items-center gap-1.5">
+                <CrossProductInbox />
                 <NotificationBell />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -669,7 +674,7 @@ function AuthenticatedApp() {
               )}
               {user.role === "super_admin" && <CountrySelector />}
               {user.role === "super_admin" && <OrgSwitcher />}
-              <ProductSwitcher />
+              <WorkspaceSwitcher variant="compact" />
               {user?.organization?.name && user.role !== "super_admin" && (
                 <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
                   <Building2 className="w-5 h-5" />
@@ -690,6 +695,7 @@ function AuthenticatedApp() {
                 </TooltipTrigger>
                 <TooltipContent>Search (⌘K)</TooltipContent>
               </Tooltip>
+              <CrossProductInbox />
               <NotificationBell />
               <ThemeToggle />
               <LanguageSwitcher />
@@ -847,6 +853,7 @@ function AuthenticatedApp() {
           </div>
         </div>
       )}
+     </WorkspaceThemeProvider>
     </SidebarProvider>
   );
 }
