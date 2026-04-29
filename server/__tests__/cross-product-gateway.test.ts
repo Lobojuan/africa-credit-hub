@@ -9,7 +9,7 @@ import { db } from "../db";
 import { eq, and, like } from "drizzle-orm";
 import {
   lotoMerchants, lotoReceipts, crossProductConsents, auditLogs, borrowers,
-  alternativeData, creditInquiries, users,
+  alternativeData, creditInquiries, users, creditAccounts, creditScoreHistory,
 } from "@shared/schema";
 import {
   gateway, computeReceiptFeatures, CrossProductError,
@@ -399,6 +399,71 @@ async function run() {
     expiresAt: snapExpires,
   });
 
+  // Credit accounts: 2 active (status != "closed") with known balances + 1 closed.
+  // The gateway sums currentBalance across ALL accounts for totalDebt, but
+  // only counts non-"closed" accounts for activeAccounts. Picking distinct
+  // decimals so a regression that flips either rule is detectable.
+  await db.insert(creditAccounts).values([
+    {
+      borrowerId: snapBorrower.id,
+      lenderInstitution: TAG + "-bank-A",
+      accountNumber: TAG + "-ACC-1",
+      accountType: "loan",
+      originalAmount: "2000.00",
+      currentBalance: "1000.00",
+      status: "current",
+    },
+    {
+      borrowerId: snapBorrower.id,
+      lenderInstitution: TAG + "-bank-B",
+      accountNumber: TAG + "-ACC-2",
+      accountType: "loan",
+      originalAmount: "800.00",
+      currentBalance: "500.50",
+      status: "delinquent",
+    },
+    {
+      borrowerId: snapBorrower.id,
+      lenderInstitution: TAG + "-bank-C",
+      accountNumber: TAG + "-ACC-3",
+      accountType: "loan",
+      originalAmount: "300.00",
+      currentBalance: "250.25",
+      status: "closed",
+    },
+  ]);
+
+  // Credit score history: gateway returns the most recent (desc(createdAt))
+  // score. Insert an older 600 then a newer 720; only 720 should surface.
+  await db.insert(creditScoreHistory).values([
+    {
+      borrowerId: snapBorrower.id,
+      score: 600,
+      scoreModel: "test_model",
+      createdAt: new Date(nowMs - 30 * dayMs),
+    },
+    {
+      borrowerId: snapBorrower.id,
+      score: 720,
+      scoreModel: "test_model",
+      createdAt: new Date(nowMs - 1 * dayMs),
+    },
+  ]);
+
+  await test("getCreditSnapshotForBorrower returns latest score, active-account count, and total debt", async () => {
+    const result = await gateway.getCreditSnapshotForBorrower(snapBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    if (result.summary.score !== 720) {
+      throw new Error(`expected score=720 (latest of {600, 720}), got ${result.summary.score}`);
+    }
+    if (result.summary.activeAccounts !== 2) {
+      throw new Error(`expected activeAccounts=2 (closed excluded), got ${result.summary.activeAccounts}`);
+    }
+    // 1000.00 + 500.50 + 250.25 = 1750.75 — sum across ALL accounts.
+    if (result.summary.totalDebt !== "1750.75") {
+      throw new Error(`expected totalDebt="1750.75", got ${result.summary.totalDebt}`);
+    }
+  });
+
   await test("getCreditSnapshotForBorrower returns recent-inquiry count and 90-day window", async () => {
     const result = await gateway.getCreditSnapshotForBorrower(snapBorrower.id, { userId: undefined, ip: "127.0.0.1" });
     if (result.summary.recentInquiries !== 3) {
@@ -486,6 +551,8 @@ async function run() {
   await db.delete(auditLogs).where(eq(auditLogs.entityId, snapBorrower.id));
   await db.delete(crossProductConsents).where(eq(crossProductConsents.borrowerId, snapBorrower.id));
   await db.delete(creditInquiries).where(eq(creditInquiries.borrowerId, snapBorrower.id));
+  await db.delete(creditScoreHistory).where(eq(creditScoreHistory.borrowerId, snapBorrower.id));
+  await db.delete(creditAccounts).where(eq(creditAccounts.borrowerId, snapBorrower.id));
   await db.delete(borrowers).where(eq(borrowers.id, snapBorrower.id));
   await db.delete(users).where(eq(users.id, snapUser.id));
 
