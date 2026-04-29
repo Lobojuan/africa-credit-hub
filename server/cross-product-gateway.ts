@@ -26,6 +26,7 @@ import {
   creditAccounts,
   creditScoreHistory,
   creditInquiries,
+  users,
   type CrossProductConsent,
   type LotoMerchant,
   type LotoReceipt,
@@ -466,7 +467,9 @@ export const gateway = {
       institution: string;
       purpose: string;
       inquiredAt: string | null;
+      inquiringOrgId: string | null;
     }>;
+    viewerOrganizationId: string | null;
     consent: CrossProductConsent;
   }> {
     const ctx: GatewayCallContext = {
@@ -482,7 +485,18 @@ export const gateway = {
     const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0).toFixed(2);
     const recentWindowDays = 90;
     const since = new Date(Date.now() - recentWindowDays * 24 * 60 * 60 * 1000);
-    const recentInquiriesRows = await db.select().from(creditInquiries)
+    // Join through users so the frontend can flag inquiries from competing
+    // institutions (purpose=new_credit AND inquiring org !== viewer's org).
+    const recentInquiriesRows = await db
+      .select({
+        id: creditInquiries.id,
+        institution: creditInquiries.institution,
+        purpose: creditInquiries.purpose,
+        createdAt: creditInquiries.createdAt,
+        inquiringOrgId: users.organizationId,
+      })
+      .from(creditInquiries)
+      .leftJoin(users, eq(creditInquiries.inquiredBy, users.id))
       .where(and(eq(creditInquiries.borrowerId, borrowerId), gte(creditInquiries.createdAt, since)))
       .orderBy(desc(creditInquiries.createdAt));
     const RECENT_INQUIRY_LIMIT = 5;
@@ -491,7 +505,19 @@ export const gateway = {
       institution: r.institution,
       purpose: r.purpose,
       inquiredAt: r.createdAt ? r.createdAt.toISOString() : null,
+      inquiringOrgId: r.inquiringOrgId ?? null,
     }));
+    // Resolve the viewing user's org so the frontend can highlight inquiries
+    // from any institution other than the viewer's own.
+    let viewerOrganizationId: string | null = null;
+    if (callerCtx.userId) {
+      const [viewer] = await db
+        .select({ organizationId: users.organizationId })
+        .from(users)
+        .where(eq(users.id, callerCtx.userId))
+        .limit(1);
+      viewerOrganizationId = viewer?.organizationId ?? null;
+    }
     await logAccess(ctx, consent, { borrowerId }, "ok");
     return {
       summary: {
@@ -502,6 +528,7 @@ export const gateway = {
         recentInquiryWindowDays: recentWindowDays,
       },
       recentInquiries,
+      viewerOrganizationId,
       consent,
     };
   },
