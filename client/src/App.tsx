@@ -144,6 +144,9 @@ const LotoWorkspacePage = lazy(() => import("@/pages/loto-workspace"));
 const DataSharingPage = lazy(() => import("@/pages/data-sharing"));
 const MerchantCreditProfilePage = lazy(() => import("@/pages/merchant-credit-profile"));
 const FinancialInclusionPage = lazy(() => import("@/pages/financial-inclusion"));
+const PressKitPage = lazy(() => import("@/pages/press-kit"));
+const ForLendersPage = lazy(() => import("@/pages/for-lenders"));
+const ForRegulatorsPage = lazy(() => import("@/pages/for-regulators"));
 const PlatformMapPage = lazy(() => import("@/pages/platform-map"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
@@ -459,7 +462,7 @@ function AuthenticatedApp() {
     return <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>;
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -850,7 +853,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs"];
+  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -868,6 +871,9 @@ function App() {
             <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
             <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
             <Route path="/financial-inclusion" component={() => <Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense>} />
+            <Route path="/press" component={() => <Suspense fallback={<LazyFallback />}><PressKitPage /></Suspense>} />
+            <Route path="/for-lenders" component={() => <Suspense fallback={<LazyFallback />}><ForLendersPage /></Suspense>} />
+            <Route path="/for-regulators" component={() => <Suspense fallback={<LazyFallback />}><ForRegulatorsPage /></Suspense>} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
             <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />

@@ -33,8 +33,11 @@ export default function MasterLandingPage() {
             </div>
           </Link>
           <nav className="flex items-center gap-1.5 md:gap-2">
+            <Link href="/for-lenders" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-lenders">For Lenders</Button></Link>
+            <Link href="/for-regulators" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-regulators">For Regulators</Button></Link>
+            <Link href="/financial-inclusion" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-impact">Impact</Button></Link>
             <Link href="/pricing" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-pricing">Pricing</Button></Link>
-            <Link href="/security" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-security">Security</Button></Link>
+            <Link href="/press" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-press">Press</Button></Link>
             <ThemeToggle />
             <LanguageSwitcher />
             <Link href="/login"><Button size="sm" data-testid="button-signin">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
@@ -231,7 +234,11 @@ export default function MasterLandingPage() {
             <Building2 className="w-4 h-4" />
             <span data-testid="text-footer-line">{t("landingShell.footerLine", { year, brand })}</span>
           </div>
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-xs">
+            <Link href="/for-lenders" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-footer-for-lenders">For Lenders</Link>
+            <Link href="/for-regulators" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-footer-for-regulators">For Regulators</Link>
+            <Link href="/financial-inclusion" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-footer-impact">Impact</Link>
+            <Link href="/press" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-footer-press">Press</Link>
             <Link href="/terms" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-terms">Terms</Link>
             <Link href="/privacy" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-privacy">Privacy</Link>
             <Link href="/contact-sales" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100" data-testid="link-contact">Contact</Link>
