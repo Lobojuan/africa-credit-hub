@@ -10,6 +10,7 @@ import { eq, and, like } from "drizzle-orm";
 import {
   lotoMerchants, lotoReceipts, crossProductConsents, auditLogs, borrowers,
   alternativeData, creditInquiries, users, creditAccounts, creditScoreHistory,
+  organizations, collateralItems,
 } from "@shared/schema";
 import {
   gateway, computeReceiptFeatures, CrossProductError,
@@ -555,6 +556,246 @@ async function run() {
   await db.delete(creditAccounts).where(eq(creditAccounts.borrowerId, snapBorrower.id));
   await db.delete(borrowers).where(eq(borrowers.id, snapBorrower.id));
   await db.delete(users).where(eq(users.id, snapUser.id));
+
+  // ─── Consumer Spending Features (gateway.getConsumerSpendingFeatures) ────
+  // Caller=credit, target=loto, purpose=consumer_spending_credit. Subject is
+  // a consumer user (not a merchant), so consent is keyed by userId. The
+  // consent row mirrors requireConsent's lookup convention:
+  // sourceProduct=loto (data origin), targetProduct=credit (caller).
+  const [spendUser] = await db.insert(users).values({
+    username: TAG + "-spend-user",
+    password: "x",
+    fullName: "Consumer Spend User",
+    email: TAG + "-spend@example.com",
+  }).returning();
+  // Receipts need a merchant FK; reuse the top-level test merchant. Each
+  // receipt is tagged to spendUser via consumerUserId so the gateway picks
+  // them up.
+  const spendNow = new Date();
+  for (let m = 0; m < 2; m++) {
+    for (let i = 0; i < 3; i++) {
+      await db.insert(lotoReceipts).values({
+        merchantId: merchant.id,
+        consumerUserId: spendUser.id,
+        fiscalCode: `${TAG}-spend-FC-${m}-${i}`,
+        ticketNumber: `${TAG}-spend-T-${m}-${i}`,
+        amount: "2500",
+        vatAmount: "450",
+        currency: "XOF",
+        category: m === 0 ? "groceries" : "fuel",
+        issuedAt: new Date(spendNow.getFullYear(), spendNow.getMonth() - m, 10 + i),
+      });
+    }
+  }
+  const spendExpires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+  await db.insert(crossProductConsents).values({
+    userId: spendUser.id,
+    sourceProduct: "loto",
+    targetProduct: "credit",
+    purpose: "consumer_spending_credit",
+    status: "active",
+    expiresAt: spendExpires,
+  });
+
+  await test("getConsumerSpendingFeatures returns features and writes ok audit row with active consent", async () => {
+    const before = Date.now();
+    const result = await gateway.getConsumerSpendingFeatures(spendUser.id, { userId: undefined, ip: "127.0.0.1" });
+    if (!result.features) throw new Error("expected features");
+    if (result.features.totalReceipts !== 6) {
+      throw new Error(`expected 6 receipts, got ${result.features.totalReceipts}`);
+    }
+    if (result.features.monthsWithActivity !== 2) {
+      throw new Error(`expected 2 months active, got ${result.features.monthsWithActivity}`);
+    }
+    if (!result.consent || result.consent.purpose !== "consumer_spending_credit") {
+      throw new Error("expected consumer_spending_credit consent in result");
+    }
+    // Audit row must record source=loto (origin), target=credit (caller),
+    // entity=loto, subjectKind=consumer, outcome=ok.
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, spendUser.id)));
+    const okLogs = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "ok" && d.purpose === "consumer_spending_credit";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!));
+    const okRow = okLogs[0];
+    if (!okRow) throw new Error("no ok audit row written for getConsumerSpendingFeatures");
+    if (new Date(okRow.createdAt!).getTime() < before - 5000) {
+      throw new Error("most recent ok audit row predates this test invocation");
+    }
+    const d = JSON.parse(okRow.details ?? "{}");
+    if (okRow.entity !== "loto") throw new Error(`expected entity=loto, got ${okRow.entity}`);
+    if (d.sourceProduct !== "loto") throw new Error(`expected sourceProduct=loto, got ${d.sourceProduct}`);
+    if (d.targetProduct !== "credit") throw new Error(`expected targetProduct=credit, got ${d.targetProduct}`);
+    if (d.subjectKind !== "consumer") throw new Error(`expected subjectKind=consumer, got ${d.subjectKind}`);
+  });
+
+  await test("getConsumerSpendingFeatures without consent throws no_consent and writes denied audit row", async () => {
+    const [bareUser] = await db.insert(users).values({
+      username: TAG + "-spend-noconsent",
+      password: "x",
+      fullName: "No Consent Spender",
+      email: TAG + "-spend-nc@example.com",
+    }).returning();
+    let caught: any = null;
+    try {
+      await gateway.getConsumerSpendingFeatures(bareUser.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected throw without consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "no_consent") throw new Error(`expected code=no_consent, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, bareUser.id)));
+    const deniedLogs = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "consumer_spending_credit";
+        } catch { return false; }
+      });
+    const denied = deniedLogs[0];
+    if (!denied) throw new Error("no denied audit row written for no-consent consumer spending call");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (dd.reason !== "no_consent") throw new Error(`expected denied reason=no_consent, got ${dd.reason}`);
+    if (denied.entity !== "loto") throw new Error(`expected denied audit entity=loto, got ${denied.entity}`);
+    if (dd.subjectKind !== "consumer") throw new Error(`expected subjectKind=consumer, got ${dd.subjectKind}`);
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, bareUser.id));
+    await db.delete(users).where(eq(users.id, bareUser.id));
+  });
+
+  // Cleanup consumer spending fixtures.
+  await db.delete(auditLogs).where(eq(auditLogs.entityId, spendUser.id));
+  await db.delete(crossProductConsents).where(eq(crossProductConsents.userId, spendUser.id));
+  await db.delete(lotoReceipts).where(eq(lotoReceipts.consumerUserId, spendUser.id));
+  await db.delete(users).where(eq(users.id, spendUser.id));
+
+  // ─── Collateral for Borrower (gateway.getCollateralForBorrower) ──────────
+  // Caller=credit, target=collateral, purpose=credit_collateral_view.
+  // Consent row: sourceProduct=collateral (origin), targetProduct=credit
+  // (caller), keyed by borrowerId.
+  const [collOrg] = await db.insert(organizations).values({
+    name: TAG + "-coll-org",
+    slug: TAG + "-coll-org",
+    type: "other",
+    status: "active",
+  }).returning();
+  const [collBorrower] = await db.insert(borrowers).values({
+    type: "individual",
+    firstName: "Coll",
+    lastName: TAG,
+    nationalId: TAG + "-COLL-NID",
+  }).returning();
+  // Two collateral items linked to this borrower.
+  for (let i = 0; i < 2; i++) {
+    await db.insert(collateralItems).values({
+      registrationNumber: `${TAG}-COLL-REG-${i}`,
+      borrowerId: collBorrower.id,
+      collateralType: i === 0 ? "vehicle" : "equipment",
+      description: `Test collateral ${i}`,
+      estimatedValue: "150000.00",
+      currency: "GHS",
+      registrationDate: new Date().toISOString().slice(0, 10),
+      status: "active",
+      lenderOrganizationId: collOrg.id,
+    });
+  }
+  const collExpires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+  await db.insert(crossProductConsents).values({
+    borrowerId: collBorrower.id,
+    sourceProduct: "collateral",
+    targetProduct: "credit",
+    purpose: "credit_collateral_view",
+    status: "active",
+    expiresAt: collExpires,
+  });
+
+  await test("getCollateralForBorrower returns items and writes ok audit row with active consent", async () => {
+    const before = Date.now();
+    const result = await gateway.getCollateralForBorrower(collBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    if (!Array.isArray(result.items)) throw new Error("expected items array");
+    if (result.items.length !== 2) {
+      throw new Error(`expected 2 collateral items, got ${result.items.length}`);
+    }
+    const types = result.items.map(i => i.collateralType).sort();
+    if (types[0] !== "equipment" || types[1] !== "vehicle") {
+      throw new Error(`unexpected collateral types: ${JSON.stringify(types)}`);
+    }
+    if (!result.consent || result.consent.purpose !== "credit_collateral_view") {
+      throw new Error("expected credit_collateral_view consent in result");
+    }
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, collBorrower.id)));
+    const okLogs = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "ok" && d.purpose === "credit_collateral_view";
+        } catch { return false; }
+      })
+      .sort((a, b) => +new Date(b.createdAt!) - +new Date(a.createdAt!));
+    const okRow = okLogs[0];
+    if (!okRow) throw new Error("no ok audit row written for getCollateralForBorrower");
+    if (new Date(okRow.createdAt!).getTime() < before - 5000) {
+      throw new Error("most recent ok audit row predates this test invocation");
+    }
+    const d = JSON.parse(okRow.details ?? "{}");
+    if (okRow.entity !== "collateral") throw new Error(`expected entity=collateral, got ${okRow.entity}`);
+    if (d.sourceProduct !== "collateral") throw new Error(`expected sourceProduct=collateral, got ${d.sourceProduct}`);
+    if (d.targetProduct !== "credit") throw new Error(`expected targetProduct=credit, got ${d.targetProduct}`);
+    if (d.subjectKind !== "borrower") throw new Error(`expected subjectKind=borrower, got ${d.subjectKind}`);
+  });
+
+  await test("getCollateralForBorrower without consent throws no_consent and writes denied audit row", async () => {
+    const [bareBorrower] = await db.insert(borrowers).values({
+      type: "individual",
+      firstName: "NoCollConsent",
+      lastName: TAG,
+      nationalId: TAG + "-COLL-NOCONSENT-NID",
+    }).returning();
+    let caught: any = null;
+    try {
+      await gateway.getCollateralForBorrower(bareBorrower.id, { userId: undefined, ip: "127.0.0.1" });
+    } catch (e) {
+      caught = e;
+    }
+    if (!caught) throw new Error("expected throw without consent");
+    if (!(caught instanceof CrossProductError)) throw new Error("wrong error type: " + caught);
+    if (caught.code !== "no_consent") throw new Error(`expected code=no_consent, got ${caught.code}`);
+
+    const logs = await db.select().from(auditLogs)
+      .where(and(eq(auditLogs.action, "cross_product_access"), eq(auditLogs.entityId, bareBorrower.id)));
+    const deniedLogs = logs
+      .filter(l => {
+        try {
+          const d = JSON.parse(l.details ?? "{}");
+          return d.outcome === "denied" && d.purpose === "credit_collateral_view";
+        } catch { return false; }
+      });
+    const denied = deniedLogs[0];
+    if (!denied) throw new Error("no denied audit row written for no-consent collateral call");
+    const dd = JSON.parse(denied.details ?? "{}");
+    if (dd.reason !== "no_consent") throw new Error(`expected denied reason=no_consent, got ${dd.reason}`);
+    if (denied.entity !== "collateral") throw new Error(`expected denied audit entity=collateral, got ${denied.entity}`);
+    if (dd.subjectKind !== "borrower") throw new Error(`expected subjectKind=borrower, got ${dd.subjectKind}`);
+
+    await db.delete(auditLogs).where(eq(auditLogs.entityId, bareBorrower.id));
+    await db.delete(borrowers).where(eq(borrowers.id, bareBorrower.id));
+  });
+
+  // Cleanup collateral fixtures.
+  await db.delete(auditLogs).where(eq(auditLogs.entityId, collBorrower.id));
+  await db.delete(crossProductConsents).where(eq(crossProductConsents.borrowerId, collBorrower.id));
+  await db.delete(collateralItems).where(eq(collateralItems.borrowerId, collBorrower.id));
+  await db.delete(borrowers).where(eq(borrowers.id, collBorrower.id));
+  await db.delete(organizations).where(eq(organizations.id, collOrg.id));
 
   await cleanup(merchant.id);
 
