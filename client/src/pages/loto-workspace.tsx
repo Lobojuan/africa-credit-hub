@@ -11,8 +11,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert } from "lucide-react";
+import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles } from "lucide-react";
 import { PRODUCT_REGISTRY } from "@/lib/products";
+import { LotoLotteryExperience } from "@/components/loto-lottery-experience";
 
 interface MerchantPayload {
   merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; currency: string; creditOptInActive: boolean; borrowerId: string | null } | null;
@@ -108,13 +109,32 @@ export default function LotoWorkspacePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid grid-cols-4 w-full md:w-auto">
+      <Tabs defaultValue="lottery" className="w-full">
+        <TabsList className="grid grid-cols-5 w-full md:w-auto">
+          <TabsTrigger value="lottery" data-testid="tab-lottery">
+            <Sparkles className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
+            {t("loto.tabs.lottery", "Lottery")}
+          </TabsTrigger>
           <TabsTrigger value="overview" data-testid="tab-overview">{t("loto.tabs.overview", "Overview")}</TabsTrigger>
           <TabsTrigger value="receipts" data-testid="tab-receipts">{t("loto.tabs.receipts", "Receipts")}</TabsTrigger>
           <TabsTrigger value="spending" data-testid="tab-spending">{t("loto.tabs.spending", "Spending")}</TabsTrigger>
           <TabsTrigger value="credit-profile" data-testid="tab-credit-profile">{t("loto.tabs.creditProfile", "Build Credit")}</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="lottery" className="mt-4">
+          <LotoLotteryExperience
+            receipts={(merchantQ.data?.receipts ?? consumerQ.data?.receipts ?? []).map((r) => ({
+              id: r.id,
+              amount: r.amount,
+              vatAmount: (r as { vatAmount?: string }).vatAmount,
+              issuedAt: r.issuedAt,
+            }))}
+            totalTurnover={merchantQ.data?.features?.totalTurnover ?? consumerQ.data?.features?.totalTurnover ?? 0}
+            monthsWithActivity={merchantQ.data?.features?.monthsWithActivity ?? consumerQ.data?.features?.monthsWithActivity ?? 0}
+            currency={merchantQ.data?.features?.currency ?? consumerQ.data?.features?.currency ?? "XOF"}
+            isMerchant={!!merchant}
+          />
+        </TabsContent>
 
         <TabsContent value="overview" className="mt-4">
           <Card className="mb-4 border-dashed">
