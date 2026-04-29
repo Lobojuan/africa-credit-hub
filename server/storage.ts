@@ -459,6 +459,8 @@ export interface IStorage {
     verifiedTurnover: number;
     activeCrossProductConsents: number;
     bridgeAccessesLogged: number;
+    bridgeAccessesAllowed: number;
+    bridgeAccessesDenied: number;
   }>;
 }
 
@@ -3738,6 +3740,27 @@ export class DatabaseStorage implements IStorage {
       .from(crossProductConsents).where(eq(crossProductConsents.status, "active"));
     const [auditStat] = await db.select({ c: sql<number>`count(*)::int` })
       .from(auditLogs).where(eq(auditLogs.action, "cross_product_access"));
+    // Group bridge accesses by outcome. We pull just the `details` text column
+    // for cross_product_access rows and parse in JS so a single legacy row
+    // with malformed JSON can never crash the public endpoint (a SQL-side
+    // `details::jsonb` cast would hard-fail on the whole query). Rows whose
+    // details aren't valid JSON or don't carry an outcome are silently skipped
+    // — neither allowed nor denied is over-reported.
+    const detailRows = await db.select({ details: auditLogs.details })
+      .from(auditLogs)
+      .where(eq(auditLogs.action, "cross_product_access"));
+    let allowed = 0;
+    let denied = 0;
+    for (const row of detailRows) {
+      if (!row.details) continue;
+      try {
+        const parsed = JSON.parse(row.details) as { outcome?: unknown };
+        if (parsed.outcome === "ok") allowed++;
+        else if (parsed.outcome === "denied") denied++;
+      } catch {
+        // malformed details — skip
+      }
+    }
     return {
       merchantsRegistered: merchants.length,
       merchantsOptedIn,
@@ -3745,6 +3768,8 @@ export class DatabaseStorage implements IStorage {
       verifiedTurnover: parseFloat(receiptStat?.s ?? "0"),
       activeCrossProductConsents: consentStat?.c ?? 0,
       bridgeAccessesLogged: auditStat?.c ?? 0,
+      bridgeAccessesAllowed: allowed,
+      bridgeAccessesDenied: denied,
     };
   }
 }

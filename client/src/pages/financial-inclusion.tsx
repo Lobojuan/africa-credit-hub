@@ -16,6 +16,8 @@ interface ImpactPayload {
   currency: string;
   activeCrossProductConsents: number;
   bridgeAccessesLogged: number;
+  bridgeAccessesAllowed: number;
+  bridgeAccessesDenied: number;
   defaultConsentMonths: number;
   generatedAt: string;
 }
@@ -236,14 +238,47 @@ export default function FinancialInclusionPage() {
             <TrustCard icon={ShieldCheck} title={t("financialInclusion.trust2Title", "Single gateway")} body={t("financialInclusion.trust2Body", "Every cross-product access goes through one auditable bridge. No silent fallbacks. Ever.")} testid="trust-2" />
             <TrustCard icon={Globe} title={t("financialInclusion.trust3Title", "Available in 7 languages")} body={t("financialInclusion.trust3Body", "EN · FR · PT · AR · SW · ES · ZH so every African merchant can read the small print.")} testid="trust-3" />
           </div>
-          {data && (
-            <div className="text-center text-xs text-muted-foreground mt-8" data-testid="text-audit-line">
-              {t("financialInclusion.auditLine", "{{count}} cross-product accesses logged. Default consent {{months}} months.", {
-                count: data.bridgeAccessesLogged,
-                months: data.defaultConsentMonths,
-              })}
-            </div>
-          )}
+          {data && (() => {
+            const total = data.bridgeAccessesLogged;
+            const allowed = data.bridgeAccessesAllowed;
+            const denied = data.bridgeAccessesDenied;
+            const classified = allowed + denied;
+            const allowedPct = classified > 0 ? Math.round((allowed / classified) * 100) : null;
+            const deniedPct = allowedPct === null ? null : 100 - allowedPct;
+            return (
+              <div className="text-center mt-8 space-y-2">
+                <div className="text-xs text-muted-foreground" data-testid="text-audit-line">
+                  {allowedPct === null
+                    ? t("financialInclusion.auditLine", "{{count}} cross-product accesses logged. Default consent {{months}} months.", {
+                        count: total,
+                        months: data.defaultConsentMonths,
+                      })
+                    : t(
+                        "financialInclusion.auditLineWithBreakdown",
+                        "{{count}} cross-product accesses · {{allowedPct}}% allowed · {{deniedPct}}% denied (consent missing or revoked). Default consent {{months}} months.",
+                        {
+                          count: total,
+                          allowedPct,
+                          deniedPct,
+                          months: data.defaultConsentMonths,
+                        },
+                      )}
+                </div>
+                {classified > 0 && (
+                  <div className="flex flex-wrap justify-center gap-2 text-xs" data-testid="outcome-breakdown">
+                    <Badge variant="outline" className="border-emerald-300 text-emerald-700 dark:text-emerald-400" data-testid="badge-outcome-allowed">
+                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                      {t("financialInclusion.outcomeAllowed", "{{count}} allowed", { count: allowed })}
+                    </Badge>
+                    <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-400" data-testid="badge-outcome-denied">
+                      <XCircle className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                      {t("financialInclusion.outcomeDenied", "{{count}} denied (consent missing or revoked)", { count: denied })}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </section>
 
