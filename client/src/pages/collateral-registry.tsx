@@ -29,6 +29,7 @@ import {
   Share2, Mail, MessageSquare, Printer, History, Send, Pencil, Car, Landmark,
   ArrowLeftRight, Flame,
 } from "lucide-react";
+import { CollateralInvestorHero } from "@/components/collateral-investor-hero";
 import { format } from "date-fns";
 
 interface SearchResultItem {
@@ -3572,6 +3573,7 @@ function MyRegistrations() {
 export default function CollateralRegistryPage() {
   return (
     <div className="p-6 space-y-6">
+      <CollateralInvestorHero />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
