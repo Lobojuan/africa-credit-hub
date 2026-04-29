@@ -57,6 +57,7 @@ const CreditLandingPage = lazy(() => import("@/pages/credit-landing"));
 const CollateralLandingPage = lazy(() => import("@/pages/collateral-landing"));
 const LotoLandingPage = lazy(() => import("@/pages/loto-landing"));
 const ProductChooserPage = lazy(() => import("@/pages/product-chooser"));
+const ChooseWorkspacePage = lazy(() => import("@/pages/choose-workspace"));
 const CountrySelectionPage = lazy(() => import("@/pages/country-selection"));
 const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
@@ -286,6 +287,7 @@ function Router() {
           )}
         </Route>
         <Route path="/choose-product" component={ProductChooserPage} />
+        <Route path="/choose-workspace" component={ChooseWorkspacePage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -477,7 +479,7 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    return doRedirect("/choose-product");
+    return doRedirect("/choose-workspace");
   }
 
   if (accountSuspended) {
