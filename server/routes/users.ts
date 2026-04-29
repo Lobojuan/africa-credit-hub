@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { storage } from "../storage";
+import { storage, GLOBAL_SCOPE } from "../storage";
 import { insertUserSchema } from "@shared/schema";
 import {
   requireRole, stripPassword, getOrgScope, getCountryFilter,
@@ -15,7 +15,8 @@ router.get("/api/users", requireRole("admin", "super_admin"), async (req, res) =
     const country = getCountryFilter(req);
     enforceCountryScopeForNonSuperAdmin(req, country, "/api/users");
     await logCrossCountryAccess(req, country, "/api/users");
-    const users = await storage.getUsers(orgId, country);
+    const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+    const users = await storage.getUsers(orgId, scope);
     res.json(users.map(stripPassword));
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });

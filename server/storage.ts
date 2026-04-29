@@ -85,7 +85,15 @@ import {
   type ConsumerMonitoringAlert, type InsertConsumerMonitoringAlert,
 } from "@shared/schema";
 
-export function requireCountryScope(country: string | string[] | undefined, methodName: string): void {
+export const GLOBAL_SCOPE = "__global__" as const;
+export type CountryScope = string | string[] | typeof GLOBAL_SCOPE | undefined;
+
+export function isGlobalScope(country: CountryScope): boolean {
+  return country === GLOBAL_SCOPE;
+}
+
+export function requireCountryScope(country: CountryScope, methodName: string): void {
+  if (country === GLOBAL_SCOPE) return;
   if (!country || (Array.isArray(country) && country.length === 0)) {
     throw new Error(`Country scope required for ${methodName}`);
   }
@@ -539,9 +547,10 @@ export class DatabaseStorage implements IStorage {
 
   async getUsers(organizationId?: string, country?: string): Promise<User[]> {
     requireCountryScope(country, "getUsers");
-    const filters: any[] = [this.countryOrgFilter(users, country!)];
+    const filters: any[] = [];
+    if (!isGlobalScope(country)) filters.push(this.countryOrgFilter(users, country!));
     if (organizationId) filters.push(eq(users.organizationId, organizationId));
-    const where = and(...filters);
+    const where = filters.length > 0 ? and(...filters) : undefined;
     return db.select().from(users).where(where).orderBy(desc(users.createdAt));
   }
 
@@ -1561,22 +1570,23 @@ export class DatabaseStorage implements IStorage {
 
   async getNotifications(userId: string, country?: string): Promise<Notification[]> {
     requireCountryScope(country, "getNotifications");
+    const conds: any[] = [
+      or(eq(notifications.userId, userId), sql`${notifications.userId} IS NULL`),
+    ];
+    if (!isGlobalScope(country)) conds.push(eq(notifications.country, country!));
     return db.select().from(notifications)
-      .where(and(
-        or(eq(notifications.userId, userId), sql`${notifications.userId} IS NULL`),
-        eq(notifications.country, country!)
-      ))
+      .where(and(...conds))
       .orderBy(desc(notifications.createdAt))
       .limit(50);
   }
 
   async getUnreadNotificationCount(userId: string, country?: string): Promise<number> {
     requireCountryScope(country, "getUnreadNotificationCount");
-    const [result] = await db.select({ value: count() }).from(notifications)
-      .where(and(
-        sql`(${notifications.userId} = ${userId} OR ${notifications.userId} IS NULL) AND ${notifications.isRead} = false`,
-        eq(notifications.country, country!)
-      ));
+    const conds: any[] = [
+      sql`(${notifications.userId} = ${userId} OR ${notifications.userId} IS NULL) AND ${notifications.isRead} = false`,
+    ];
+    if (!isGlobalScope(country)) conds.push(eq(notifications.country, country!));
+    const [result] = await db.select({ value: count() }).from(notifications).where(and(...conds));
     return result.value;
   }
 
@@ -1910,29 +1920,30 @@ export class DatabaseStorage implements IStorage {
 
   async getDashboardStats(organizationId?: string, country?: string) {
     requireCountryScope(country, "getDashboardStats");
+    const scopedCountry = isGlobalScope(country) ? undefined : (country as string | undefined);
     const borrowerFilters: any[] = [];
     if (organizationId) borrowerFilters.push(eq(borrowers.organizationId, organizationId));
-    if (country) borrowerFilters.push(eq(borrowers.country, country));
+    if (scopedCountry) borrowerFilters.push(eq(borrowers.country, scopedCountry));
     const borrowerFilter = borrowerFilters.length > 1 ? and(...borrowerFilters) : borrowerFilters[0];
 
     const accFilters: any[] = [];
     if (organizationId) accFilters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country) accFilters.push(this.countryOrgFilter(creditAccounts, country));
+    if (scopedCountry) accFilters.push(this.countryOrgFilter(creditAccounts, scopedCountry));
     const accFilter = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
 
     const approvalFilters: any[] = [];
     if (organizationId) approvalFilters.push(eq(pendingApprovals.organizationId, organizationId));
-    if (country) approvalFilters.push(eq(pendingApprovals.country, country));
+    if (scopedCountry) approvalFilters.push(eq(pendingApprovals.country, scopedCountry));
     const orgApprovalFilter = approvalFilters.length > 1 ? and(...approvalFilters) : approvalFilters[0];
 
     const dispFilters: any[] = [];
     if (organizationId) dispFilters.push(eq(disputes.organizationId, organizationId));
-    if (country) dispFilters.push(eq(disputes.country, country));
+    if (scopedCountry) dispFilters.push(eq(disputes.country, scopedCountry));
     const orgDisputeFilter = dispFilters.length > 1 ? and(...dispFilters) : dispFilters[0];
 
     const inqFilters: any[] = [];
     if (organizationId) inqFilters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
-    if (country) inqFilters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
+    if (scopedCountry) inqFilters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${scopedCountry})`);
     const inqFilter = inqFilters.length > 1 ? and(...inqFilters) : inqFilters[0];
 
     const outstandingStatusFilter = or(eq(creditAccounts.status, "current"), eq(creditAccounts.status, "delinquent"), eq(creditAccounts.status, "restructured"));

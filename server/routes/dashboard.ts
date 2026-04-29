@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db";
-import { storage } from "../storage";
+import { storage, GLOBAL_SCOPE } from "../storage";
 import { creditInquiries, courtJudgments, borrowers, creditAccounts, disputes } from "@shared/schema";
 import { inArray, sql, and, eq, gte, lte } from "drizzle-orm";
 import { calculateCreditScore } from "../credit-score";
@@ -10,11 +10,12 @@ import {
 
 const router = Router();
 
-router.get("/api/dashboard/stats", async (req, res) => {
+router.get("/api/dashboard/stats", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
-    const stats = await storage.getDashboardStats(orgId, country);
+    const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+    const stats = await storage.getDashboardStats(orgId, scope);
     res.json(stats);
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
@@ -93,7 +94,7 @@ router.get("/api/dashboard/trends", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/api/dashboard/details/:type", async (req, res) => {
+router.get("/api/dashboard/details/:type", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
@@ -108,8 +109,9 @@ router.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
+    const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
     const [stats, portfolio, borrowerAgg] = await Promise.all([
-      storage.getDashboardStats(orgId, country),
+      storage.getDashboardStats(orgId, scope),
       storage.getPortfolioAggregates(orgId, country),
       storage.getBorrowerAggregates(orgId, country),
     ]);
@@ -172,8 +174,9 @@ router.get("/api/platform-kpis", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
+    const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
     const [stats, portfolio, borrowerAgg] = await Promise.all([
-      storage.getDashboardStats(orgId, country),
+      storage.getDashboardStats(orgId, scope),
       storage.getPortfolioAggregates(orgId, country),
       storage.getBorrowerAggregates(orgId, country),
     ]);

@@ -22,7 +22,7 @@ import telcoRouter from "./routes/telco";
 import walletRouter from "./routes/wallet";
 import webauthnRouter from "./routes/webauthn";
 import { registerPlatformControlRoutes } from "./routes/platform-control";
-import { storage, requireCountryScope } from "./storage";
+import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
@@ -675,8 +675,9 @@ export async function registerRoutes(
     try {
       const apiStats = getApiUsageStats();
       const country = getCountryFilter(req);
+      const scope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
       const orgs = await storage.getOrganizations(country);
-      const users = await storage.getUsers(undefined, country);
+      const users = await storage.getUsers(undefined, scope);
       const tierPrices: Record<string, number> = { standard: 299, professional: 799, enterprise: 1999 };
       const activeOrgs = orgs.filter(o => o.status === "active");
       const mrr = activeOrgs.reduce((s, o) => s + (tierPrices[o.subscriptionTier || "standard"] || 0), 0);
@@ -5748,7 +5749,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications");
       await logCrossCountryAccess(req, country, "/api/notifications");
-      const items = await storage.getNotifications(req.session.userId, country);
+      const scope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+      const items = await storage.getNotifications(req.session.userId, scope);
       res.json(items);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5760,7 +5762,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications/unread-count");
-      const count = await storage.getUnreadNotificationCount(req.session.userId, country);
+      const scope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+      const count = await storage.getUnreadNotificationCount(req.session.userId, scope);
       res.json({ count });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -8662,10 +8665,11 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
+      const statsScope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
       const [portfolio, borrowerAgg, stats, disputeList, approvals, { data: instList }] = await Promise.all([
         storage.getPortfolioAggregates(orgId, country),
         storage.getBorrowerAggregates(orgId, country),
-        storage.getDashboardStats(orgId, country),
+        storage.getDashboardStats(orgId, statsScope),
         storage.getDisputes(orgId, country),
         storage.getPendingApprovals(orgId, country),
         storage.getInstitutions(1, 200, orgId, country),
@@ -9866,9 +9870,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.get("/api/admin/platform-stats", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const country = getCountryFilter(req);
+      const scope = country ?? GLOBAL_SCOPE;
       const orgs = await storage.getOrganizations(country);
-      const allUsers = await storage.getUsers(undefined, country);
-      const globalStats = await storage.getDashboardStats(undefined, country);
+      const allUsers = await storage.getUsers(undefined, scope);
+      const globalStats = await storage.getDashboardStats(undefined, scope);
       res.json({
         totalOrganizations: orgs.length,
         activeOrganizations: orgs.filter(o => o.status === "active").length,
