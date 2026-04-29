@@ -17445,7 +17445,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // so visitors can see the consent log working in real time.
   app.get("/api/public/financial-inclusion-recent-bridge-accesses", async (_req, res) => {
     try {
-      const rows = await storage.getCrossProductAuditEntries(10);
+      const RECENCY_WINDOW_DAYS = 7;
+      const MAX_EVENTS = 10;
+      const since = new Date(Date.now() - RECENCY_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+      const rows = await storage.getCrossProductAuditEntries(MAX_EVENTS, { since });
       const events = rows.map((r) => {
         let purpose: string | null = null;
         let sourceProduct: string | null = null;
@@ -17466,7 +17469,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           timestamp: r.createdAt ? r.createdAt.toISOString() : null,
         };
       });
-      res.json({ events, generatedAt: new Date().toISOString() });
+      res.json({ events, generatedAt: new Date().toISOString(), windowDays: RECENCY_WINDOW_DAYS });
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

@@ -31,6 +31,7 @@ interface BridgeAccessEvent {
 interface BridgeAccessPayload {
   events: BridgeAccessEvent[];
   generatedAt: string;
+  windowDays?: number;
 }
 
 const TICKER_REFRESH_MS = 30_000;
@@ -146,7 +147,7 @@ export default function FinancialInclusionPage() {
                 </span>
               </div>
               <div className="text-xs text-muted-foreground" data-testid="text-ticker-caption">
-                {t("financialInclusion.tickerCaption", "Last 10 events · refreshes every 30s · PII redacted")}
+                {t("financialInclusion.tickerCaption", "Last 10 events from the past 7 days · refreshes every 30s · PII redacted")}
               </div>
             </div>
 
@@ -157,8 +158,13 @@ export default function FinancialInclusionPage() {
                 ))}
               </div>
             ) : !bridgeData || bridgeData.events.length === 0 ? (
-              <div className="text-sm text-muted-foreground py-4 text-center" data-testid="text-ticker-empty">
-                {t("financialInclusion.tickerEmpty", "No bridge accesses yet. Events appear here as soon as a consented cross-product call is made.")}
+              <div className="py-6 text-center space-y-1" data-testid="text-ticker-empty">
+                <div className="text-sm font-medium" data-testid="text-ticker-empty-title">
+                  {t("financialInclusion.tickerEmptyTitle", "Quiet right now")}
+                </div>
+                <div className="text-xs text-muted-foreground max-w-md mx-auto" data-testid="text-ticker-empty-body">
+                  {t("financialInclusion.tickerEmptyBody", "No consent-bridge accesses in the last 7 days. New events appear here as soon as a consented cross-product call is made.")}
+                </div>
               </div>
             ) : (
               <ul className="divide-y" data-testid="list-ticker">

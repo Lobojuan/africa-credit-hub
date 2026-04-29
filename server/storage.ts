@@ -449,7 +449,7 @@ export interface IStorage {
   getCrossProductConsentById(id: string): Promise<CrossProductConsent | undefined>;
   createCrossProductConsent(input: InsertCrossProductConsent): Promise<CrossProductConsent>;
   revokeCrossProductConsent(id: string, reason?: string): Promise<CrossProductConsent | undefined>;
-  getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string }): Promise<AuditLog[]>;
+  getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]>;
   deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number>;
   getCrossProductImpactStats(): Promise<{
     merchantsRegistered: number;
@@ -3689,12 +3689,16 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return row;
   }
-  async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string }): Promise<AuditLog[]> {
+  async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]> {
+    const conditions = [eq(auditLogs.action, "cross_product_access")];
+    if (filter?.since) {
+      conditions.push(sql`${auditLogs.createdAt} >= ${filter.since}`);
+    }
     const rows = await db.select().from(auditLogs)
-      .where(eq(auditLogs.action, "cross_product_access"))
+      .where(and(...conditions))
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit);
-    if (!filter) return rows;
+    if (!filter || (!filter.source && !filter.target && !filter.purpose)) return rows;
     return rows.filter((r) => {
       try {
         const d = JSON.parse(r.details ?? "{}");
