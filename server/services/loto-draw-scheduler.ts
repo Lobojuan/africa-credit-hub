@@ -18,11 +18,6 @@
 import { randomUUID } from "crypto";
 import { storage } from "../storage";
 import { computeCommitmentHash, generateCommitment, runDraw } from "./loto-draw-engine";
-import {
-  dispatchDrawReminders,
-  dispatchMerchantInactivityAlerts,
-  retryPendingMessages,
-} from "./loto-notification-dispatcher";
 import type { InsertAuditLog, LotoCountryDrawConfig, LotoDefaultTier, LotoDraw } from "@shared/schema";
 
 const TICK_MS = 60_000;
@@ -211,57 +206,28 @@ async function tick() {
       }
     }
 
-    // Phase 3: T-24h reminders + merchant inactivity (Task #286). Each
-    // dispatch is best-effort and idempotent on the outbound table.
+    // Phase 3: messaging side-channel — T-24h draw reminders, daily merchant
+    // inactivity sweep, and outbound retry-queue drain. All wrapped so a
+    // messaging failure never affects the core draw scheduler.
     try {
-      const allDraws = await storage.listLotoDraws({ limit: 50 });
-      const now = new Date();
-      for (const d of allDraws) {
-        if (d.status !== "scheduled" && d.status !== "open") continue;
-        const hoursToClose = (new Date(d.periodEnd).getTime() - now.getTime()) / (1000 * 60 * 60);
-        if (hoursToClose <= 0 || hoursToClose > 24) continue;
-        try {
-          const summary = await dispatchDrawReminders(d, now);
-          if (summary.queued > 0) {
-            // eslint-disable-next-line no-console
-            console.info(`[loto-scheduler] draw reminders for ${d.countryCode} #${d.drawNumber}: queued=${summary.queued} skipped=${summary.skipped}`);
-          }
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error(`[loto-scheduler] reminder dispatch failed for ${d.id}:`, err instanceof Error ? err.message : err);
-        }
-      }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[loto-scheduler] reminder phase failed:", err instanceof Error ? err.message : err);
-    }
+      const { enqueueDrawReminders, enqueueMerchantInactivityAlerts, processOutboundQueue }
+        = await import("./loto-notifications");
+      const r = await enqueueDrawReminders();
+      if (r.enqueued > 0) console.info(`[loto-scheduler] enqueued ${r.enqueued} draw reminder(s)`);
 
-    // Phase 4: retry pending/failed outbound messages.
-    try {
-      const r = await retryPendingMessages(new Date());
-      if (r.retried > 0) {
-        // eslint-disable-next-line no-console
-        console.info(`[loto-scheduler] retried ${r.retried} outbound messages`);
+      // Run merchant inactivity sweep at most once an hour to avoid thrash.
+      const minute = new Date().getMinutes();
+      if (minute < 1) {
+        const m = await enqueueMerchantInactivityAlerts();
+        if (m.enqueued > 0) console.info(`[loto-scheduler] enqueued ${m.enqueued} merchant alert(s)`);
       }
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[loto-scheduler] retry phase failed:", err instanceof Error ? err.message : err);
-    }
 
-    // Phase 5: daily merchant-inactivity sweep — cheap dedupe handled in dispatcher.
-    try {
-      const configs = await storage.listLotoCountryDrawConfigs();
-      for (const cfg of configs) {
-        try {
-          await dispatchMerchantInactivityAlerts(cfg.countryCode, 7);
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error(`[loto-scheduler] inactivity dispatch failed for ${cfg.countryCode}:`, err instanceof Error ? err.message : err);
-        }
+      const drained = await processOutboundQueue(50);
+      if (drained.dispatched + drained.failed > 0) {
+        console.info(`[loto-scheduler] outbound: ${drained.dispatched} sent, ${drained.failed} failed`);
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("[loto-scheduler] inactivity phase failed:", err instanceof Error ? err.message : err);
+      console.error("[loto-scheduler] messaging tick failed (non-fatal):", err instanceof Error ? err.message : err);
     }
   } catch (err) {
     // eslint-disable-next-line no-console

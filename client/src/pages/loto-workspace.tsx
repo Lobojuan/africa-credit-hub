@@ -14,7 +14,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles } from "lucide-react";
 import { PRODUCT_REGISTRY } from "@/lib/products";
 import { LotoLotteryExperience } from "@/components/loto-lottery-experience";
-import { LotoMessagingPreferences } from "@/components/loto-messaging-preferences";
 import { getTaxAuthorityProfile } from "@shared/tax-authority";
 
 interface MerchantPayload {
@@ -112,7 +111,7 @@ export default function LotoWorkspacePage() {
       </div>
 
       <Tabs defaultValue="lottery" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full md:w-auto">
+        <TabsList className="grid grid-cols-6 w-full md:w-auto">
           <TabsTrigger value="lottery" data-testid="tab-lottery">
             <Sparkles className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
             {t("loto.tabs.lottery", "Lottery")}
@@ -121,6 +120,7 @@ export default function LotoWorkspacePage() {
           <TabsTrigger value="receipts" data-testid="tab-receipts">{t("loto.tabs.receipts", "Receipts")}</TabsTrigger>
           <TabsTrigger value="spending" data-testid="tab-spending">{t("loto.tabs.spending", "Spending")}</TabsTrigger>
           <TabsTrigger value="credit-profile" data-testid="tab-credit-profile">{t("loto.tabs.creditProfile", "Build Credit")}</TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications">{t("loto.tabs.notifications", "Notifications")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lottery" className="mt-4">
@@ -155,9 +155,7 @@ export default function LotoWorkspacePage() {
           />
 
           <div className="mt-6 max-w-xl">
-            <LotoMessagingPreferences
-              countryCode={merchant?.countryCode ?? (consumerQ.data?.features?.currency === "KES" ? "KE" : "CI")}
-            />
+            <LotoMessagingPreferences />
           </div>
         </TabsContent>
 
@@ -325,8 +323,134 @@ export default function LotoWorkspacePage() {
             </>
           )}
         </TabsContent>
+
+        <TabsContent value="notifications" className="mt-4">
+          <LotoMessagingPreferences />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Consumer messaging preferences (Task #286)
+// Lets the consumer pick a verified phone, choose a UI language used in
+// outbound SMS templates, and opt out of marketing-style reminders. The
+// "winner SMS bypasses opt-out" rule is surfaced explicitly so consumers
+// understand they will still hear about a real cash prize.
+// ---------------------------------------------------------------------------
+function LotoMessagingPreferences() {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const prefsQ = useQuery<{
+    optOutReminders: boolean; language: string; verifiedPhone: string | null; verifiedAt: string | null;
+  }>({ queryKey: ["/api/loto/messaging-prefs"] });
+
+  const updateMut = useMutation({
+    mutationFn: async (patch: { optOutReminders?: boolean; language?: string; verifiedPhone?: string | null }) => {
+      const r = await apiRequest("PUT", "/api/loto/messaging-prefs", patch);
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/messaging-prefs"] });
+      toast({ title: t("loto.messagingPrefs.savedTitle", "Preferences saved") });
+    },
+    onError: (e: unknown) => toast({
+      title: t("loto.messagingPrefs.errorTitle", "Could not save"),
+      description: e instanceof Error ? e.message : String(e),
+      variant: "destructive",
+    }),
+  });
+
+  if (prefsQ.isLoading || !prefsQ.data) {
+    return <Skeleton className="h-48 w-full" data-testid="skeleton-prefs" />;
+  }
+  const prefs = prefsQ.data;
+
+  return (
+    <Card data-testid="card-messaging-prefs">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Bell className="w-5 h-5 text-amber-600" />
+          {t("loto.messagingPrefs.title", "How we contact you")}
+        </CardTitle>
+        <CardDescription>
+          {t("loto.messagingPrefs.subtitle",
+            "Choose how the Loto Fiscal pilot reaches you. Winner notifications always send by SMS to your verified phone — only marketing-style reminders honour the opt-out below.")}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="prefs-phone">
+            {t("loto.messagingPrefs.phone", "Verified phone (E.164, e.g. +22507000000)")}
+          </label>
+          <div className="flex gap-2">
+            <input
+              id="prefs-phone"
+              data-testid="input-prefs-phone"
+              defaultValue={prefs.verifiedPhone ?? ""}
+              placeholder="+225 07 00 00 00 00"
+              className="flex-1 px-3 py-2 border rounded-md bg-background"
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v && v !== prefs.verifiedPhone) updateMut.mutate({ verifiedPhone: v });
+                if (!v && prefs.verifiedPhone) updateMut.mutate({ verifiedPhone: null });
+              }}
+            />
+          </div>
+          {prefs.verifiedAt && (
+            <p className="text-xs text-emerald-700 flex items-center gap-1" data-testid="text-prefs-verified-at">
+              <BadgeCheck className="w-3.5 h-3.5" />
+              {t("loto.messagingPrefs.verifiedAt", "Verified")} — {new Date(prefs.verifiedAt).toLocaleString()}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium" htmlFor="prefs-lang">
+            {t("loto.messagingPrefs.language", "Preferred language for SMS")}
+          </label>
+          <select
+            id="prefs-lang"
+            data-testid="select-prefs-language"
+            defaultValue={prefs.language}
+            onChange={(e) => updateMut.mutate({ language: e.target.value })}
+            className="px-3 py-2 border rounded-md bg-background"
+          >
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+            <option value="pt">Português</option>
+            <option value="ar">العربية</option>
+            <option value="sw">Kiswahili</option>
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between border rounded-md p-3">
+          <div className="flex-1 pr-3">
+            <p className="text-sm font-medium">{t("loto.messagingPrefs.optOutTitle", "Pause draw reminders")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("loto.messagingPrefs.optOutBody",
+                "Stops the T-24h reminder SMS before each draw. Winner notifications and prize-claim instructions are still sent.")}
+            </p>
+          </div>
+          <Switch
+            checked={prefs.optOutReminders}
+            onCheckedChange={(v) => updateMut.mutate({ optOutReminders: v })}
+            disabled={updateMut.isPending}
+            data-testid="switch-prefs-opt-out"
+          />
+        </div>
+
+        <Alert>
+          <ShieldAlert className="w-4 h-4" />
+          <AlertTitle>{t("loto.messagingPrefs.demoTitle", "Demo mode — no real SMS sent")}</AlertTitle>
+          <AlertDescription>
+            {t("loto.messagingPrefs.demoBody",
+              "This pilot environment uses a simulated SMS adapter. Every outbound message is logged so administrators can audit delivery, but no message reaches a real handset.")}
+          </AlertDescription>
+        </Alert>
+      </CardContent>
+    </Card>
   );
 }
 

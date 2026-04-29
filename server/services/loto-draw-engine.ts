@@ -28,7 +28,7 @@ import type {
   LotoDraw, LotoDrawPrizeTier, LotoDrawWinner, LotoReceipt,
 } from "@shared/schema";
 import { adapterFor } from "./loto-payout-adapter";
-import { dispatchWinnerNotifications } from "./loto-notification-dispatcher";
+import { sendWinnerNotifications } from "./loto-notifications";
 
 async function writeAudit(
   action: string,
@@ -292,17 +292,16 @@ export async function runDraw(drawId: string): Promise<RunDrawResult> {
     });
   }
 
-  // Winner SMS dispatch (Task #286). Failures here must never abort the
-  // draw run — the table-of-record is `loto_outbound_messages` and the
-  // retry worker will pick up any pending rows on the next scheduler tick.
+  // Notify winners — runs AFTER payout dispatch so the SMS body can refer
+  // to the prize. Audit-log separation: winner SMS is recorded in
+  // loto_outbound_messages with purpose='winner_notification', distinct from
+  // the 'loto_payout_dispatched' / future 'loto_prize_claimed' audit entries
+  // (Task #286 mandate). Failures inside notifications never break the draw.
   try {
-    const summary = await dispatchWinnerNotifications(persisted.draw, persisted.winners);
-    await writeAudit("loto_winner_notifications_dispatched", existing, {
-      queued: summary.queued, skipped: summary.skipped,
-    });
+    await sendWinnerNotifications({ draw: persisted.draw, winners: persisted.winners });
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.error("[loto-draw-engine] winner notification dispatch failed:", err instanceof Error ? err.message : err);
+    console.error("[loto-draw-engine] winner notifications failed (non-fatal):", err);
   }
 
   return { draw: persisted.draw, winners: persisted.winners, tiers, alreadyRun: false };

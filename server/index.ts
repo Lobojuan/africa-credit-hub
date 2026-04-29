@@ -265,6 +265,11 @@ app.use((req, res, next) => {
   if (req.path === "/api/trial/register") return next();
   if (req.path === "/api/consumer/login") return next();
   if (req.path === "/api/consumer/register") return next();
+  // USSD gateway callbacks (Africa's Talking, Twilio, etc.) cannot include a
+  // CSRF token; they are authenticated separately via LOTO_USSD_TOKEN header
+  // when configured. The endpoint is also whitelisted from the /api session
+  // auth wrapper. See server/services/loto-ussd-state-machine.ts.
+  if (req.path === "/api/loto/ussd/session") return next();
 
   const csrfToken = req.headers["x-csrf-token"] as string;
   if (req.session?.userId) {

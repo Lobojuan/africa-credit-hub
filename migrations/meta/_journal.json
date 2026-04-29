@@ -97,7 +97,14 @@
       "idx": 13,
       "version": "7",
       "when": 1777488644400,
-      "tag": "0013_loto_messaging_ussd",
+      "tag": "0013_loto_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1777488644401,
+      "tag": "0014_loto_fiscal_code_pref",
       "breakpoints": true
     }
   ]
