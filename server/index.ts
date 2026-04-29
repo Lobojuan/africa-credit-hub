@@ -90,6 +90,7 @@ function validateProductionConfig() {
 validateProductionConfig();
 
 const app = express();
+app.set("trust proxy", 1);
 app.set("etag", false);
 
 app.get("/health", async (_req, res) => {
@@ -377,7 +378,6 @@ app.use((req, res, next) => {
   next();
 });
 
-app.set("trust proxy", 1);
 
 const httpLogger = createLogger("http");
 const startupLogger = createLogger("startup");
@@ -578,12 +578,7 @@ process.stderr.write = function (...args: any[]) {
     console.error("CRIF features migration error (non-fatal):", e);
   }
 
-  try {
-    const { migrateNewTables } = await import("./migrate-new-tables");
-    await migrateNewTables();
-  } catch (e) {
-    console.error("[NewTables] Migration error (non-fatal):", e);
-  }
+
 
   try {
     const { ensureIdempotencyTable } = await import("./routes/middleware");

@@ -15,7 +15,7 @@ export const pool = new pg.Pool({
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   allowExitOnIdle: false,
-  ssl: isProductionBoot ? { rejectUnauthorized: false } : false,
+  ssl: isProductionBoot ? { rejectUnauthorized: true } : false,
 });
 
 pool.on("error", (err) => {
