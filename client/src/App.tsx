@@ -147,6 +147,8 @@ const LoanOriginationPage = lazy(() => import("@/pages/loan-origination"));
 const CollateralRegistryPage = lazy(() => import("@/pages/collateral-registry"));
 const LotoWorkspacePage = lazy(() => import("@/pages/loto-workspace"));
 const LotoMessagingDashboardPage = lazy(() => import("@/pages/loto-messaging-dashboard"));
+const LotoPosPage = lazy(() => import("@/pages/loto-pos"));
+const LotoDevicesAdminPage = lazy(() => import("@/pages/loto-devices-admin"));
 const DataSharingPage = lazy(() => import("@/pages/data-sharing"));
 const MerchantCreditProfilePage = lazy(() => import("@/pages/merchant-credit-profile"));
 const FinancialInclusionPage = lazy(() => import("@/pages/financial-inclusion"));
@@ -251,6 +253,8 @@ function Router() {
         <Route path="/loto-fiscal" component={LotoWorkspacePage} />
         <Route path="/loto/admin/messaging" component={LotoMessagingDashboardPage} />
         <Route path="/loto/draws/verify/:drawId" component={LotoVerifyDrawPage} />
+        <Route path="/loto-fiscal/pos" component={LotoPosPage} />
+        <Route path="/loto-fiscal/devices" component={LotoDevicesAdminPage} />
         <Route path="/data-sharing" component={DataSharingPage} />
         <Route path="/merchant-credit-profile/:merchantId" component={MerchantCreditProfilePage} />
         <Route path="/financial-inclusion" component={FinancialInclusionPage} />

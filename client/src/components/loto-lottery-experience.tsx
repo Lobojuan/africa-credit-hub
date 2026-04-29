@@ -716,11 +716,15 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete, onWatc
   const { t } = useTranslation();
   const { toast } = useToast();
   const [manualCode, setManualCode] = useState("");
+  const [qrPayload, setQrPayload] = useState("");
   const [lastResult, setLastResult] = useState<ScanResult | null>(null);
 
+  // Demo / synthetic receipt path — only the Sample / Paste-code tabs use
+  // this. The endpoint is gated behind ?demo=1 on the server so synthetic
+  // receipts can never contaminate real merchant credit data.
   const scanMutation = useMutation({
     mutationFn: async (input: { kind?: "small" | "medium" | "large"; fiscalCode?: string }) => {
-      const res = await apiRequest("POST", "/api/loto/receipts/scan", input);
+      const res = await apiRequest("POST", "/api/loto/receipts/scan?demo=1", input);
       return (await res.json()) as ScanResult;
     },
     onSuccess: (data) => {
@@ -749,9 +753,52 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete, onWatc
     },
   });
 
+  // Production verifier path — accepts a real signed `qrPayload` from a
+  // certified merchant POS, rebuilds the canonical payload server-side
+  // from the persisted issuance ledger, and HMAC-verifies it. No demo
+  // fallback: invalid signatures, unknown fiscal codes, or expired
+  // receipts return errors. This path is what real consumer QR scans go
+  // through.
+  const verifyMutation = useMutation({
+    mutationFn: async (payload: string) => {
+      const res = await apiRequest("POST", "/api/loto/receipts/verify", { qrPayload: payload });
+      const body = await res.json();
+      if (!res.ok || body?.valid === false) {
+        const msg = body?.message ?? body?.error ?? "verification_failed";
+        throw new Error(msg);
+      }
+      return body as ScanResult & { valid: true; merchant: { id: string; shopName: string; city: string | null } };
+    },
+    onSuccess: (data) => {
+      setLastResult(data);
+      onScanComplete?.();
+      toast({
+        title: t("loto.lottery.scanSuccessTitle", "Receipt verified — ticket #{{n}} added!", { n: data.ticketNumber }),
+        description: t(
+          "loto.lottery.scanSuccessBody",
+          "{{amount}} {{currency}} purchase from {{shop}}. You now hold {{count}} ticket(s).",
+          {
+            amount: fmtAmount(parseFloat(data.receipt.amount)),
+            currency: data.receipt.currency,
+            shop: data.merchant.shopName,
+            count: data.ticketCount,
+          },
+        ),
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: t("loto.lottery.verifyErrorTitle", "Receipt could not be verified"),
+        description: err?.message ?? t("loto.lottery.verifyErrorBody", "The QR signature did not match a registered fiscal device."),
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleClose = (next: boolean) => {
     if (!next) {
       setManualCode("");
+      setQrPayload("");
       setLastResult(null);
     }
     onOpenChange(next);
@@ -803,17 +850,56 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete, onWatc
             </div>
           </div>
         ) : (
-          <Tabs defaultValue="sample" className="w-full">
-            <TabsList className="grid grid-cols-2 w-full">
+          <Tabs defaultValue="qr" className="w-full">
+            <TabsList className="grid grid-cols-3 w-full">
+              <TabsTrigger value="qr" data-testid="tab-scan-qr">
+                <ScanLine className="w-3.5 h-3.5 mr-1.5" />
+                {t("loto.lottery.scanTabQr", "Scan QR")}
+              </TabsTrigger>
               <TabsTrigger value="sample" data-testid="tab-scan-sample">
                 <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-                {t("loto.lottery.scanTabSample", "Sample receipt")}
+                {t("loto.lottery.scanTabSample", "Demo")}
               </TabsTrigger>
               <TabsTrigger value="manual" data-testid="tab-scan-manual">
                 <QrCode className="w-3.5 h-3.5 mr-1.5" />
-                {t("loto.lottery.scanTabManual", "Paste code")}
+                {t("loto.lottery.scanTabManual", "Demo code")}
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="qr" className="mt-4">
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="qr-payload-input" className="text-xs uppercase tracking-wider text-muted-foreground">
+                    {t("loto.lottery.scanQrLabel", "Receipt QR payload")}
+                  </Label>
+                  <textarea
+                    id="qr-payload-input"
+                    value={qrPayload}
+                    onChange={(e) => setQrPayload(e.target.value)}
+                    placeholder="LOTOFISC|v1|<serial>|<fiscalCode>|<signature>"
+                    rows={3}
+                    disabled={verifyMutation.isPending}
+                    className="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    data-testid="input-qr-payload"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1.5">
+                    {t(
+                      "loto.lottery.scanQrHint",
+                      "Paste or scan the QR string from a real merchant receipt. The signature is HMAC-verified against the issuing fiscal device.",
+                    )}
+                  </p>
+                </div>
+                <Button
+                  className="w-full gap-2 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white border-0"
+                  disabled={verifyMutation.isPending || qrPayload.trim().length < 8}
+                  onClick={() => verifyMutation.mutate(qrPayload.trim())}
+                  data-testid="button-submit-qr-payload"
+                >
+                  {verifyMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <ScanLine className="w-4 h-4" />}
+                  {t("loto.lottery.scanVerifyCta", "Verify signature & claim ticket")}
+                </Button>
+              </div>
+            </TabsContent>
 
             <TabsContent value="sample" className="mt-4">
               <p className="text-xs text-muted-foreground mb-3">

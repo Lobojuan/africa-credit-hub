@@ -2119,6 +2119,73 @@ export const insertLotoMerchantSchema = createInsertSchema(lotoMerchants).omit({
 export type InsertLotoMerchant = z.infer<typeof insertLotoMerchantSchema>;
 export type LotoMerchant = typeof lotoMerchants.$inferSelect;
 
+// ────────────────────────────────────────────────────────────────────────
+// Loto Fiscal — Electronic Fiscal Devices (EFDs).
+// Each registered EFD belongs to a merchant and is the only accepted
+// signer of receipts that grant lottery tickets in production. The device
+// holds a per-device secret stored as an envelope-encrypted blob via
+// `server/key-vault.ts`; the key bytes never live in plaintext at rest
+// and are never logged.
+// ────────────────────────────────────────────────────────────────────────
+export const lotoFiscalDeviceStatusEnum = pgEnum("loto_fiscal_device_status", [
+  "pending",
+  "active",
+  "revoked",
+]);
+
+export const lotoFiscalDevices = pgTable("loto_fiscal_devices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  // Vendor-stamped serial — the public identifier on the QR payload.
+  serial: text("serial").notNull().unique(),
+  merchantId: varchar("merchant_id").notNull().references(() => lotoMerchants.id),
+  countryCode: text("country_code").notNull(),
+  // Envelope-encrypted device key payload (managed by KeyVault). Never logged.
+  encryptedKey: text("encrypted_key").notNull(),
+  // Indirection so a real KMS/HSM backend can carry an external key id.
+  keyVaultBackend: text("key_vault_backend").notNull().default("db_envelope"),
+  keyReference: text("key_reference"),
+  // Free-form metadata about who certified the device (DGI agent name etc.).
+  certifiedBy: text("certified_by"),
+  certifiedAt: timestamp("certified_at"),
+  status: lotoFiscalDeviceStatusEnum("status").notNull().default("pending"),
+  revokedReason: text("revoked_reason"),
+  lastSeenAt: timestamp("last_seen_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLotoFiscalDeviceSchema = createInsertSchema(lotoFiscalDevices).omit({
+  id: true, createdAt: true, lastSeenAt: true, certifiedAt: true, status: true,
+});
+export type InsertLotoFiscalDevice = z.infer<typeof insertLotoFiscalDeviceSchema>;
+export type LotoFiscalDevice = typeof lotoFiscalDevices.$inferSelect;
+
+// Persistent issuance ledger — bridges merchant POS issuance and the
+// later consumer verification call. Survives process restarts and works
+// across horizontally scaled instances. The QR payload only carries
+// (fiscalCode, signature, deviceSerial); the canonical signed string
+// also includes (merchantVatId, issuedAtUnix, amountTotal, currency),
+// which we stage here at issuance time so the verifier can rebuild the
+// canonical payload without trusting the QR contents. Rows expire and
+// are removed by a scheduled cleanup; they're also deleted on
+// successful verification.
+export const lotoPendingIssuances = pgTable("loto_pending_issuances", {
+  fiscalCode: text("fiscal_code").primaryKey(),
+  deviceId: varchar("device_id").notNull().references(() => lotoFiscalDevices.id),
+  merchantVatId: text("merchant_vat_id").notNull(),
+  amountTotal: decimal("amount_total", { precision: 15, scale: 2 }).notNull(),
+  vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  issuedAtUnix: integer("issued_at_unix").notNull(),
+  category: text("category").notNull().default("retail"),
+  itemCount: integer("item_count").notNull().default(1),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLotoPendingIssuanceSchema = createInsertSchema(lotoPendingIssuances).omit({ createdAt: true });
+export type InsertLotoPendingIssuance = z.infer<typeof insertLotoPendingIssuanceSchema>;
+export type LotoPendingIssuance = typeof lotoPendingIssuances.$inferSelect;
+
 export const lotoReceipts = pgTable("loto_receipts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   merchantId: varchar("merchant_id").notNull().references(() => lotoMerchants.id),
@@ -2132,6 +2199,16 @@ export const lotoReceipts = pgTable("loto_receipts", {
   currency: text("currency").notNull(),
   category: text("category"),
   itemCount: integer("item_count").default(1),
+  // Issuing fiscal device. Nullable so legacy / `?demo=1` rows remain
+  // valid, but production receipts must always carry one.
+  deviceId: varchar("device_id").references(() => lotoFiscalDevices.id),
+  // Hex-encoded HMAC-SHA256 of the canonical signed payload. Used by
+  // the verifier to detect tampering. Optional for legacy rows.
+  signature: text("signature"),
+  // True when the receipt was minted via the demo merchant flow
+  // (`?demo=1` against the demo merchant). Production scoring filters
+  // these out so synthetic activity never contaminates credit signals.
+  isDemo: boolean("is_demo").notNull().default(false),
   issuedAt: timestamp("issued_at").notNull().defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
 });

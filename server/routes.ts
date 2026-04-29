@@ -94,6 +94,13 @@ import {
   scanRetentionPolicies,
 } from "./export-service";
 import { decryptBorrowerPII, decryptBorrowerArray } from "./encryption";
+import {
+  canonicalReceiptPayload,
+  verifyReceiptPayload,
+  getKeyVault,
+  coerceKeyVaultBackend,
+} from "./key-vault";
+import { getSimulatedEfd, parseQrPayload } from "./efd-adapter";
 
 
 
@@ -426,6 +433,32 @@ function calculateNextRun(frequency: string, dayOfWeek: number, dayOfMonth: numb
     next.setHours(6, 0, 0, 0);
   }
   return next;
+}
+
+// ────────────────────────────────────────────────────────────────────────
+// Pending issuance ledger — bridges the merchant POS issuance call and a
+// subsequent consumer verification call. The QR payload only carries
+// (fiscalCode, signature, deviceSerial); the canonical signed string also
+// includes (merchantVatId, issuedAtUnix, amountTotal, currency). We stage
+// those fields here at issuance time so the verifier can rebuild the
+// canonical payload without trusting the QR. Entries auto-expire after 7
+// days so the map cannot grow unboundedly.
+// ────────────────────────────────────────────────────────────────────────
+// Pending issuances are now persisted in the `loto_pending_issuances`
+// table (see shared/schema.ts) so they survive restarts and work across
+// horizontally scaled instances. Rows live for 7 days, are removed on
+// successful verification, and a periodic sweep purges expired rows.
+const PENDING_ISSUANCE_TTL_SECONDS = 7 * 86400;
+let _lastPendingCleanup = 0;
+function schedulePendingIssuanceCleanup() {
+  const now = Math.floor(Date.now() / 1000);
+  if (now - _lastPendingCleanup < 60) return;
+  _lastPendingCleanup = now;
+  // Fire-and-forget; best-effort housekeeping. A separate failure here
+  // must never block the merchant POS issuance request path.
+  storage.deleteExpiredLotoPendingIssuances().catch((err) => {
+    console.warn("[loto] pending issuance cleanup failed", err);
+  });
 }
 
 export async function registerRoutes(
@@ -17597,18 +17630,16 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ────────────────────────────────────────────────────────────────────────
-  // Receipt scan — demo flow that creates a synthetic verified receipt and
-  // grants the consumer one lottery ticket. Real fiscalisation integration
-  // (DGI/FIRS/KRA QR verification) will replace the synthetic generator.
-  // Hardening:
-  //  - Per-user rate limiter (30 scans / 5 min) prevents ticket spamming.
-  //  - Zod-validated body so malformed input is rejected at the edge.
-  //  - Country must resolve from session — no silent CI fallback (would
-  //    cross-contaminate countries when super-admin is in global view).
-  //  - Synthetic receipts are pinned to a dedicated demo merchant per
-  //    country (shopName="__loto_demo_scan__"). Real production merchants
-  //    are never selected, so their turnover/credit features cannot be
-  //    polluted by demo activity.
+  // Receipt scan — production flow now goes through a real cryptographic
+  // verifier; the synthetic-receipt path is gated behind `?demo=1` and is
+  // only allowed against the dedicated demo merchant
+  // (shopName="__loto_demo_scan__"). This guarantees that:
+  //  - Real consumer-side scans go through `/api/loto/receipts/verify`,
+  //    which validates HMAC-SHA256 signatures issued by registered EFDs.
+  //  - Production merchant turnover and bureau credit signals can NEVER
+  //    be polluted by synthetic demo activity (demo rows are tagged
+  //    `is_demo=true` and pinned to a country-scoped demo merchant).
+  //  - A per-user rate limiter applies to BOTH scan paths.
   // ────────────────────────────────────────────────────────────────────────
   const lotoScanLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
@@ -17623,6 +17654,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   const lotoScanBodySchema = z.object({
     kind: z.enum(["small", "medium", "large"]).optional(),
     fiscalCode: z.string().trim().min(6).max(32).regex(/^[A-Za-z0-9_-]+$/, "fiscalCode must be alphanumeric").optional(),
+    qrPayload: z.string().trim().min(8).max(2048).optional(),
   });
 
   const DEMO_SCAN_MERCHANT_TAG = "__loto_demo_scan__";
@@ -17636,6 +17668,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!parsed.success) {
         return res.status(400).json({ message: "Invalid scan request", errors: parsed.error.flatten() });
       }
+
+      // ── Real QR payload path ─────────────────────────────────────────
+      // If the client posts a `qrPayload` we DELEGATE to the verifier and
+      // grant the ticket on a successful, non-replayed verification. The
+      // `?demo=1` flag has no effect here — the verifier rejects unknown
+      // devices and bad signatures regardless of query string.
+      if (parsed.data.qrPayload) {
+        const verifyResult = await verifyAndGrantTicket(req, parsed.data.qrPayload);
+        if (verifyResult.status === 200) {
+          return res.status(200).json(verifyResult.body);
+        }
+        return res.status(verifyResult.status).json(verifyResult.body);
+      }
+
+      // ── Synthetic demo path ──────────────────────────────────────────
+      // ONLY allowed behind explicit `?demo=1`. This branch never touches
+      // a real merchant; demo receipts are pinned to the country-scoped
+      // demo merchant and tagged `is_demo=true` so they cannot pollute
+      // production credit/turnover signals.
+      const demoMode = req.query?.demo === "1" || req.query?.demo === "true";
+      if (!demoMode) {
+        return res.status(400).json({
+          error: "missing_qr_payload",
+          message: "Real receipt scans must include a verified QR payload. Pass `?demo=1` only for demo receipts against the demo merchant.",
+        });
+      }
+
       const kind = parsed.data.kind ?? "medium";
       const manualCode = parsed.data.fiscalCode?.toUpperCase() ?? null;
 
@@ -17704,6 +17763,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           category: "retail",
           itemCount: 1 + Math.floor(Math.random() * 5),
           issuedAt: new Date(),
+          isDemo: true,
         });
       } catch (insertErr) {
         // Postgres unique-violation on fiscalCode → friendly 409.
@@ -17729,10 +17789,453 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         },
         ticketNumber,
         ticketCount,
+        demo: true,
       });
     } catch (e) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Cryptographic receipt verifier — the production path.
+  // Validates HMAC-SHA256 signatures issued by registered EFDs, rejects
+  // replayed/expired/unknown-device/bad-signature payloads with explicit
+  // codes, and on success grants the consumer one lottery ticket and
+  // records the receipt under the device's owning merchant.
+  //
+  // Audit hooks:
+  //  - Every verification (ok or denied) writes an audit_logs row tagged
+  //    action="loto_receipt_verify" with reason code (no key material).
+  //  - Successful verification touches `last_seen_at` on the device.
+  //  - Critical security-relevant events (bad_signature, unknown_device,
+  //    revoked_device) feed the same audit log.
+  // ────────────────────────────────────────────────────────────────────────
+  const RECEIPT_FRESHNESS_MAX_AGE_DAYS = 31; // accept receipts up to 31 days old
+  const RECEIPT_FRESHNESS_MAX_FUTURE_SECONDS = 5 * 60; // tolerate 5 min of clock skew
+
+  async function logVerifierEvent(req: Request, outcome: "ok" | "denied", reason: string, extra: Record<string, unknown>) {
+    try {
+      await db.insert(auditLogs).values({
+        userId: req.session?.userId ?? null,
+        action: "loto_receipt_verify",
+        entity: "loto",
+        entityId: typeof extra.deviceSerial === "string" ? extra.deviceSerial : null,
+        details: JSON.stringify({ outcome, reason, ...extra }),
+        ipAddress: req.ip ?? null,
+      });
+    } catch (e) {
+      console.error("[loto verify] audit write failed", e);
+    }
+  }
+
+  async function verifyAndGrantTicket(req: Request, qrPayload: string): Promise<{ status: number; body: any }> {
+    const userId = req.session?.userId;
+    if (!userId) return { status: 401, body: { error: "unauthenticated", message: "Login required to claim a ticket." } };
+
+    const parsedPayload = parseQrPayload(qrPayload);
+    if (!parsedPayload) {
+      await logVerifierEvent(req, "denied", "malformed_payload", {});
+      return { status: 400, body: { valid: false, error: "malformed_payload", message: "QR payload is malformed." } };
+    }
+
+    const { fiscalCode, signature, deviceSerial } = parsedPayload;
+
+    const device = await storage.getLotoFiscalDeviceBySerial(deviceSerial);
+    if (!device) {
+      await logVerifierEvent(req, "denied", "unknown_device", { deviceSerial });
+      return { status: 404, body: { valid: false, error: "unknown_device", message: "This device is not registered with the tax authority." } };
+    }
+    if (device.status !== "active") {
+      await logVerifierEvent(req, "denied", "device_not_active", { deviceSerial, deviceStatus: device.status });
+      return { status: 403, body: { valid: false, error: "device_not_active", message: `Device status is ${device.status}.` } };
+    }
+
+    const merchant = await storage.getLotoMerchantById(device.merchantId);
+    if (!merchant) {
+      await logVerifierEvent(req, "denied", "merchant_not_found", { deviceSerial });
+      return { status: 404, body: { valid: false, error: "merchant_not_found", message: "Issuing merchant not found." } };
+    }
+
+    // Replay protection — fiscal codes are single-use.
+    const existing = await storage.getLotoReceiptByFiscalCode(fiscalCode);
+    if (existing) {
+      const sameUser = existing.consumerUserId === userId;
+      await logVerifierEvent(req, "denied", "already_claimed", { deviceSerial, fiscalCode, sameUser });
+      return {
+        status: 409,
+        body: {
+          valid: true,
+          alreadyClaimed: true,
+          ticketEligible: false,
+          error: "already_claimed",
+          message: sameUser
+            ? "You already claimed a lottery ticket for this receipt."
+            : "This receipt has already been used for a lottery ticket.",
+        },
+      };
+    }
+
+    // We don't have the original {amount, currency, issuedAt} on the QR —
+    // the QR only carries (fiscalCode, signature, deviceSerial). The
+    // verifier therefore needs the merchant POS to call the issuance
+    // endpoint first (which writes the canonical row). For the simulated
+    // path, the issuance endpoint pre-stages a pending row with status —
+    // see `/api/loto/devices/:id/issue`. Here we re-derive the canonical
+    // payload from a side-channel pending-issuance store keyed by
+    // fiscalCode. If none exists, we treat the QR as unknown.
+    const pending = await storage.getLotoPendingIssuance(fiscalCode);
+    if (!pending) {
+      await logVerifierEvent(req, "denied", "unknown_fiscal_code", { deviceSerial, fiscalCode });
+      return { status: 404, body: { valid: false, error: "unknown_fiscal_code", message: "Fiscal code not found in issuer's records." } };
+    }
+    if (pending.deviceId !== device.id) {
+      await logVerifierEvent(req, "denied", "device_mismatch", { deviceSerial, fiscalCode });
+      return { status: 400, body: { valid: false, error: "device_mismatch", message: "Device on QR does not match issuer record." } };
+    }
+
+    const canonical = canonicalReceiptPayload({
+      fiscalCode,
+      merchantVatId: pending.merchantVatId,
+      issuedAtUnix: pending.issuedAtUnix,
+      amountTotal: pending.amountTotal,
+      currency: pending.currency,
+    });
+    const rawKey = await getKeyVault().getKey({ backend: coerceKeyVaultBackend(device.keyVaultBackend), encryptedKey: device.encryptedKey });
+    if (!rawKey) {
+      await logVerifierEvent(req, "denied", "device_key_unavailable", { deviceSerial });
+      return { status: 500, body: { valid: false, error: "device_key_unavailable", message: "Device key is not available." } };
+    }
+    const ok = verifyReceiptPayload(rawKey, canonical, signature);
+    if (!ok) {
+      await logVerifierEvent(req, "denied", "bad_signature", { deviceSerial, fiscalCode });
+      return { status: 400, body: { valid: false, error: "bad_signature", message: "Receipt signature does not match." } };
+    }
+
+    // Freshness check — receipts older than the cutoff or impossibly
+    // futuredated are rejected even with a valid signature.
+    const now = Math.floor(Date.now() / 1000);
+    const ageSeconds = now - pending.issuedAtUnix;
+    if (ageSeconds < -RECEIPT_FRESHNESS_MAX_FUTURE_SECONDS) {
+      await logVerifierEvent(req, "denied", "future_dated", { deviceSerial, fiscalCode, ageSeconds });
+      return { status: 400, body: { valid: false, error: "future_dated", message: "Receipt is dated in the future." } };
+    }
+    if (ageSeconds > RECEIPT_FRESHNESS_MAX_AGE_DAYS * 86400) {
+      await logVerifierEvent(req, "denied", "expired", { deviceSerial, fiscalCode, ageSeconds });
+      return { status: 400, body: { valid: false, error: "expired", message: "Receipt is past the lottery eligibility window." } };
+    }
+
+    // All checks pass → mint a ticket and persist the receipt.
+    const ticketNumber = (Math.floor(Math.random() * 1_000_000)).toString().padStart(6, "0");
+    let receipt;
+    try {
+      receipt = await storage.createLotoReceipt({
+        merchantId: device.merchantId,
+        consumerUserId: userId,
+        fiscalCode,
+        ticketNumber,
+        amount: pending.amountTotal,
+        vatAmount: pending.vatAmount,
+        currency: pending.currency,
+        category: pending.category ?? "retail",
+        itemCount: pending.itemCount ?? 1,
+        issuedAt: new Date(pending.issuedAtUnix * 1000),
+        deviceId: device.id,
+        signature,
+        isDemo: false,
+      });
+    } catch (insertErr) {
+      const msg = (insertErr as Error)?.message ?? "";
+      if (/unique|duplicate/i.test(msg)) {
+        await logVerifierEvent(req, "denied", "race_already_claimed", { deviceSerial, fiscalCode });
+        return { status: 409, body: { valid: true, alreadyClaimed: true, ticketEligible: false, error: "already_claimed" } };
+      }
+      throw insertErr;
+    }
+
+    await storage.deleteLotoPendingIssuance(fiscalCode);
+    await storage.touchLotoFiscalDeviceLastSeen(device.id);
+    await logVerifierEvent(req, "ok", "verified", { deviceSerial, fiscalCode, merchantId: device.merchantId });
+    const ticketCount = await storage.countLotoReceiptsByConsumer(userId);
+    return {
+      status: 200,
+      body: {
+        valid: true,
+        alreadyClaimed: false,
+        ticketEligible: true,
+        receipt,
+        merchant: { id: merchant.id, shopName: merchant.shopName, city: merchant.city },
+        amount: pending.amountTotal,
+        vat: pending.vatAmount,
+        currency: pending.currency,
+        issuedAt: new Date(pending.issuedAtUnix * 1000).toISOString(),
+        ticketNumber,
+        ticketCount,
+      },
+    };
+  }
+
+  app.post("/api/loto/receipts/verify", requireAuth, lotoScanLimiter, async (req, res) => {
+    try {
+      const schema = z.object({ qrPayload: z.string().trim().min(8).max(2048) });
+      const parsed = schema.safeParse(req.body ?? {});
+      if (!parsed.success) {
+        return res.status(400).json({ valid: false, error: "bad_request", message: "qrPayload required" });
+      }
+      const result = await verifyAndGrantTicket(req, parsed.data.qrPayload);
+      res.status(result.status).json(result.body);
+    } catch (e) {
+      res.status(500).json({ valid: false, error: "internal", message: safeErrorMessage(e) });
+    }
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // EFD Device Registration (DGI / super_admin only)
+  // ────────────────────────────────────────────────────────────────────────
+  async function logDeviceLifecycleEvent(req: Request, action: string, deviceId: string | null, deviceSerial: string, extra: Record<string, unknown> = {}) {
+    try {
+      await db.insert(auditLogs).values({
+        userId: req.session?.userId ?? null,
+        action,
+        entity: "loto_fiscal_device",
+        entityId: deviceId,
+        details: JSON.stringify({ deviceSerial, ...extra }),
+        ipAddress: req.ip ?? null,
+      });
+    } catch (e) {
+      console.error(`[loto device] audit write failed for ${action}`, e);
+    }
+  }
+
+  app.get("/api/loto/merchants", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const limit = req.query.limit ? Math.min(500, Number(req.query.limit)) : 200;
+      const merchants = await storage.listLotoMerchants(limit);
+      res.json(merchants.map((m) => ({
+        id: m.id,
+        shopName: m.shopName,
+        ownerName: m.ownerName,
+        vatRegistrationNumber: m.vatRegistrationNumber,
+        countryCode: m.countryCode,
+        currency: m.currency,
+        city: m.city,
+      })));
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Merchant self-service: list devices owned by the caller's merchant.
+  // Used by the merchant POS UI so non-admin users can pick from their
+  // own devices without needing the admin device list (which is gated to
+  // admin / super_admin). Returns [] if the caller isn't linked to a
+  // merchant rather than 403, since the UI may render this conditionally.
+  app.get("/api/loto/devices/me", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) return res.status(401).json({ message: "Authentication required" });
+      const merchant = await storage.getLotoMerchantByUserId(userId);
+      if (!merchant) return res.json([]);
+      const devices = await storage.listLotoFiscalDevices({ merchantId: merchant.id });
+      const sanitized = devices.map((d) => ({
+        id: d.id,
+        serial: d.serial,
+        merchantId: d.merchantId,
+        countryCode: d.countryCode,
+        status: d.status,
+        certifiedAt: d.certifiedAt,
+        lastSeenAt: d.lastSeenAt,
+      }));
+      res.json(sanitized);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.get("/api/loto/devices", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const merchantId = req.query.merchantId ? String(req.query.merchantId) : undefined;
+      const country = req.query.country ? String(req.query.country).toUpperCase() : undefined;
+      const status = req.query.status ? String(req.query.status) as "pending" | "active" | "revoked" : undefined;
+      const devices = await storage.listLotoFiscalDevices({ merchantId, countryCode: country, status });
+      // Never include encryptedKey in the public response.
+      const sanitized = devices.map((d) => ({
+        id: d.id,
+        serial: d.serial,
+        merchantId: d.merchantId,
+        countryCode: d.countryCode,
+        keyVaultBackend: d.keyVaultBackend,
+        keyReference: d.keyReference,
+        certifiedBy: d.certifiedBy,
+        certifiedAt: d.certifiedAt,
+        status: d.status,
+        revokedReason: d.revokedReason,
+        lastSeenAt: d.lastSeenAt,
+        createdAt: d.createdAt,
+      }));
+      res.json(sanitized);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/loto/devices", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const schema = z.object({
+        serial: z.string().trim().min(4).max(64).regex(/^[A-Za-z0-9_-]+$/, "serial must be alphanumeric"),
+        merchantId: z.string().min(1),
+        certifiedBy: z.string().trim().max(120).optional(),
+        activate: z.boolean().optional(),
+      });
+      const parsed = schema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+
+      const merchant = await storage.getLotoMerchantById(parsed.data.merchantId);
+      if (!merchant) return res.status(404).json({ message: "Merchant not found" });
+
+      const existing = await storage.getLotoFiscalDeviceBySerial(parsed.data.serial);
+      if (existing) return res.status(409).json({ message: "A device with this serial already exists." });
+
+      // Generate a fresh device key via the active KeyVault.
+      const { stored } = await getKeyVault().generateKey();
+      const device = await storage.createLotoFiscalDevice({
+        serial: parsed.data.serial,
+        merchantId: merchant.id,
+        countryCode: merchant.countryCode,
+        encryptedKey: stored.encryptedKey,
+        keyVaultBackend: stored.backend,
+        keyReference: stored.keyReference ?? null,
+        certifiedBy: parsed.data.certifiedBy ?? null,
+      });
+      await logDeviceLifecycleEvent(req, "loto_device_registered", device.id, device.serial, { merchantId: merchant.id, countryCode: merchant.countryCode });
+
+      // Optional one-shot activation: register + certify in a single call.
+      let final = device;
+      if (parsed.data.activate) {
+        const updated = await storage.updateLotoFiscalDeviceStatus(device.id, "active", { certifiedBy: parsed.data.certifiedBy ?? req.session?.userId ?? "admin" });
+        if (updated) final = updated;
+        await logDeviceLifecycleEvent(req, "loto_device_certified", final.id, final.serial, {});
+      }
+
+      res.status(201).json({
+        id: final.id,
+        serial: final.serial,
+        merchantId: final.merchantId,
+        countryCode: final.countryCode,
+        status: final.status,
+        certifiedBy: final.certifiedBy,
+        certifiedAt: final.certifiedAt,
+        keyVaultBackend: final.keyVaultBackend,
+      });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/loto/devices/:id/certify", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const schema = z.object({ certifiedBy: z.string().trim().max(120).optional() });
+      const parsed = schema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ message: "Invalid payload" });
+      const device = await storage.getLotoFiscalDeviceById(req.params.id);
+      if (!device) return res.status(404).json({ message: "Device not found" });
+      if (device.status === "revoked") return res.status(409).json({ message: "Cannot certify a revoked device." });
+      const updated = await storage.updateLotoFiscalDeviceStatus(device.id, "active", { certifiedBy: parsed.data.certifiedBy ?? req.session?.userId ?? "admin" });
+      await logDeviceLifecycleEvent(req, "loto_device_certified", device.id, device.serial, {});
+      res.json({ id: updated!.id, status: updated!.status, certifiedAt: updated!.certifiedAt, certifiedBy: updated!.certifiedBy });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/loto/devices/:id/revoke", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
+    try {
+      const schema = z.object({ reason: z.string().trim().min(3).max(500) });
+      const parsed = schema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ message: "Reason required" });
+      const device = await storage.getLotoFiscalDeviceById(req.params.id);
+      if (!device) return res.status(404).json({ message: "Device not found" });
+      const updated = await storage.updateLotoFiscalDeviceStatus(device.id, "revoked", { revokedReason: parsed.data.reason });
+      await logDeviceLifecycleEvent(req, "loto_device_revoked", device.id, device.serial, { reason: parsed.data.reason });
+      res.json({ id: updated!.id, status: updated!.status, revokedReason: updated!.revokedReason });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Merchant POS — issue a real, signed receipt via SimulatedEfd. Used by
+  // the merchant POS page so demos exercise the same crypto pipeline as
+  // production scans. Requires the caller to own the merchant or be an
+  // admin/super_admin.
+  // ────────────────────────────────────────────────────────────────────────
+  app.post("/api/loto/devices/:id/issue", requireAuth, async (req, res) => {
+    try {
+      const schema = z.object({
+        amount: z.number().positive().max(100_000_000),
+        items: z.number().int().min(1).max(99).optional(),
+        category: z.string().trim().max(40).optional(),
+      });
+      const parsed = schema.safeParse(req.body ?? {});
+      if (!parsed.success) return res.status(400).json({ message: "Invalid payload", errors: parsed.error.flatten() });
+
+      const device = await storage.getLotoFiscalDeviceById(req.params.id);
+      if (!device) return res.status(404).json({ message: "Device not found" });
+      if (device.status !== "active") {
+        return res.status(403).json({ message: `Device must be active to issue receipts (current: ${device.status}).` });
+      }
+      const merchant = await storage.getLotoMerchantById(device.merchantId);
+      if (!merchant) return res.status(404).json({ message: "Merchant not found" });
+
+      // Authz: caller must own the merchant OR be admin/super_admin.
+      const callerUserId = req.session?.userId;
+      const callerRole = req.session?.userRole;
+      const isPrivileged = callerRole === "admin" || callerRole === "super_admin";
+      if (!isPrivileged && merchant.userId && merchant.userId !== callerUserId) {
+        return res.status(403).json({ message: "You do not own this merchant device." });
+      }
+
+      const amount = parsed.data.amount;
+      const vat = Math.round(amount * 0.18 * 100) / 100;
+      const issuedAt = new Date();
+      const fiscalCode = `${device.countryCode}-${device.serial}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
+      const signed = await getSimulatedEfd().issueReceipt(
+        {
+          deviceId: device.id,
+          deviceSerial: device.serial,
+          merchantVatId: merchant.vatRegistrationNumber ?? `${device.countryCode}-${device.serial}`,
+          currency: merchant.currency,
+          amountTotal: amount.toFixed(2),
+          issuedAt,
+          fiscalCode,
+        },
+        device.encryptedKey,
+        device.keyVaultBackend,
+      );
+
+      // Stage canonical metadata for the verifier (persisted, TTL'd) so a
+      // subsequent /api/loto/receipts/verify call can re-derive the
+      // canonical signed payload without trusting the QR contents. We
+      // upsert so a duplicate POST with the same fiscalCode (e.g. retry)
+      // doesn't error out.
+      const expiresAt = new Date(Date.now() + PENDING_ISSUANCE_TTL_SECONDS * 1000);
+      await storage.upsertLotoPendingIssuance({
+        fiscalCode,
+        deviceId: device.id,
+        merchantVatId: merchant.vatRegistrationNumber ?? `${device.countryCode}-${device.serial}`,
+        amountTotal: amount.toFixed(2),
+        vatAmount: vat.toFixed(2),
+        currency: merchant.currency,
+        issuedAtUnix: signed.issuedAtUnix,
+        category: parsed.data.category ?? "retail",
+        itemCount: parsed.data.items ?? 1,
+        expiresAt,
+      });
+      // Best-effort sweep of expired ledger rows.
+      schedulePendingIssuanceCleanup();
+
+      await storage.touchLotoFiscalDeviceLastSeen(device.id);
+
+      res.json({
+        ok: true,
+        fiscalCode,
+        qrPayload: signed.qrPayload,
+        deviceSerial: device.serial,
+        amount: amount.toFixed(2),
+        vatAmount: vat.toFixed(2),
+        currency: merchant.currency,
+        issuedAt: issuedAt.toISOString(),
+        merchantName: merchant.shopName,
+      });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   // ════════════════════════════════════════════════════════════════════════

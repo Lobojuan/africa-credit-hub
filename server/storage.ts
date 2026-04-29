@@ -74,9 +74,9 @@ import {
   type InstitutionBranding, type InsertInstitutionBranding,
   type RegistryCountryConfig, type InsertRegistryCountryConfig,
   type CollateralAmendmentRequest, type InsertCollateralAmendmentRequest,
-  lotoMerchants, lotoReceipts, crossProductConsents, alternativeData,
-  type LotoMerchant, type LotoReceipt, type CrossProductConsent,
-  type InsertLotoMerchant, type InsertLotoReceipt, type InsertCrossProductConsent,
+  lotoMerchants, lotoReceipts, lotoFiscalDevices, lotoPendingIssuances, crossProductConsents, alternativeData,
+  type LotoMerchant, type LotoReceipt, type LotoFiscalDevice, type LotoPendingIssuance, type CrossProductConsent,
+  type InsertLotoMerchant, type InsertLotoReceipt, type InsertLotoFiscalDevice, type InsertLotoPendingIssuance, type InsertCrossProductConsent,
   lotoCountryDrawConfig, lotoDraws, lotoDrawPrizeTiers, lotoDrawWinners, lotoPayouts,
   type LotoCountryDrawConfig, type InsertLotoCountryDrawConfig,
   type LotoDraw, type InsertLotoDraw,
@@ -464,6 +464,19 @@ export interface IStorage {
   listLotoReceiptsByMerchant(merchantId: string, limit?: number): Promise<LotoReceipt[]>;
   listLotoReceiptsByConsumer(userId: string, limit?: number): Promise<LotoReceipt[]>;
   createLotoReceipt(input: InsertLotoReceipt): Promise<LotoReceipt>;
+  getLotoReceiptByFiscalCode(fiscalCode: string): Promise<LotoReceipt | undefined>;
+  // ── Loto Fiscal Devices (Task #284) ──────────────────────────────────
+  listLotoFiscalDevices(filter?: { merchantId?: string; countryCode?: string; status?: "pending" | "active" | "revoked" }): Promise<LotoFiscalDevice[]>;
+  getLotoFiscalDeviceById(id: string): Promise<LotoFiscalDevice | undefined>;
+  getLotoFiscalDeviceBySerial(serial: string): Promise<LotoFiscalDevice | undefined>;
+  createLotoFiscalDevice(input: InsertLotoFiscalDevice): Promise<LotoFiscalDevice>;
+  updateLotoFiscalDeviceStatus(id: string, status: "pending" | "active" | "revoked", opts?: { certifiedBy?: string; revokedReason?: string }): Promise<LotoFiscalDevice | undefined>;
+  touchLotoFiscalDeviceLastSeen(id: string): Promise<void>;
+  // ── Loto Pending Issuances (verifier ledger) ─────────────────────────
+  upsertLotoPendingIssuance(input: InsertLotoPendingIssuance): Promise<LotoPendingIssuance>;
+  getLotoPendingIssuance(fiscalCode: string): Promise<LotoPendingIssuance | undefined>;
+  deleteLotoPendingIssuance(fiscalCode: string): Promise<void>;
+  deleteExpiredLotoPendingIssuances(now?: Date): Promise<number>;
   // ── Loto Draw Engine (Task #283) ─────────────────────────────────────
   getLotoCountryDrawConfig(countryCode: string): Promise<LotoCountryDrawConfig | undefined>;
   upsertLotoCountryDrawConfig(input: InsertLotoCountryDrawConfig): Promise<LotoCountryDrawConfig>;
@@ -4159,6 +4172,17 @@ export class DatabaseStorage implements IStorage {
         phone: r.phone,
         userId: r.userId,
       }));
+  }
+  async getLotoPendingIssuance(fiscalCode: string): Promise<LotoPendingIssuance | undefined> {
+    const [row] = await db.select().from(lotoPendingIssuances).where(eq(lotoPendingIssuances.fiscalCode, fiscalCode)).limit(1);
+    return row;
+  }
+  async deleteLotoPendingIssuance(fiscalCode: string): Promise<void> {
+    await db.delete(lotoPendingIssuances).where(eq(lotoPendingIssuances.fiscalCode, fiscalCode));
+  }
+  async deleteExpiredLotoPendingIssuances(now: Date = new Date()): Promise<number> {
+    const result = await db.delete(lotoPendingIssuances).where(lt(lotoPendingIssuances.expiresAt, now)).returning();
+    return result.length;
   }
   async getCrossProductConsents(filter: { userId?: string; borrowerId?: string; merchantId?: string }): Promise<CrossProductConsent[]> {
     const ors = [];
