@@ -17,7 +17,9 @@ import {
   Trophy, Crown, Sparkles, Star, Zap, Flame, Calendar, Clock,
   Users, Coins, Gift, Award, Target, Rocket, MapPin, ScanLine,
   CheckCircle2, Lock, TrendingUp, Ticket, PartyPopper, Medal, QrCode, Loader2,
+  PlayCircle,
 } from "lucide-react";
+import { LotoPosAnimation, type PosAnimationReceipt } from "./loto-pos-animation";
 
 const SEED_NAMES = [
   { first: "Aïssata", last: "Koné", city: "Abidjan" },
@@ -138,6 +140,54 @@ export function LotoLotteryExperience({
   const { t } = useTranslation();
   const myTickets = receipts.length;
   const [scanOpen, setScanOpen] = useState(false);
+  const [posAnimOpen, setPosAnimOpen] = useState(false);
+  const [posAnimReceipt, setPosAnimReceipt] = useState<PosAnimationReceipt | null>(null);
+  const [posAnimForceWin, setPosAnimForceWin] = useState(false);
+
+  const buildDemoReceipt = (): PosAnimationReceipt => {
+    const amount = 8_000 + Math.floor(Math.random() * 22_000);
+    const vat = Math.round(amount * 0.18);
+    const ticketNumber = Math.floor(100000 + Math.random() * 900000).toString();
+    const fiscalCode = `${currency === "XOF" ? "CI" : "XX"}-DEMO-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    return {
+      ticketNumber,
+      fiscalCode,
+      merchantName: "Boutique Démo Loto",
+      city: "Abidjan",
+      amount,
+      vatAmount: vat,
+      itemCount: 1 + Math.floor(Math.random() * 4),
+      currency,
+    };
+  };
+
+  const openHowItWorksDemo = () => {
+    setPosAnimReceipt(buildDemoReceipt());
+    setPosAnimForceWin(true);
+    setPosAnimOpen(true);
+  };
+
+  const replayDemoDraw = () => {
+    setPosAnimReceipt(buildDemoReceipt());
+    setPosAnimForceWin(false);
+    setPosAnimOpen(false);
+    window.setTimeout(() => setPosAnimOpen(true), 50);
+  };
+
+  const handleWatchDrawForReceipt = (r: { ticketNumber: string; fiscalCode: string; amount: number; vatAmount: number; merchantName: string; city: string | null }) => {
+    setPosAnimReceipt({
+      ticketNumber: r.ticketNumber,
+      fiscalCode: r.fiscalCode,
+      merchantName: r.merchantName,
+      city: r.city,
+      amount: r.amount,
+      vatAmount: r.vatAmount,
+      itemCount: 1 + Math.floor(Math.random() * 4),
+      currency,
+    });
+    setPosAnimForceWin(false);
+    setPosAnimOpen(true);
+  };
 
   const myVatContribution = useMemo(() => {
     if (typeof totalVatMobilised === "number" && totalVatMobilised > 0) return totalVatMobilised;
@@ -269,7 +319,7 @@ export function LotoLotteryExperience({
             ))}
           </div>
 
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center">
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center items-center flex-wrap">
             <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 backdrop-blur border border-white/20 text-sm font-semibold text-white" data-testid="text-my-tickets-summary">
               <Ticket className="w-4 h-4 text-amber-300" />
               {t("loto.lottery.youHold", "You hold")} <span className="text-amber-300 font-black">{myTickets}</span> {myTickets === 1 ? t("loto.lottery.ticket", "ticket") : t("loto.lottery.tickets", "tickets")}
@@ -282,6 +332,16 @@ export function LotoLotteryExperience({
             >
               <ScanLine className="w-4 h-4" />
               {t("loto.lottery.scanReceiptCta", "Scan a receipt to enter")}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={openHowItWorksDemo}
+              className="gap-2 bg-white/10 hover:bg-white/20 text-white border-white/30 hover:border-white/50 backdrop-blur"
+              data-testid="button-how-it-works"
+            >
+              <PlayCircle className="w-4 h-4" />
+              {t("loto.lottery.howItWorksCta", "See how it works")}
             </Button>
           </div>
         </div>
@@ -553,6 +613,15 @@ export function LotoLotteryExperience({
         onOpenChange={setScanOpen}
         currency={currency}
         onScanComplete={onScanComplete}
+        onWatchDraw={handleWatchDrawForReceipt}
+      />
+
+      <LotoPosAnimation
+        open={posAnimOpen}
+        onOpenChange={setPosAnimOpen}
+        receipt={posAnimReceipt}
+        forceWin={posAnimForceWin}
+        onPlayAgain={replayDemoDraw}
       />
     </div>
   );
@@ -569,17 +638,18 @@ interface ScanReceiptModalProps {
   onOpenChange: (open: boolean) => void;
   currency: string;
   onScanComplete?: () => void;
+  onWatchDraw?: (r: { ticketNumber: string; fiscalCode: string; amount: number; vatAmount: number; merchantName: string; city: string | null }) => void;
 }
 
 interface ScanResult {
   ok: boolean;
   ticketNumber: string;
   ticketCount: number;
-  receipt: { id: string; amount: string; vatAmount: string; currency: string };
+  receipt: { id: string; amount: string; vatAmount: string; currency: string; fiscalCode: string };
   merchant: { id: string; shopName: string; city: string | null };
 }
 
-function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete }: ScanReceiptModalProps) {
+function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete, onWatchDraw }: ScanReceiptModalProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [manualCode, setManualCode] = useState("");
@@ -743,7 +813,7 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete }: Scan
           </Tabs>
         )}
 
-        <DialogFooter className="sm:justify-between">
+        <DialogFooter className="sm:justify-between gap-2 flex-wrap">
           {lastResult ? (
             <>
               <Button
@@ -754,13 +824,36 @@ function ScanReceiptModal({ open, onOpenChange, currency, onScanComplete }: Scan
                 <ScanLine className="w-4 h-4 mr-2" />
                 {t("loto.lottery.scanAnother", "Scan another")}
               </Button>
-              <Button
-                onClick={() => handleClose(false)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                data-testid="button-scan-done"
-              >
-                {t("common.done", "Done")}
-              </Button>
+              <div className="flex gap-2">
+                {onWatchDraw && (
+                  <Button
+                    onClick={() => {
+                      const r = lastResult;
+                      onWatchDraw({
+                        ticketNumber: r.ticketNumber,
+                        fiscalCode: r.receipt.fiscalCode,
+                        amount: parseFloat(r.receipt.amount),
+                        vatAmount: parseFloat(r.receipt.vatAmount),
+                        merchantName: r.merchant.shopName,
+                        city: r.merchant.city,
+                      });
+                      handleClose(false);
+                    }}
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white border-0"
+                    data-testid="button-scan-watch-draw"
+                  >
+                    <PartyPopper className="w-4 h-4 mr-2" />
+                    {t("loto.lottery.watchDrawCta", "Watch the live draw")}
+                  </Button>
+                )}
+                <Button
+                  onClick={() => handleClose(false)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  data-testid="button-scan-done"
+                >
+                  {t("common.done", "Done")}
+                </Button>
+              </div>
             </>
           ) : (
             <Button variant="ghost" onClick={() => handleClose(false)} data-testid="button-scan-cancel">
