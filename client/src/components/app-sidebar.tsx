@@ -8,6 +8,7 @@ import {
   Search,
   FileText,
   Shield,
+  Network,
   Settings,
   CheckSquare,
   AlertCircle,
@@ -127,6 +128,7 @@ const dataManagementItems: NavItem[] = [
   { label: "Borrower Alerts", tKey: "sidebar.borrowerAlerts", url: "/borrower-alerts", icon: Bell, testId: "nav-borrower-alerts", roles: ["admin", "regulator", "super_admin"] },
   { label: "Consent", tKey: "sidebar.consentManagement", url: "/consent", icon: FileCheck, testId: "nav-consent", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "My Data Sharing", tKey: "sidebar.dataSharing", url: "/data-sharing", icon: Shield, testId: "nav-data-sharing", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
+  { label: "Platform Map", tKey: "sidebar.platformMap", url: "/platform-map", icon: Network, testId: "nav-platform-map", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
 ];
 
 const workflowItems: NavItem[] = [

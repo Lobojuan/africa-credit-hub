@@ -144,6 +144,7 @@ const LotoWorkspacePage = lazy(() => import("@/pages/loto-workspace"));
 const DataSharingPage = lazy(() => import("@/pages/data-sharing"));
 const MerchantCreditProfilePage = lazy(() => import("@/pages/merchant-credit-profile"));
 const FinancialInclusionPage = lazy(() => import("@/pages/financial-inclusion"));
+const PlatformMapPage = lazy(() => import("@/pages/platform-map"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
 const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
@@ -242,6 +243,7 @@ function Router() {
         <Route path="/data-sharing" component={DataSharingPage} />
         <Route path="/merchant-credit-profile/:merchantId" component={MerchantCreditProfilePage} />
         <Route path="/financial-inclusion" component={FinancialInclusionPage} />
+        <Route path="/platform-map" component={PlatformMapPage} />
         <Route path="/institution-analytics" component={InstitutionAnalyticsPage} />
         <Route path="/institution-branding" component={InstitutionBrandingPage} />
         <Route path="/organizations" component={OrganizationsPage} />
