@@ -2677,6 +2677,9 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       trust3Title: "Disponible en 7 idiomas",
       trust3Body: "EN · FR · PT · AR · SW · ES · ZH para que cada comerciante africano pueda leer la letra pequeña.",
       auditLine: "{{count}} accesos entre productos registrados. Consentimiento predeterminado de {{months}} meses.",
+      auditLineWithBreakdown: "{{count}} accesos entre productos · {{allowedPct}} % permitidos · {{deniedPct}} % denegados (consentimiento ausente o revocado). Consentimiento predeterminado de {{months}} meses.",
+      outcomeAllowed: "{{count}} permitidos",
+      outcomeDenied: "{{count}} denegados (consentimiento ausente o revocado)",
       footer: "© Africa Credit Hub. Infraestructura de crédito universal para mercados emergentes.",
     },
     collateralLanding: {

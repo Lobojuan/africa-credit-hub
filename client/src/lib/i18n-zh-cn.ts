@@ -2844,6 +2844,9 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "trust3Title": "支持 7 种语言",
     "trust3Body": "EN · FR · PT · AR · SW · ES · ZH,让每一位非洲商户都能看清细则。",
     "auditLine": "已记录 {{count}} 次跨产品访问。默认同意期 {{months}} 个月。",
+    "auditLineWithBreakdown": "{{count}} 次跨产品访问 · {{allowedPct}}% 允许 · {{deniedPct}}% 拒绝(同意缺失或已撤销)。默认同意期 {{months}} 个月。",
+    "outcomeAllowed": "允许 {{count}} 次",
+    "outcomeDenied": "拒绝 {{count}} 次(同意缺失或已撤销)",
     "footer": "© Africa Credit Hub。新兴市场的通用信贷基础设施。",
   },
   "collateralLanding": {

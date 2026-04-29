@@ -2577,6 +2577,9 @@ const ar: Record<string, any> = {
     trust3Title: "متاح بـ 7 لغات",
     trust3Body: "EN · FR · PT · AR · SW · ES · ZH ليتمكن كل تاجر أفريقي من قراءة التفاصيل الدقيقة.",
     auditLine: "{{count}} عمليات وصول بين المنتجات مسجلة. الموافقة الافتراضية {{months}} شهرًا.",
+    auditLineWithBreakdown: "{{count}} عمليات وصول بين المنتجات · {{allowedPct}}% مسموح بها · {{deniedPct}}% مرفوضة (الموافقة مفقودة أو مُلغاة). الموافقة الافتراضية {{months}} شهرًا.",
+    outcomeAllowed: "{{count}} مسموح بها",
+    outcomeDenied: "{{count}} مرفوضة (الموافقة مفقودة أو مُلغاة)",
     footer: "© Africa Credit Hub. بنية تحتية ائتمانية عالمية للأسواق الناشئة.",
   },
   collateralLanding: {

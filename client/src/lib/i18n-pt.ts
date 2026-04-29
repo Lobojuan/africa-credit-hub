@@ -2639,6 +2639,9 @@ const pt = {
     trust3Title: "Disponível em 7 idiomas",
     trust3Body: "EN · FR · PT · AR · SW · ES · ZH para que cada comerciante africano possa ler as letras miúdas.",
     auditLine: "{{count}} acessos entre produtos registrados. Consentimento padrão de {{months}} meses.",
+    auditLineWithBreakdown: "{{count}} acessos entre produtos · {{allowedPct}}% permitidos · {{deniedPct}}% negados (consentimento ausente ou revogado). Consentimento padrão de {{months}} meses.",
+    outcomeAllowed: "{{count}} permitidos",
+    outcomeDenied: "{{count}} negados (consentimento ausente ou revogado)",
     footer: "© Africa Credit Hub. Infraestrutura de crédito universal para mercados emergentes.",
   },
   collateralLanding: {

@@ -2641,6 +2641,9 @@ const sw: Record<string, any> = {
     trust3Title: "Inapatikana katika lugha 7",
     trust3Body: "EN · FR · PT · AR · SW · ES · ZH ili kila mfanyabiashara wa Afrika aweze kusoma maandishi madogo.",
     auditLine: "Ufikiaji {{count}} kati ya bidhaa umerekodiwa. Idhini chaguo-msingi miezi {{months}}.",
+    auditLineWithBreakdown: "Ufikiaji {{count}} kati ya bidhaa · {{allowedPct}}% umeruhusiwa · {{deniedPct}}% umekataliwa (idhini haipo au imefutwa). Idhini chaguo-msingi miezi {{months}}.",
+    outcomeAllowed: "{{count}} umeruhusiwa",
+    outcomeDenied: "{{count}} umekataliwa (idhini haipo au imefutwa)",
     footer: "© Africa Credit Hub. Miundombinu ya mikopo ya ulimwenguni kwa masoko yanayochipuka.",
   },
   collateralLanding: {

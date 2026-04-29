@@ -3327,6 +3327,9 @@ const zhTW = {
     trust3Title: "支援 7 種語言",
     trust3Body: "EN · FR · PT · AR · SW · ES · ZH,讓每一位非洲商戶都能看清細則。",
     auditLine: "已記錄 {{count}} 次跨產品存取。預設同意期 {{months}} 個月。",
+    auditLineWithBreakdown: "{{count}} 次跨產品存取 · {{allowedPct}}% 允許 · {{deniedPct}}% 拒絕(同意缺失或已撤銷)。預設同意期 {{months}} 個月。",
+    outcomeAllowed: "允許 {{count}} 次",
+    outcomeDenied: "拒絕 {{count}} 次(同意缺失或已撤銷)",
     footer: "© Africa Credit Hub。新興市場的通用信貸基礎設施。",
   },
   collateralLanding: {

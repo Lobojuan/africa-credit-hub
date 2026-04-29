@@ -2624,6 +2624,9 @@ const en = {
     trust3Title: "Available in 7 languages",
     trust3Body: "EN · FR · PT · AR · SW · ES · ZH so every African merchant can read the small print.",
     auditLine: "{{count}} cross-product accesses logged. Default consent {{months}} months.",
+    auditLineWithBreakdown: "{{count}} cross-product accesses · {{allowedPct}}% allowed · {{deniedPct}}% denied (consent missing or revoked). Default consent {{months}} months.",
+    outcomeAllowed: "{{count}} allowed",
+    outcomeDenied: "{{count}} denied (consent missing or revoked)",
     footer: "© Africa Credit Hub. Universal credit infrastructure for emerging markets.",
   },
   collateralLanding: {
@@ -5242,6 +5245,9 @@ const fr: typeof en = {
     trust3Title: "Disponible en 7 langues",
     trust3Body: "EN · FR · PT · AR · SW · ES · ZH pour que chaque commerçant africain puisse lire les détails.",
     auditLine: "{{count}} accès inter-produits journalisés. Consentement par défaut {{months}} mois.",
+    auditLineWithBreakdown: "{{count}} accès inter-produits · {{allowedPct}} % autorisés · {{deniedPct}} % refusés (consentement manquant ou révoqué). Consentement par défaut {{months}} mois.",
+    outcomeAllowed: "{{count}} autorisés",
+    outcomeDenied: "{{count}} refusés (consentement manquant ou révoqué)",
     footer: "© Africa Credit Hub. Infrastructure de crédit universelle pour les marchés émergents.",
   },
   collateralLanding: {
