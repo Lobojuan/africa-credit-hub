@@ -1,24 +1,57 @@
 /**
- * Seed demo data for the Cross-Product Bridge.
- * - 5 Ivorian merchants (3 linked to existing borrowers)
- * - 6 months of receipts each
- * - 2 merchants opted in to share with credit bureau
- * - A demo consumer with spending insights
+ * Seed demo data for the Cross-Product Bridge — pan-African.
+ * - 10 merchants across 7 African countries (CI, NG, KE, GH, SN, RW, ZA)
+ *   demonstrating that Loto Fiscal / Verified Receipts works continent-wide.
+ * - 6 months of receipts each, in each country's own currency.
+ * - Roughly half the merchants opted in to share with the credit bureau.
+ * - A demo consumer with spending insights (linked to Ivorian merchants for
+ *   continuity with existing demo flows).
  */
 
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
 import {
   lotoMerchants, lotoReceipts, crossProductConsents, borrowers, users,
 } from "@shared/schema";
+import { getTaxAuthorityProfile } from "@shared/tax-authority";
 import { syncMerchantReceiptsToAlternativeData, DEFAULT_CONSENT_DURATION_MONTHS } from "./cross-product-gateway";
 
-const MERCHANT_SEEDS = [
-  { shopName: "Boutique Akwaba", ownerName: "Aminata Koné",   city: "Abidjan",     category: "general",     vat: "CI-VAT-001", optIn: true  },
-  { shopName: "Marché Treichville", ownerName: "Youssouf Bamba", city: "Abidjan",   category: "food",        vat: "CI-VAT-002", optIn: true  },
-  { shopName: "Pharmacie du Plateau", ownerName: "Dr Aïcha Diallo", city: "Abidjan", category: "pharmacy",  vat: "CI-VAT-003", optIn: false },
-  { shopName: "Tech Yopougon",     ownerName: "Mamadou Traoré", city: "Abidjan",    category: "electronics", vat: "CI-VAT-004", optIn: true  },
-  { shopName: "Kiosque Cocody",    ownerName: "Salimata N'Goran", city: "Abidjan",  category: "general",     vat: "CI-VAT-005", optIn: false },
+interface MerchantSeed {
+  countryCode: string;        // ISO-2 — currency + tax authority derived
+  shopName: string;
+  ownerName: string;
+  city: string;
+  category: string;
+  vat: string;                // Local VAT registration number (display only)
+  optIn: boolean;
+  baseReceiptsPerMonth: number;
+  baseAmount: number;         // Average receipt value in local currency
+  trendUp: boolean;           // True for growing, false for declining
+}
+
+const MERCHANT_SEEDS: MerchantSeed[] = [
+  // ── Côte d'Ivoire — original Loto Fiscal home ────────────────────────────
+  { countryCode: "CI", shopName: "Boutique Akwaba",         ownerName: "Aminata Koné",       city: "Abidjan",     category: "general",     vat: "CI-VAT-001", optIn: true,  baseReceiptsPerMonth: 60, baseAmount: 3500,    trendUp: true  },
+  { countryCode: "CI", shopName: "Marché Treichville",      ownerName: "Youssouf Bamba",     city: "Abidjan",     category: "food",        vat: "CI-VAT-002", optIn: true,  baseReceiptsPerMonth: 45, baseAmount: 2200,    trendUp: true  },
+  { countryCode: "CI", shopName: "Pharmacie du Plateau",    ownerName: "Dr Aïcha Diallo",    city: "Abidjan",     category: "pharmacy",    vat: "CI-VAT-003", optIn: false, baseReceiptsPerMonth: 18, baseAmount: 12000,   trendUp: true  },
+
+  // ── Nigeria — FIRS / Verified Receipts ───────────────────────────────────
+  { countryCode: "NG", shopName: "Lagos Mama Put",          ownerName: "Ngozi Okeke",        city: "Lagos",       category: "food",        vat: "NG-VAT-101", optIn: true,  baseReceiptsPerMonth: 80, baseAmount: 4500,    trendUp: true  },
+  { countryCode: "NG", shopName: "Abuja Tech Stop",         ownerName: "Tunde Adebayo",      city: "Abuja",       category: "electronics", vat: "NG-VAT-102", optIn: false, baseReceiptsPerMonth: 22, baseAmount: 95000,   trendUp: true  },
+
+  // ── Kenya — KRA / eTIMS ─────────────────────────────────────────────────
+  { countryCode: "KE", shopName: "Westlands Duka",          ownerName: "Wanjiru Mwangi",     city: "Nairobi",     category: "general",     vat: "KE-VAT-201", optIn: true,  baseReceiptsPerMonth: 55, baseAmount: 850,     trendUp: true  },
+
+  // ── Ghana — GRA / E-VAT ─────────────────────────────────────────────────
+  { countryCode: "GH", shopName: "Osu Market Stall",        ownerName: "Kwame Asante",       city: "Accra",       category: "food",        vat: "GH-VAT-301", optIn: true,  baseReceiptsPerMonth: 40, baseAmount: 38,      trendUp: true  },
+
+  // ── Senegal — DGID / Loto Fiscal ────────────────────────────────────────
+  { countryCode: "SN", shopName: "Boutique Plateau Dakar",  ownerName: "Fatou Ndiaye",       city: "Dakar",       category: "general",     vat: "SN-VAT-401", optIn: false, baseReceiptsPerMonth: 30, baseAmount: 4200,    trendUp: false },
+
+  // ── Rwanda — RRA / EBM ──────────────────────────────────────────────────
+  { countryCode: "RW", shopName: "Kigali Heights Shop",     ownerName: "Jean-Paul Mugisha",  city: "Kigali",      category: "general",     vat: "RW-VAT-501", optIn: true,  baseReceiptsPerMonth: 50, baseAmount: 2800,    trendUp: true  },
+
+  // ── South Africa — SARS / e-Invoicing ───────────────────────────────────
+  { countryCode: "ZA", shopName: "Sandton Spaza",           ownerName: "Thandi Mokoena",     city: "Johannesburg",category: "general",     vat: "ZA-VAT-601", optIn: false, baseReceiptsPerMonth: 35, baseAmount: 220,     trendUp: true  },
 ];
 
 function seededRandom(seed: number) {
@@ -34,14 +67,15 @@ export async function seedCrossProductDemoData() {
     return;
   }
 
-  // Try to find borrowers to link to (first three)
+  // Try to find borrowers and users to link to (first three of each).
   const someBorrowers = await db.select().from(borrowers).limit(3);
   const someUsers = await db.select().from(users).limit(2);
 
-  console.log(`[seed-cross-product] seeding ${MERCHANT_SEEDS.length} merchants…`);
+  console.log(`[seed-cross-product] seeding ${MERCHANT_SEEDS.length} pan-African merchants…`);
 
   for (let i = 0; i < MERCHANT_SEEDS.length; i++) {
     const seed = MERCHANT_SEEDS[i];
+    const profile = getTaxAuthorityProfile(seed.countryCode);
     const linkedBorrower = someBorrowers[i] ?? null;
     const linkedUser = someUsers[i] ?? null;
 
@@ -51,28 +85,27 @@ export async function seedCrossProductDemoData() {
       shopName: seed.shopName,
       ownerName: seed.ownerName,
       vatRegistrationNumber: seed.vat,
-      countryCode: "CI",
-      currency: "XOF",
+      countryCode: profile.countryCode,
+      currency: profile.currency,
       city: seed.city,
       category: seed.category,
       creditOptInActive: seed.optIn,
     }).returning();
 
-    // 6 months of receipts. Volume varies per merchant for visual interest.
+    // 6 months of receipts per merchant. Volume varies for visual interest.
     const rng = seededRandom(i * 1000 + 17);
-    const baseReceiptsPerMonth = [60, 45, 18, 30, 8][i] ?? 20;
-    const baseAmount = [3500, 2200, 12000, 18000, 1500][i] ?? 4000;
-
     const now = new Date();
     let receiptCounter = 0;
 
     for (let monthOffset = 5; monthOffset >= 0; monthOffset--) {
-      // Slight upward trend for first three merchants, declining for last two
-      const trendMultiplier = i < 3 ? 1 + (5 - monthOffset) * 0.05 : 1 - (5 - monthOffset) * 0.07;
-      const numReceipts = Math.max(2, Math.round(baseReceiptsPerMonth * trendMultiplier));
+      const trendMultiplier = seed.trendUp
+        ? 1 + (5 - monthOffset) * 0.05
+        : 1 - (5 - monthOffset) * 0.07;
+      const numReceipts = Math.max(2, Math.round(seed.baseReceiptsPerMonth * trendMultiplier));
+
       for (let r = 0; r < numReceipts; r++) {
         const issuedAt = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1 + Math.floor(rng() * 27), 8 + Math.floor(rng() * 12));
-        const amount = Math.round(baseAmount * (0.5 + rng()));
+        const amount = Math.round(seed.baseAmount * (0.5 + rng()));
         const vat = Math.round(amount * 0.18);
         const ticketNum = `${seed.vat}-${String(monthOffset).padStart(2, "0")}-${String(receiptCounter).padStart(4, "0")}`;
         receiptCounter++;
@@ -83,7 +116,7 @@ export async function seedCrossProductDemoData() {
           ticketNumber: ticketNum,
           amount: String(amount),
           vatAmount: String(vat),
-          currency: "XOF",
+          currency: profile.currency,
           category: seed.category,
           itemCount: 1 + Math.floor(rng() * 5),
           issuedAt,
@@ -101,20 +134,20 @@ export async function seedCrossProductDemoData() {
         sourceProduct: "loto",
         targetProduct: "credit",
         purpose: "merchant_credit_profile",
-        scopeNote: "Demo seed: merchant opted in to share VAT receipt history",
+        scopeNote: `Demo seed: ${profile.countryCode} merchant opted in to share VAT receipt history with lenders`,
         expiresAt,
       });
 
-      // Sync into alternative_data so credit scoring can use it
+      // Sync into alternative_data so credit scoring can use it.
       try {
         await syncMerchantReceiptsToAlternativeData(merchant.id, { userId: undefined, ip: "seed" });
-      } catch (e) {
-        // ok if no borrower
+      } catch {
+        // ok if no borrower linked
       }
     }
 
-    console.log(`[seed-cross-product]   ${seed.shopName}: ${receiptCounter} receipts, optIn=${seed.optIn}`);
+    console.log(`[seed-cross-product]   [${profile.countryCode}] ${seed.shopName}: ${receiptCounter} receipts in ${profile.currency}, optIn=${seed.optIn}, badge="${profile.taxAuthority} ${profile.productLabel}"`);
   }
 
-  console.log(`[seed-cross-product] done`);
+  console.log(`[seed-cross-product] done — ${MERCHANT_SEEDS.length} merchants across ${new Set(MERCHANT_SEEDS.map(m => m.countryCode)).size} African countries`);
 }

@@ -87,7 +87,7 @@ const SYSTEMS: SystemDef[] = [
     ],
     contributes: [
       "Lender-to-lender credit snapshots",
-      "DGI reputation badge for merchants",
+      "Local tax-authority reputation badge for merchants (DGI in CI, FIRS in NG, KRA in KE, GRA in GH, RRA in RW, SARS in ZA, +48 more)",
     ],
     href: "/search",
     cta: "Open credit search",
@@ -116,8 +116,8 @@ const SYSTEMS: SystemDef[] = [
   },
   {
     id: "loto",
-    title: "Loto Fiscal",
-    tagline: "VAT receipts, merchant turnover, consumer spend",
+    title: "Loto Fiscal / Verified Receipts",
+    tagline: "VAT receipts, merchant turnover, consumer spend — across all 54 African countries",
     icon: Receipt,
     accent: "border-emerald-300 dark:border-emerald-700",
     iconBg: "bg-emerald-50 dark:bg-emerald-950/40",
@@ -191,8 +191,10 @@ export default function PlatformMapPage() {
           Three systems. One consent gateway.
         </h1>
         <p className="text-muted-foreground max-w-3xl text-base">
-          Africa Credit Hub now spans the Credit Bureau, the Collateral Registry, and Loto Fiscal — wired together
-          through a single consent-controlled bridge that audits every cross-system data access.
+          Africa Credit Hub now spans the Credit Bureau, the Collateral Registry, and verified VAT receipts (called
+          <em> Loto Fiscal </em>in Côte d'Ivoire and Francophone markets, <em>Verified Receipts</em> elsewhere — backed by
+          each country's own tax authority across all 54 African markets) — wired together through a single
+          consent-controlled bridge that audits every cross-system data access.
         </p>
       </div>
 

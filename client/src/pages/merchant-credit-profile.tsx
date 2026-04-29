@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Receipt, TrendingUp, TrendingDown, Activity, ShieldCheck, AlertTriangle, Building2 } from "lucide-react";
+import { getTaxAuthorityProfile } from "@shared/tax-authority";
 
 interface MerchantCreditProfileResponse {
-  merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; category: string | null; currency: string };
+  merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; countryCode: string; category: string | null; currency: string };
   features: {
     totalReceipts: number; totalTurnover: number; averageMonthlyTurnover: number;
     monthsWithActivity: number; averageReceiptsPerMonth: number;
@@ -51,6 +52,20 @@ export default function MerchantCreditProfilePage() {
   const errMessage = error instanceof Error ? error.message : "";
   const isConsentError = errMessage.includes("403") || errMessage.includes("no_consent");
 
+  // Resolve the merchant's local tax authority + product framing so the page
+  // says "Verified VAT-receipt history from FIRS Verified Receipts" for a
+  // Lagos merchant and "from DGI Loto Fiscal" for an Abidjan merchant. Falls
+  // back to the default Côte d'Ivoire profile until the merchant payload
+  // arrives so the subtitle never flickers blank.
+  const profile = data?.merchant?.countryCode
+    ? getTaxAuthorityProfile(data.merchant.countryCode)
+    : getTaxAuthorityProfile("CI");
+  const subtitleText = t(
+    "merchantCredit.subtitle",
+    `Verified VAT-receipt history from ${profile.taxAuthority} ${profile.productLabel}, served via the Cross-Product Bridge.`,
+    { authority: profile.taxAuthority, product: profile.productLabel },
+  );
+
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto" data-testid="page-merchant-credit-profile">
       <div className="flex items-start gap-3 mb-6">
@@ -61,8 +76,8 @@ export default function MerchantCreditProfilePage() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-mcp-title">
             {t("merchantCredit.title", "Merchant Credit Profile")}
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            {t("merchantCredit.subtitle", "Verified VAT-receipt history from Loto Fiscal, served via the Cross-Product Bridge.")}
+          <p className="text-sm md:text-base text-muted-foreground" data-testid="text-mcp-subtitle">
+            {subtitleText}
           </p>
         </div>
       </div>

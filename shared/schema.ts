@@ -2099,8 +2099,11 @@ export const lotoMerchants = pgTable("loto_merchants", {
   shopName: text("shop_name").notNull(),
   ownerName: text("owner_name"),
   vatRegistrationNumber: text("vat_registration_number"),
-  countryCode: text("country_code").notNull().default("CI"),
-  currency: text("currency").notNull().default("XOF"),
+  // Pan-African: every African country is supported. No default country
+  // is set at the database level so demos / writes always pass an explicit
+  // ISO country code resolved from the merchant's location.
+  countryCode: text("country_code").notNull(),
+  currency: text("currency").notNull(),
   city: text("city"),
   category: text("category"),
   registeredAt: timestamp("registered_at").defaultNow(),
@@ -2120,7 +2123,9 @@ export const lotoReceipts = pgTable("loto_receipts", {
   ticketNumber: text("ticket_number").notNull(),
   amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
   vatAmount: decimal("vat_amount", { precision: 15, scale: 2 }).notNull(),
-  currency: text("currency").notNull().default("XOF"),
+  // Receipt currency — written explicitly by the issuing country's
+  // fiscalisation regime; never defaulted at the schema layer.
+  currency: text("currency").notNull(),
   category: text("category"),
   itemCount: integer("item_count").default(1),
   issuedAt: timestamp("issued_at").notNull().defaultNow(),

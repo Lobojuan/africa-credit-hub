@@ -14,9 +14,10 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles } from "lucide-react";
 import { PRODUCT_REGISTRY } from "@/lib/products";
 import { LotoLotteryExperience } from "@/components/loto-lottery-experience";
+import { getTaxAuthorityProfile } from "@shared/tax-authority";
 
 interface MerchantPayload {
-  merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; currency: string; creditOptInActive: boolean; borrowerId: string | null } | null;
+  merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; countryCode: string; currency: string; creditOptInActive: boolean; borrowerId: string | null } | null;
   receipts: { id: string; ticketNumber: string; amount: string; vatAmount: string; currency: string; issuedAt: string; category: string | null }[];
   features: {
     totalReceipts: number; totalTurnover: number; averageMonthlyTurnover: number;
@@ -292,7 +293,11 @@ export default function LotoWorkspacePage() {
                 </Card>
               )}
 
-              <DgiBureauReputationBadge merchantId={merchant.id} optedIn={merchant.creditOptInActive} />
+              <BureauReputationBadge
+                merchantId={merchant.id}
+                merchantCountryCode={merchant.countryCode}
+                optedIn={merchant.creditOptInActive}
+              />
             </>
           )}
         </TabsContent>
@@ -319,8 +324,25 @@ interface LotoBadgeProjection {
   consent: { id: string };
 }
 
-function DgiBureauReputationBadge({ merchantId, optedIn }: { merchantId: string; optedIn: boolean }) {
+function BureauReputationBadge({ merchantId, merchantCountryCode, optedIn }: { merchantId: string; merchantCountryCode: string; optedIn: boolean }) {
   const { t } = useTranslation();
+  // Resolve the merchant's local tax authority + product framing (e.g.
+  // "DGI Loto Fiscal" in Côte d'Ivoire, "FIRS Verified Receipts" in
+  // Lagos) from the shared registry so the badge speaks the merchant's
+  // local language regardless of where in Africa they're trading.
+  const profile = getTaxAuthorityProfile(merchantCountryCode);
+  const badgeTitle = `${profile.taxAuthority} Bureau Reputation Badge`;
+  const badgeSubtitle = t(
+    "merchantCredit.badgeSubtitle",
+    `Verified by the ${profile.productLabel} → Credit Bureau bridge. Lenders see this badge on your merchant credit profile.`,
+    { authority: profile.taxAuthority, product: profile.productLabel },
+  );
+  const lockedBody = t(
+    "merchantCredit.badgeLockedBody",
+    `Turn on credit-profile sharing to issue your verified ${profile.taxAuthority} / ${profile.productLabel} reputation badge through the bridge.`,
+    { authority: profile.taxAuthority, product: profile.productLabel },
+  );
+
   const { data, isLoading, error } = useQuery<LotoBadgeProjection>({
     queryKey: ["/api/cross-product/bureau-badge", merchantId],
     queryFn: () => fetch(`/api/cross-product/bureau-badge/${merchantId}`, { credentials: "include" }).then(async r => {
@@ -349,10 +371,10 @@ function DgiBureauReputationBadge({ merchantId, optedIn }: { merchantId: string;
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <ShieldAlert className="w-5 h-5 text-muted-foreground" />
-            {t("merchantCredit.badgeLockedTitle", "DGI Bureau Reputation Badge")}
+            {badgeTitle}
           </CardTitle>
           <CardDescription>
-            {t("merchantCredit.badgeLockedBody", "Turn on credit-profile sharing to issue your verified DGI / Loto Fiscal reputation badge through the bridge.")}
+            {lockedBody}
           </CardDescription>
         </CardHeader>
       </Card>
@@ -374,10 +396,10 @@ function DgiBureauReputationBadge({ merchantId, optedIn }: { merchantId: string;
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <BadgeCheck className="w-5 h-5 text-emerald-600" />
-          {t("merchantCredit.badgeTitle", "DGI Bureau Reputation Badge")}
+          {badgeTitle}
         </CardTitle>
         <CardDescription>
-          {t("merchantCredit.badgeSubtitle", "Verified by the Loto Fiscal → Credit Bureau bridge. Lenders see this badge on your merchant credit profile.")}
+          {badgeSubtitle}
         </CardDescription>
       </CardHeader>
       <CardContent>

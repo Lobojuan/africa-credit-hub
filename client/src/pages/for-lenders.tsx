@@ -204,7 +204,7 @@ export default function ForLendersPage() {
               <BarChart3 className="w-10 h-10 text-emerald-600 mb-3" />
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-3">Lend to merchants you'd previously have to decline</h2>
               <p className="text-slate-600 dark:text-slate-300 mb-4">
-                Verified VAT receipts from Loto Fiscal compose a 300–850 score for thin-file merchants. With consent, you see monthly turnover, frequency, growth trend, and reason codes — the same way you'd read a traditional credit report.
+                Verified VAT receipts from each country's tax authority — branded <em>Loto Fiscal</em> in Côte d'Ivoire and Francophone markets, <em>Verified Receipts</em> elsewhere (FIRS in Nigeria, KRA in Kenya, GRA in Ghana, SARS in South Africa, RRA in Rwanda, and so on across all 54 markets) — compose a 300–850 score for thin-file merchants. With consent, you see monthly turnover, frequency, growth trend, and reason codes in the merchant's local currency — the same way you'd read a traditional credit report.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link href="/financial-inclusion"><Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" data-testid="button-see-impact">See the impact <ArrowRight className="w-4 h-4" /></Button></Link>

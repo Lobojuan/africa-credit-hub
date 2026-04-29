@@ -15,7 +15,7 @@ import { Seo } from "@/components/seo";
 const FACTS: { label: string; value: string }[] = [
   { label: "Countries supported", value: "54 — every African market" },
   { label: "Languages", value: "EN · FR · PT · AR · SW · ES · ZH" },
-  { label: "Products", value: "Credit Bureau · Collateral Registry · Loto Fiscal" },
+  { label: "Products", value: "Credit Bureau · Collateral Registry · Loto Fiscal / Verified Receipts" },
   { label: "Architecture", value: "Consent-first cross-product gateway" },
   { label: "Regulator integrations", value: "BoG · CBN · BCEAO · BEAC · CBK · BSL" },
   { label: "Legal regimes", value: "OHADA · UCC-9 · Common Law · Civil Law" },
@@ -47,7 +47,7 @@ const COVERAGE = [
 const PRODUCT_BLURBS: { id: string; name: string; line: string; icon: typeof CreditCard }[] = [
   { id: "credit", name: "Credit Bureau", line: "Pan-African consumer & business credit reporting with AI-driven portfolio intelligence and regulator-ready exports.", icon: CreditCard },
   { id: "collateral", name: "Collateral Registry", line: "Movable-asset lien registration across OHADA, UCC-9, Common and Civil regimes — PMSI, certificates, search.", icon: PackageIcon },
-  { id: "loto", name: "Loto Fiscal", line: "Verified VAT-receipt platform that doubles as alternative-data scoring for thin-file merchants.", icon: Receipt },
+  { id: "loto", name: "Loto Fiscal / Verified Receipts", line: "Verified VAT-receipt platform that doubles as alternative-data scoring for thin-file merchants. Branded ‘Loto Fiscal’ in Côte d'Ivoire and Francophone markets that already use the term, ‘Verified Receipts’ everywhere else — backed by each country's tax authority (DGI, FIRS, KRA, GRA, RRA, SARS, and 48 more).", icon: Receipt },
 ];
 
 export default function PressKitPage() {
@@ -131,7 +131,7 @@ export default function PressKitPage() {
         <Card className="border-slate-200/80 dark:border-slate-800">
           <CardContent className="p-6">
             <p className="text-lg text-slate-800 dark:text-slate-100 leading-relaxed" data-testid="text-one-liner">
-              <strong>{brand}</strong> is the consent-first credit infrastructure for Africa — a single platform combining a pan-African credit bureau, a movable-asset collateral registry, and a verified VAT-receipt system (Loto Fiscal) — wired together by a consent-bounded data bridge so previously invisible merchants can unlock real credit.
+              <strong>{brand}</strong> is the consent-first credit infrastructure for all 54 African countries — a single platform combining a pan-African credit bureau, a movable-asset collateral registry, and a verified VAT-receipt system (called <em>Loto Fiscal</em> in Côte d'Ivoire and Francophone markets, <em>Verified Receipts</em> elsewhere, but always plugged into the local tax authority — FIRS, KRA, GRA, RRA, SARS, etc.) — wired together by a consent-bounded data bridge so previously invisible merchants can unlock real credit.
             </p>
           </CardContent>
         </Card>

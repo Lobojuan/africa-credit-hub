@@ -108,7 +108,7 @@ export default function FinancialInclusionPage() {
           {t("financialInclusion.heroTitle", "Every receipt is a step toward credit.")}
         </h1>
         <p className="text-base md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6" data-testid="text-hero-subtitle">
-          {t("financialInclusion.heroSubtitle", "Africa Credit Hub turns verified VAT receipts from Loto Fiscal into a credit profile that unlocks loans for previously invisible merchants — entirely on the merchant's terms.")}
+          {t("financialInclusion.heroSubtitle", "Africa Credit Hub turns verified VAT receipts — Loto Fiscal in Côte d'Ivoire and Francophone markets, Verified Receipts everywhere else — into a credit profile that unlocks loans for previously invisible merchants in all 54 African countries, entirely on the merchant's terms.")}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/loto-fiscal">

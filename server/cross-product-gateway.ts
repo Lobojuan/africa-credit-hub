@@ -33,6 +33,7 @@ import {
   type LotoReceipt,
   type CollateralItem,
 } from "@shared/schema";
+import { getTaxAuthorityProfile, type TaxAuthorityProfile } from "@shared/tax-authority";
 
 export type ProductId = "loto" | "credit" | "collateral";
 export type CrossProductPurpose =
@@ -379,11 +380,18 @@ export const gateway = {
       hasBureauProfile: boolean;
       bureauScore: number | null;
     };
+    /**
+     * The merchant's local tax authority + product framing, derived from the
+     * merchant's countryCode. Surfaced so the UI can label the badge with
+     * "FIRS Verified Receipts" in Lagos and "DGI Loto Fiscal" in Abidjan
+     * instead of hardcoding Côte d'Ivoire branding everywhere.
+     */
+    authority: TaxAuthorityProfile;
     consent: CrossProductConsent;
   } | null> {
     // Convention (kept consistent across the gateway): callerProduct = the
     // product CONSUMING the data, targetProduct = the product where the data
-    // lives. The DGI Bureau Reputation Badge is issued by the credit bureau
+    // lives. The Bureau Reputation Badge is issued by the credit bureau
     // (the consumer) from loto-side receipt history (the origin), so caller
     // is "credit" and target is "loto" — this matches the consent row tuple
     // (sourceProduct=loto, targetProduct=credit) granted at merchant opt-in.
@@ -434,6 +442,7 @@ export const gateway = {
         hasBureauProfile,
         bureauScore,
       },
+      authority: getTaxAuthorityProfile(merchant.countryCode),
       consent,
     };
   },

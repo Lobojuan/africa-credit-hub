@@ -17355,9 +17355,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         // purposes that both flow from the same merchant decision:
         //   1. merchant_credit_profile  — lenders may pull verified VAT
         //      receipt history into the bureau credit profile.
-        //   2. bureau_reputation_badge — the DGI Bureau Reputation Badge
-        //      (tier / receipts / active months) can be issued to the
-        //      merchant's own Loto workspace and exposed on lender views.
+        //   2. bureau_reputation_badge — the local-tax-authority Bureau
+        //      Reputation Badge (tier / receipts / active months) can be
+        //      issued to the merchant's own workspace and exposed on lender
+        //      views. The exact authority + product framing (e.g. "DGI Loto
+        //      Fiscal" in Côte d'Ivoire, "FIRS Verified Receipts" in Nigeria)
+        //      is resolved per merchant via shared/tax-authority.ts.
         // Both are time-bounded with the same 12-month default expiry and
         // revoked together when the merchant opts back out.
         const baseConsent = {
@@ -17377,7 +17380,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         await storage.createCrossProductConsent({
           ...baseConsent,
           purpose: "bureau_reputation_badge",
-          scopeNote: "Merchant opted in to issue the DGI Bureau Reputation Badge from verified VAT receipts",
+          scopeNote: "Merchant opted in to issue the local Bureau Reputation Badge from verified VAT receipts",
         });
         // best-effort sync to alternative_data
         try {
