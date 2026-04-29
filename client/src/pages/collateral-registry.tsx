@@ -484,6 +484,9 @@ interface CreditSnapshotInquiry {
   purpose: string;
   inquiredAt: string | null;
   inquiringOrgId: string | null;
+  inquiringOrgName: string | null;
+  inquiringOrgCountry: string | null;
+  inquiringOrgType: string | null;
 }
 
 interface CreditSnapshotResponse {
@@ -516,9 +519,60 @@ const INQUIRY_PURPOSE_TONE: Record<string, string> = {
 };
 
 const COMPETING_INQUIRY_WINDOW_DAYS = 30;
+const SHOPPING_AROUND_WINDOW_DAYS = 7;
+const SHOPPING_AROUND_MIN_INSTITUTIONS = 2;
+
+const ORG_TYPE_LABELS: Record<string, string> = {
+  bank: "Bank",
+  microfinance: "Microfinance",
+  insurance: "Insurance",
+  telecom: "Telecom",
+  fintech: "Fintech",
+  utility: "Utility",
+  government: "Government",
+  regulator: "Regulator",
+  real_estate: "Real estate",
+  investment: "Investment",
+  registry_authority: "Registry authority",
+  other: "Other",
+};
+
+function formatOrgType(type: string | null): string | null {
+  if (!type) return null;
+  return ORG_TYPE_LABELS[type] ?? type.replace(/_/g, " ");
+}
 
 function formatInquiryPurpose(purpose: string): string {
   return INQUIRY_PURPOSE_LABELS[purpose] ?? purpose.replace(/_/g, " ");
+}
+
+/**
+ * "Shopping around" = the borrower has competing-lender pulls clustered tightly
+ * (≥2 different institutions within the last 7 days). That pattern is a strong
+ * signal the borrower is actively comparing offers right now, which the lender
+ * viewing the snapshot will want to act on immediately.
+ */
+function detectShoppingAround(
+  inquiries: CreditSnapshotInquiry[],
+  viewerOrgId: string | null,
+): { active: boolean; institutionCount: number; institutions: string[] } {
+  const cutoff = Date.now() - SHOPPING_AROUND_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const orgs = new Map<string, string>();
+  for (const inq of inquiries) {
+    if (!isCompetingInquiry(inq, viewerOrgId)) continue;
+    if (!inq.inquiredAt) continue;
+    const t = new Date(inq.inquiredAt).getTime();
+    if (Number.isNaN(t) || t < cutoff) continue;
+    const key = inq.inquiringOrgId ?? inq.institution;
+    if (!orgs.has(key)) {
+      orgs.set(key, inq.inquiringOrgName ?? inq.institution);
+    }
+  }
+  return {
+    active: orgs.size >= SHOPPING_AROUND_MIN_INSTITUTIONS,
+    institutionCount: orgs.size,
+    institutions: Array.from(orgs.values()),
+  };
 }
 
 function inquiryAgeDays(inquiredAt: string | null): number | null {
@@ -550,6 +604,55 @@ function isStaleInquiry(inq: CreditSnapshotInquiry): boolean {
 function inquiryPurposeBadgeClass(purpose: string): string {
   return INQUIRY_PURPOSE_TONE[purpose] ?? "border-border bg-muted text-muted-foreground";
 }
+
+/**
+ * Header hint that surfaces when the borrower has competing-lender pulls from
+ * ≥2 different institutions clustered into the last 7 days — a strong "actively
+ * comparing offers right now" signal the viewing lender will want to react to
+ * before the snapshot list itself.
+ */
+function ShoppingAroundHint({
+  inquiries,
+  viewerOrgId,
+  variant,
+}: {
+  inquiries: CreditSnapshotInquiry[];
+  viewerOrgId: string | null;
+  variant: "dialog" | "panel";
+}) {
+  const result = detectShoppingAround(inquiries, viewerOrgId);
+  if (!result.active) return null;
+
+  const testIdPrefix = variant === "dialog" ? "" : "panel-";
+  const sample = result.institutions.slice(0, 3).join(", ");
+  const more = result.institutions.length > 3 ? ` and ${result.institutions.length - 3} more` : "";
+
+  return (
+    <div
+      className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-2 text-[11px] text-amber-900 dark:text-amber-200 flex items-start gap-2"
+      data-testid={`${testIdPrefix}hint-shopping-around`}
+      data-institution-count={result.institutionCount}
+    >
+      <Flame className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+      <div className="space-y-0.5 min-w-0">
+        <div className="font-semibold">Shopping around</div>
+        <div className="text-amber-800/90 dark:text-amber-300/90 leading-snug">
+          {result.institutionCount} different lenders pulled this borrower's
+          credit in the last {SHOPPING_AROUND_WINDOW_DAYS} days
+          {sample && (
+            <>
+              {" "}
+              ({sample}
+              {more})
+            </>
+          )}
+          . They may be comparing offers right now.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 class CreditSnapshotError extends Error {
   code: "no_consent" | "consent_expired" | "consent_revoked" | "wrong_purpose" | "subject_not_found" | "forbidden" | "unknown";
@@ -650,9 +753,12 @@ interface SnapshotInquiryRowProps {
 
 /**
  * Shared row used by both the in-sheet snapshot panel and the popup dialog.
- * The whole row is a click-through button that routes through the
+ * Clicking the row opens a small popover with the full inquiring institution
+ * name, exact timestamp, country and segment — the natural drill-down a
+ * lender wants right after spotting a "Competing" badge. The popover also
+ * carries a "View full bureau profile" button that routes through the
  * cross-product gateway (consent-checked + audited as
- * `inquiry_clickthrough`) to the borrower's full bureau profile.
+ * `inquiry_clickthrough`) for the heavier navigation.
  *
  * Highlights at a glance:
  *  - purpose=new_credit from a different org than the viewer => "Competing"
@@ -666,7 +772,6 @@ function SnapshotInquiryRow({ borrowerId, inquiry, viewerOrgId, variant, onNavig
   const isPanel = variant === "panel";
   const idPrefix = isPanel ? "panel-" : "";
   const isPending = clickThrough.isPending;
-  const canClick = !!borrowerId && !isPending;
 
   const competing = isCompetingInquiry(inquiry, viewerOrgId);
   const stale = isStaleInquiry(inquiry);
@@ -679,7 +784,17 @@ function SnapshotInquiryRow({ borrowerId, inquiry, viewerOrgId, variant, onNavig
   // because the actionable signal is "another lender just pulled credit".
   const fade = stale ? "opacity-60" : "";
 
-  const handleClick = () => {
+  // Full institution name comes from the joined organizations row when the
+  // inquirer is a registered org on the platform; fall back to the free-text
+  // `institution` column the inquiring system recorded otherwise.
+  const fullInstitutionName = inquiry.inquiringOrgName ?? inquiry.institution;
+  const segmentLabel = formatOrgType(inquiry.inquiringOrgType);
+  const exactTimestamp = inquiry.inquiredAt
+    ? format(new Date(inquiry.inquiredAt), "dd MMM yyyy 'at' HH:mm")
+    : null;
+  const ageDays = inquiryAgeDays(inquiry.inquiredAt);
+
+  const handleViewProfile = () => {
     if (!borrowerId) return;
     clickThrough.mutate({ borrowerId, inquiryId: inquiry.id });
   };
@@ -691,71 +806,172 @@ function SnapshotInquiryRow({ borrowerId, inquiry, viewerOrgId, variant, onNavig
       data-competing={competing ? "true" : "false"}
       data-stale={stale ? "true" : "false"}
     >
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={!canClick}
-        title="View this borrower's full bureau profile"
-        aria-label={`View bureau profile for inquiry by ${inquiry.institution}`}
-        className={
-          "w-full flex items-start justify-between gap-2 p-2 text-left " +
-          (isPanel ? "text-[11px]" : "text-xs") +
-          " transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:opacity-60 disabled:cursor-not-allowed"
-        }
-        data-testid={`${idPrefix}btn-snapshot-inquiry-view-${inquiry.id}`}
-      >
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span
-              className={`font-medium truncate${isPanel ? " leading-tight" : ""}`}
-              data-testid={`${idPrefix}text-snapshot-inquiry-institution-${inquiry.id}`}
-            >
-              {inquiry.institution}
-            </span>
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            title="Click to see who pulled the credit"
+            aria-label={`Inquiry details for ${inquiry.institution}`}
+            className={
+              "w-full flex items-start justify-between gap-2 p-2 text-left " +
+              (isPanel ? "text-[11px]" : "text-xs") +
+              " transition-colors hover:bg-muted/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+            }
+            data-testid={`${idPrefix}btn-snapshot-inquiry-${inquiry.id}`}
+          >
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span
+                  className={`font-medium truncate${isPanel ? " leading-tight" : ""}`}
+                  data-testid={`${idPrefix}text-snapshot-inquiry-institution-${inquiry.id}`}
+                >
+                  {inquiry.institution}
+                </span>
+                {competing && (
+                  <Badge
+                    variant="outline"
+                    className="shrink-0 h-4 px-1 text-[9px] uppercase tracking-wide font-semibold border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                    data-testid={`${idPrefix}badge-snapshot-inquiry-competing-${inquiry.id}`}
+                    title="Another lender pulled this borrower's credit for a new facility"
+                  >
+                    <Flame className="w-2.5 h-2.5 mr-0.5" />
+                    Competing
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span
+                  className={`inline-flex items-center rounded-sm border px-1 py-px text-[9px] font-medium uppercase tracking-wide ${inquiryPurposeBadgeClass(inquiry.purpose)}`}
+                  data-testid={`${idPrefix}text-snapshot-inquiry-purpose-${inquiry.id}`}
+                >
+                  {formatInquiryPurpose(inquiry.purpose)}
+                </span>
+                {stale && (
+                  <span
+                    className="text-[9px] uppercase tracking-wide text-muted-foreground"
+                    data-testid={`${idPrefix}text-snapshot-inquiry-stale-${inquiry.id}`}
+                  >
+                    · older
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span
+                className={
+                  "text-muted-foreground" + (isPanel ? " leading-tight" : "")
+                }
+                data-testid={`${idPrefix}text-snapshot-inquiry-date-${inquiry.id}`}
+              >
+                {inquiry.inquiredAt ? format(new Date(inquiry.inquiredAt), "dd MMM yyyy") : "—"}
+              </span>
+            </div>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          side={isPanel ? "left" : "bottom"}
+          align="start"
+          className="w-72 p-3 text-xs space-y-2"
+          data-testid={`${idPrefix}popover-snapshot-inquiry-${inquiry.id}`}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Inquiring institution
+              </div>
+              <div
+                className="font-semibold text-sm leading-tight break-words"
+                data-testid={`${idPrefix}text-snapshot-inquiry-full-name-${inquiry.id}`}
+              >
+                {fullInstitutionName}
+              </div>
+            </div>
             {competing && (
               <Badge
                 variant="outline"
                 className="shrink-0 h-4 px-1 text-[9px] uppercase tracking-wide font-semibold border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
-                data-testid={`${idPrefix}badge-snapshot-inquiry-competing-${inquiry.id}`}
-                title="Another lender pulled this borrower's credit for a new facility"
               >
                 <Flame className="w-2.5 h-2.5 mr-0.5" />
                 Competing
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span
-              className={`inline-flex items-center rounded-sm border px-1 py-px text-[9px] font-medium uppercase tracking-wide ${inquiryPurposeBadgeClass(inquiry.purpose)}`}
-              data-testid={`${idPrefix}text-snapshot-inquiry-purpose-${inquiry.id}`}
-            >
-              {formatInquiryPurpose(inquiry.purpose)}
-            </span>
-            {stale && (
-              <span
-                className="text-[9px] uppercase tracking-wide text-muted-foreground"
-                data-testid={`${idPrefix}text-snapshot-inquiry-stale-${inquiry.id}`}
+
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Country
+              </div>
+              <div
+                className="font-medium"
+                data-testid={`${idPrefix}text-snapshot-inquiry-country-${inquiry.id}`}
               >
-                · older
-              </span>
-            )}
+                {inquiry.inquiringOrgCountry ?? <span className="text-muted-foreground">—</span>}
+              </div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Segment
+              </div>
+              <div
+                className="font-medium"
+                data-testid={`${idPrefix}text-snapshot-inquiry-segment-${inquiry.id}`}
+              >
+                {segmentLabel ?? <span className="text-muted-foreground">—</span>}
+              </div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Pulled at
+              </div>
+              <div
+                className="font-medium"
+                data-testid={`${idPrefix}text-snapshot-inquiry-timestamp-${inquiry.id}`}
+              >
+                {exactTimestamp ?? <span className="text-muted-foreground">Unknown</span>}
+                {ageDays !== null && (
+                  <span className="ml-1 text-muted-foreground">
+                    · {ageDays === 0 ? "today" : `${ageDays}d ago`}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="col-span-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Purpose
+              </div>
+              <div className="font-medium">{formatInquiryPurpose(inquiry.purpose)}</div>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span
-            className={
-              "text-muted-foreground" + (isPanel ? " leading-tight" : "")
-            }
-            data-testid={`${idPrefix}text-snapshot-inquiry-date-${inquiry.id}`}
-          >
-            {inquiry.inquiredAt ? format(new Date(inquiry.inquiredAt), "dd MMM yyyy") : "—"}
-          </span>
-          <ExternalLink
-            className="w-3 h-3 text-primary/70"
-            aria-hidden="true"
-          />
-        </div>
-      </button>
+
+          {!inquiry.inquiringOrgId && (
+            <div
+              className="text-[10px] text-muted-foreground border-t pt-1.5"
+              data-testid={`${idPrefix}text-snapshot-inquiry-unverified-${inquiry.id}`}
+            >
+              The inquirer is not a registered organization on the platform, so
+              only the self-reported institution name is available.
+            </div>
+          )}
+
+          {borrowerId && (
+            <div className="border-t pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full h-7 text-xs"
+                onClick={handleViewProfile}
+                disabled={isPending}
+                data-testid={`${idPrefix}btn-snapshot-inquiry-view-${inquiry.id}`}
+                aria-label={`View bureau profile for inquiry by ${inquiry.institution}`}
+              >
+                <ExternalLink className="w-3 h-3 mr-1.5" aria-hidden="true" />
+                {isPending ? "Opening profile…" : "View full bureau profile"}
+              </Button>
+            </div>
+          )}
+        </PopoverContent>
+      </Popover>
     </li>
   );
 }
@@ -816,6 +1032,11 @@ function BorrowerCreditSnapshotDialog({ borrowerId, itemId }: { borrowerId: stri
               <div className="text-xs font-medium text-muted-foreground">
                 Recent inquiries · last {data.summary.recentInquiryWindowDays}d
               </div>
+              <ShoppingAroundHint
+                inquiries={data.recentInquiries}
+                viewerOrgId={data.viewerOrganizationId}
+                variant="dialog"
+              />
               {data.recentInquiries.length === 0 ? (
                 <div
                   className="rounded-md border border-dashed bg-muted/30 p-2 text-xs text-muted-foreground"
@@ -947,6 +1168,11 @@ function BorrowerCreditSnapshotPanel({
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
               Recent inquiries · last {data.summary.recentInquiryWindowDays}d
             </div>
+            <ShoppingAroundHint
+              inquiries={data.recentInquiries}
+              viewerOrgId={data.viewerOrganizationId}
+              variant="panel"
+            />
             {data.recentInquiries.length === 0 ? (
               <div
                 className="rounded-md border border-dashed bg-muted/30 p-2 text-[11px] text-muted-foreground"

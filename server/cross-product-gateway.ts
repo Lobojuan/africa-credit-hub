@@ -26,6 +26,7 @@ import {
   creditAccounts,
   creditScoreHistory,
   creditInquiries,
+  organizations,
   users,
   type CrossProductConsent,
   type LotoMerchant,
@@ -470,6 +471,9 @@ export const gateway = {
       purpose: string;
       inquiredAt: string | null;
       inquiringOrgId: string | null;
+      inquiringOrgName: string | null;
+      inquiringOrgCountry: string | null;
+      inquiringOrgType: string | null;
     }>;
     viewerOrganizationId: string | null;
     consent: CrossProductConsent;
@@ -496,9 +500,13 @@ export const gateway = {
         purpose: creditInquiries.purpose,
         createdAt: creditInquiries.createdAt,
         inquiringOrgId: users.organizationId,
+        inquiringOrgName: organizations.name,
+        inquiringOrgCountry: organizations.country,
+        inquiringOrgType: organizations.type,
       })
       .from(creditInquiries)
       .leftJoin(users, eq(creditInquiries.inquiredBy, users.id))
+      .leftJoin(organizations, eq(users.organizationId, organizations.id))
       .where(and(eq(creditInquiries.borrowerId, borrowerId), gte(creditInquiries.createdAt, since)))
       .orderBy(desc(creditInquiries.createdAt));
     const RECENT_INQUIRY_LIMIT = 5;
@@ -508,6 +516,9 @@ export const gateway = {
       purpose: r.purpose,
       inquiredAt: r.createdAt ? r.createdAt.toISOString() : null,
       inquiringOrgId: r.inquiringOrgId ?? null,
+      inquiringOrgName: r.inquiringOrgName ?? null,
+      inquiringOrgCountry: r.inquiringOrgCountry ?? null,
+      inquiringOrgType: r.inquiringOrgType ?? null,
     }));
     // Resolve the viewing user's org so the frontend can highlight inquiries
     // from any institution other than the viewer's own.
