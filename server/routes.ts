@@ -8746,7 +8746,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const r = await pool.query(
         `SELECT country, count(*)::int AS borrower_count
          FROM borrowers
-         WHERE country IS NOT NULL
+         WHERE country IS NOT NULL AND trim(country) <> ''
          GROUP BY country
          ORDER BY borrower_count DESC`
       );
@@ -8763,7 +8763,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.get("/api/admin/demo/reset-credit-scoring/preview", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const country = req.query.country ? String(req.query.country) : null;
+      const country = req.query.country ? String(req.query.country).trim() || null : null;
       const counts: Record<string, number> = {};
       for (const { table, label, scopedWhere } of CREDIT_RESET_SCOPED_CONFIG) {
         let q: string;
@@ -8810,7 +8810,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     if (confirm !== "RESET") {
       return res.status(400).json({ message: "Missing or incorrect confirmation. Send { confirm: 'RESET' }" });
     }
-    const scopedCountry: string | null = country ? String(country) : null;
+    const scopedCountry: string | null = country ? String(country).trim() || null : null;
     const performingUserId = req.session?.userId ?? null;
     const deleted: Record<string, number> = {};
     const unlinked: Record<string, number> = {};

@@ -1871,6 +1871,7 @@ interface ResetCountryOption { country: string; count: number }
 
 function DemoResetPanel() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [selectedCountry, setSelectedCountry] = useState<string>("");
@@ -1925,6 +1926,9 @@ function DemoResetPanel() {
       setResetDone(data);
       setDialogOpen(false);
       setConfirmText("");
+      setSelectedCountry("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/reset-credit-scoring/countries"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/reset-credit-scoring/preview"] });
       const scopeLabel = data.scope === "global" ? "all countries" : data.scope;
       toast({ title: "Credit scoring data purged", description: `${total.toLocaleString()} rows deleted (${scopeLabel}). Loto, collateral, orgs, and billing untouched.` });
     },
