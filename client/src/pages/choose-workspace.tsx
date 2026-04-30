@@ -30,8 +30,8 @@ export default function ChooseWorkspacePage() {
   const brand = PLATFORM_COMPANY_NAME;
 
   const accessible = useMemo<WorkspaceDefinition[]>(
-    () => workspacesForRole(user?.role),
-    [user?.role],
+    () => workspacesForRole(user?.role, (user as any)?.allowedProducts),
+    [user?.role, (user as any)?.allowedProducts],
   );
   const accessibleIds = useMemo(() => new Set(accessible.map((w) => w.id)), [accessible]);
 

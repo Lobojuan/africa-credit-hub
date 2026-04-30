@@ -881,12 +881,12 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
-            <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><MasterLandingPage /></Suspense>} />
+            <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
             <Route path="/investor" component={() => <Redirect to="/" />} />
             <Route path="/solutions" component={() => <Redirect to="/" />} />
             <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
-            <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
-            <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
+            <Route path="/collateral" component={() => <Redirect to="/" />} />
+            <Route path="/loto" component={() => <Redirect to="/" />} />
             <Route path="/financial-inclusion" component={() => <Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense>} />
             <Route path="/press" component={() => <Suspense fallback={<LazyFallback />}><PressKitPage /></Suspense>} />
             <Route path="/for-lenders" component={() => <Suspense fallback={<LazyFallback />}><ForLendersPage /></Suspense>} />

@@ -131,8 +131,13 @@ export function workspaceForPath(path: string): WorkspaceId | null {
   return null;
 }
 
-export function workspacesForRole(role?: string): WorkspaceDefinition[] {
+export function workspacesForRole(role?: string, allowedProducts?: string[] | null): WorkspaceDefinition[] {
   return WORKSPACE_ORDER
     .map((id) => WORKSPACES[id])
-    .filter((w) => !w.allowedRoles || !role || w.allowedRoles.includes(role));
+    .filter((w) => !w.allowedRoles || !role || w.allowedRoles.includes(role))
+    .filter((w) => {
+      if (!allowedProducts || allowedProducts.length === 0) return true;
+      if (w.id === "shared") return true;
+      return allowedProducts.includes(w.id);
+    });
 }
