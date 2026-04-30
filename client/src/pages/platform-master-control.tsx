@@ -2413,6 +2413,7 @@ function CollateralResetPanel() {
     },
     enabled: dialogOpen,
     staleTime: 0,
+    gcTime: 0,
   });
 
   const resetMutation = useMutation({
@@ -2593,7 +2594,7 @@ function CollateralResetPanel() {
               <Button
                 variant="destructive"
                 size="sm"
-                disabled={confirmText !== "RESET" || resetMutation.isPending}
+                disabled={confirmText !== "RESET" || resetMutation.isPending || !previewQuery.data || !!previewQuery.error}
                 onClick={() => resetMutation.mutate()}
                 data-testid="button-collateral-reset-execute"
               >
