@@ -20,7 +20,7 @@ export function WorkspaceSwitcher({ variant = "compact" }: WorkspaceSwitcherProp
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { workspace, workspaceId, setWorkspace } = useActiveWorkspace();
-  const accessible = new Set(workspacesForRole(user?.role).map((w) => w.id));
+  const accessible = new Set(workspacesForRole(user?.role, (user as any)?.allowedProducts).map((w) => w.id));
   const Icon = workspace.icon;
 
   const choose = (id: WorkspaceId) => {
