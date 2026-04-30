@@ -10,7 +10,6 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { isGhanaMode } from "@/lib/country-mode";
 import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
-import { startDemoTour } from "@/components/demo-tour";
 
 type LoginMode = "chooser" | "institution" | "consumer";
 
@@ -133,47 +132,6 @@ export default function LoginPage() {
       }
     } finally {
       if (!mfaRequired) setLoading(false);
-    }
-  };
-
-  const quickDemoLogin = async (
-    demoUsername: string,
-    demoPassword: string,
-    tourRole?: "secured_creditor" | "registry_authority" | "super_admin",
-  ) => {
-    if (loading || passkeyLoading) return;
-    setError("");
-    setLoading(true);
-    setUsername(demoUsername);
-    setPassword(demoPassword);
-    try {
-      const result = await login(demoUsername, demoPassword);
-      if ((result as any)?.requireMfa) {
-        setMfaRequired(true);
-        setLoading(false);
-        return;
-      }
-      toast({ title: t('login.success') });
-      sessionStorage.setItem("passkey_prompt", "1");
-      if (tourRole) {
-        startDemoTour(tourRole);
-      }
-      window.location.replace("/choose-product");
-    } catch (err: any) {
-      const msg = err.message || t('common.error');
-      const cleaned = msg.replace(/^\d+:\s*/, "").replace(/^"?|"?$/g, "");
-      try {
-        const parsed = JSON.parse(cleaned);
-        if (parsed.requireMfa) {
-          setMfaRequired(true);
-          setLoading(false);
-          return;
-        }
-        setError(parsed.message || cleaned);
-      } catch {
-        setError(cleaned);
-      }
-      setLoading(false);
     }
   };
 
@@ -711,70 +669,6 @@ export default function LoginPage() {
                 </form>
               ) : (
                 <>
-                <div
-                  className="rounded-xl p-4 mb-4 space-y-3"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(45 100% 96%) 0%, hsl(35 100% 95%) 100%)",
-                    border: "1px solid hsl(40 80% 80%)",
-                  }}
-                  data-testid="panel-demo-access"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold tracking-wide" style={{ background: "hsl(40 80% 50%)", color: "white" }}>DEMO</span>
-                    <p className="text-xs font-semibold" style={{ color: "hsl(30 50% 25%)" }}>One-click sign in</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => quickDemoLogin("johndoe", "SecuredCreditor2026!", "secured_creditor")}
-                      className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
-                      style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
-                      data-testid="button-demo-secured-creditor"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Building2 className="w-4 h-4" style={{ color: "hsl(215 55% 50%)" }} />
-                        <span><strong>Secured Creditor</strong> — Test Bank Ltd</span>
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5" style={{ color: "hsl(215 15% 50%)" }} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => quickDemoLogin("registry_admin", "TestPass2026!", "registry_authority")}
-                      className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
-                      style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
-                      data-testid="button-demo-registry-authority"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Shield className="w-4 h-4" style={{ color: "hsl(140 50% 40%)" }} />
-                        <span><strong>Registry Authority</strong> — approve filings</span>
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5" style={{ color: "hsl(215 15% 50%)" }} />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => quickDemoLogin("demo_admin", "TestPass2026!", "super_admin")}
-                      className="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center justify-between gap-2 transition-all hover:shadow-sm disabled:opacity-50"
-                      style={{ background: "white", border: "1px solid hsl(40 50% 85%)", color: "hsl(215 30% 25%)" }}
-                      data-testid="button-demo-super-admin"
-                    >
-                      <span className="flex items-center gap-2">
-                        <KeyRound className="w-4 h-4" style={{ color: "hsl(265 50% 50%)" }} />
-                        <span><strong>Super Admin</strong> — full access</span>
-                      </span>
-                      <ArrowRight className="w-3.5 h-3.5" style={{ color: "hsl(215 15% 50%)" }} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="relative flex items-center gap-3 mb-2">
-                  <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
-                  <span className="text-[11px] whitespace-nowrap" style={{ color: "hsl(215 15% 60%)" }}>or sign in with your account</span>
-                  <div className="flex-1 h-px" style={{ background: "hsl(215 25% 88%)" }} />
-                </div>
-
                 <form onSubmit={handleInstitutionSubmit} className="space-y-4" data-testid="form-login">
                   {error && (
                     <div className="flex items-start gap-2.5 p-3 rounded-lg text-sm"
