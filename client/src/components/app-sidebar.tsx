@@ -406,14 +406,17 @@ export function AppSidebar() {
   const { workspaceId: activeWorkspace } = useActiveWorkspace();
   const isShared = activeWorkspace === "shared";
   const productMatch = (ids?: ProductId[]) => sectionMatchesProduct(ids, activeProduct);
+  const userAllowedProducts: string[] | null = (user as any)?.allowedProducts ?? null;
+  const canSeeProduct = (id: ProductId) =>
+    !userAllowedProducts || userAllowedProducts.length === 0 || userAllowedProducts.includes(id);
   const visibleOverview = !isShared ? filterByRole(overviewItems, role) : [];
-  const visibleCreditData = !isShared && productMatch(["credit"]) ? filterByRole(creditDataItems, role) : [];
-  const visibleReportsScoring = !isShared && productMatch(["credit"]) ? filterByRole(reportsScoringItems, role) : [];
-  const visibleDataMgmt = !isShared && productMatch(["credit"]) ? filterByRole(dataManagementItems, role) : [];
-  const visibleWorkflows = !isShared && productMatch(["credit"]) ? filterByRole(workflowItems, role) : [];
-  const visibleIntelligence = !isShared && productMatch(["credit"]) ? filterByRole(intelligenceItems, role) : [];
-  const visibleCollateral = !isShared && productMatch(["collateral"]) ? filterByRole(collateralItems, role) : [];
-  const visibleLoto = !isShared && productMatch(["loto"]) ? filterByRole(lotoItems, role) : [];
+  const visibleCreditData = !isShared && productMatch(["credit"]) && canSeeProduct("credit") ? filterByRole(creditDataItems, role) : [];
+  const visibleReportsScoring = !isShared && productMatch(["credit"]) && canSeeProduct("credit") ? filterByRole(reportsScoringItems, role) : [];
+  const visibleDataMgmt = !isShared && productMatch(["credit"]) && canSeeProduct("credit") ? filterByRole(dataManagementItems, role) : [];
+  const visibleWorkflows = !isShared && productMatch(["credit"]) && canSeeProduct("credit") ? filterByRole(workflowItems, role) : [];
+  const visibleIntelligence = !isShared && productMatch(["credit"]) && canSeeProduct("credit") ? filterByRole(intelligenceItems, role) : [];
+  const visibleCollateral = !isShared && productMatch(["collateral"]) && canSeeProduct("collateral") ? filterByRole(collateralItems, role) : [];
+  const visibleLoto = !isShared && productMatch(["loto"]) && canSeeProduct("loto") ? filterByRole(lotoItems, role) : [];
   const oversightItems = getOversightItems(dynamicCountryConfig?.name);
   const visibleOversight = !isShared ? filterByRole(oversightItems, role) : [];
   const { data: crossBorderAccess } = useQuery<{ hasAccess: boolean; reason: string }>({

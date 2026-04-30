@@ -10,6 +10,23 @@ Please ask for confirmation before implementing major architectural changes or s
 I prefer detailed explanations for complex logic or design decisions.
 Do not make changes to the `docs/` folder.
 
+## Platform Access & Credentials
+
+### Product Access Control
+Users have a per-user `allowedProducts` field (`text[]` in the `users` table). When set, only those product workspaces (credit/collateral/loto) appear in the sidebar and product switcher for that user. `null` = unrestricted (all platforms visible).
+
+### Login Accounts
+| Username | Password | Access | Purpose |
+|---|---|---|---|
+| `admin` | `SEED_ADMIN_PASSWORD` env var | Credit Bureau only | Shared client / demo login |
+| `owner_admin` | `OWNER_ADMIN_PASSWORD` env var | All 3 platforms | Private owner super-admin |
+| `platform_admin` | `SEED_ADMIN_PASSWORD` env var | All 3 platforms | Platform CTO account |
+| `johndoe` | `SecuredCreditor2026!` | Credit + Collateral | Demo secured creditor |
+| `registry_admin` | `TestPass2026!` | Credit | Demo registry authority |
+| `demo_admin` | `TestPass2026!` | Credit | Demo super admin |
+
+> The `admin` restriction to credit-only is applied idempotently on every startup via `ensureDemoUsers()` in `server/seed.ts`. `owner_admin` is created if `OWNER_ADMIN_PASSWORD` is set and the account doesn't exist yet.
+
 ## System Architecture
 The system employs a modern full-stack architecture built for scalability and compliance, featuring a React/TypeScript frontend with Tailwind CSS and shadcn/ui, and an Express.js API server with a PostgreSQL database managed by Drizzle ORM.
 

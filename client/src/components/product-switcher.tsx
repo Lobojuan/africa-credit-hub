@@ -51,7 +51,7 @@ export function ProductSwitcher() {
     };
   }, []);
 
-  const accessibleIds = new Set(getAccessibleProducts(user?.role).map((p) => p.id));
+  const accessibleIds = new Set(getAccessibleProducts(user?.role, (user as any)?.allowedProducts).map((p) => p.id));
   const current = PRODUCT_REGISTRY[active];
   const CurrentIcon = current.icon;
 

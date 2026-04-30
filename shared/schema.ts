@@ -71,6 +71,9 @@ export const users = pgTable("users", {
   // OTP is successfully entered). Used by Loto Fiscal eligibility (Task #283)
   // so only consumers who proved control of a real phone number can win.
   phoneVerifiedAt: timestamp("phone_verified_at"),
+  // Per-user product access restriction. When set, only the listed product
+  // IDs ("credit", "collateral", "loto") are visible to this user. null = full access.
+  allowedProducts: text("allowed_products").array(),
   createdAt: timestamp("created_at").defaultNow(),
 });
 

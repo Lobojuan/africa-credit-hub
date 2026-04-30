@@ -409,6 +409,37 @@ export async function ensureDemoUsers() {
         }
       }
     }
+
+    // Restrict the shared 'admin' account to Credit Bureau only so clients
+    // testing credit scoring cannot see Loto Fiscal or Collateral Registry.
+    const adminUser = await db.select().from(users).where(eq(users.username, "admin")).limit(1);
+    if (adminUser.length > 0 && (adminUser[0] as any).allowedProducts === null) {
+      await db.update(users)
+        .set({ allowedProducts: ["credit"] } as any)
+        .where(eq(users.username, "admin"));
+      console.log("[Demo Seed] Restricted 'admin' user to credit platform only");
+    }
+
+    // Create the private owner super-admin account with full access to all products.
+    // Password comes from OWNER_ADMIN_PASSWORD env var. Username is 'owner_admin'.
+    const ownerPassword = process.env.OWNER_ADMIN_PASSWORD;
+    if (ownerPassword) {
+      const ownerExists = await db.select().from(users).where(eq(users.username, "owner_admin")).limit(1);
+      if (ownerExists.length === 0) {
+        await db.insert(users).values({
+          username: "owner_admin",
+          password: hash(ownerPassword),
+          fullName: "Platform Owner",
+          email: process.env.PLATFORM_SUPPORT_EMAIL || "owner@africacredithub.com",
+          role: "super_admin",
+          status: "active",
+          institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
+        } as any);
+        console.log("[Demo Seed] Created owner_admin super-admin with full product access");
+      }
+    } else {
+      console.warn("[Demo Seed] OWNER_ADMIN_PASSWORD not set — owner_admin account not created");
+    }
   } catch (e) {
     console.error("[Demo Seed] ensureDemoUsers error (non-fatal):", e);
   }

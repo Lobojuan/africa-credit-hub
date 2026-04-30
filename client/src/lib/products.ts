@@ -151,12 +151,17 @@ export function writeActiveProduct(id: ProductId) {
   }
 }
 
-/** What products is this user allowed to enter? */
-export function getAccessibleProducts(role?: string): ProductDefinition[] {
+/** What products is this user allowed to enter?
+ *  When allowedProducts is set (non-null), the result is further intersected
+ *  with that list so per-user product restrictions are honoured.
+ */
+export function getAccessibleProducts(role?: string, allowedProducts?: string[] | null): ProductDefinition[] {
   if (!role) return [PRODUCT_REGISTRY.credit];
-  return PRODUCT_ORDER
+  const byRole = PRODUCT_ORDER
     .map(id => PRODUCT_REGISTRY[id])
     .filter(p => p.allowedRoles.includes(role));
+  if (!allowedProducts || allowedProducts.length === 0) return byRole;
+  return byRole.filter(p => allowedProducts.includes(p.id));
 }
 
 /** Centralised parent brand label (single source of truth — i18n key + constant). */
