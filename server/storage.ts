@@ -4191,7 +4191,7 @@ export class DatabaseStorage implements IStorage {
     const totals = await db.execute(sql`
       SELECT status::text AS s, count(*)::int AS c
       FROM loto_outbound_messages
-      WHERE created_at >= now() - (${sinceDays}::int * interval '1 day')
+      WHERE created_at >= now() - (${sinceDays} * interval '1 day')
         ${filter?.countryCode ? sql`AND country_code = ${filter.countryCode}` : sql``}
       GROUP BY status::text
     `);
@@ -4204,10 +4204,10 @@ export class DatabaseStorage implements IStorage {
     const byPurposeRows = await db.execute(sql`
       SELECT purpose,
         count(*)::int AS total,
-        sum(CASE WHEN status = 'sent' THEN 1 ELSE 0 END)::int AS sent,
-        sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)::int AS failed
+        sum(CASE WHEN status::text IN ('sent','dispatched') THEN 1 ELSE 0 END)::int AS sent,
+        sum(CASE WHEN status::text = 'failed' THEN 1 ELSE 0 END)::int AS failed
       FROM loto_outbound_messages
-      WHERE created_at >= now() - (${sinceDays}::int * interval '1 day')
+      WHERE created_at >= now() - (${sinceDays} * interval '1 day')
         ${filter?.countryCode ? sql`AND country_code = ${filter.countryCode}` : sql``}
       GROUP BY purpose
       ORDER BY total DESC
@@ -4219,10 +4219,10 @@ export class DatabaseStorage implements IStorage {
     const byCountryRows = await db.execute(sql`
       SELECT country_code AS "countryCode",
         count(*)::int AS total,
-        sum(CASE WHEN status = 'sent' THEN 1 ELSE 0 END)::int AS sent,
-        sum(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)::int AS failed
+        sum(CASE WHEN status::text IN ('sent','dispatched') THEN 1 ELSE 0 END)::int AS sent,
+        sum(CASE WHEN status::text = 'failed' THEN 1 ELSE 0 END)::int AS failed
       FROM loto_outbound_messages
-      WHERE created_at >= now() - (${sinceDays}::int * interval '1 day')
+      WHERE created_at >= now() - (${sinceDays} * interval '1 day')
       GROUP BY country_code
       ORDER BY total DESC
     `);

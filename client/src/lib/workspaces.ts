@@ -136,8 +136,10 @@ export function workspacesForRole(role?: string, allowedProducts?: string[] | nu
     .map((id) => WORKSPACES[id])
     .filter((w) => !w.allowedRoles || !role || w.allowedRoles.includes(role))
     .filter((w) => {
+      // If the user has no product restriction, show everything.
       if (!allowedProducts || allowedProducts.length === 0) return true;
-      if (w.id === "shared") return true;
+      // Restricted users: only show the workspaces matching their allowed products.
+      // "shared" tools are hidden too — keeps the UI focused on credit only.
       return allowedProducts.includes(w.id);
     });
 }
