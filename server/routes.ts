@@ -3446,7 +3446,21 @@ export async function registerRoutes(
       }
 
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
-      const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      const rawInquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
+      // Enrich with the inquiring lender's org id so we can flag competing
+      // pulls (purpose=new_credit) — matches the highlight treatment shown
+      // on the lender views.
+      const inqUserIds = Array.from(new Set(rawInquiries.map(i => i.inquiredBy).filter(Boolean) as string[]));
+      const inqUserOrgRows = inqUserIds.length > 0
+        ? await db.select({ id: users.id, organizationId: users.organizationId })
+            .from(users)
+            .where(inArray(users.id, inqUserIds))
+        : [];
+      const inqOrgByUser = new Map(inqUserOrgRows.map(r => [r.id, r.organizationId ?? null]));
+      const inquiries = rawInquiries.map(i => ({
+        ...i,
+        inquiringOrgId: inqOrgByUser.get(i.inquiredBy) ?? null,
+      }));
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
@@ -3604,14 +3618,43 @@ export async function registerRoutes(
         sectionHead("RECENT ENQUIRIES (last 5)");
         const qi1 = W * 0.45, qi2 = W * 0.30, qi3 = W * 0.25;
         tHead([{ label: "Institution", w: qi1 }, { label: "Purpose", w: qi2 }, { label: "Date", w: qi3, align: "right" }]);
+        // Mirror lender-side highlight: tinted purpose label, "COMPETING"
+        // tag for new_credit pulls (consumer view has no viewer org, so any
+        // external new_credit pull counts), faded text for stale (>30d).
+        const COMPETING_WINDOW_DAYS = 30;
+        const PURPOSE_TONE: Record<string, string> = {
+          new_credit: "#b45309",
+          review: "#0369a1",
+          collection: "#b91c1c",
+          regulatory: "#6d28d9",
+          portfolio_monitoring: C_GRAY,
+        };
+        const PURPOSE_LABELS: Record<string, string> = {
+          new_credit: "New credit",
+          review: "Account review",
+          collection: "Collection",
+          regulatory: "Regulatory",
+          portfolio_monitoring: "Portfolio monitoring",
+        };
         inquiries.slice(0, 5).forEach(inq => {
-          const d = (inq as any).createdAt
-            ? new Date((inq as any).createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
+          const inqAny = inq as any;
+          const created = inqAny.createdAt ? new Date(inqAny.createdAt) : null;
+          const d = created
+            ? created.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
             : "—";
+          const ageDays = created ? Math.floor((Date.now() - created.getTime()) / 86400000) : null;
+          const stale = ageDays === null ? true : ageDays > COMPETING_WINDOW_DAYS;
+          const isCompeting = inqAny.purpose === "new_credit" && !!inqAny.inquiringOrgId;
+          const purposeLabel = PURPOSE_LABELS[inqAny.purpose] || (inqAny.purpose || "—");
+          const purposeColor = stale ? C_LIGHT : (PURPOSE_TONE[inqAny.purpose] || C_DARK);
+          const baseColor = stale ? C_LIGHT : C_DARK;
+          const institutionText = isCompeting
+            ? `${inqAny.institution || "—"}  [COMPETING]`
+            : (inqAny.institution || "—");
           tRow([
-            { val: (inq as any).institution || "—", w: qi1 },
-            { val: (inq as any).purpose || "—", w: qi2 },
-            { val: d, w: qi3, align: "right" },
+            { val: institutionText, w: qi1, color: isCompeting ? "#b45309" : baseColor, bold: isCompeting },
+            { val: purposeLabel, w: qi2, color: purposeColor, bold: true },
+            { val: stale ? `${d}  · older` : d, w: qi3, align: "right", color: baseColor },
           ]);
         });
       }
@@ -6503,6 +6546,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         }
       }
       const accounts = [...accountMap.values()];
+      // Use the shared enrichment helper — it joins each inquiry with the
+      // inquiring lender's organization id (and registered name / country /
+      // segment) so Section 8 can highlight competing-lender pulls the same
+      // way the collateral-registry snapshot panel does (Task #263).
       const inquiries = await getEnrichedCreditInquiriesForBorrower(borrowerId);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
       const consents = await storage.getConsentRecordsByBorrower(borrowerId);
@@ -6648,6 +6695,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         guarantors: guarantorMap,
         paymentHistory: paymentHistoryMap,
         requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
+        // Surfaced to the client for the competing-lender highlight on
+        // Section 8 (Task #263). Source from the session — same source used
+        // by the PDF endpoint below — so the lender vs borrower distinction
+        // stays consistent across renders.
         viewerOrganizationId: req.session?.organizationId ?? null,
         affordability: reportAffordability ? { assessment: reportAffordability, incomeSources: reportIncomeSources, expenses: reportExpenses } : null,
         ...(xdsBureauData ? { xdsBureauData } : {}),
@@ -7947,29 +7998,62 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           { label: L("consent"), width: W * 0.10 },
         ];
         tableHeader(inqCols);
+        // Mirror the highlight treatment that ships on the collateral
+        // registry snapshot panel + the on-screen Section 8 table:
+        //  - colored "purpose" cell (text tinted to the purpose tone)
+        //  - "· COMPETING" tag + amber left-edge marker on new_credit pulls
+        //    from a different org than the viewer
+        //  - faded text on inquiries older than the 30-day competing window
+        //  - keeps the enriched 7-column layout (country / segment / exact
+        //    timestamp) so the printed report carries the same context the
+        //    underwriter saw on screen.
+        const COMPETING_WINDOW_DAYS = 30;
+        const PURPOSE_TONE: Record<string, string> = {
+          new_credit: "#b45309",
+          review: "#0369a1",
+          collection: "#b91c1c",
+          regulatory: "#6d28d9",
+          portfolio_monitoring: "#475569",
+        };
+        const PURPOSE_LABELS: Record<string, string> = {
+          new_credit: "New credit",
+          review: "Account review",
+          collection: "Collection",
+          regulatory: "Regulatory",
+          portfolio_monitoring: "Portfolio monitoring",
+        };
         inqs.forEach(inq => {
           const isHard = HARD_PURPOSES.includes(inq.purpose ?? "");
           const competing = isCompeting(inq);
+          const ageDays = inq.createdAt
+            ? Math.floor((Date.now() - new Date(inq.createdAt).getTime()) / 86400000)
+            : null;
+          const stale = ageDays === null ? true : ageDays > COMPETING_WINDOW_DAYS;
           // Prefer the joined organization name (full registered name) and
           // fall back to the free-text institution column the inquiring
           // system originally recorded for unregistered inquirers.
           const fullName = inq.inquiringOrgName || inq.institution || "—";
           const institutionLabel = competing ? `${fullName}  · COMPETING` : fullName;
+          const purposeKey = inq.purpose ?? "";
+          const purposeLabel = PURPOSE_LABELS[purposeKey] || purposeKey.replace(/_/g, " ");
+          const purposeColor = PURPOSE_TONE[purposeKey] || DARK;
+          const baseColor = stale ? LIGHT : DARK;
           const ts = safeDate(inq.createdAt);
           const exactTimestamp = ts
             ? `${ts.toLocaleDateString("en-GB")} ${ts.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
             : "—";
+          const timestampText = stale ? `${exactTimestamp}  · older` : exactTimestamp;
           // Capture y BEFORE drawing the row so we can paint the amber
           // left-edge marker on competing rows after tableRow advances y.
           const rowY = doc.y;
           tableRow([
-            { value: institutionLabel, width: W * 0.30, bold: true, color: competing ? "#92400e" : DARK },
-            { value: inq.inquiringOrgCountry || "—", width: W * 0.07 },
-            { value: formatOrgType(inq.inquiringOrgType), width: W * 0.10 },
-            { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.13 },
-            { value: isHard ? "Hard" : "Soft", width: W * 0.08, color: isHard ? "#dc2626" : GRAY },
-            { value: exactTimestamp, width: W * 0.22 },
-            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.10, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
+            { value: institutionLabel, width: W * 0.30, bold: true, color: competing ? "#92400e" : baseColor },
+            { value: inq.inquiringOrgCountry || "—", width: W * 0.07, color: baseColor },
+            { value: formatOrgType(inq.inquiringOrgType), width: W * 0.10, color: baseColor },
+            { value: purposeLabel, width: W * 0.13, bold: true, color: stale ? LIGHT : purposeColor },
+            { value: isHard ? "Hard" : "Soft", width: W * 0.08, color: stale ? LIGHT : (isHard ? "#dc2626" : GRAY) },
+            { value: timestampText, width: W * 0.22, color: baseColor },
+            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.10, color: stale ? LIGHT : (inq.consentProvided ? "#16a34a" : "#dc2626") },
           ]);
           if (competing) {
             // 2px amber bar on the left edge of the row to mirror the

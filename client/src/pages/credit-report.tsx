@@ -4,8 +4,16 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiRequest } from "@/lib/queryClient";
 import { useBrandColors } from "@/hooks/use-brand-colors";
+import { useAuth } from "@/hooks/use-auth";
 import { ConsentGateModal } from "@/components/consent-gate-modal";
 import { CrossProductCreditExtras } from "@/components/cross-product-credit-extras";
+import {
+  CompetingInquiryBadge,
+  InquiryPurposePill,
+  isCompetingInquiry,
+  isStaleInquiry,
+  type InquiryHighlightData,
+} from "@/components/inquiry-highlight";
 import { formatCurrency } from "@/lib/currency";
 import { getDefaultFallbackCurrency } from "@/lib/country-mode";
 import { BOG_ACCOUNT_STATUS, mapInternalStatusToBog } from "@shared/bog-codes";
@@ -52,7 +60,10 @@ interface CreditReportData {
   inquiries: ReportInquiry[];
   /**
    * Organization id of the user who pulled the report — used to flag
-   * inquiries from competing institutions in the inquiry section.
+   * inquiries from competing institutions in Section 8 (same rule the
+   * collateral registry snapshot panel uses). `null` when the viewer is a
+   * borrower viewing their own report, in which case every external
+   * new_credit pull is treated as competing.
    */
   viewerOrganizationId: string | null;
   courtJudgments: CourtJudgment[];
@@ -510,6 +521,8 @@ export default function CreditReportPage() {
   const [, params] = useRoute("/credit-report/:borrowerId");
   const [, navigate] = useLocation();
   const brandColors = useBrandColors();
+  const { user: viewer } = useAuth();
+  const viewerOrgId = viewer?.organizationId ?? null;
   const borrowerId = params?.borrowerId;
   const [purpose, setPurpose] = useState("new_credit");
   const [includeAI, setIncludeAI] = useState(true);
@@ -1931,8 +1944,13 @@ export default function CreditReportPage() {
             // Mirror the on-screen Borrower Credit Snapshot panel so the
             // exported / printed report carries the same competitive-intel
             // signals an underwriter sees in the live UI:
+            //  - Purpose-color pill (shared `InquiryPurposePill` from the
+            //    `inquiry-highlight` module) so the badge tone matches the
+            //    snapshot view exactly.
             //  - "Competing" badge + amber tint = purpose=new_credit pull
             //    by an organization other than the viewing institution.
+            //  - Faded styling on inquiries older than the 30-day competing
+            //    window so the freshest pulls dominate the eye.
             //  - "Shopping around" hint = ≥2 different competing
             //    institutions pulled within the last 7 days.
             const SHOPPING_AROUND_WINDOW_DAYS = 7;
@@ -2032,16 +2050,32 @@ export default function CreditReportPage() {
                           {report.inquiries.map((inq) => {
                             const isHard = HARD_INQUIRY_PURPOSES.includes(inq.purpose);
                             const competing = isCompeting(inq);
+                            // Reuse the shared `isStaleInquiry` so the
+                            // ">30-day fade" rule stays in sync with the
+                            // collateral-registry snapshot panel — Task #263.
+                            const highlightInq: InquiryHighlightData = {
+                              id: inq.id,
+                              institution: inq.institution,
+                              purpose: inq.purpose,
+                              inquiredAt: inq.createdAt ?? null,
+                              inquiringOrgId: inq.inquiringOrgId,
+                            };
+                            const stale = isStaleInquiry(highlightInq);
                             const fullName = inq.inquiringOrgName ?? inq.institution;
-                            const rowTone = competing
-                              ? "border-l-2 border-l-amber-500 bg-amber-50/70 dark:bg-amber-950/30 print:bg-amber-50"
-                              : "";
+                            const rowClass = [
+                              "hover:bg-muted/20",
+                              competing
+                                ? "border-l-2 border-l-amber-500 bg-amber-50/70 dark:bg-amber-950/30 print:bg-amber-50"
+                                : "",
+                              stale ? "opacity-60 print:opacity-100 print:text-muted-foreground" : "",
+                            ].filter(Boolean).join(" ");
                             return (
                               <tr
                                 key={inq.id}
-                                className={`hover:bg-muted/20 ${rowTone}`.trim()}
+                                className={rowClass}
                                 data-testid={`row-report-inquiry-${inq.id}`}
                                 data-competing={competing ? "true" : "false"}
+                                data-stale={stale ? "true" : "false"}
                               >
                                 <TableCell className="font-medium">
                                   <div className="flex items-center gap-1.5 flex-wrap">
@@ -2072,7 +2106,12 @@ export default function CreditReportPage() {
                                 <TableCell data-testid={`text-report-inquiry-segment-${inq.id}`}>
                                   {formatOrgType(inq.inquiringOrgType)}
                                 </TableCell>
-                                <TableCell className="capitalize">{inq.purpose.replace(/_/g, " ")}</TableCell>
+                                <TableCell>
+                                  <InquiryPurposePill
+                                    purpose={inq.purpose}
+                                    testId={`text-report-inquiry-purpose-${inq.id}`}
+                                  />
+                                </TableCell>
                                 <TableCell>
                                   <Badge variant={isHard ? "destructive" : "secondary"} className="text-[9px] print:text-[7px]">
                                     {isHard ? "Hard" : "Soft"}
@@ -2083,6 +2122,14 @@ export default function CreditReportPage() {
                                   data-testid={`text-report-inquiry-timestamp-${inq.id}`}
                                 >
                                   {formatExactTimestamp(inq.createdAt)}
+                                  {stale && (
+                                    <span
+                                      className="ml-1 text-[9px] uppercase tracking-wide text-muted-foreground"
+                                      data-testid={`text-report-inquiry-stale-${inq.id}`}
+                                    >
+                                      · older
+                                    </span>
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   {inq.consentProvided ? (

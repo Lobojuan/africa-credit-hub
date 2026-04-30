@@ -31,6 +31,20 @@ import {
 } from "lucide-react";
 import { CollateralInvestorHero } from "@/components/collateral-investor-hero";
 import { format } from "date-fns";
+// The `InquiryRow` component (with its competing-lender highlight + stale fade
+// treatment) lives in `@/components/inquiry-highlight` so the consumer credit
+// report can reuse the exact same visuals. The accompanying helpers
+// (isCompetingInquiry/isStaleInquiry/etc.) ship from the same module so the
+// `ShoppingAroundHint` heuristic and inline cell renderings on this page stay
+// in sync with whatever the shared row uses.
+import {
+  InquiryRow,
+  isCompetingInquiry,
+  isStaleInquiry,
+  formatInquiryPurpose,
+  inquiryAgeDays,
+  inquiryPurposeBadgeClass,
+} from "@/components/inquiry-highlight";
 
 interface SearchResultItem {
   id: string;
@@ -503,23 +517,10 @@ interface CreditSnapshotResponse {
   consent: { id: string; expiresAt: string };
 }
 
-const INQUIRY_PURPOSE_LABELS: Record<string, string> = {
-  new_credit: "New credit",
-  review: "Account review",
-  collection: "Collection",
-  regulatory: "Regulatory",
-  portfolio_monitoring: "Portfolio monitoring",
-};
-
-const INQUIRY_PURPOSE_TONE: Record<string, string> = {
-  new_credit: "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
-  review: "border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-300",
-  collection: "border-red-300 bg-red-50 text-red-800 dark:border-red-700 dark:bg-red-950/40 dark:text-red-300",
-  regulatory: "border-violet-300 bg-violet-50 text-violet-800 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-300",
-  portfolio_monitoring: "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-300",
-};
-
-const COMPETING_INQUIRY_WINDOW_DAYS = 30;
+// "Shopping around" detector + inline header hint — incoming feature from
+// main. The competing/stale rules themselves now live in the shared
+// `inquiry-highlight` module (imported above), so this code stays focused
+// on the cluster heuristic and its presentation.
 const SHOPPING_AROUND_WINDOW_DAYS = 7;
 const SHOPPING_AROUND_MIN_INSTITUTIONS = 2;
 
@@ -541,10 +542,6 @@ const ORG_TYPE_LABELS: Record<string, string> = {
 function formatOrgType(type: string | null): string | null {
   if (!type) return null;
   return ORG_TYPE_LABELS[type] ?? type.replace(/_/g, " ");
-}
-
-function formatInquiryPurpose(purpose: string): string {
-  return INQUIRY_PURPOSE_LABELS[purpose] ?? purpose.replace(/_/g, " ");
 }
 
 /**
@@ -574,36 +571,6 @@ function detectShoppingAround(
     institutionCount: orgs.size,
     institutions: Array.from(orgs.values()),
   };
-}
-
-function inquiryAgeDays(inquiredAt: string | null): number | null {
-  if (!inquiredAt) return null;
-  const t = new Date(inquiredAt).getTime();
-  if (Number.isNaN(t)) return null;
-  return Math.floor((Date.now() - t) / (24 * 60 * 60 * 1000));
-}
-
-function isCompetingInquiry(
-  inq: CreditSnapshotInquiry,
-  viewerOrgId: string | null,
-): boolean {
-  if (inq.purpose !== "new_credit") return false;
-  if (!inq.inquiringOrgId) return false;
-  // If we can't tell which org the viewer belongs to, treat any external
-  // new_credit pull as competing — that matches the "stand out at a glance"
-  // intent: better to over-highlight than to hide a real competing pull.
-  if (!viewerOrgId) return true;
-  return inq.inquiringOrgId !== viewerOrgId;
-}
-
-function isStaleInquiry(inq: CreditSnapshotInquiry): boolean {
-  const age = inquiryAgeDays(inq.inquiredAt);
-  if (age === null) return true;
-  return age > COMPETING_INQUIRY_WINDOW_DAYS;
-}
-
-function inquiryPurposeBadgeClass(purpose: string): string {
-  return INQUIRY_PURPOSE_TONE[purpose] ?? "border-border bg-muted text-muted-foreground";
 }
 
 /**
@@ -653,7 +620,6 @@ function ShoppingAroundHint({
     </div>
   );
 }
-
 
 class CreditSnapshotError extends Error {
   code: "no_consent" | "consent_expired" | "consent_revoked" | "wrong_purpose" | "subject_not_found" | "forbidden" | "unknown";
