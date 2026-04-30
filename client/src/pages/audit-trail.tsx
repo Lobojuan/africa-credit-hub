@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Shield, Search, ShieldCheck, ShieldAlert, RefreshCw, Hash, List, Clock, Download, FileSpreadsheet, Calendar, Activity, Users, Eye, BarChart3, Filter, Wrench, Info, Loader2 } from "lucide-react";
+import { Shield, Search, ShieldCheck, ShieldAlert, RefreshCw, Hash, List, Clock, Download, FileSpreadsheet, Calendar, Activity, Users, Eye, BarChart3, Filter, Wrench, Info, Loader2, Link2, ArrowRight } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -16,6 +16,22 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AuditLog } from "@shared/schema";
+
+type CrossProductAuditMeta = {
+  sourceProduct?: string;
+  targetProduct?: string;
+  purpose?: string;
+  consentId?: string | null;
+  outcome?: "ok" | "denied";
+  reason?: string | null;
+  subjectKind?: string;
+  action?: string;
+  inquiryId?: string;
+  inquiryInstitution?: string;
+  inquiryPurpose?: string;
+};
+
+type CrossProductAuditRow = AuditLog & { _meta: CrossProductAuditMeta };
 
 interface AuditStats {
   totalLogs: number;
@@ -82,9 +98,29 @@ export default function AuditTrailPage() {
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("logs");
+  const [crossProductActionFilter, setCrossProductActionFilter] = useState<"all" | "snapshot_read" | "inquiry_clickthrough">("all");
 
   const { data: logs, isLoading } = useQuery<AuditLog[]>({
     queryKey: ["/api/audit-logs"],
+  });
+
+  const crossProductQueryKey = useMemo(() => {
+    return crossProductActionFilter === "all"
+      ? ["/api/cross-product/audit"]
+      : ["/api/cross-product/audit", { action: crossProductActionFilter }];
+  }, [crossProductActionFilter]);
+
+  const { data: crossProductRows, isLoading: crossProductLoading } = useQuery<CrossProductAuditRow[]>({
+    queryKey: crossProductQueryKey,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (crossProductActionFilter !== "all") params.set("action", crossProductActionFilter);
+      const url = `/api/cross-product/audit${params.toString() ? `?${params.toString()}` : ""}`;
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error(`Failed to load cross-product audit (${res.status})`);
+      return res.json();
+    },
+    enabled: activeTab === "cross-product",
   });
 
   const { data: integrity, isLoading: integrityLoading, refetch: refetchIntegrity, isFetching: integrityFetching } = useQuery<{ valid: boolean; totalChecked: number; brokenAt?: string; brokenAtIndex?: number; reason?: string }>({
@@ -358,6 +394,10 @@ export default function AuditTrailPage() {
             <TabsTrigger value="access" data-testid="tab-access-logs">
               <Eye className="w-3.5 h-3.5 mr-1.5" />
               Access Log
+            </TabsTrigger>
+            <TabsTrigger value="cross-product" data-testid="tab-cross-product-audit">
+              <Link2 className="w-3.5 h-3.5 mr-1.5" />
+              Cross-Product
             </TabsTrigger>
           </TabsList>
           <div className="flex items-center gap-2 flex-wrap">
@@ -681,6 +721,168 @@ export default function AuditTrailPage() {
                   <h3 className="font-semibold">No Access Records</h3>
                   <p className="text-sm text-muted-foreground mt-1">
                     No VIEW or SEARCH actions have been recorded yet.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="cross-product" className="space-y-4 mt-4">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Action type</Label>
+              <Select
+                value={crossProductActionFilter}
+                onValueChange={(v) => setCrossProductActionFilter(v as typeof crossProductActionFilter)}
+              >
+                <SelectTrigger className="w-[220px]" data-testid="select-cross-product-action">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All actions</SelectItem>
+                  <SelectItem value="snapshot_read">Snapshot read</SelectItem>
+                  <SelectItem value="inquiry_clickthrough">Inquiry click-through</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground sm:ml-2 sm:mb-2 max-w-md">
+              Every consent-checked call through the cross-product gateway is logged here. Inquiry click-throughs from the Borrower Credit Snapshot are tagged separately so you can tell them apart from snapshot reads.
+            </p>
+          </div>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+              <div className="flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Cross-Product Access Log</h3>
+              </div>
+              <Badge variant="secondary" className="text-xs" data-testid="badge-cross-product-count">
+                {crossProductRows?.length ?? 0} records
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-0">
+              {crossProductLoading ? (
+                <div className="p-5 space-y-3">
+                  {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                </div>
+              ) : crossProductRows && crossProductRows.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table className="w-full">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[140px]">Timestamp</TableHead>
+                        <TableHead className="w-[170px]">Action type</TableHead>
+                        <TableHead className="w-[170px]">Flow</TableHead>
+                        <TableHead className="w-[170px]">Purpose</TableHead>
+                        <TableHead>Subject / details</TableHead>
+                        <TableHead className="w-[80px]">Outcome</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {crossProductRows.map((row) => {
+                        const meta = row._meta ?? {};
+                        const isClickthrough = meta.action === "inquiry_clickthrough";
+                        // A row with no explicit `action` is a snapshot read
+                        // (the original gateway purpose). Any other explicit
+                        // value we don't recognize gets surfaced as-is so we
+                        // never silently mislabel a future action type.
+                        const isSnapshotRead = !meta.action;
+                        return (
+                          <TableRow
+                            key={row.id}
+                            data-testid={`row-cross-product-${row.id}`}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setSelectedLog(row)}
+                          >
+                            <TableCell className="text-xs text-muted-foreground">
+                              {row.createdAt ? new Date(row.createdAt).toLocaleString("en-GB", {
+                                day: "2-digit", month: "short", year: "2-digit",
+                                hour: "2-digit", minute: "2-digit",
+                              }) : "\u2014"}
+                            </TableCell>
+                            <TableCell>
+                              {isClickthrough ? (
+                                <Badge
+                                  variant="default"
+                                  className="text-[10px] bg-purple-600 hover:bg-purple-600 text-white"
+                                  data-testid={`badge-action-clickthrough-${row.id}`}
+                                >
+                                  <Link2 className="w-3 h-3 mr-1" />
+                                  Inquiry click-through
+                                </Badge>
+                              ) : isSnapshotRead ? (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px]"
+                                  data-testid={`badge-action-snapshot-${row.id}`}
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  Snapshot read
+                                </Badge>
+                              ) : (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                  data-testid={`badge-action-other-${row.id}`}
+                                  title={meta.action}
+                                >
+                                  <Activity className="w-3 h-3 mr-1" />
+                                  {meta.action}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <span className="inline-flex items-center gap-1 capitalize">
+                                <span className="font-medium">{meta.targetProduct || "\u2014"}</span>
+                                <ArrowRight className="w-3 h-3 text-muted-foreground" />
+                                <span className="font-medium">{meta.sourceProduct || "\u2014"}</span>
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {meta.purpose || "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-xs">
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <span className="font-mono text-muted-foreground truncate">
+                                  {meta.subjectKind ? `${meta.subjectKind}: ` : ""}{row.entityId || "\u2014"}
+                                </span>
+                                {isClickthrough && (meta.inquiryInstitution || meta.inquiryPurpose) && (
+                                  <span
+                                    className="text-[11px] text-purple-700 dark:text-purple-300"
+                                    data-testid={`text-inquiry-institution-${row.id}`}
+                                  >
+                                    {meta.inquiryInstitution || "Unknown institution"}
+                                    {meta.inquiryPurpose ? ` · ${meta.inquiryPurpose}` : ""}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={meta.outcome === "ok" ? "default" : "destructive"}
+                                className="text-[10px]"
+                                data-testid={`badge-outcome-${row.id}`}
+                              >
+                                {meta.outcome === "ok" ? "Allowed" : meta.outcome === "denied" ? (meta.reason || "Denied") : "\u2014"}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="p-12 text-center">
+                  <Link2 className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
+                  <h3 className="font-semibold">No cross-product accesses</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {crossProductActionFilter === "inquiry_clickthrough"
+                      ? "No lender has clicked through a recent inquiry from the Borrower Credit Snapshot yet."
+                      : crossProductActionFilter === "snapshot_read"
+                        ? "No snapshot reads have been recorded yet."
+                        : "Cross-product gateway calls will appear here as soon as they happen."}
                   </p>
                 </div>
               )}

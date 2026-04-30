@@ -502,7 +502,7 @@ export interface IStorage {
   approveCrossProductConsent(id: string): Promise<CrossProductConsent | undefined>;
   denyPendingCrossProductConsent(id: string, reason?: string): Promise<CrossProductConsent | undefined>;
   getIncomingPendingConsents(filter: { userId?: string; merchantId?: string }): Promise<CrossProductConsent[]>;
-  getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]>;
+  getCrossProductAuditEntries(limit?: number, filter?: { source?: string; target?: string; purpose?: string; action?: string; since?: Date }): Promise<AuditLog[]>;
   getLatestCrossProductAuditTimestamp(): Promise<Date | null>;
   deleteAlternativeDataForBorrower(borrowerId: string, source: string): Promise<number>;
   getCrossProductImpactStats(): Promise<{
@@ -4004,7 +4004,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(crossProductConsents.status, "pending"), or(...ors)))
       .orderBy(desc(crossProductConsents.createdAt));
   }
-  async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string; since?: Date }): Promise<AuditLog[]> {
+  async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string; action?: string; since?: Date }): Promise<AuditLog[]> {
     const conditions = [eq(auditLogs.action, "cross_product_access")];
     if (filter?.since) {
       conditions.push(sql`${auditLogs.createdAt} >= ${filter.since}`);
@@ -4013,13 +4013,21 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit);
-    if (!filter || (!filter.source && !filter.target && !filter.purpose)) return rows;
+    if (!filter || (!filter.source && !filter.target && !filter.purpose && !filter.action)) return rows;
     return rows.filter((r) => {
       try {
         const d = JSON.parse(r.details ?? "{}");
         if (filter.source && d.sourceProduct !== filter.source) return false;
         if (filter.target && d.targetProduct !== filter.target) return false;
         if (filter.purpose && d.purpose !== filter.purpose) return false;
+        if (filter.action) {
+          // "snapshot_read" is the implicit action when no `action` field is
+          // present in the details JSON (legacy snapshot read rows). All other
+          // explicit actions (e.g. "inquiry_clickthrough") are matched by
+          // exact string compare.
+          const rowAction = d.action ?? "snapshot_read";
+          if (rowAction !== filter.action) return false;
+        }
         return true;
       } catch { return false; }
     });

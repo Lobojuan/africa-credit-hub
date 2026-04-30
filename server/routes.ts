@@ -17722,6 +17722,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         source: req.query.source ? String(req.query.source) : undefined,
         target: req.query.target ? String(req.query.target) : undefined,
         purpose: req.query.purpose ? String(req.query.purpose) : undefined,
+        action: req.query.action ? String(req.query.action) : undefined,
       };
       const limit = req.query.limit ? Math.min(500, Number(req.query.limit)) : 100;
       const rows = await storage.getCrossProductAuditEntries(limit, filter);
