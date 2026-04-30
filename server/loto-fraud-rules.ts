@@ -225,6 +225,8 @@ export interface RunFraudScanResult {
   detectionsFound: number;
   flagsUpserted: number;
   byRule: Record<string, number>;
+  /** Flags that were newly inserted (not just refreshed) in this run. */
+  newFlags: DetectedFlag[];
 }
 
 /**
@@ -270,6 +272,7 @@ export async function runFraudScan(opts: RunFraudScanOptions): Promise<RunFraudS
 
   const byRule: Record<string, number> = {};
   let upserts = 0;
+  const newFlags: DetectedFlag[] = [];
   for (const d of detections) {
     byRule[d.ruleCode] = (byRule[d.ruleCode] ?? 0) + 1;
     // Upsert: refresh evidence/severity/summary if an open flag exists,
@@ -299,6 +302,7 @@ export async function runFraudScan(opts: RunFraudScanOptions): Promise<RunFraudS
         evidence: d.evidence,
       });
       upserts++;
+      newFlags.push(d);
     } else if (existing[0].status === "open") {
       await db
         .update(lotoFraudFlags)
@@ -313,7 +317,7 @@ export async function runFraudScan(opts: RunFraudScanOptions): Promise<RunFraudS
     }
   }
 
-  return { rulesEvaluated: 5, detectionsFound: detections.length, flagsUpserted: upserts, byRule };
+  return { rulesEvaluated: 5, detectionsFound: detections.length, flagsUpserted: upserts, byRule, newFlags };
 }
 
 /**
