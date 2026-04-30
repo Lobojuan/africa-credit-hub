@@ -8630,14 +8630,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   // registry, organisations, users, wallets, and billing completely intact.
   // ---------------------------------------------------------------------------
 
-  /**
-   * Master config for the credit-scoring demo reset. FK-safe deletion order,
-   * with per-table `scopedWhere` for country-scoped resets.
-   *
-   * scopedWhere = null  → table has no borrower FK; included in global-only wipe,
-   *                        skipped when a country filter is active.
-   * scopedWhere = string → parameterised WHERE clause using $1 = the country value.
-   */
+  // FK-safe deletion order for the credit-scoring demo reset.
+  // scopedWhere: SQL WHERE clause using $1 = country value (country-scoped mode).
+  // scopedWhere: null = no country filter applicable; table skipped in scoped mode, wiped in global mode.
   const CREDIT_RESET_SCOPED_CONFIG: Array<{
     table: string;
     label: string;
@@ -8730,15 +8725,17 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
     { table: "loan_applications", label: "Loan applications",
       scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
-    // ── scopeable tables (borrower_id text or country column) ─────────────
+    // alternative_data.borrower_id is text (no FK constraint); link_clusters and
+    // collection_sla_settings have a country column — all three are country-scoped.
     { table: "alternative_data", label: "Alternative data entries",
       scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
     { table: "link_clusters", label: "Link clusters (AML)",
       scopedWhere: "country = $1" },
-    // ── global-only: no borrower/country relationship, always wiped in full ─
+    { table: "collection_sla_settings", label: "Collection SLA settings",
+      scopedWhere: "country = $1" },
+    // batch_jobs has no borrower or country column — global wipe only.
     { table: "batch_jobs", label: "Batch upload jobs", scopedWhere: null },
-    { table: "collection_sla_settings", label: "Collection SLA settings", scopedWhere: null },
-    // ── borrowers last ─────────────────────────────────────────────────────
+    // borrowers deleted last (parent of nearly every other table).
     { table: "borrowers", label: "Borrower profiles",
       scopedWhere: "country = $1" },
   ];
