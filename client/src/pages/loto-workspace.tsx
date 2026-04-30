@@ -362,8 +362,18 @@ function LotoMessagingPreferences() {
     }),
   });
 
-  if (prefsQ.isLoading || !prefsQ.data) {
+  if (prefsQ.isLoading) {
     return <Skeleton className="h-48 w-full" data-testid="skeleton-prefs" />;
+  }
+  if (prefsQ.isError || !prefsQ.data) {
+    return (
+      <Card data-testid="card-messaging-prefs-unavailable">
+        <CardContent className="py-8 text-center text-sm text-muted-foreground">
+          {t("loto.messagingPrefs.consumerOnly",
+            "Messaging preferences are only available to consumer accounts enrolled in the Loto Fiscal pilot.")}
+        </CardContent>
+      </Card>
+    );
   }
   const prefs = prefsQ.data;
 
