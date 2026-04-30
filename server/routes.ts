@@ -8974,6 +8974,74 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // Collateral Registry demo reset — wipes all collateral items and their
+  // amendment/rejection/share history. Preserves all other data.
+  // ---------------------------------------------------------------------------
+
+  // FK-safe deletion order (children before parent):
+  // 1. collateral_amendment_requests  (collateral_item_id NOT NULL → collateral_items CASCADE)
+  // 2. collateral_amendments          (collateral_item_id NOT NULL → collateral_items CASCADE)
+  // 3. collateral_rejection_history   (collateral_item_id NOT NULL → collateral_items CASCADE)
+  // 4. collateral_share_log           (collateral_item_id NOT NULL → collateral_items CASCADE)
+  // 5. collateral_items               (resubmitted_from_id nullable self-ref NO ACTION — safe to wipe all at once)
+  const COLLATERAL_RESET_TABLES: Array<{ table: string }> = [
+    { table: "collateral_amendment_requests" },
+    { table: "collateral_amendments" },
+    { table: "collateral_rejection_history" },
+    { table: "collateral_share_log" },
+    { table: "collateral_items" },
+  ];
+
+  app.get("/api/admin/demo/reset-collateral/preview", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const counts: Record<string, number> = {};
+      for (const { table } of COLLATERAL_RESET_TABLES) {
+        const r = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
+        counts[table] = (r.rows[0] as { c: number }).c;
+      }
+      res.json({ counts });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/admin/demo/reset-collateral", requireAuth, requireSuperAdmin, async (req, res) => {
+    const { confirm } = req.body as { confirm?: string };
+    if (confirm !== "RESET") {
+      return res.status(400).json({ message: "Missing or incorrect confirmation. Send { confirm: 'RESET' }" });
+    }
+    const performingUserId = req.session?.userId ?? null;
+    const deleted: Record<string, number> = {};
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const { table } of COLLATERAL_RESET_TABLES) {
+        const r = await client.query(`DELETE FROM ${table}`);
+        deleted[table] = r.rowCount ?? 0;
+      }
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action, entity, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
+        [
+          performingUserId,
+          "COLLATERAL_DEMO_RESET",
+          "system",
+          JSON.stringify({ deleted, performedAt: new Date().toISOString() }),
+          req.ip ?? "unknown",
+        ]
+      );
+      await client.query("COMMIT");
+      routeLogger.warn("COLLATERAL_DEMO_RESET executed", { userId: performingUserId, deleted });
+      res.json({ ok: true, deleted });
+    } catch (e: any) {
+      await client.query("ROLLBACK").catch(() => {});
+      routeLogger.error("COLLATERAL_DEMO_RESET failed", { error: safeErrorMessage(e) });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    } finally {
+      client.release();
+    }
+  });
+
   app.get("/api/health/production", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const checks: Record<string, { status: "pass" | "fail" | "warn"; message: string }> = {};

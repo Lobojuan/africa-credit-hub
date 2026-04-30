@@ -2391,6 +2391,226 @@ function LotoResetPanel() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Collateral Reset Panel — Collateral registry data purge (super_admin only)
+// ---------------------------------------------------------------------------
+function CollateralResetPanel() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number> } | null>(null);
+
+  const previewQuery = useQuery<{ counts: Record<string, number> }>({
+    queryKey: ["/api/admin/demo/reset-collateral/preview"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/demo/reset-collateral/preview", { credentials: "include" });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: "Failed to load preview" }));
+        throw new Error((err as { message?: string }).message ?? "Preview failed");
+      }
+      return r.json();
+    },
+    enabled: dialogOpen,
+    staleTime: 0,
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/admin/demo/reset-collateral", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ confirm: "RESET" }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error((err as { message?: string }).message ?? "Reset failed");
+      }
+      return r.json() as Promise<{ deleted: Record<string, number> }>;
+    },
+    onSuccess: (data) => {
+      const total = Object.values(data.deleted).reduce((a, b) => a + b, 0);
+      setResetDone(data);
+      setDialogOpen(false);
+      setConfirmText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/reset-collateral/preview"] });
+      toast({ title: "Collateral registry purged", description: `${total.toLocaleString()} rows deleted. Organisations, borrowers, and credit data are untouched.` });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Reset failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const totalRows = previewQuery.data
+    ? Object.values(previewQuery.data.counts).reduce((a, b) => a + b, 0)
+    : null;
+
+  /** Format collateral table name for display: "collateral_amendment_requests" → "Amendment requests" */
+  function fmtCollateralTable(t: string) {
+    return t.replace(/^collateral_/, "").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+  }
+
+  return (
+    <div className="space-y-4 pt-4 border-t border-border">
+      <div className="flex items-start gap-3 p-3 rounded-lg bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800">
+        <AlertTriangle className="w-5 h-5 text-purple-500 mt-0.5 shrink-0" />
+        <div className="text-sm">
+          <p className="font-semibold text-purple-700 dark:text-purple-400">Collateral registry reset — wipes all collateral items and history</p>
+          <p className="text-purple-600 dark:text-purple-400 mt-0.5">
+            Deletes all collateral items along with their amendment requests, amendment history, rejection history, and share log.
+            Organisations, users, borrowers, credit scoring, Loto, and billing data are <strong>completely untouched</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-2">
+          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">Preserved (untouched)</p>
+          <ul className="text-emerald-600 dark:text-emerald-500 space-y-0.5 list-disc list-inside">
+            <li>Organizations &amp; users</li>
+            <li>Borrower profiles</li>
+            <li>Credit scoring data</li>
+            <li>Loto Fiscal data</li>
+            <li>Country config &amp; billing</li>
+          </ul>
+        </div>
+        <div className="rounded-md border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20 p-2">
+          <p className="font-medium text-purple-700 dark:text-purple-400 mb-1">Wiped by reset</p>
+          <ul className="text-purple-600 dark:text-purple-500 space-y-0.5 list-disc list-inside">
+            <li>Collateral items</li>
+            <li>Amendment requests</li>
+            <li>Amendment history</li>
+            <li>Rejection history</li>
+            <li>Share log</li>
+          </ul>
+        </div>
+      </div>
+
+      {resetDone && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs space-y-2">
+          <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+            Last reset — {Object.values(resetDone.deleted).reduce((a, b) => a + b, 0).toLocaleString()} rows purged
+          </p>
+          <div className="space-y-0.5 text-emerald-600 dark:text-emerald-500">
+            {Object.entries(resetDone.deleted).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a).map(([k, v]) => (
+              <div key={k} className="flex justify-between">
+                <span className="font-mono text-[10px] text-emerald-500">{k}</span>
+                <span className="font-mono font-medium">{v.toLocaleString()}</span>
+              </div>
+            ))}
+            {Object.values(resetDone.deleted).every(v => v === 0) && (
+              <p className="text-muted-foreground italic">No rows were present — registry was already empty.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400"
+          onClick={() => { setDialogOpen(true); setConfirmText(""); setResetDone(null); }}
+          data-testid="button-collateral-reset-open"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Reset Collateral Data
+        </Button>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setConfirmText(""); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-purple-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirm Collateral Registry Demo Reset
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center gap-2 rounded-md bg-red-600 text-white px-3 py-2 text-sm font-semibold">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Destructive — this cannot be undone
+            </div>
+
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <p className="font-medium mb-2 text-muted-foreground">Collateral tables that will be wiped:</p>
+              {previewQuery.isLoading && (
+                <p className="text-muted-foreground text-xs animate-pulse">Loading counts…</p>
+              )}
+              {previewQuery.error && (
+                <p className="text-red-600 text-xs">{(previewQuery.error as Error).message}</p>
+              )}
+              {previewQuery.data && (
+                <>
+                  <div className="space-y-0.5 text-xs">
+                    {Object.entries(previewQuery.data.counts)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([tbl, count]) => (
+                        <div key={tbl} className="flex justify-between gap-2">
+                          <span className={count === 0 ? "text-muted-foreground/50" : "text-muted-foreground"}>
+                            {fmtCollateralTable(tbl)}
+                          </span>
+                          <span className={`font-mono font-medium shrink-0 ${count > 0 ? "text-red-600" : "text-muted-foreground/40"}`}>
+                            {count.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="mt-2 pt-2 border-t flex justify-between font-semibold text-xs">
+                    <span>Total rows to delete</span>
+                    <span className={`font-mono ${totalRows ? "text-red-600" : "text-muted-foreground"}`}>
+                      {(totalRows ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Type <span className="font-mono font-bold text-foreground">RESET</span> to confirm:
+              </p>
+              <Input
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder="Type RESET here"
+                className="font-mono"
+                data-testid="input-collateral-reset-confirm"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setDialogOpen(false); setConfirmText(""); }}
+                data-testid="button-collateral-reset-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={confirmText !== "RESET" || resetMutation.isPending}
+                onClick={() => resetMutation.mutate()}
+                data-testid="button-collateral-reset-execute"
+              >
+                {resetMutation.isPending ? (
+                  <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Resetting…</>
+                ) : (
+                  <><Trash2 className="w-4 h-4 mr-2" /> Purge Collateral Registry</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -2484,6 +2704,7 @@ function ControlDashboard() {
           <Panel title="Demo Tools" icon={TestTube} color="text-red-500" defaultOpen={false}>
             <DemoResetPanel />
             <LotoResetPanel />
+            <CollateralResetPanel />
           </Panel>
         </div>
       </div>
