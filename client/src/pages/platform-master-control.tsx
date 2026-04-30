@@ -1859,6 +1859,214 @@ function CollateralRegistrySetupPanel() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Demo Reset Panel — Credit Scoring data purge (super_admin only)
+// ---------------------------------------------------------------------------
+interface CreditResetPreview {
+  counts: Record<string, number>;
+  unlinkedPreview: Record<string, number>;
+}
+
+function DemoResetPanel() {
+  const { toast } = useToast();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [resetDone, setResetDone] = useState<Record<string, number> | null>(null);
+
+  const previewQuery = useQuery<CreditResetPreview>({
+    queryKey: ["/api/platform-control/demo/credit-scoring/preview"],
+    queryFn: () => pcFetch("/api/platform-control/demo/credit-scoring/preview").then(r => r.json()),
+    enabled: dialogOpen,
+    staleTime: 0,
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const r = await pcFetch("/api/platform-control/demo/credit-scoring/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: "RESET" }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error((err as { message?: string }).message ?? "Reset failed");
+      }
+      return r.json() as Promise<{ deleted: Record<string, number>; unlinked: Record<string, number> }>;
+    },
+    onSuccess: (data) => {
+      const total = Object.values(data.deleted).reduce((a, b) => a + b, 0);
+      setResetDone(data.deleted);
+      setDialogOpen(false);
+      setConfirmText("");
+      toast({ title: "Credit scoring data purged", description: `${total.toLocaleString()} rows deleted across ${Object.keys(data.deleted).length} tables. Loto, collateral, orgs, users and billing untouched.` });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Reset failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const totalRows = previewQuery.data
+    ? Object.values(previewQuery.data.counts).reduce((a, b) => a + b, 0)
+    : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Danger zone warning */}
+      <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+        <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
+        <div className="text-sm">
+          <p className="font-semibold text-red-700 dark:text-red-400">Danger zone — irreversible action</p>
+          <p className="text-red-600 dark:text-red-400 mt-0.5">
+            Resets all credit scoring demo data: borrowers, credit accounts, loan applications, telco profiles, open banking, collection records, and every dependent table.
+            Loto Fiscal, collateral registry, organisations, users, wallets, and billing data are <strong>completely untouched</strong>.
+          </p>
+        </div>
+      </div>
+
+      {/* What is preserved */}
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-2">
+          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">Preserved (untouched)</p>
+          <ul className="text-emerald-600 dark:text-emerald-500 space-y-0.5 list-disc list-inside">
+            <li>Organizations &amp; users</li>
+            <li>Wallets &amp; billing records</li>
+            <li>Loto Fiscal (draws, tickets, EFDs)</li>
+            <li>Collateral registry items</li>
+            <li>Audit logs</li>
+          </ul>
+        </div>
+        <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-2">
+          <p className="font-medium text-red-700 dark:text-red-400 mb-1">Wiped by reset</p>
+          <ul className="text-red-600 dark:text-red-500 space-y-0.5 list-disc list-inside">
+            <li>All borrower profiles</li>
+            <li>Credit accounts &amp; scores</li>
+            <li>Loan applications</li>
+            <li>Telco &amp; open banking data</li>
+            <li>Collections &amp; disputes</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Last reset result (success banner) */}
+      {resetDone && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs space-y-1">
+          <p className="font-semibold text-emerald-700 dark:text-emerald-400">Last reset summary</p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-emerald-600 dark:text-emerald-500 max-h-40 overflow-y-auto">
+            {Object.entries(resetDone).filter(([, v]) => v > 0).map(([k, v]) => (
+              <span key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trigger button */}
+      <div className="flex justify-end">
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={() => { setDialogOpen(true); setConfirmText(""); setResetDone(null); }}
+          data-testid="button-credit-scoring-reset-open"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Reset Credit Scoring Data
+        </Button>
+      </div>
+
+      {/* Confirmation dialog */}
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setConfirmText(""); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirm Credit Scoring Demo Reset
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            {/* Row-count preview */}
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <p className="font-medium mb-2 text-muted-foreground">Data that will be permanently deleted:</p>
+              {previewQuery.isLoading && (
+                <p className="text-muted-foreground text-xs animate-pulse">Loading counts…</p>
+              )}
+              {previewQuery.data && (
+                <>
+                  <div className="max-h-48 overflow-y-auto space-y-0.5 text-xs">
+                    {Object.entries(previewQuery.data.counts)
+                      .filter(([, v]) => v > 0)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([label, count]) => (
+                        <div key={label} className="flex justify-between">
+                          <span className="text-muted-foreground">{label}</span>
+                          <span className="font-mono font-medium">{count.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    {Object.values(previewQuery.data.counts).every(v => v === 0) && (
+                      <p className="text-muted-foreground italic">No credit scoring data found — database is already clean.</p>
+                    )}
+                  </div>
+                  {totalRows !== null && totalRows > 0 && (
+                    <div className="mt-2 pt-2 border-t flex justify-between font-semibold text-xs">
+                      <span>Total rows to delete</span>
+                      <span className="font-mono text-red-600">{totalRows.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {Object.values(previewQuery.data.unlinkedPreview).some(v => v > 0) && (
+                    <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+                      <p className="font-medium">FK links to be NULLed (rows kept, links cleared):</p>
+                      {Object.entries(previewQuery.data.unlinkedPreview).filter(([, v]) => v > 0).map(([k, v]) => (
+                        <div key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Typed confirmation */}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Type <span className="font-mono font-bold text-foreground">RESET</span> to confirm this irreversible action:
+              </p>
+              <Input
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder="Type RESET here"
+                className="font-mono"
+                data-testid="input-credit-scoring-reset-confirm"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setDialogOpen(false); setConfirmText(""); }}
+                data-testid="button-credit-scoring-reset-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={confirmText !== "RESET" || resetMutation.isPending}
+                onClick={() => resetMutation.mutate()}
+                data-testid="button-credit-scoring-reset-execute"
+              >
+                {resetMutation.isPending ? (
+                  <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Resetting…</>
+                ) : (
+                  <><Trash2 className="w-4 h-4 mr-2" /> Purge All Credit Scoring Data</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -1947,6 +2155,10 @@ function ControlDashboard() {
 
           <Panel title="Pan-African Collateral Registry Setup" icon={Shield} color="text-emerald-600" defaultOpen={false}>
             <CollateralRegistrySetupPanel />
+          </Panel>
+
+          <Panel title="Demo Tools" icon={TestTube} color="text-red-500" defaultOpen={false}>
+            <DemoResetPanel />
           </Panel>
         </div>
       </div>
