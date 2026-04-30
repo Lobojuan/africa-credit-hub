@@ -453,6 +453,58 @@ export async function registerRoutes(
     return map[purpose] ?? "other";
   }
 
+  /**
+   * Fetch a borrower's credit inquiries enriched with the inquiring user's
+   * organization (name / country / type / id). The printable credit report
+   * surfaces these fields in the inquiry section so underwriters reading the
+   * exported PDF have the same context the on-screen inquiry panel shows
+   * (full institution name, country, segment, exact timestamp, plus the
+   * "Competing" / "Shopping around" highlights computed against the viewer's
+   * organization id).
+   *
+   * Inquiries from users with no organizationId (legacy / system pulls) keep
+   * the free-text `institution` column the original row recorded — the four
+   * `inquiringOrg*` fields simply come back as null in that case.
+   */
+  async function getEnrichedCreditInquiriesForBorrower(borrowerId: string) {
+    const rows = await db
+      .select({
+        id: creditInquiries.id,
+        borrowerId: creditInquiries.borrowerId,
+        inquiredBy: creditInquiries.inquiredBy,
+        purpose: creditInquiries.purpose,
+        institution: creditInquiries.institution,
+        consentProvided: creditInquiries.consentProvided,
+        isSoftPull: creditInquiries.isSoftPull,
+        softPullResult: creditInquiries.softPullResult,
+        createdAt: creditInquiries.createdAt,
+        inquiringOrgId: users.organizationId,
+        inquiringOrgName: organizations.name,
+        inquiringOrgCountry: organizations.country,
+        inquiringOrgType: organizations.type,
+      })
+      .from(creditInquiries)
+      .leftJoin(users, eq(creditInquiries.inquiredBy, users.id))
+      .leftJoin(organizations, eq(users.organizationId, organizations.id))
+      .where(eq(creditInquiries.borrowerId, borrowerId))
+      .orderBy(desc(creditInquiries.createdAt));
+    return rows.map(r => ({
+      id: r.id,
+      borrowerId: r.borrowerId,
+      inquiredBy: r.inquiredBy,
+      purpose: r.purpose,
+      institution: r.institution,
+      consentProvided: r.consentProvided,
+      isSoftPull: r.isSoftPull,
+      softPullResult: r.softPullResult,
+      createdAt: r.createdAt,
+      inquiringOrgId: r.inquiringOrgId ?? null,
+      inquiringOrgName: r.inquiringOrgName ?? null,
+      inquiringOrgCountry: r.inquiringOrgCountry ?? null,
+      inquiringOrgType: r.inquiringOrgType ?? null,
+    }));
+  }
+
   app.use("/api", apiLimiter, (req, res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
@@ -1599,7 +1651,7 @@ export async function registerRoutes(
         }
       }
       const accounts = await storage.getCreditAccountsByBorrower(req.params.id as string);
-      const inquiries = await storage.getCreditInquiriesByBorrower(req.params.id as string);
+      const inquiries = await getEnrichedCreditInquiriesForBorrower(req.params.id as string);
 
       const judgments = await storage.getCourtJudgmentsByBorrower(req.params.id as string);
       const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, req.params["id"] as string));
@@ -1625,6 +1677,7 @@ export async function registerRoutes(
         accounts,
         inquiries,
         courtJudgments: judgments,
+        viewerOrganizationId: req.session?.organizationId ?? null,
         affordability: latestAffordability ? {
           assessment: latestAffordability,
           incomeSources,
@@ -6450,7 +6503,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         }
       }
       const accounts = [...accountMap.values()];
-      const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
+      const inquiries = await getEnrichedCreditInquiriesForBorrower(borrowerId);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
       const consents = await storage.getConsentRecordsByBorrower(borrowerId);
       const dishonouredChequesList = await storage.getDishonouredChequesByBorrower(borrowerId);
@@ -6595,6 +6648,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         guarantors: guarantorMap,
         paymentHistory: paymentHistoryMap,
         requestedBy: user ? { fullName: user.fullName, institution: user.institution } : null,
+        viewerOrganizationId: req.session?.organizationId ?? null,
         affordability: reportAffordability ? { assessment: reportAffordability, incomeSources: reportIncomeSources, expenses: reportExpenses } : null,
         ...(xdsBureauData ? { xdsBureauData } : {}),
         summary: {
@@ -7796,30 +7850,132 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       // === SECTION 8: CREDIT SEARCH INQUIRY HISTORY ===
       sectionTitle("Credit Search Inquiry History", 8);
       const HARD_PURPOSES = ["new_credit", "collection"];
-      const hardCount = inquiries.filter((inq: any) => HARD_PURPOSES.includes(inq.purpose)).length;
-      const softCount = inquiries.length - hardCount;
+      // Shape of an inquiry in the PDF reportData payload — kept narrow on
+      // purpose so we can rely on TypeScript to flag schema drift in this
+      // high-value reporting code path.
+      type PdfInquiry = {
+        purpose?: string | null;
+        institution?: string | null;
+        consentProvided?: boolean | null;
+        createdAt?: string | Date | null;
+        inquiringOrgId?: string | null;
+        inquiringOrgName?: string | null;
+        inquiringOrgCountry?: string | null;
+        inquiringOrgType?: string | null;
+      };
+      const inqs = inquiries as PdfInquiry[];
+      const hardCount = inqs.filter(inq => HARD_PURPOSES.includes(inq.purpose ?? "")).length;
+      const softCount = inqs.length - hardCount;
       ensureSpace(16);
       doc.fontSize(7).font("Helvetica").fill(GRAY).text(`Hard Inquiries: ${hardCount}  |  Soft Inquiries: ${softCount}`, 46, doc.y);
       doc.moveDown(0.3);
+
+      // Mirror the on-screen inquiry panel (Borrower Credit Snapshot):
+      //  - "Competing" = purpose=new_credit pulled by an org other than the
+      //    viewing institution.
+      //  - "Shopping around" hint surfaces when ≥2 different competing
+      //    institutions pulled in the last 7 days.
+      // Underwriters reading the exported PDF need the same context they
+      // get in the live UI, otherwise they lose competitive intel when the
+      // report is shared with a credit committee.
+      const viewerOrgId: string | null = reportData.viewerOrganizationId ?? null;
+      const SHOPPING_AROUND_WINDOW_DAYS = 7;
+      const SHOPPING_AROUND_MIN_INSTITUTIONS = 2;
+      const isCompeting = (inq: PdfInquiry): boolean => {
+        if (inq.purpose !== "new_credit") return false;
+        if (!inq.inquiringOrgId) return false;
+        if (!viewerOrgId) return true;
+        return inq.inquiringOrgId !== viewerOrgId;
+      };
+      const ORG_TYPE_LABELS: Record<string, string> = {
+        bank: "Bank", microfinance: "Microfinance", insurance: "Insurance",
+        telecom: "Telecom", fintech: "Fintech", utility: "Utility",
+        government: "Government", regulator: "Regulator",
+        real_estate: "Real estate", investment: "Investment",
+        registry_authority: "Registry authority", other: "Other",
+      };
+      const formatOrgType = (t: string | null | undefined): string => {
+        if (!t) return "—";
+        return ORG_TYPE_LABELS[t] ?? t.replace(/_/g, " ");
+      };
+      // Centralised guard so a malformed createdAt never renders as
+      // "Invalid Date" in the PDF (matches the on-screen formatter).
+      const safeDate = (raw: string | Date | null | undefined): Date | null => {
+        if (!raw) return null;
+        const d = raw instanceof Date ? raw : new Date(raw);
+        return Number.isNaN(d.getTime()) ? null : d;
+      };
+      const shopCutoff = Date.now() - SHOPPING_AROUND_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+      const shoppingOrgs = new Map<string, string>();
+      inqs.forEach(inq => {
+        if (!isCompeting(inq)) return;
+        const d = safeDate(inq.createdAt);
+        if (!d || d.getTime() < shopCutoff) return;
+        const key = inq.inquiringOrgId ?? inq.institution ?? "";
+        if (key && !shoppingOrgs.has(key)) {
+          shoppingOrgs.set(key, inq.inquiringOrgName ?? inq.institution ?? "—");
+        }
+      });
+      if (shoppingOrgs.size >= SHOPPING_AROUND_MIN_INSTITUTIONS) {
+        ensureSpace(34);
+        const banY = doc.y;
+        const banH = 28;
+        // Amber tinted hint box matches the on-screen amber treatment.
+        doc.rect(40, banY, W, banH).fill("#fef3c7");
+        doc.rect(40, banY, 3, banH).fill("#f59e0b");
+        doc.fill("#92400e").fontSize(8).font("Helvetica-Bold")
+          .text("Shopping around", 50, banY + 4, { width: W - 14 });
+        const sample = Array.from(shoppingOrgs.values()).slice(0, 3).join(", ");
+        const more = shoppingOrgs.size > 3 ? ` and ${shoppingOrgs.size - 3} more` : "";
+        doc.fill("#92400e").fontSize(7).font("Helvetica")
+          .text(
+            `${shoppingOrgs.size} different lenders pulled this borrower's credit in the last ${SHOPPING_AROUND_WINDOW_DAYS} days (${sample}${more}). They may be comparing offers right now.`,
+            50, banY + 14, { width: W - 14 },
+          );
+        doc.y = banY + banH + 4;
+      }
+
       if (inquiries.length > 0) {
         resetTableRowIdx();
         const inqCols = [
-          { label: L("institution"), width: W * 0.3 },
-          { label: L("purpose"), width: W * 0.2 },
-          { label: "Type", width: W * 0.12 },
-          { label: L("date"), width: W * 0.18 },
-          { label: L("consent"), width: W * 0.2 },
+          { label: L("institution"), width: W * 0.30 },
+          { label: "Country", width: W * 0.07 },
+          { label: "Segment", width: W * 0.10 },
+          { label: L("purpose"), width: W * 0.13 },
+          { label: "Type", width: W * 0.08 },
+          { label: "Pulled At", width: W * 0.22 },
+          { label: L("consent"), width: W * 0.10 },
         ];
         tableHeader(inqCols);
-        inquiries.forEach((inq: any) => {
-          const isHard = HARD_PURPOSES.includes(inq.purpose);
+        inqs.forEach(inq => {
+          const isHard = HARD_PURPOSES.includes(inq.purpose ?? "");
+          const competing = isCompeting(inq);
+          // Prefer the joined organization name (full registered name) and
+          // fall back to the free-text institution column the inquiring
+          // system originally recorded for unregistered inquirers.
+          const fullName = inq.inquiringOrgName || inq.institution || "—";
+          const institutionLabel = competing ? `${fullName}  · COMPETING` : fullName;
+          const ts = safeDate(inq.createdAt);
+          const exactTimestamp = ts
+            ? `${ts.toLocaleDateString("en-GB")} ${ts.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`
+            : "—";
+          // Capture y BEFORE drawing the row so we can paint the amber
+          // left-edge marker on competing rows after tableRow advances y.
+          const rowY = doc.y;
           tableRow([
-            { value: inq.institution, width: W * 0.3, bold: true },
-            { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.2 },
-            { value: isHard ? "Hard" : "Soft", width: W * 0.12, color: isHard ? "#dc2626" : GRAY },
-            { value: inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—", width: W * 0.18 },
-            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.2, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
+            { value: institutionLabel, width: W * 0.30, bold: true, color: competing ? "#92400e" : DARK },
+            { value: inq.inquiringOrgCountry || "—", width: W * 0.07 },
+            { value: formatOrgType(inq.inquiringOrgType), width: W * 0.10 },
+            { value: (inq.purpose || "").replace(/_/g, " "), width: W * 0.13 },
+            { value: isHard ? "Hard" : "Soft", width: W * 0.08, color: isHard ? "#dc2626" : GRAY },
+            { value: exactTimestamp, width: W * 0.22 },
+            { value: inq.consentProvided ? L("yes") : L("no"), width: W * 0.10, color: inq.consentProvided ? "#16a34a" : "#dc2626" },
           ]);
+          if (competing) {
+            // 2px amber bar on the left edge of the row to mirror the
+            // on-screen "border-l-2 border-l-amber-500" treatment.
+            doc.rect(40, rowY, 2, 17).fill("#f59e0b");
+          }
         });
       } else {
         ensureSpace(16);

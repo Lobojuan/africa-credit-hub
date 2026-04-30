@@ -14,6 +14,7 @@ import {
   AlertTriangle, Shield, Gavel, CheckCircle2, XCircle, Clock, Flag,
   Calendar, MapPin, Phone, Mail, Briefcase, Hash, TrendingUp, Activity,
   Landmark, BarChart3, Layers, Table, Loader2, Brain, Sparkles, Globe, Lock,
+  Flame,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -25,12 +26,35 @@ import type { Borrower, CreditAccount, CreditInquiry, CourtJudgment, ConsentReco
 import { BOG_CHEQUE_RETURN_REASON, BOG_NATURE_OF_GUARANTOR, BOG_OWNER_TENANT, BOG_EMPLOYMENT_TYPE } from "@shared/bog-codes";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
+/**
+ * Enriched inquiry shape returned by the credit-report endpoint. It extends
+ * the raw `CreditInquiry` row with the inquiring user's organization context
+ * (full name / country / segment / id) so the printable view can mirror the
+ * on-screen Borrower Credit Snapshot panel — Competing badge, amber tint,
+ * exact timestamp and Shopping-around hint.
+ *
+ * The `inquiringOrg*` fields are nullable because legacy / system pulls were
+ * recorded against users that aren't tied to an organization, in which case
+ * the printed row falls back to the free-text `institution` column.
+ */
+interface ReportInquiry extends CreditInquiry {
+  inquiringOrgId: string | null;
+  inquiringOrgName: string | null;
+  inquiringOrgCountry: string | null;
+  inquiringOrgType: string | null;
+}
+
 interface CreditReportData {
   serialNumber: string;
   generatedAt: string;
   borrower: Borrower;
   accounts: CreditAccount[];
-  inquiries: CreditInquiry[];
+  inquiries: ReportInquiry[];
+  /**
+   * Organization id of the user who pulled the report — used to flag
+   * inquiries from competing institutions in the inquiry section.
+   */
+  viewerOrganizationId: string | null;
   courtJudgments: CourtJudgment[];
   consentRecords: ConsentRecord[];
   dishonouredCheques: DishonouredCheque[];
@@ -1903,6 +1927,58 @@ export default function CreditReportPage() {
             const softInquiries = report.inquiries.filter(inq =>
               !HARD_INQUIRY_PURPOSES.includes(inq.purpose)
             );
+
+            // Mirror the on-screen Borrower Credit Snapshot panel so the
+            // exported / printed report carries the same competitive-intel
+            // signals an underwriter sees in the live UI:
+            //  - "Competing" badge + amber tint = purpose=new_credit pull
+            //    by an organization other than the viewing institution.
+            //  - "Shopping around" hint = ≥2 different competing
+            //    institutions pulled within the last 7 days.
+            const SHOPPING_AROUND_WINDOW_DAYS = 7;
+            const SHOPPING_AROUND_MIN_INSTITUTIONS = 2;
+            const ORG_TYPE_LABELS: Record<string, string> = {
+              bank: "Bank", microfinance: "Microfinance", insurance: "Insurance",
+              telecom: "Telecom", fintech: "Fintech", utility: "Utility",
+              government: "Government", regulator: "Regulator",
+              real_estate: "Real estate", investment: "Investment",
+              registry_authority: "Registry authority", other: "Other",
+            };
+            const formatOrgType = (t: string | null): string => {
+              if (!t) return "—";
+              return ORG_TYPE_LABELS[t] ?? t.replace(/_/g, " ");
+            };
+            const viewerOrgId = report.viewerOrganizationId ?? null;
+            const isCompeting = (inq: ReportInquiry): boolean => {
+              if (inq.purpose !== "new_credit") return false;
+              if (!inq.inquiringOrgId) return false;
+              if (!viewerOrgId) return true;
+              return inq.inquiringOrgId !== viewerOrgId;
+            };
+            const shopCutoff = Date.now() - SHOPPING_AROUND_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+            const shoppingOrgs = new Map<string, string>();
+            for (const inq of report.inquiries) {
+              if (!isCompeting(inq) || !inq.createdAt) continue;
+              const t = new Date(inq.createdAt).getTime();
+              if (Number.isNaN(t) || t < shopCutoff) continue;
+              const key = inq.inquiringOrgId ?? inq.institution;
+              if (!shoppingOrgs.has(key)) {
+                shoppingOrgs.set(key, inq.inquiringOrgName ?? inq.institution);
+              }
+            }
+            const shoppingActive = shoppingOrgs.size >= SHOPPING_AROUND_MIN_INSTITUTIONS;
+            const shoppingSample = Array.from(shoppingOrgs.values()).slice(0, 3).join(", ");
+            const shoppingMore = shoppingOrgs.size > 3 ? ` and ${shoppingOrgs.size - 3} more` : "";
+
+            const formatExactTimestamp = (iso: string | Date | null): string => {
+              if (!iso) return "—";
+              const d = new Date(iso);
+              if (Number.isNaN(d.getTime())) return "—";
+              const date = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+              const time = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+              return `${date} at ${time}`;
+            };
+
             return (
               <Card>
                 <CardContent className="p-5 print:p-3">
@@ -1915,31 +1991,99 @@ export default function CreditReportPage() {
                       Soft Inquiries: {softInquiries.length}
                     </Badge>
                   </div>
+                  {shoppingActive && (
+                    <div
+                      className="mb-3 print:mb-2 rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-2 text-[11px] print:text-[8px] text-amber-900 dark:text-amber-200 flex items-start gap-2"
+                      data-testid="hint-report-shopping-around"
+                      data-institution-count={shoppingOrgs.size}
+                    >
+                      <Flame className="w-3.5 h-3.5 print:w-3 print:h-3 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="font-semibold">Shopping around</div>
+                        <div className="text-amber-800/90 dark:text-amber-300/90 leading-snug">
+                          {shoppingOrgs.size} different lenders pulled this borrower's
+                          credit in the last {SHOPPING_AROUND_WINDOW_DAYS} days
+                          {shoppingSample && (
+                            <>
+                              {" "}
+                              ({shoppingSample}{shoppingMore})
+                            </>
+                          )}
+                          . They may be comparing offers right now.
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {report.inquiries.length > 0 ? (
                     <div className="border rounded-lg overflow-hidden print:border-border">
                       <table className="w-full text-xs print:text-[9px]">
                         <thead>
                           <tr className="bg-muted/50">
                             <TableCell header>Institution</TableCell>
+                            <TableCell header>Country</TableCell>
+                            <TableCell header>Segment</TableCell>
                             <TableCell header>Purpose</TableCell>
                             <TableCell header>Type</TableCell>
-                            <TableCell header>Date</TableCell>
+                            <TableCell header>Pulled At</TableCell>
                             <TableCell header>Consent</TableCell>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {report.inquiries.map((inq) => {
                             const isHard = HARD_INQUIRY_PURPOSES.includes(inq.purpose);
+                            const competing = isCompeting(inq);
+                            const fullName = inq.inquiringOrgName ?? inq.institution;
+                            const rowTone = competing
+                              ? "border-l-2 border-l-amber-500 bg-amber-50/70 dark:bg-amber-950/30 print:bg-amber-50"
+                              : "";
                             return (
-                              <tr key={inq.id} className="hover:bg-muted/20">
-                                <TableCell className="font-medium">{inq.institution}</TableCell>
+                              <tr
+                                key={inq.id}
+                                className={`hover:bg-muted/20 ${rowTone}`.trim()}
+                                data-testid={`row-report-inquiry-${inq.id}`}
+                                data-competing={competing ? "true" : "false"}
+                              >
+                                <TableCell className="font-medium">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span data-testid={`text-report-inquiry-institution-${inq.id}`}>
+                                      {fullName}
+                                    </span>
+                                    {competing && (
+                                      <Badge
+                                        variant="outline"
+                                        className="shrink-0 h-4 px-1 text-[9px] print:text-[7px] uppercase tracking-wide font-semibold border-amber-400 bg-amber-100 text-amber-900 dark:border-amber-600 dark:bg-amber-900/60 dark:text-amber-200"
+                                        data-testid={`badge-report-inquiry-competing-${inq.id}`}
+                                        title="Another lender pulled this borrower's credit for a new facility"
+                                      >
+                                        <Flame className="w-2.5 h-2.5 mr-0.5" />
+                                        Competing
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {inq.inquiringOrgName && inq.inquiringOrgName !== inq.institution && (
+                                    <div className="text-[10px] print:text-[7px] text-muted-foreground leading-tight">
+                                      Recorded as: {inq.institution}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell data-testid={`text-report-inquiry-country-${inq.id}`}>
+                                  {inq.inquiringOrgCountry ?? "—"}
+                                </TableCell>
+                                <TableCell data-testid={`text-report-inquiry-segment-${inq.id}`}>
+                                  {formatOrgType(inq.inquiringOrgType)}
+                                </TableCell>
                                 <TableCell className="capitalize">{inq.purpose.replace(/_/g, " ")}</TableCell>
                                 <TableCell>
                                   <Badge variant={isHard ? "destructive" : "secondary"} className="text-[9px] print:text-[7px]">
                                     {isHard ? "Hard" : "Soft"}
                                   </Badge>
                                 </TableCell>
-                                <TableCell>{inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB") : "—"}</TableCell>
+                                <TableCell
+                                  className="whitespace-nowrap"
+                                  data-testid={`text-report-inquiry-timestamp-${inq.id}`}
+                                >
+                                  {formatExactTimestamp(inq.createdAt)}
+                                </TableCell>
                                 <TableCell>
                                   {inq.consentProvided ? (
                                     <Badge variant="default" className="text-[9px] print:text-[7px]">Yes</Badge>
