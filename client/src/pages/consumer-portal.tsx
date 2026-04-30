@@ -18,7 +18,65 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 // ---------------------------------------------------------------------------
 interface ScoreHistoryPoint { id: string; score: number; scoreModel: string | null; createdAt: string; }
 interface ConsumerDispute { id: string; disputeType: string; description: string; status: string; createdAt: string; updatedAt?: string; slaDeadline?: string; resolvedAt?: string; }
-interface ConsumerInquiry { id: string; institution: string; purpose: string; isSoftPull: boolean; createdAt: string; }
+interface ConsumerInquiry {
+  id: string;
+  institution: string;
+  purpose: string;
+  isSoftPull: boolean;
+  createdAt: string;
+  inquiringOrgId?: string | null;
+  inquiringOrgName?: string | null;
+  inquiringOrgCountry?: string | null;
+  inquiringOrgType?: string | null;
+}
+
+// "Multi-lender pull" thresholds — kept in sync with the lender-side
+// "shopping around" hint (`SHOPPING_AROUND_WINDOW_DAYS`,
+// `SHOPPING_AROUND_MIN_INSTITUTIONS` in `client/src/pages/collateral-registry.tsx`)
+// so the borrower sees the same clustering signal the lender does.
+const MULTI_LENDER_WINDOW_DAYS = 7;
+const MULTI_LENDER_MIN_INSTITUTIONS = 2;
+
+interface MultiLenderPull {
+  inquiry: ConsumerInquiry;
+  key: string;
+  label: string;
+}
+
+function detectMultiLenderPulls(inquiries: ConsumerInquiry[] | undefined): {
+  active: boolean;
+  count: number;
+  pulls: MultiLenderPull[];
+} {
+  if (!inquiries || inquiries.length === 0) return { active: false, count: 0, pulls: [] };
+  const cutoff = Date.now() - MULTI_LENDER_WINDOW_DAYS * 24 * 60 * 60 * 1000;
+  const seen = new Map<string, MultiLenderPull>();
+  for (const inq of inquiries) {
+    if (inq.isSoftPull) continue; // soft pulls aren't visible to lenders/score
+    if (!inq.createdAt) continue;
+    const t = new Date(inq.createdAt).getTime();
+    if (Number.isNaN(t) || t < cutoff) continue;
+    // Dedup per institution: prefer the inquiring org id (when joined),
+    // fall back to the free-text institution label.
+    const key = (inq.inquiringOrgId ?? inq.institution ?? inq.id).toString();
+    if (seen.has(key)) continue;
+    seen.set(key, {
+      inquiry: inq,
+      key,
+      label: inq.inquiringOrgName ?? inq.institution ?? "Unknown lender",
+    });
+  }
+  const pulls = Array.from(seen.values()).sort((a, b) => {
+    const ta = new Date(a.inquiry.createdAt).getTime();
+    const tb = new Date(b.inquiry.createdAt).getTime();
+    return tb - ta;
+  });
+  return {
+    active: pulls.length >= MULTI_LENDER_MIN_INSTITUTIONS,
+    count: pulls.length,
+    pulls,
+  };
+}
 interface PushStatusResponse { subscribed: boolean; vapidPublicKey?: string; }
 interface FreezeResponse { frozen: boolean; }
 interface ImprovementTipsResponse { score: number; tips: { id: string; title: string; estimatedImpact: string; detail: string }[] }
@@ -29,37 +87,97 @@ type MonitoringPrefs = { alertOnInquiry: boolean; alertOnScoreChange: boolean; a
 // ---------------------------------------------------------------------------
 // Dispute Filing Dialog
 // ---------------------------------------------------------------------------
-function DisputeFilingDialog() {
+interface DisputeFilingDialogProps {
+  /** Optional preset values, e.g. when launched from an "I didn't authorize this"
+   * button on a specific inquiry row. */
+  preset?: {
+    disputeType?: string;
+    description?: string;
+    accountRef?: string;
+    inquiryId?: string;
+    inquiryLabel?: string;
+  };
+  /** Optional custom trigger element. When omitted, the default
+   * "File a Dispute" outline button is rendered. */
+  trigger?: React.ReactNode;
+  /** Optional callback fired after a successful submission. Useful for
+   * invalidating the consumer's disputes list. */
+  onFiled?: () => void;
+}
+
+function DisputeFilingDialog({ preset, trigger, onFiled }: DisputeFilingDialogProps = {}) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [form, setForm] = useState({ disputeType: "", description: "", accountRef: "" });
+  const [form, setForm] = useState({
+    disputeType: preset?.disputeType ?? "",
+    description: preset?.description ?? "",
+    accountRef: preset?.accountRef ?? "",
+  });
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Re-seed the form whenever the dialog is (re-)opened with a different
+  // preset so consecutive "I didn't authorize this" clicks on different
+  // inquiries don't carry over the previous prefill.
+  useEffect(() => {
+    if (open) {
+      setForm({
+        disputeType: preset?.disputeType ?? "",
+        description: preset?.description ?? "",
+        accountRef: preset?.accountRef ?? "",
+      });
+      setErrorMsg(null);
+    }
+  }, [open, preset?.disputeType, preset?.description, preset?.accountRef, preset?.inquiryId]);
 
   const handleSubmit = async () => {
     if (!form.disputeType || !form.description) return;
     setLoading(true);
+    setErrorMsg(null);
     try {
       const res = await fetch("/api/consumer/file-dispute", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, inquiryId: preset?.inquiryId }),
       });
-      if (!res.ok) throw new Error("Failed to file dispute");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message || "Failed to file dispute");
+      }
       setSubmitted(true);
-    } catch {
-      setSubmitted(true); // show success anyway if endpoint doesn't exist yet
+      onFiled?.();
+    } catch (e: any) {
+      setErrorMsg(e?.message || "Failed to file dispute. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const defaultTrigger = (
+    <Button size="sm" variant="outline" className="w-full rounded-xl mt-2" data-testid="button-file-dispute">
+      <AlertTriangle className="w-3.5 h-3.5 mr-1.5" /> File a Dispute
+    </Button>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={v => { setOpen(v); if (!v) { setSubmitted(false); setForm({ disputeType: "", description: "", accountRef: "" }); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={v => {
+        setOpen(v);
+        if (!v) {
+          setSubmitted(false);
+          setErrorMsg(null);
+          setForm({
+            disputeType: preset?.disputeType ?? "",
+            description: preset?.description ?? "",
+            accountRef: preset?.accountRef ?? "",
+          });
+        }
+      }}
+    >
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="w-full rounded-xl mt-2" data-testid="button-file-dispute">
-          <AlertTriangle className="w-3.5 h-3.5 mr-1.5" /> File a Dispute
-        </Button>
+        {trigger ?? defaultTrigger}
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
@@ -74,11 +192,21 @@ function DisputeFilingDialog() {
           </div>
         ) : (
           <div className="space-y-4 py-2">
+            {preset?.inquiryId && (
+              <div
+                className="rounded-md border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 p-2.5 text-xs text-amber-900 dark:text-amber-200"
+                data-testid="dispute-inquiry-context"
+              >
+                <p className="font-semibold">Disputing inquiry from {preset.inquiryLabel || "this lender"}</p>
+                <p className="text-[11px] mt-0.5 text-amber-800/90 dark:text-amber-300/90">We'll attach this credit pull to your dispute so the bureau can investigate.</p>
+              </div>
+            )}
             <div>
               <Label>Dispute Type</Label>
               <Select value={form.disputeType} onValueChange={v => setForm(f => ({ ...f, disputeType: v }))}>
                 <SelectTrigger data-testid="select-dispute-type"><SelectValue placeholder="Select type of dispute..." /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="unauthorized_inquiry">Unauthorized Credit Inquiry</SelectItem>
                   <SelectItem value="incorrect_balance">Incorrect Balance / Amount</SelectItem>
                   <SelectItem value="account_not_mine">Account Not Mine</SelectItem>
                   <SelectItem value="incorrect_status">Incorrect Account Status</SelectItem>
@@ -109,6 +237,9 @@ function DisputeFilingDialog() {
                 rows={4}
               />
             </div>
+            {errorMsg && (
+              <p className="text-xs text-red-600 dark:text-red-400" data-testid="text-dispute-error">{errorMsg}</p>
+            )}
             <p className="text-xs text-muted-foreground">Your dispute will be reviewed within 5 business days as required by African data protection legislation.</p>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setOpen(false)} className="flex-1">Cancel</Button>
@@ -530,6 +661,19 @@ export default function ConsumerPortalPage() {
   const [simToggles, setSimToggles] = useState({ payArrears: false, reduceUtil: false, noNewInquiries6m: false });
   const [inquiryExpanded, setInquiryExpanded] = useState(false);
   const [expandedInquiryId, setExpandedInquiryId] = useState<string | null>(null);
+  const inquiryFeedRef = useRef<HTMLDivElement | null>(null);
+
+  // Multi-lender pull detection — drives both the top-of-page heads-up
+  // banner and the per-inquiry highlighting in the inquiry feed below.
+  const multiLenderPulls = detectMultiLenderPulls(myInquiriesQuery.data);
+  const multiLenderKeys = new Set(multiLenderPulls.pulls.map(p => p.inquiry.id));
+
+  const handleViewMultiLenderPulls = () => {
+    setInquiryExpanded(true);
+    requestAnimationFrame(() => {
+      inquiryFeedRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
 
   const [monitorPrefsOpen, setMonitorPrefsOpen] = useState(false);
   const [localPrefs, setLocalPrefs] = useState<MonitoringPrefs>({ alertOnInquiry: true, alertOnScoreChange: true, alertOnNewAccount: true, alertOnDelinquency: true, emailAlerts: true, smsAlerts: false });
@@ -1383,6 +1527,61 @@ export default function ConsumerPortalPage() {
                   </div>
                 )}
 
+                {/* ─── MULTI-LENDER PULL HEADS-UP ────────────────────────────── */}
+                {/* Mirrors the lender-side "Shopping around" hint: when ≥2
+                    different lenders pulled the borrower's credit in the
+                    last 7 days, surface it so they can confirm or flag any
+                    pull they didn't authorize. */}
+                {multiLenderPulls.active && (
+                  <div
+                    className="rounded-xl px-4 py-3 shadow border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 flex items-start gap-3"
+                    data-testid="banner-multi-lender-pulls"
+                    data-lender-count={multiLenderPulls.count}
+                  >
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold leading-tight text-amber-900 dark:text-amber-200" data-testid="text-multi-lender-headline">
+                        {multiLenderPulls.count} lenders pulled your credit in the last {MULTI_LENDER_WINDOW_DAYS} days
+                      </p>
+                      <p className="text-xs leading-snug text-amber-800/90 dark:text-amber-300/90 mt-0.5">
+                        If you're shopping around, no action is needed. If you don't recognize one of these lenders, you can flag the pull as unauthorized below.
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 mt-2" data-testid="list-multi-lender-institutions">
+                        {multiLenderPulls.pulls.slice(0, 5).map(p => (
+                          <span
+                            key={p.key}
+                            className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-800"
+                            data-testid={`chip-multi-lender-${p.key}`}
+                            title={p.inquiry.createdAt ? new Date(p.inquiry.createdAt).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : ""}
+                          >
+                            {p.label}
+                            {p.inquiry.createdAt && (
+                              <span className="ml-1 opacity-70">
+                                · {new Date(p.inquiry.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                              </span>
+                            )}
+                          </span>
+                        ))}
+                        {multiLenderPulls.pulls.length > 5 && (
+                          <span className="text-[10px] text-amber-800/80 dark:text-amber-300/80 px-1 py-0.5">
+                            + {multiLenderPulls.pulls.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="mt-2.5 h-7 px-2.5 text-[11px] border-amber-400 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/40"
+                        onClick={handleViewMultiLenderPulls}
+                        data-testid="button-view-multi-lender-pulls"
+                      >
+                        View pulls & flag unauthorized
+                        <ChevronRight className="w-3 h-3 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <Card className="shadow-sm overflow-hidden">
                   <div className="bg-gradient-to-br from-primary/5 via-transparent to-primary/3 p-6 sm:p-8">
                     <div className="flex items-center justify-center gap-2 mb-5">
@@ -1795,7 +1994,11 @@ export default function ConsumerPortalPage() {
                 )}
 
                 {/* ─── 6. WHO ACCESSED MY DATA (collapsible) ──────────────────── */}
-                <Card className="shadow-sm" data-testid="card-inquiry-feed">
+                <Card
+                  ref={inquiryFeedRef}
+                  className={`shadow-sm scroll-mt-4 ${multiLenderPulls.active ? "border-amber-300 dark:border-amber-700" : ""}`}
+                  data-testid="card-inquiry-feed"
+                >
                   <CardContent className="p-4">
                     <button
                       className="w-full flex items-center justify-between mb-1 text-left"
@@ -1825,8 +2028,18 @@ export default function ConsumerPortalPage() {
                       <div className="space-y-2 mt-2">
                         {myInquiriesQuery.data.map((inq) => {
                           const isOpen = expandedInquiryId === inq.id;
+                          const inMultiLenderWindow = multiLenderKeys.has(inq.id);
+                          const lenderLabel = inq.inquiringOrgName || inq.institution || "Unknown Institution";
+                          const inquiryDateLabel = inq.createdAt
+                            ? new Date(inq.createdAt).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                            : "an unknown date";
                           return (
-                            <div key={inq.id} data-testid={`inquiry-${inq.id}`} className="rounded-xl border overflow-hidden">
+                            <div
+                              key={inq.id}
+                              data-testid={`inquiry-${inq.id}`}
+                              data-multi-lender={inMultiLenderWindow ? "true" : "false"}
+                              className={`rounded-xl border overflow-hidden ${inMultiLenderWindow ? "border-amber-300 dark:border-amber-700" : ""}`}
+                            >
                               <button
                                 className="w-full flex items-start gap-2.5 p-2.5 text-left hover:bg-muted/30 transition-colors"
                                 onClick={() => setExpandedInquiryId(isOpen ? null : inq.id)}
@@ -1837,10 +2050,19 @@ export default function ConsumerPortalPage() {
                                   <Search className="w-3.5 h-3.5 text-primary" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold truncate">{inq.institution || "Unknown Institution"}</p>
+                                  <p className="text-xs font-semibold truncate">{lenderLabel}</p>
                                   <p className="text-[10px] text-muted-foreground">{(inq.purpose || "inquiry").replace(/_/g, " ")} · {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                                  {inMultiLenderWindow && (
+                                    <span
+                                      className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-800"
+                                      data-testid={`badge-multi-lender-${inq.id}`}
+                                      title={`Pulled within the last ${MULTI_LENDER_WINDOW_DAYS} days`}
+                                    >
+                                      Last 7d
+                                    </span>
+                                  )}
                                   <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${inq.isSoftPull ? "bg-muted text-muted-foreground" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"}`}>
                                     {inq.isSoftPull ? "Soft" : "Hard"}
                                   </span>
@@ -1849,11 +2071,34 @@ export default function ConsumerPortalPage() {
                               </button>
                               {isOpen && (
                                 <div className="px-3 pb-3 pt-1 border-t bg-muted/10 space-y-1" data-testid={`inquiry-detail-${inq.id}`}>
-                                  <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Institution:</span> {inq.institution || "Unknown"}</p>
+                                  <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Institution:</span> {lenderLabel}</p>
                                   <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Purpose:</span> {(inq.purpose || "Credit inquiry").replace(/_/g, " ")}</p>
                                   <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Type:</span> {inq.isSoftPull ? "Soft pull — does not affect your score" : "Hard pull — may affect your score"}</p>
                                   <p className="text-[11px] text-muted-foreground"><span className="font-medium text-foreground">Date:</span> {inq.createdAt ? new Date(inq.createdAt).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}</p>
                                   {!inq.isSoftPull && <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1">Hard inquiries remain on your credit file for 2 years. If you did not authorise this inquiry, you may file a dispute.</p>}
+                                  <div className="pt-2">
+                                    <DisputeFilingDialog
+                                      preset={{
+                                        disputeType: "unauthorized_inquiry",
+                                        description: `I did not authorize the credit pull from ${lenderLabel} on ${inquiryDateLabel}.`,
+                                        inquiryId: inq.id,
+                                        inquiryLabel: lenderLabel,
+                                      }}
+                                      onFiled={() => {
+                                        queryClient.invalidateQueries({ queryKey: ["/api/consumer/my-disputes"] });
+                                      }}
+                                      trigger={
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="h-7 px-2.5 text-[11px] border-red-300 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+                                          data-testid={`button-flag-unauthorized-${inq.id}`}
+                                        >
+                                          <AlertTriangle className="w-3 h-3 mr-1" /> I didn't authorize this
+                                        </Button>
+                                      }
+                                    />
+                                  </div>
                                 </div>
                               )}
                             </div>

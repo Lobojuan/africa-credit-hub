@@ -16829,6 +16829,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ─── Consumer My Inquiries ─────────────────────────────────────────────────
+  // Returns the borrower's recent credit inquiries with the inquiring
+  // organization's identity (id, name, country, type) joined in. The org
+  // metadata lets the frontend deduplicate by lender (for the multi-lender
+  // pull banner) and label inquiries with the lender's actual brand instead
+  // of just the free-text `institution` field.
   app.get("/api/consumer/my-inquiries", requireConsumer, async (req, res) => {
     try {
       const consumerNationalId = (req.session as any).consumerNationalId;
@@ -16837,8 +16842,108 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       ).limit(1);
       const borrower = borrowerResult[0];
       if (!borrower) return res.json([]);
-      const myInquiries = await db.select().from(creditInquiries).where(eq(creditInquiries.borrowerId, borrower.id)).orderBy(desc(creditInquiries.createdAt)).limit(20);
-      res.json(myInquiries);
+      const rows = await db
+        .select({
+          id: creditInquiries.id,
+          institution: creditInquiries.institution,
+          purpose: creditInquiries.purpose,
+          isSoftPull: creditInquiries.isSoftPull,
+          createdAt: creditInquiries.createdAt,
+          inquiringOrgId: users.organizationId,
+          inquiringOrgName: organizations.name,
+          inquiringOrgCountry: organizations.country,
+          inquiringOrgType: organizations.type,
+        })
+        .from(creditInquiries)
+        .leftJoin(users, eq(creditInquiries.inquiredBy, users.id))
+        .leftJoin(organizations, eq(users.organizationId, organizations.id))
+        .where(eq(creditInquiries.borrowerId, borrower.id))
+        .orderBy(desc(creditInquiries.createdAt))
+        .limit(20);
+      res.json(rows);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Consumer File Dispute ────────────────────────────────────────────────
+  // Lets the authenticated borrower file a dispute from the consumer portal
+  // (e.g. flagging an unauthorized credit pull from the multi-lender banner).
+  // The disputes table requires `filed_by` to reference a real users row, so
+  // we attribute consumer-filed disputes to a system super_admin and prefix
+  // the description with "[Consumer-filed]" for traceability.
+  app.post("/api/consumer/file-dispute", requireConsumer, async (req, res) => {
+    try {
+      const { disputeType, description, accountRef, inquiryId } = (req.body ?? {}) as {
+        disputeType?: string;
+        description?: string;
+        accountRef?: string;
+        inquiryId?: string;
+      };
+      if (!disputeType || typeof disputeType !== "string") {
+        return res.status(400).json({ message: "disputeType is required" });
+      }
+      if (!description || typeof description !== "string") {
+        return res.status(400).json({ message: "description is required" });
+      }
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const [borrower] = await db.select().from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      if (!borrower) return res.status(404).json({ message: "No credit file matches your account" });
+
+      // Validate inquiry (when provided) belongs to this borrower so a
+      // consumer can't reference an arbitrary inquiry id.
+      let inquiryRef: { id: string; institution: string } | null = null;
+      if (inquiryId) {
+        const [inq] = await db.select({ id: creditInquiries.id, institution: creditInquiries.institution })
+          .from(creditInquiries)
+          .where(and(eq(creditInquiries.id, inquiryId), eq(creditInquiries.borrowerId, borrower.id)))
+          .limit(1);
+        if (!inq) return res.status(404).json({ message: "Referenced inquiry not found" });
+        inquiryRef = inq;
+      }
+
+      // Pick a system user to satisfy the not-null filed_by FK. Prefer a
+      // super_admin so the dispute can be triaged by the registry team.
+      const [systemUser] = await db.select({ id: users.id })
+        .from(users)
+        .where(sql`${users.role} = 'super_admin'`)
+        .limit(1);
+      const fallbackUser = systemUser
+        ?? (await db.select({ id: users.id }).from(users).where(sql`${users.role} = 'admin'`).limit(1))[0]
+        ?? (await db.select({ id: users.id }).from(users).limit(1))[0];
+      if (!fallbackUser) return res.status(500).json({ message: "No system user available to record dispute" });
+
+      const refParts: string[] = [];
+      if (inquiryRef) refParts.push(`inquiry ${inquiryRef.id} (${inquiryRef.institution})`);
+      if (accountRef && typeof accountRef === "string") refParts.push(`account ${accountRef}`);
+      const refSuffix = refParts.length ? ` [Ref: ${refParts.join("; ")}]` : "";
+      const finalDescription = `[Consumer-filed via portal] ${description}${refSuffix}`.slice(0, 4000);
+
+      const dispute = await storage.createDispute({
+        borrowerId: borrower.id,
+        filedBy: fallbackUser.id,
+        disputeType,
+        description: finalDescription,
+        country: borrower.country || "GH",
+        organizationId: borrower.organizationId ?? null,
+      } as any);
+
+      await storage.createAuditLog({
+        action: "CONSUMER_FILE_DISPUTE",
+        entity: "dispute",
+        entityId: dispute.id,
+        details: `Consumer (national id ${consumerNationalId}) filed ${disputeType} dispute${inquiryRef ? ` for inquiry ${inquiryRef.id}` : ""}`,
+        ipAddress: req.ip || null,
+        userId: null,
+        organizationId: borrower.organizationId ?? null,
+      });
+
+      res.status(201).json({
+        id: dispute.id,
+        disputeType: dispute.disputeType,
+        status: dispute.status,
+        createdAt: dispute.createdAt,
+      });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
