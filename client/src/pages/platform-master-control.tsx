@@ -1871,11 +1871,18 @@ function DemoResetPanel() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [resetDone, setResetDone] = useState<Record<string, number> | null>(null);
+  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number>; unlinked: Record<string, number> } | null>(null);
 
   const previewQuery = useQuery<CreditResetPreview>({
     queryKey: ["/api/admin/demo/reset-credit-scoring/preview"],
-    queryFn: () => fetch("/api/admin/demo/reset-credit-scoring/preview", { credentials: "include" }).then(r => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/admin/demo/reset-credit-scoring/preview", { credentials: "include" });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: "Failed to load preview" }));
+        throw new Error((err as { message?: string }).message ?? "Preview failed");
+      }
+      return r.json();
+    },
     enabled: dialogOpen,
     staleTime: 0,
   });
@@ -1896,10 +1903,10 @@ function DemoResetPanel() {
     },
     onSuccess: (data) => {
       const total = Object.values(data.deleted).reduce((a, b) => a + b, 0);
-      setResetDone(data.deleted);
+      setResetDone(data);
       setDialogOpen(false);
       setConfirmText("");
-      toast({ title: "Credit scoring data purged", description: `${total.toLocaleString()} rows deleted across ${Object.keys(data.deleted).length} tables. Loto, collateral, orgs, users and billing untouched.` });
+      toast({ title: "Credit scoring data purged", description: `${total.toLocaleString()} rows deleted. Loto, collateral, orgs, users, and billing untouched.` });
     },
     onError: (e: Error) => {
       toast({ title: "Reset failed", description: e.message, variant: "destructive" });
@@ -1951,13 +1958,23 @@ function DemoResetPanel() {
 
       {/* Last reset result (success banner) */}
       {resetDone && (
-        <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs space-y-1">
-          <p className="font-semibold text-emerald-700 dark:text-emerald-400">Last reset summary</p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-emerald-600 dark:text-emerald-500 max-h-40 overflow-y-auto">
-            {Object.entries(resetDone).filter(([, v]) => v > 0).map(([k, v]) => (
-              <span key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></span>
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs space-y-2">
+          <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+            Last reset — {Object.values(resetDone.deleted).reduce((a, b) => a + b, 0).toLocaleString()} rows purged
+          </p>
+          <div className="max-h-36 overflow-y-auto space-y-0.5 text-emerald-600 dark:text-emerald-500">
+            {Object.entries(resetDone.deleted).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a).map(([k, v]) => (
+              <div key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></div>
             ))}
           </div>
+          {Object.values(resetDone.unlinked).some(v => v > 0) && (
+            <div className="pt-1 border-t border-emerald-200 dark:border-emerald-700 space-y-0.5 text-amber-600 dark:text-amber-400">
+              <p className="font-medium">FK links cleared (rows preserved):</p>
+              {Object.entries(resetDone.unlinked).filter(([, v]) => v > 0).map(([k, v]) => (
+                <div key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1985,39 +2002,49 @@ function DemoResetPanel() {
           </DialogHeader>
 
           <div className="space-y-4 pt-1">
+            {/* Destructive warning banner inside dialog */}
+            <div className="flex items-center gap-2 rounded-md bg-red-600 text-white px-3 py-2 text-sm font-semibold">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Destructive — this cannot be undone
+            </div>
+
             {/* Row-count preview */}
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
-              <p className="font-medium mb-2 text-muted-foreground">Data that will be permanently deleted:</p>
+              <p className="font-medium mb-2 text-muted-foreground">All modules that will be wiped:</p>
               {previewQuery.isLoading && (
                 <p className="text-muted-foreground text-xs animate-pulse">Loading counts…</p>
+              )}
+              {previewQuery.error && (
+                <p className="text-red-600 text-xs">{(previewQuery.error as Error).message}</p>
               )}
               {previewQuery.data && (
                 <>
                   <div className="max-h-48 overflow-y-auto space-y-0.5 text-xs">
                     {Object.entries(previewQuery.data.counts)
-                      .filter(([, v]) => v > 0)
                       .sort(([, a], [, b]) => b - a)
                       .map(([label, count]) => (
                         <div key={label} className="flex justify-between">
-                          <span className="text-muted-foreground">{label}</span>
-                          <span className="font-mono font-medium">{count.toLocaleString()}</span>
+                          <span className={count === 0 ? "text-muted-foreground/50" : "text-muted-foreground"}>{label}</span>
+                          <span className={`font-mono font-medium ${count > 0 ? "text-red-600" : "text-muted-foreground/40"}`}>
+                            {count.toLocaleString()}
+                          </span>
                         </div>
                       ))}
-                    {Object.values(previewQuery.data.counts).every(v => v === 0) && (
-                      <p className="text-muted-foreground italic">No credit scoring data found — database is already clean.</p>
-                    )}
                   </div>
-                  {totalRows !== null && totalRows > 0 && (
-                    <div className="mt-2 pt-2 border-t flex justify-between font-semibold text-xs">
-                      <span>Total rows to delete</span>
-                      <span className="font-mono text-red-600">{totalRows.toLocaleString()}</span>
-                    </div>
-                  )}
+                  <div className="mt-2 pt-2 border-t flex justify-between font-semibold text-xs">
+                    <span>Total rows to delete</span>
+                    <span className={`font-mono ${totalRows ? "text-red-600" : "text-muted-foreground"}`}>
+                      {(totalRows ?? 0).toLocaleString()}
+                    </span>
+                  </div>
                   {Object.values(previewQuery.data.unlinkedPreview).some(v => v > 0) && (
                     <div className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                       <p className="font-medium">FK links to be NULLed (rows kept, links cleared):</p>
-                      {Object.entries(previewQuery.data.unlinkedPreview).filter(([, v]) => v > 0).map(([k, v]) => (
-                        <div key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></div>
+                      {Object.entries(previewQuery.data.unlinkedPreview).map(([k, v]) => (
+                        <div key={k} className="flex justify-between">
+                          <span>{k}</span>
+                          <span className="font-mono">{v.toLocaleString()}</span>
+                        </div>
                       ))}
                     </div>
                   )}
