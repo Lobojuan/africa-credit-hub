@@ -1874,17 +1874,18 @@ function DemoResetPanel() {
   const [resetDone, setResetDone] = useState<Record<string, number> | null>(null);
 
   const previewQuery = useQuery<CreditResetPreview>({
-    queryKey: ["/api/platform-control/demo/credit-scoring/preview"],
-    queryFn: () => pcFetch("/api/platform-control/demo/credit-scoring/preview").then(r => r.json()),
+    queryKey: ["/api/admin/demo/reset-credit-scoring/preview"],
+    queryFn: () => fetch("/api/admin/demo/reset-credit-scoring/preview", { credentials: "include" }).then(r => r.json()),
     enabled: dialogOpen,
     staleTime: 0,
   });
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const r = await pcFetch("/api/platform-control/demo/credit-scoring/reset", {
+      const r = await fetch("/api/admin/demo/reset-credit-scoring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ confirm: "RESET" }),
       });
       if (!r.ok) {
@@ -1915,10 +1916,11 @@ function DemoResetPanel() {
       <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
         <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
         <div className="text-sm">
-          <p className="font-semibold text-red-700 dark:text-red-400">Danger zone — irreversible action</p>
+          <p className="font-semibold text-red-700 dark:text-red-400">Danger zone — irreversible action (super_admin session required)</p>
           <p className="text-red-600 dark:text-red-400 mt-0.5">
             Resets all credit scoring demo data: borrowers, credit accounts, loan applications, telco profiles, open banking, collection records, and every dependent table.
             Loto Fiscal, collateral registry, organisations, users, wallets, and billing data are <strong>completely untouched</strong>.
+            You must be logged in as <strong>super_admin</strong> in the main application for this action to succeed.
           </p>
         </div>
       </div>

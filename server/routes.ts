@@ -8624,6 +8624,183 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // Demo Tools — Credit Scoring Reset (super_admin only)
+  // Wipes all credit-scoring data while leaving Loto Fiscal, collateral
+  // registry, organisations, users, wallets, and billing completely intact.
+  // ---------------------------------------------------------------------------
+
+  const CREDIT_RESET_TABLES: Array<{ table: string; label: string }> = [
+    { table: "borrowers", label: "Borrower profiles" },
+    { table: "credit_accounts", label: "Credit accounts" },
+    { table: "payment_history", label: "Payment history records" },
+    { table: "credit_inquiries", label: "Credit inquiries" },
+    { table: "credit_score_history", label: "Score history (institutional)" },
+    { table: "consumer_score_history", label: "Score history (consumer)" },
+    { table: "disputes", label: "Disputes" },
+    { table: "court_judgments", label: "Court judgments" },
+    { table: "dishonoured_cheques", label: "Dishonoured cheques" },
+    { table: "consent_records", label: "Consent records" },
+    { table: "credit_report_logs", label: "Credit report logs" },
+    { table: "guarantors", label: "Guarantors" },
+    { table: "batch_jobs", label: "Batch upload jobs" },
+    { table: "alternative_data", label: "Alternative data entries" },
+    { table: "collection_assignments", label: "Collection assignments" },
+    { table: "collection_attempts", label: "Collection attempts" },
+    { table: "collection_sla_settings", label: "Collection SLA settings" },
+    { table: "affordability_assessments", label: "Affordability assessments" },
+    { table: "income_sources", label: "Income sources" },
+    { table: "expense_categorisations", label: "Expense categorisations" },
+    { table: "loan_applications", label: "Loan applications" },
+    { table: "loan_repayment_schedules", label: "Loan repayment schedules" },
+    { table: "telco_profiles", label: "Telco profiles" },
+    { table: "telco_loans", label: "Telco loans" },
+    { table: "telco_loan_repayments", label: "Telco loan repayments" },
+    { table: "momo_transactions", label: "MoMo transactions" },
+    { table: "telco_credit_scores", label: "Telco credit scores" },
+    { table: "telco_decision_logs", label: "Telco decision logs" },
+    { table: "telco_consent_events", label: "Telco consent events" },
+    { table: "open_banking_profiles", label: "Open banking profiles" },
+    { table: "linked_open_banking_accounts", label: "Linked open banking accounts" },
+    { table: "identity_verifications", label: "Identity verifications" },
+    { table: "watchlist_hits", label: "Watchlist hits" },
+    { table: "fraud_alerts", label: "Fraud alerts" },
+    { table: "borrower_alerts", label: "Borrower alerts" },
+    { table: "contact_events", label: "Contact / collection events" },
+    { table: "asset_trace_records", label: "Asset trace records" },
+    { table: "esg_scores", label: "ESG scores" },
+    { table: "consumer_monitoring_prefs", label: "Consumer monitoring prefs" },
+    { table: "consumer_monitoring_alerts", label: "Consumer monitoring alerts" },
+    { table: "portfolio_trigger_subscriptions", label: "Portfolio trigger subscriptions" },
+    { table: "portfolio_trigger_events", label: "Portfolio trigger events" },
+    { table: "cross_product_consents", label: "Cross-product consents" },
+    { table: "xds_bureau_queries", label: "XDS bureau queries" },
+    { table: "link_clusters", label: "Link clusters (AML)" },
+  ];
+
+  app.get("/api/admin/demo/reset-credit-scoring/preview", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const counts: Record<string, number> = {};
+      for (const { table, label } of CREDIT_RESET_TABLES) {
+        const result = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
+        counts[label] = (result.rows[0] as { c: number }).c;
+      }
+      const lotoLinks = await pool.query(`SELECT count(*)::int AS c FROM loto_merchants WHERE borrower_id IS NOT NULL`);
+      const collBorrower = await pool.query(`SELECT count(*)::int AS c FROM collateral_items WHERE borrower_id IS NOT NULL`);
+      const collLoan = await pool.query(`SELECT count(*)::int AS c FROM collateral_items WHERE loan_application_id IS NOT NULL`);
+      const unlinkedPreview = {
+        "loto_merchants with borrower link": (lotoLinks.rows[0] as { c: number }).c,
+        "collateral items with borrower link": (collBorrower.rows[0] as { c: number }).c,
+        "collateral items with loan link": (collLoan.rows[0] as { c: number }).c,
+      };
+      res.json({ counts, unlinkedPreview });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/admin/demo/reset-credit-scoring", requireAuth, requireSuperAdmin, async (req, res) => {
+    const { confirm } = req.body as { confirm?: string };
+    if (confirm !== "RESET") {
+      return res.status(400).json({ message: "Missing or incorrect confirmation. Send { confirm: 'RESET' }" });
+    }
+    const performingUserId = req.session?.userId ?? null;
+    const deleted: Record<string, number> = {};
+    const unlinked: Record<string, number> = {};
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      // Step 1: NULL out FKs in tables to KEEP (loto, collateral stay intact)
+      const r1 = await client.query(`UPDATE loto_merchants SET borrower_id = NULL WHERE borrower_id IS NOT NULL`);
+      unlinked["loto_merchants.borrower_id"] = r1.rowCount ?? 0;
+      const r2 = await client.query(`UPDATE collateral_items SET borrower_id = NULL WHERE borrower_id IS NOT NULL`);
+      unlinked["collateral_items.borrower_id"] = r2.rowCount ?? 0;
+      const r3 = await client.query(`UPDATE collateral_items SET loan_application_id = NULL WHERE loan_application_id IS NOT NULL`);
+      unlinked["collateral_items.loan_application_id"] = r3.rowCount ?? 0;
+
+      // Step 2: Delete in FK-safe order (children before parents, borrowers last).
+      // telco_loan_repayments.loan_id → telco_loans (NOT NULL) — must go first
+      // telco_loans.{decision_log_id,score_id} → telco_decision_logs/telco_credit_scores
+      //   so delete telco_loan_repayments → telco_loans → telco_decision_logs → telco_credit_scores
+      // credit_report_logs.consent_record_id → consent_records — must delete credit_report_logs first
+      const deletions: Array<[string, string]> = [
+        ["collection_attempts",           "Collection attempts"],
+        ["telco_loan_repayments",          "Telco loan repayments"],
+        ["telco_loans",                    "Telco loans"],
+        ["telco_decision_logs",            "Telco decision logs"],
+        ["telco_credit_scores",            "Telco credit scores"],
+        ["momo_transactions",              "MoMo transactions"],
+        ["telco_consent_events",           "Telco consent events"],
+        ["linked_open_banking_accounts",   "Linked open banking accounts"],
+        ["loan_repayment_schedules",       "Loan repayment schedules"],
+        ["credit_report_logs",             "Credit report logs"],
+        ["payment_history",                "Payment history"],
+        ["guarantors",                     "Guarantors"],
+        ["disputes",                       "Disputes"],
+        ["collection_assignments",         "Collection assignments"],
+        ["affordability_assessments",      "Affordability assessments"],
+        ["income_sources",                 "Income sources"],
+        ["expense_categorisations",        "Expense categorisations"],
+        ["asset_trace_records",            "Asset trace records"],
+        ["borrower_alerts",                "Borrower alerts"],
+        ["consent_records",                "Consent records"],
+        ["consumer_monitoring_alerts",     "Consumer monitoring alerts"],
+        ["consumer_monitoring_prefs",      "Consumer monitoring prefs"],
+        ["consumer_score_history",         "Score history (consumer)"],
+        ["contact_events",                 "Contact events"],
+        ["court_judgments",                "Court judgments"],
+        ["credit_inquiries",               "Credit inquiries"],
+        ["credit_score_history",           "Score history (institutional)"],
+        ["cross_product_consents",         "Cross-product consents"],
+        ["dishonoured_cheques",            "Dishonoured cheques"],
+        ["esg_scores",                     "ESG scores"],
+        ["fraud_alerts",                   "Fraud alerts"],
+        ["identity_verifications",         "Identity verifications"],
+        ["open_banking_profiles",          "Open banking profiles"],
+        ["portfolio_trigger_events",       "Portfolio trigger events"],
+        ["portfolio_trigger_subscriptions","Portfolio trigger subscriptions"],
+        ["telco_profiles",                 "Telco profiles"],
+        ["watchlist_hits",                 "Watchlist hits"],
+        ["xds_bureau_queries",             "XDS bureau queries"],
+        ["credit_accounts",                "Credit accounts"],
+        ["loan_applications",              "Loan applications"],
+        ["alternative_data",               "Alternative data"],
+        ["link_clusters",                  "Link clusters"],
+        ["batch_jobs",                     "Batch jobs"],
+        ["collection_sla_settings",        "Collection SLA settings"],
+        ["borrowers",                      "Borrowers"],
+      ];
+
+      for (const [table, label] of deletions) {
+        const r = await client.query(`DELETE FROM ${table}`);
+        deleted[label] = r.rowCount ?? 0;
+      }
+
+      // Step 3: Write immutable audit log
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action, entity, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
+        [
+          performingUserId,
+          "CREDIT_DEMO_RESET",
+          "system",
+          JSON.stringify({ deleted, unlinked, performedAt: new Date().toISOString() }),
+          req.ip ?? "unknown",
+        ]
+      );
+
+      await client.query("COMMIT");
+      routeLogger.warn("CREDIT_DEMO_RESET executed", { userId: performingUserId, deleted, unlinked });
+      res.json({ ok: true, deleted, unlinked });
+    } catch (e: any) {
+      await client.query("ROLLBACK").catch(() => {});
+      routeLogger.error("CREDIT_DEMO_RESET failed", { error: safeErrorMessage(e) });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    } finally {
+      client.release();
+    }
+  });
+
   app.get("/api/health/production", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const checks: Record<string, { status: "pass" | "fail" | "warn"; message: string }> = {};
