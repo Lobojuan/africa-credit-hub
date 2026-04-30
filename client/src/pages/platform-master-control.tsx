@@ -2156,12 +2156,17 @@ interface LotoResetPreview {
   preserved: Record<string, number>;
 }
 
+/** Convert "loto_draw_prize_tiers" → "Draw prize tiers" for display */
+function fmtTableName(t: string) {
+  return t.replace(/^loto_/, "").replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
 function LotoResetPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number> } | null>(null);
+  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number>; preserved: Record<string, number> } | null>(null);
 
   const previewQuery = useQuery<LotoResetPreview>({
     queryKey: ["/api/admin/demo/reset-loto/preview"],
@@ -2189,11 +2194,11 @@ function LotoResetPanel() {
         const err = await r.json().catch(() => ({ message: "Unknown error" }));
         throw new Error((err as { message?: string }).message ?? "Reset failed");
       }
-      return r.json() as Promise<{ deleted: Record<string, number> }>;
+      return r.json() as Promise<{ deleted: Record<string, number>; preserved: Record<string, number> }>;
     },
     onSuccess: (data) => {
       const total = Object.values(data.deleted).reduce((a, b) => a + b, 0);
-      setResetDone(data);
+      setResetDone({ deleted: data.deleted, preserved: data.preserved ?? {} });
       setDialogOpen(false);
       setConfirmText("");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/reset-loto/preview"] });
@@ -2250,11 +2255,25 @@ function LotoResetPanel() {
           <p className="font-semibold text-emerald-700 dark:text-emerald-400">
             Last reset — {Object.values(resetDone.deleted).reduce((a, b) => a + b, 0).toLocaleString()} rows purged
           </p>
-          <div className="max-h-36 overflow-y-auto space-y-0.5 text-emerald-600 dark:text-emerald-500">
+          <div className="max-h-28 overflow-y-auto space-y-0.5 text-emerald-600 dark:text-emerald-500">
             {Object.entries(resetDone.deleted).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a).map(([k, v]) => (
-              <div key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></div>
+              <div key={k} className="flex justify-between">
+                <span className="font-mono text-[10px] text-emerald-500">{k}</span>
+                <span className="font-mono font-medium">{v.toLocaleString()}</span>
+              </div>
             ))}
           </div>
+          {Object.keys(resetDone.preserved).length > 0 && (
+            <div className="pt-1 border-t border-emerald-200 dark:border-emerald-700 space-y-0.5">
+              <p className="font-medium text-emerald-700 dark:text-emerald-400">Preserved (untouched):</p>
+              {Object.entries(resetDone.preserved).map(([k, v]) => (
+                <div key={k} className="flex justify-between text-emerald-600 dark:text-emerald-500">
+                  <span className="font-mono text-[10px]">{k}</span>
+                  <span className="font-mono font-medium">{v.toLocaleString()} rows</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -2299,10 +2318,10 @@ function LotoResetPanel() {
                   <div className="max-h-48 overflow-y-auto space-y-0.5 text-xs">
                     {Object.entries(previewQuery.data.counts)
                       .sort(([, a], [, b]) => b - a)
-                      .map(([label, count]) => (
-                        <div key={label} className="flex justify-between">
-                          <span className={count === 0 ? "text-muted-foreground/50" : "text-muted-foreground"}>{label}</span>
-                          <span className={`font-mono font-medium ${count > 0 ? "text-red-600" : "text-muted-foreground/40"}`}>
+                      .map(([tbl, count]) => (
+                        <div key={tbl} className="flex justify-between gap-2">
+                          <span className={count === 0 ? "text-muted-foreground/50" : "text-muted-foreground"}>{fmtTableName(tbl)}</span>
+                          <span className={`font-mono font-medium shrink-0 ${count > 0 ? "text-red-600" : "text-muted-foreground/40"}`}>
                             {count.toLocaleString()}
                           </span>
                         </div>
@@ -2318,9 +2337,9 @@ function LotoResetPanel() {
                     <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
                       <p className="font-medium">Preserved (untouched):</p>
                       {Object.entries(previewQuery.data.preserved).map(([k, v]) => (
-                        <div key={k} className="flex justify-between">
-                          <span>{k}</span>
-                          <span className="font-mono">{v.toLocaleString()}</span>
+                        <div key={k} className="flex justify-between gap-2">
+                          <span>{fmtTableName(k)}</span>
+                          <span className="font-mono shrink-0">{v.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>

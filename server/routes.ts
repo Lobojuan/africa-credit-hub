@@ -8917,14 +8917,14 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.get("/api/admin/demo/reset-loto/preview", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const counts: Record<string, number> = {};
-      for (const { table, label } of LOTO_RESET_TABLES) {
+      for (const { table } of LOTO_RESET_TABLES) {
         const r = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
-        counts[label] = (r.rows[0] as { c: number }).c;
+        counts[table] = (r.rows[0] as { c: number }).c;
       }
       const preserved: Record<string, number> = {};
-      for (const { table, label } of LOTO_PRESERVED_TABLES) {
+      for (const { table } of LOTO_PRESERVED_TABLES) {
         const r = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
-        preserved[label] = (r.rows[0] as { c: number }).c;
+        preserved[table] = (r.rows[0] as { c: number }).c;
       }
       res.json({ counts, preserved });
     } catch (e: any) {
@@ -8942,9 +8942,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      for (const { table, label } of LOTO_RESET_TABLES) {
+      for (const { table } of LOTO_RESET_TABLES) {
         const r = await client.query(`DELETE FROM ${table}`);
-        deleted[label] = r.rowCount ?? 0;
+        deleted[table] = r.rowCount ?? 0;
       }
       await client.query(
         `INSERT INTO audit_logs (user_id, action, entity, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
@@ -8957,8 +8957,14 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         ]
       );
       await client.query("COMMIT");
-      routeLogger.warn("LOTO_DEMO_RESET executed", { userId: performingUserId, deleted });
-      res.json({ ok: true, deleted });
+      // Read preserved counts after commit so they reflect the final state
+      const preserved: Record<string, number> = {};
+      for (const { table } of LOTO_PRESERVED_TABLES) {
+        const r = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
+        preserved[table] = (r.rows[0] as { c: number }).c;
+      }
+      routeLogger.warn("LOTO_DEMO_RESET executed", { userId: performingUserId, deleted, preserved });
+      res.json({ ok: true, deleted, preserved });
     } catch (e: any) {
       await client.query("ROLLBACK").catch(() => {});
       routeLogger.error("LOTO_DEMO_RESET failed", { error: safeErrorMessage(e) });
