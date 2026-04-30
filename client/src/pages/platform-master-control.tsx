@@ -1865,18 +1865,35 @@ function CollateralRegistrySetupPanel() {
 interface CreditResetPreview {
   counts: Record<string, number>;
   unlinkedPreview: Record<string, number>;
+  scope: string;
 }
+interface ResetCountryOption { country: string; count: number }
 
 function DemoResetPanel() {
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
-  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number>; unlinked: Record<string, number> } | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number>; unlinked: Record<string, number>; scope: string } | null>(null);
+
+  // Load available country choices (only shown when there are borrowers with a country value)
+  const countriesQuery = useQuery<{ countries: ResetCountryOption[] }>({
+    queryKey: ["/api/admin/demo/reset-credit-scoring/countries"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/demo/reset-credit-scoring/countries", { credentials: "include" });
+      if (!r.ok) return { countries: [] };
+      return r.json();
+    },
+    staleTime: 30_000,
+  });
 
   const previewQuery = useQuery<CreditResetPreview>({
-    queryKey: ["/api/admin/demo/reset-credit-scoring/preview"],
+    queryKey: ["/api/admin/demo/reset-credit-scoring/preview", selectedCountry],
     queryFn: async () => {
-      const r = await fetch("/api/admin/demo/reset-credit-scoring/preview", { credentials: "include" });
+      const url = selectedCountry
+        ? `/api/admin/demo/reset-credit-scoring/preview?country=${encodeURIComponent(selectedCountry)}`
+        : "/api/admin/demo/reset-credit-scoring/preview";
+      const r = await fetch(url, { credentials: "include" });
       if (!r.ok) {
         const err = await r.json().catch(() => ({ message: "Failed to load preview" }));
         throw new Error((err as { message?: string }).message ?? "Preview failed");
@@ -1889,24 +1906,27 @@ function DemoResetPanel() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
+      const body: Record<string, string> = { confirm: "RESET" };
+      if (selectedCountry) body.country = selectedCountry;
       const r = await fetch("/api/admin/demo/reset-credit-scoring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ confirm: "RESET" }),
+        body: JSON.stringify(body),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({ message: "Unknown error" }));
         throw new Error((err as { message?: string }).message ?? "Reset failed");
       }
-      return r.json() as Promise<{ deleted: Record<string, number>; unlinked: Record<string, number> }>;
+      return r.json() as Promise<{ deleted: Record<string, number>; unlinked: Record<string, number>; scope: string }>;
     },
     onSuccess: (data) => {
       const total = Object.values(data.deleted).reduce((a, b) => a + b, 0);
       setResetDone(data);
       setDialogOpen(false);
       setConfirmText("");
-      toast({ title: "Credit scoring data purged", description: `${total.toLocaleString()} rows deleted. Loto, collateral, orgs, users, and billing untouched.` });
+      const scopeLabel = data.scope === "global" ? "all countries" : data.scope;
+      toast({ title: "Credit scoring data purged", description: `${total.toLocaleString()} rows deleted (${scopeLabel}). Loto, collateral, orgs, and billing untouched.` });
     },
     onError: (e: Error) => {
       toast({ title: "Reset failed", description: e.message, variant: "destructive" });
@@ -1917,6 +1937,9 @@ function DemoResetPanel() {
     ? Object.values(previewQuery.data.counts).reduce((a, b) => a + b, 0)
     : null;
 
+  const scopeLabel = selectedCountry || "All countries";
+  const countries = countriesQuery.data?.countries ?? [];
+
   return (
     <div className="space-y-4">
       {/* Danger zone warning */}
@@ -1925,7 +1948,7 @@ function DemoResetPanel() {
         <div className="text-sm">
           <p className="font-semibold text-red-700 dark:text-red-400">Danger zone — irreversible action (super_admin session required)</p>
           <p className="text-red-600 dark:text-red-400 mt-0.5">
-            Resets all credit scoring demo data: borrowers, credit accounts, loan applications, telco profiles, open banking, collection records, and every dependent table.
+            Resets credit scoring demo data for the selected scope: borrowers, credit accounts, loan applications, telco profiles, open banking, collection records, and every dependent table.
             Loto Fiscal, collateral registry, organisations, users, wallets, and billing data are <strong>completely untouched</strong>.
             You must be logged in as <strong>super_admin</strong> in the main application for this action to succeed.
           </p>
@@ -1947,7 +1970,7 @@ function DemoResetPanel() {
         <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/20 p-2">
           <p className="font-medium text-red-700 dark:text-red-400 mb-1">Wiped by reset</p>
           <ul className="text-red-600 dark:text-red-500 space-y-0.5 list-disc list-inside">
-            <li>All borrower profiles</li>
+            <li>Borrower profiles (scoped)</li>
             <li>Credit accounts &amp; scores</li>
             <li>Loan applications</li>
             <li>Telco &amp; open banking data</li>
@@ -1960,7 +1983,7 @@ function DemoResetPanel() {
       {resetDone && (
         <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs space-y-2">
           <p className="font-semibold text-emerald-700 dark:text-emerald-400">
-            Last reset — {Object.values(resetDone.deleted).reduce((a, b) => a + b, 0).toLocaleString()} rows purged
+            Last reset ({resetDone.scope === "global" ? "all countries" : resetDone.scope}) — {Object.values(resetDone.deleted).reduce((a, b) => a + b, 0).toLocaleString()} rows purged
           </p>
           <div className="max-h-36 overflow-y-auto space-y-0.5 text-emerald-600 dark:text-emerald-500">
             {Object.entries(resetDone.deleted).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a).map(([k, v]) => (
@@ -1992,12 +2015,12 @@ function DemoResetPanel() {
       </div>
 
       {/* Confirmation dialog */}
-      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setConfirmText(""); }}>
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) { setConfirmText(""); setSelectedCountry(""); } }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
               <AlertTriangle className="w-5 h-5" />
-              Confirm Credit Scoring Demo Reset
+              {selectedCountry ? `Reset ${selectedCountry} Credit Data` : "Reset All Credit Scoring Data"}
             </DialogTitle>
           </DialogHeader>
 
@@ -2008,9 +2031,34 @@ function DemoResetPanel() {
               Destructive — this cannot be undone
             </div>
 
+            {/* Country scope selector */}
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium">Scope</p>
+              <select
+                value={selectedCountry}
+                onChange={e => setSelectedCountry(e.target.value)}
+                className="w-full px-3 py-1.5 text-sm border rounded-md bg-background"
+                data-testid="select-reset-country"
+              >
+                <option value="">All countries (global wipe)</option>
+                {countries.map(c => (
+                  <option key={c.country} value={c.country}>
+                    {c.country} ({c.count.toLocaleString()} borrowers)
+                  </option>
+                ))}
+              </select>
+              {selectedCountry && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Only data linked to <strong>{selectedCountry}</strong> borrowers will be deleted. All other countries remain untouched.
+                </p>
+              )}
+            </div>
+
             {/* Row-count preview */}
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
-              <p className="font-medium mb-2 text-muted-foreground">All modules that will be wiped:</p>
+              <p className="font-medium mb-2 text-muted-foreground">
+                Modules that will be wiped{selectedCountry ? ` (${selectedCountry})` : ""}:
+              </p>
               {previewQuery.isLoading && (
                 <p className="text-muted-foreground text-xs animate-pulse">Loading counts…</p>
               )}
@@ -2070,7 +2118,7 @@ function DemoResetPanel() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => { setDialogOpen(false); setConfirmText(""); }}
+                onClick={() => { setDialogOpen(false); setConfirmText(""); setSelectedCountry(""); }}
                 data-testid="button-credit-scoring-reset-cancel"
               >
                 Cancel
@@ -2085,7 +2133,7 @@ function DemoResetPanel() {
                 {resetMutation.isPending ? (
                   <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Resetting…</>
                 ) : (
-                  <><Trash2 className="w-4 h-4 mr-2" /> Purge All Credit Scoring Data</>
+                  <><Trash2 className="w-4 h-4 mr-2" /> Purge {scopeLabel} Credit Data</>
                 )}
               </Button>
             </div>

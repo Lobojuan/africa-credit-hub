@@ -8630,80 +8630,187 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   // registry, organisations, users, wallets, and billing completely intact.
   // ---------------------------------------------------------------------------
 
-  const CREDIT_RESET_TABLES: Array<{ table: string; label: string }> = [
-    { table: "borrowers", label: "Borrower profiles" },
-    { table: "credit_accounts", label: "Credit accounts" },
-    { table: "payment_history", label: "Payment history records" },
-    { table: "credit_inquiries", label: "Credit inquiries" },
-    { table: "credit_score_history", label: "Score history (institutional)" },
-    { table: "consumer_score_history", label: "Score history (consumer)" },
-    { table: "disputes", label: "Disputes" },
-    { table: "court_judgments", label: "Court judgments" },
-    { table: "dishonoured_cheques", label: "Dishonoured cheques" },
-    { table: "consent_records", label: "Consent records" },
-    { table: "credit_report_logs", label: "Credit report logs" },
-    { table: "guarantors", label: "Guarantors" },
-    { table: "batch_jobs", label: "Batch upload jobs" },
-    { table: "alternative_data", label: "Alternative data entries" },
-    { table: "collection_assignments", label: "Collection assignments" },
-    { table: "collection_attempts", label: "Collection attempts" },
-    { table: "collection_sla_settings", label: "Collection SLA settings" },
-    { table: "affordability_assessments", label: "Affordability assessments" },
-    { table: "income_sources", label: "Income sources" },
-    { table: "expense_categorisations", label: "Expense categorisations" },
-    { table: "loan_applications", label: "Loan applications" },
-    { table: "loan_repayment_schedules", label: "Loan repayment schedules" },
-    { table: "telco_profiles", label: "Telco profiles" },
-    { table: "telco_loans", label: "Telco loans" },
-    { table: "telco_loan_repayments", label: "Telco loan repayments" },
-    { table: "momo_transactions", label: "MoMo transactions" },
-    { table: "telco_credit_scores", label: "Telco credit scores" },
-    { table: "telco_decision_logs", label: "Telco decision logs" },
-    { table: "telco_consent_events", label: "Telco consent events" },
-    { table: "open_banking_profiles", label: "Open banking profiles" },
-    { table: "linked_open_banking_accounts", label: "Linked open banking accounts" },
-    { table: "identity_verifications", label: "Identity verifications" },
-    { table: "watchlist_hits", label: "Watchlist hits" },
-    { table: "fraud_alerts", label: "Fraud alerts" },
-    { table: "borrower_alerts", label: "Borrower alerts" },
-    { table: "contact_events", label: "Contact / collection events" },
-    { table: "asset_trace_records", label: "Asset trace records" },
-    { table: "esg_scores", label: "ESG scores" },
-    { table: "consumer_monitoring_prefs", label: "Consumer monitoring prefs" },
-    { table: "consumer_monitoring_alerts", label: "Consumer monitoring alerts" },
-    { table: "portfolio_trigger_subscriptions", label: "Portfolio trigger subscriptions" },
-    { table: "portfolio_trigger_events", label: "Portfolio trigger events" },
-    { table: "cross_product_consents", label: "Cross-product consents" },
-    { table: "xds_bureau_queries", label: "XDS bureau queries" },
-    { table: "link_clusters", label: "Link clusters (AML)" },
+  /**
+   * Master config for the credit-scoring demo reset. FK-safe deletion order,
+   * with per-table `scopedWhere` for country-scoped resets.
+   *
+   * scopedWhere = null  → table has no borrower FK; included in global-only wipe,
+   *                        skipped when a country filter is active.
+   * scopedWhere = string → parameterised WHERE clause using $1 = the country value.
+   */
+  const CREDIT_RESET_SCOPED_CONFIG: Array<{
+    table: string;
+    label: string;
+    scopedWhere: string | null;
+  }> = [
+    // ── telco chain: repayments before loans ──────────────────────────────
+    { table: "telco_loan_repayments", label: "Telco loan repayments",
+      scopedWhere: "loan_id IN (SELECT id FROM telco_loans WHERE profile_id IN (SELECT id FROM telco_profiles WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1)))" },
+    { table: "telco_loans", label: "Telco loans",
+      scopedWhere: "profile_id IN (SELECT id FROM telco_profiles WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    { table: "telco_decision_logs", label: "Telco decision logs",
+      scopedWhere: "profile_id IN (SELECT id FROM telco_profiles WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    { table: "telco_credit_scores", label: "Telco credit scores",
+      scopedWhere: "profile_id IN (SELECT id FROM telco_profiles WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    { table: "momo_transactions", label: "MoMo transactions",
+      scopedWhere: "profile_id IN (SELECT id FROM telco_profiles WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    { table: "telco_consent_events", label: "Telco consent events",
+      scopedWhere: "profile_id IN (SELECT id FROM telco_profiles WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    // ── collection chain: attempts before assignments ──────────────────────
+    { table: "collection_attempts", label: "Collection attempts",
+      scopedWhere: "assignment_id IN (SELECT id FROM collection_assignments WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    // ── open banking chain ─────────────────────────────────────────────────
+    { table: "linked_open_banking_accounts", label: "Linked open banking accounts",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    // ── loan chain: repayment schedules before applications ───────────────
+    { table: "loan_repayment_schedules", label: "Loan repayment schedules",
+      scopedWhere: "loan_application_id IN (SELECT id FROM loan_applications WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    // ── credit_report_logs before consent_records ─────────────────────────
+    { table: "credit_report_logs", label: "Credit report logs",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    // ── payment_history before credit_accounts ────────────────────────────
+    { table: "payment_history", label: "Payment history records",
+      scopedWhere: "credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
+    // ── direct borrower_id FK tables ──────────────────────────────────────
+    { table: "guarantors", label: "Guarantors",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "disputes", label: "Disputes",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "collection_assignments", label: "Collection assignments",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "affordability_assessments", label: "Affordability assessments",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "income_sources", label: "Income sources",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "expense_categorisations", label: "Expense categorisations",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "asset_trace_records", label: "Asset trace records",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "borrower_alerts", label: "Borrower alerts",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "consent_records", label: "Consent records",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "consumer_monitoring_alerts", label: "Consumer monitoring alerts",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "consumer_monitoring_prefs", label: "Consumer monitoring prefs",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "consumer_score_history", label: "Score history (consumer)",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "contact_events", label: "Contact / collection events",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "court_judgments", label: "Court judgments",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "credit_inquiries", label: "Credit inquiries",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "credit_score_history", label: "Score history (institutional)",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "cross_product_consents", label: "Cross-product consents",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "dishonoured_cheques", label: "Dishonoured cheques",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "esg_scores", label: "ESG scores",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "fraud_alerts", label: "Fraud alerts",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "identity_verifications", label: "Identity verifications",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "open_banking_profiles", label: "Open banking profiles",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "portfolio_trigger_events", label: "Portfolio trigger events",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "portfolio_trigger_subscriptions", label: "Portfolio trigger subscriptions",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "telco_profiles", label: "Telco profiles",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "watchlist_hits", label: "Watchlist hits",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "xds_bureau_queries", label: "XDS bureau queries",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "credit_accounts", label: "Credit accounts",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "loan_applications", label: "Loan applications",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    // ── global-only: no borrower FK, skipped when country filter is active ─
+    { table: "alternative_data", label: "Alternative data entries", scopedWhere: null },
+    { table: "link_clusters", label: "Link clusters (AML)", scopedWhere: null },
+    { table: "batch_jobs", label: "Batch upload jobs", scopedWhere: null },
+    { table: "collection_sla_settings", label: "Collection SLA settings", scopedWhere: null },
+    // ── borrowers last ─────────────────────────────────────────────────────
+    { table: "borrowers", label: "Borrower profiles",
+      scopedWhere: "country = $1" },
   ];
 
-  app.get("/api/admin/demo/reset-credit-scoring/preview", requireAuth, requireSuperAdmin, async (_req, res) => {
+  // Countries available for per-country scoped reset.
+  app.get("/api/admin/demo/reset-credit-scoring/countries", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
+      const r = await pool.query(
+        `SELECT country, count(*)::int AS borrower_count
+         FROM borrowers
+         WHERE country IS NOT NULL
+         GROUP BY country
+         ORDER BY borrower_count DESC`
+      );
+      res.json({
+        countries: (r.rows as Array<{ country: string; borrower_count: number }>).map((row) => ({
+          country: row.country,
+          count: row.borrower_count,
+        })),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/admin/demo/reset-credit-scoring/preview", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const country = req.query.country ? String(req.query.country) : null;
       const counts: Record<string, number> = {};
-      for (const { table, label } of CREDIT_RESET_TABLES) {
-        const result = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
+      for (const { table, label, scopedWhere } of CREDIT_RESET_SCOPED_CONFIG) {
+        let q: string;
+        let params: string[];
+        if (country) {
+          if (!scopedWhere) continue; // skip global-only tables in scoped mode
+          q = `SELECT count(*)::int AS c FROM ${table} WHERE ${scopedWhere}`;
+          params = [country];
+        } else {
+          q = `SELECT count(*)::int AS c FROM ${table}`;
+          params = [];
+        }
+        const result = await pool.query(q, params);
         counts[label] = (result.rows[0] as { c: number }).c;
       }
-      const lotoLinks = await pool.query(`SELECT count(*)::int AS c FROM loto_merchants WHERE borrower_id IS NOT NULL`);
-      const collBorrower = await pool.query(`SELECT count(*)::int AS c FROM collateral_items WHERE borrower_id IS NOT NULL`);
-      const collLoan = await pool.query(`SELECT count(*)::int AS c FROM collateral_items WHERE loan_application_id IS NOT NULL`);
+
+      // FK links that will be NULLed (rows preserved) — scoped to same country if applicable.
+      const lotoWhere = country
+        ? `borrower_id IN (SELECT id FROM borrowers WHERE country = $1)`
+        : `borrower_id IS NOT NULL`;
+      const collBorWhere = country
+        ? `borrower_id IN (SELECT id FROM borrowers WHERE country = $1)`
+        : `borrower_id IS NOT NULL`;
+      const collLoanWhere = country
+        ? `loan_application_id IN (SELECT id FROM loan_applications WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))`
+        : `loan_application_id IS NOT NULL`;
+      const p = country ? [country] : [];
+      const lotoLinks = await pool.query(`SELECT count(*)::int AS c FROM loto_merchants WHERE ${lotoWhere}`, p);
+      const collBorrower = await pool.query(`SELECT count(*)::int AS c FROM collateral_items WHERE ${collBorWhere}`, p);
+      const collLoan = await pool.query(`SELECT count(*)::int AS c FROM collateral_items WHERE ${collLoanWhere}`, p);
       const unlinkedPreview = {
         "loto_merchants with borrower link": (lotoLinks.rows[0] as { c: number }).c,
         "collateral items with borrower link": (collBorrower.rows[0] as { c: number }).c,
         "collateral items with loan link": (collLoan.rows[0] as { c: number }).c,
       };
-      res.json({ counts, unlinkedPreview });
+      res.json({ counts, unlinkedPreview, scope: country ?? "global" });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
   app.post("/api/admin/demo/reset-credit-scoring", requireAuth, requireSuperAdmin, async (req, res) => {
-    const { confirm } = req.body as { confirm?: string };
+    const { confirm, country } = req.body as { confirm?: string; country?: string };
     if (confirm !== "RESET") {
       return res.status(400).json({ message: "Missing or incorrect confirmation. Send { confirm: 'RESET' }" });
     }
+    const scopedCountry: string | null = country ? String(country) : null;
     const performingUserId = req.session?.userId ?? null;
     const deleted: Record<string, number> = {};
     const unlinked: Record<string, number> = {};
@@ -8711,69 +8818,46 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       await client.query("BEGIN");
 
-      // Step 1: NULL out FKs in tables to KEEP (loto, collateral stay intact)
-      const r1 = await client.query(`UPDATE loto_merchants SET borrower_id = NULL WHERE borrower_id IS NOT NULL`);
-      unlinked["loto_merchants.borrower_id"] = r1.rowCount ?? 0;
-      const r2 = await client.query(`UPDATE collateral_items SET borrower_id = NULL WHERE borrower_id IS NOT NULL`);
-      unlinked["collateral_items.borrower_id"] = r2.rowCount ?? 0;
-      const r3 = await client.query(`UPDATE collateral_items SET loan_application_id = NULL WHERE loan_application_id IS NOT NULL`);
-      unlinked["collateral_items.loan_application_id"] = r3.rowCount ?? 0;
+      // Step 1: NULL out FKs in tables to KEEP (loto, collateral stay intact).
+      // When scoped to a country, only clear links from that country's borrowers.
+      if (scopedCountry) {
+        const r1 = await client.query(
+          `UPDATE loto_merchants SET borrower_id = NULL WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1)`,
+          [scopedCountry]
+        );
+        unlinked["loto_merchants.borrower_id"] = r1.rowCount ?? 0;
+        const r2 = await client.query(
+          `UPDATE collateral_items SET borrower_id = NULL WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1)`,
+          [scopedCountry]
+        );
+        unlinked["collateral_items.borrower_id"] = r2.rowCount ?? 0;
+        const r3 = await client.query(
+          `UPDATE collateral_items SET loan_application_id = NULL WHERE loan_application_id IN (SELECT id FROM loan_applications WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))`,
+          [scopedCountry]
+        );
+        unlinked["collateral_items.loan_application_id"] = r3.rowCount ?? 0;
+      } else {
+        const r1 = await client.query(`UPDATE loto_merchants SET borrower_id = NULL WHERE borrower_id IS NOT NULL`);
+        unlinked["loto_merchants.borrower_id"] = r1.rowCount ?? 0;
+        const r2 = await client.query(`UPDATE collateral_items SET borrower_id = NULL WHERE borrower_id IS NOT NULL`);
+        unlinked["collateral_items.borrower_id"] = r2.rowCount ?? 0;
+        const r3 = await client.query(`UPDATE collateral_items SET loan_application_id = NULL WHERE loan_application_id IS NOT NULL`);
+        unlinked["collateral_items.loan_application_id"] = r3.rowCount ?? 0;
+      }
 
-      // Step 2: Delete in FK-safe order (children before parents, borrowers last).
-      // telco_loan_repayments.loan_id → telco_loans (NOT NULL) — must go first
-      // telco_loans.{decision_log_id,score_id} → telco_decision_logs/telco_credit_scores
-      //   so delete telco_loan_repayments → telco_loans → telco_decision_logs → telco_credit_scores
-      // credit_report_logs.consent_record_id → consent_records — must delete credit_report_logs first
-      const deletions: Array<[string, string]> = [
-        ["collection_attempts",           "Collection attempts"],
-        ["telco_loan_repayments",          "Telco loan repayments"],
-        ["telco_loans",                    "Telco loans"],
-        ["telco_decision_logs",            "Telco decision logs"],
-        ["telco_credit_scores",            "Telco credit scores"],
-        ["momo_transactions",              "MoMo transactions"],
-        ["telco_consent_events",           "Telco consent events"],
-        ["linked_open_banking_accounts",   "Linked open banking accounts"],
-        ["loan_repayment_schedules",       "Loan repayment schedules"],
-        ["credit_report_logs",             "Credit report logs"],
-        ["payment_history",                "Payment history"],
-        ["guarantors",                     "Guarantors"],
-        ["disputes",                       "Disputes"],
-        ["collection_assignments",         "Collection assignments"],
-        ["affordability_assessments",      "Affordability assessments"],
-        ["income_sources",                 "Income sources"],
-        ["expense_categorisations",        "Expense categorisations"],
-        ["asset_trace_records",            "Asset trace records"],
-        ["borrower_alerts",                "Borrower alerts"],
-        ["consent_records",                "Consent records"],
-        ["consumer_monitoring_alerts",     "Consumer monitoring alerts"],
-        ["consumer_monitoring_prefs",      "Consumer monitoring prefs"],
-        ["consumer_score_history",         "Score history (consumer)"],
-        ["contact_events",                 "Contact events"],
-        ["court_judgments",                "Court judgments"],
-        ["credit_inquiries",               "Credit inquiries"],
-        ["credit_score_history",           "Score history (institutional)"],
-        ["cross_product_consents",         "Cross-product consents"],
-        ["dishonoured_cheques",            "Dishonoured cheques"],
-        ["esg_scores",                     "ESG scores"],
-        ["fraud_alerts",                   "Fraud alerts"],
-        ["identity_verifications",         "Identity verifications"],
-        ["open_banking_profiles",          "Open banking profiles"],
-        ["portfolio_trigger_events",       "Portfolio trigger events"],
-        ["portfolio_trigger_subscriptions","Portfolio trigger subscriptions"],
-        ["telco_profiles",                 "Telco profiles"],
-        ["watchlist_hits",                 "Watchlist hits"],
-        ["xds_bureau_queries",             "XDS bureau queries"],
-        ["credit_accounts",                "Credit accounts"],
-        ["loan_applications",              "Loan applications"],
-        ["alternative_data",               "Alternative data"],
-        ["link_clusters",                  "Link clusters"],
-        ["batch_jobs",                     "Batch jobs"],
-        ["collection_sla_settings",        "Collection SLA settings"],
-        ["borrowers",                      "Borrowers"],
-      ];
-
-      for (const [table, label] of deletions) {
-        const r = await client.query(`DELETE FROM ${table}`);
+      // Step 2: Delete in FK-safe order driven by CREDIT_RESET_SCOPED_CONFIG.
+      for (const { table, label, scopedWhere } of CREDIT_RESET_SCOPED_CONFIG) {
+        let q: string;
+        let params: string[];
+        if (scopedCountry) {
+          if (!scopedWhere) continue; // skip global-only tables in scoped mode
+          q = `DELETE FROM ${table} WHERE ${scopedWhere}`;
+          params = [scopedCountry];
+        } else {
+          q = `DELETE FROM ${table}`;
+          params = [];
+        }
+        const r = await client.query(q, params);
         deleted[label] = r.rowCount ?? 0;
       }
 
@@ -8784,14 +8868,14 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           performingUserId,
           "CREDIT_DEMO_RESET",
           "system",
-          JSON.stringify({ deleted, unlinked, performedAt: new Date().toISOString() }),
+          JSON.stringify({ deleted, unlinked, scope: scopedCountry ?? "global", performedAt: new Date().toISOString() }),
           req.ip ?? "unknown",
         ]
       );
 
       await client.query("COMMIT");
-      routeLogger.warn("CREDIT_DEMO_RESET executed", { userId: performingUserId, deleted, unlinked });
-      res.json({ ok: true, deleted, unlinked });
+      routeLogger.warn("CREDIT_DEMO_RESET executed", { userId: performingUserId, scope: scopedCountry ?? "global", deleted, unlinked });
+      res.json({ ok: true, deleted, unlinked, scope: scopedCountry ?? "global" });
     } catch (e: any) {
       await client.query("ROLLBACK").catch(() => {});
       routeLogger.error("CREDIT_DEMO_RESET failed", { error: safeErrorMessage(e) });
