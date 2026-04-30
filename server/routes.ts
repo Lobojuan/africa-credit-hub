@@ -8885,6 +8885,89 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
+  // ---------------------------------------------------------------------------
+  // Loto Fiscal demo reset — wipes draws, winners, receipts, payouts, messages.
+  // Preserves loto_merchants and loto_country_draw_config.
+  // ---------------------------------------------------------------------------
+
+  // FK-safe deletion order (children before parents):
+  // loto_payouts (winner_id NOT NULL → loto_draw_winners)
+  // loto_outbound_messages (winner_id → loto_draw_winners NO ACTION)
+  // loto_draw_winners (draw_id NOT NULL → loto_draws; receipt_id NOT NULL → loto_receipts)
+  // loto_draw_prize_tiers (draw_id NOT NULL → loto_draws)
+  // loto_receipts (merchant_id NOT NULL → loto_merchants, merchants preserved)
+  // loto_draws (root table, no Loto parents)
+  // loto_ussd_sessions, loto_consumer_messaging_prefs (reference only users)
+  const LOTO_RESET_TABLES: Array<{ table: string; label: string }> = [
+    { table: "loto_payouts",                  label: "Payouts" },
+    { table: "loto_outbound_messages",        label: "Outbound messages" },
+    { table: "loto_draw_winners",             label: "Draw winners" },
+    { table: "loto_draw_prize_tiers",         label: "Draw prize tiers" },
+    { table: "loto_receipts",                 label: "Receipts" },
+    { table: "loto_draws",                    label: "Draws" },
+    { table: "loto_ussd_sessions",            label: "USSD sessions" },
+    { table: "loto_consumer_messaging_prefs", label: "Consumer messaging prefs" },
+  ];
+
+  const LOTO_PRESERVED_TABLES: Array<{ table: string; label: string }> = [
+    { table: "loto_merchants",           label: "Merchants (preserved)" },
+    { table: "loto_country_draw_config", label: "Country draw config (preserved)" },
+  ];
+
+  app.get("/api/admin/demo/reset-loto/preview", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const counts: Record<string, number> = {};
+      for (const { table, label } of LOTO_RESET_TABLES) {
+        const r = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
+        counts[label] = (r.rows[0] as { c: number }).c;
+      }
+      const preserved: Record<string, number> = {};
+      for (const { table, label } of LOTO_PRESERVED_TABLES) {
+        const r = await pool.query(`SELECT count(*)::int AS c FROM ${table}`);
+        preserved[label] = (r.rows[0] as { c: number }).c;
+      }
+      res.json({ counts, preserved });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/admin/demo/reset-loto", requireAuth, requireSuperAdmin, async (req, res) => {
+    const { confirm } = req.body as { confirm?: string };
+    if (confirm !== "RESET") {
+      return res.status(400).json({ message: "Missing or incorrect confirmation. Send { confirm: 'RESET' }" });
+    }
+    const performingUserId = req.session?.userId ?? null;
+    const deleted: Record<string, number> = {};
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const { table, label } of LOTO_RESET_TABLES) {
+        const r = await client.query(`DELETE FROM ${table}`);
+        deleted[label] = r.rowCount ?? 0;
+      }
+      await client.query(
+        `INSERT INTO audit_logs (user_id, action, entity, details, ip_address) VALUES ($1, $2, $3, $4, $5)`,
+        [
+          performingUserId,
+          "LOTO_DEMO_RESET",
+          "system",
+          JSON.stringify({ deleted, performedAt: new Date().toISOString() }),
+          req.ip ?? "unknown",
+        ]
+      );
+      await client.query("COMMIT");
+      routeLogger.warn("LOTO_DEMO_RESET executed", { userId: performingUserId, deleted });
+      res.json({ ok: true, deleted });
+    } catch (e: any) {
+      await client.query("ROLLBACK").catch(() => {});
+      routeLogger.error("LOTO_DEMO_RESET failed", { error: safeErrorMessage(e) });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    } finally {
+      client.release();
+    }
+  });
+
   app.get("/api/health/production", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const checks: Record<string, { status: "pass" | "fail" | "warn"; message: string }> = {};

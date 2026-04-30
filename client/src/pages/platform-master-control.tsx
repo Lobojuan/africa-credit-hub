@@ -2148,6 +2148,230 @@ function DemoResetPanel() {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Loto Reset Panel — Loto Fiscal transactional data purge (super_admin only)
+// ---------------------------------------------------------------------------
+interface LotoResetPreview {
+  counts: Record<string, number>;
+  preserved: Record<string, number>;
+}
+
+function LotoResetPanel() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
+  const [resetDone, setResetDone] = useState<{ deleted: Record<string, number> } | null>(null);
+
+  const previewQuery = useQuery<LotoResetPreview>({
+    queryKey: ["/api/admin/demo/reset-loto/preview"],
+    queryFn: async () => {
+      const r = await fetch("/api/admin/demo/reset-loto/preview", { credentials: "include" });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: "Failed to load preview" }));
+        throw new Error((err as { message?: string }).message ?? "Preview failed");
+      }
+      return r.json();
+    },
+    enabled: dialogOpen,
+    staleTime: 0,
+  });
+
+  const resetMutation = useMutation({
+    mutationFn: async () => {
+      const r = await fetch("/api/admin/demo/reset-loto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ confirm: "RESET" }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ message: "Unknown error" }));
+        throw new Error((err as { message?: string }).message ?? "Reset failed");
+      }
+      return r.json() as Promise<{ deleted: Record<string, number> }>;
+    },
+    onSuccess: (data) => {
+      const total = Object.values(data.deleted).reduce((a, b) => a + b, 0);
+      setResetDone(data);
+      setDialogOpen(false);
+      setConfirmText("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/demo/reset-loto/preview"] });
+      toast({ title: "Loto data purged", description: `${total.toLocaleString()} rows deleted. Merchants and country config are untouched.` });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Reset failed", description: e.message, variant: "destructive" });
+    },
+  });
+
+  const totalRows = previewQuery.data
+    ? Object.values(previewQuery.data.counts).reduce((a, b) => a + b, 0)
+    : null;
+
+  return (
+    <div className="space-y-4 pt-4 border-t border-border">
+      <div className="flex items-start gap-3 p-3 rounded-lg bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800">
+        <AlertTriangle className="w-5 h-5 text-orange-500 mt-0.5 shrink-0" />
+        <div className="text-sm">
+          <p className="font-semibold text-orange-700 dark:text-orange-400">Loto Fiscal reset — wipes all draws, winners, and receipts</p>
+          <p className="text-orange-600 dark:text-orange-400 mt-0.5">
+            Deletes all Loto transactional data: draws, prize tiers, winners, receipts, payouts, outbound messages, and USSD sessions.
+            Merchant registrations and country draw configuration are <strong>completely untouched</strong>.
+            All credit scoring, collateral, organisation, and billing data remain intact.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/20 p-2">
+          <p className="font-medium text-emerald-700 dark:text-emerald-400 mb-1">Preserved (untouched)</p>
+          <ul className="text-emerald-600 dark:text-emerald-500 space-y-0.5 list-disc list-inside">
+            <li>Merchant registrations</li>
+            <li>Country draw configuration</li>
+            <li>Organizations &amp; users</li>
+            <li>All credit scoring data</li>
+            <li>Collateral registry</li>
+          </ul>
+        </div>
+        <div className="rounded-md border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20 p-2">
+          <p className="font-medium text-orange-700 dark:text-orange-400 mb-1">Wiped by reset</p>
+          <ul className="text-orange-600 dark:text-orange-500 space-y-0.5 list-disc list-inside">
+            <li>Draws &amp; prize tiers</li>
+            <li>Winners &amp; payouts</li>
+            <li>Receipts</li>
+            <li>Outbound messages</li>
+            <li>USSD sessions</li>
+          </ul>
+        </div>
+      </div>
+
+      {resetDone && (
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 dark:bg-emerald-950/30 p-3 text-xs space-y-2">
+          <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+            Last reset — {Object.values(resetDone.deleted).reduce((a, b) => a + b, 0).toLocaleString()} rows purged
+          </p>
+          <div className="max-h-36 overflow-y-auto space-y-0.5 text-emerald-600 dark:text-emerald-500">
+            {Object.entries(resetDone.deleted).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a).map(([k, v]) => (
+              <div key={k} className="flex justify-between"><span>{k}</span><span className="font-mono">{v.toLocaleString()}</span></div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400"
+          onClick={() => { setDialogOpen(true); setConfirmText(""); setResetDone(null); }}
+          data-testid="button-loto-reset-open"
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Reset Loto Data
+        </Button>
+      </div>
+
+      <Dialog open={dialogOpen} onOpenChange={(o) => { setDialogOpen(o); if (!o) setConfirmText(""); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-600">
+              <AlertTriangle className="w-5 h-5" />
+              Confirm Loto Fiscal Demo Reset
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-1">
+            <div className="flex items-center gap-2 rounded-md bg-red-600 text-white px-3 py-2 text-sm font-semibold">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              Destructive — this cannot be undone
+            </div>
+
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              <p className="font-medium mb-2 text-muted-foreground">Loto modules that will be wiped:</p>
+              {previewQuery.isLoading && (
+                <p className="text-muted-foreground text-xs animate-pulse">Loading counts…</p>
+              )}
+              {previewQuery.error && (
+                <p className="text-red-600 text-xs">{(previewQuery.error as Error).message}</p>
+              )}
+              {previewQuery.data && (
+                <>
+                  <div className="max-h-48 overflow-y-auto space-y-0.5 text-xs">
+                    {Object.entries(previewQuery.data.counts)
+                      .sort(([, a], [, b]) => b - a)
+                      .map(([label, count]) => (
+                        <div key={label} className="flex justify-between">
+                          <span className={count === 0 ? "text-muted-foreground/50" : "text-muted-foreground"}>{label}</span>
+                          <span className={`font-mono font-medium ${count > 0 ? "text-red-600" : "text-muted-foreground/40"}`}>
+                            {count.toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                  <div className="mt-2 pt-2 border-t flex justify-between font-semibold text-xs">
+                    <span>Total rows to delete</span>
+                    <span className={`font-mono ${totalRows ? "text-red-600" : "text-muted-foreground"}`}>
+                      {(totalRows ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                  {Object.keys(previewQuery.data.preserved).length > 0 && (
+                    <div className="mt-2 text-xs text-emerald-600 dark:text-emerald-400">
+                      <p className="font-medium">Preserved (untouched):</p>
+                      {Object.entries(previewQuery.data.preserved).map(([k, v]) => (
+                        <div key={k} className="flex justify-between">
+                          <span>{k}</span>
+                          <span className="font-mono">{v.toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Type <span className="font-mono font-bold text-foreground">RESET</span> to confirm:
+              </p>
+              <Input
+                value={confirmText}
+                onChange={e => setConfirmText(e.target.value)}
+                placeholder="Type RESET here"
+                className="font-mono"
+                data-testid="input-loto-reset-confirm"
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => { setDialogOpen(false); setConfirmText(""); }}
+                data-testid="button-loto-reset-cancel"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={confirmText !== "RESET" || resetMutation.isPending}
+                onClick={() => resetMutation.mutate()}
+                data-testid="button-loto-reset-execute"
+              >
+                {resetMutation.isPending ? (
+                  <><RefreshCw className="w-4 h-4 mr-2 animate-spin" /> Resetting…</>
+                ) : (
+                  <><Trash2 className="w-4 h-4 mr-2" /> Purge All Loto Data</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -2240,6 +2464,7 @@ function ControlDashboard() {
 
           <Panel title="Demo Tools" icon={TestTube} color="text-red-500" defaultOpen={false}>
             <DemoResetPanel />
+            <LotoResetPanel />
           </Panel>
         </div>
       </div>
