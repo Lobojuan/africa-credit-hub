@@ -8673,7 +8673,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       scopedWhere: "credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
     // ── direct borrower_id FK tables ──────────────────────────────────────
     { table: "guarantors", label: "Guarantors",
-      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+      scopedWhere: "credit_account_id IN (SELECT id FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country = $1))" },
     { table: "disputes", label: "Disputes",
       scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
     { table: "collection_assignments", label: "Collection assignments",
@@ -8730,9 +8730,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
     { table: "loan_applications", label: "Loan applications",
       scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
-    // ── global-only: no borrower FK, skipped when country filter is active ─
-    { table: "alternative_data", label: "Alternative data entries", scopedWhere: null },
-    { table: "link_clusters", label: "Link clusters (AML)", scopedWhere: null },
+    // ── scopeable tables (borrower_id text or country column) ─────────────
+    { table: "alternative_data", label: "Alternative data entries",
+      scopedWhere: "borrower_id IN (SELECT id FROM borrowers WHERE country = $1)" },
+    { table: "link_clusters", label: "Link clusters (AML)",
+      scopedWhere: "country = $1" },
+    // ── global-only: no borrower/country relationship, always wiped in full ─
     { table: "batch_jobs", label: "Batch upload jobs", scopedWhere: null },
     { table: "collection_sla_settings", label: "Collection SLA settings", scopedWhere: null },
     // ── borrowers last ─────────────────────────────────────────────────────
