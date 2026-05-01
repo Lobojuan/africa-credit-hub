@@ -34,6 +34,7 @@ import {
   collateralItems,
 } from "@shared/schema";
 import { count, eq } from "drizzle-orm";
+import type { PgTable } from "drizzle-orm/pg-core";
 import { randomUUID } from "crypto";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,7 +52,7 @@ function daysAgo(n: number): Date {
   d.setDate(d.getDate() - n);
   return d;
 }
-async function tableCount(table: Parameters<typeof db.select>[0] extends undefined ? never : any): Promise<number> {
+async function tableCount(table: PgTable): Promise<number> {
   const [row] = await db.select({ value: count() }).from(table);
   return Number(row?.value ?? 0);
 }
@@ -787,27 +788,37 @@ async function seedPapssSettlements() {
     status: SettlementStatus;
   }
 
+  // Corridors scoped to Ghana + immediate ECOWAS neighbors:
+  // GH ↔ CI (Côte d'Ivoire), GH ↔ NG (Nigeria), GH ↔ SN (Senegal)
+  // plus CI ↔ SN (BCEAO-zone intra-regional), with all four status values represented.
   const CORRIDORS: Corridor[] = [
-    { sender: "GCB Bank Ltd",                 senderCountry: "Ghana",         receiver: "Société Générale CI",       receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.2400", purpose: "Trade finance — cocoa export proceeds",             status: "completed" },
-    { sender: "Ecobank Ghana",                senderCountry: "Ghana",         receiver: "Access Bank Nigeria",        receiverCountry: "Nigeria",        senderCcy: "GHS", receiverCcy: "NGN", rate: "47.1200", purpose: "Remittance — family support",                       status: "completed" },
-    { sender: "Bank of Ghana",                senderCountry: "Ghana",         receiver: "Banque Centrale du Sénégal", receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "62.8900", purpose: "Interbank regulatory settlement",                   status: "completed" },
-    { sender: "Fidelity Bank Ghana",          senderCountry: "Ghana",         receiver: "UBA Côte d'Ivoire",         receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.1500", purpose: "SME supplier payment",                              status: "completed" },
-    { sender: "Zenith Bank Ghana",            senderCountry: "Ghana",         receiver: "First Bank Nigeria",         receiverCountry: "Nigeria",        senderCcy: "GHS", receiverCcy: "NGN", rate: "47.3300", purpose: "Education fees — tertiary institution",             status: "completed" },
-    { sender: "Standard Chartered Ghana",     senderCountry: "Ghana",         receiver: "Attijari Bank Maroc",        receiverCountry: "Morocco",        senderCcy: "GHS", receiverCcy: "MAD", rate: "2.8400",  purpose: "Import financing — leather goods",                  status: "completed" },
-    { sender: "Société Générale CI",          senderCountry: "Côte d'Ivoire", receiver: "GCB Bank Ltd",              receiverCountry: "Ghana",          senderCcy: "XOF", receiverCcy: "GHS", rate: "0.01465", purpose: "Reverse settlement — excess clearing balance",      status: "completed" },
-    { sender: "Access Bank Nigeria",          senderCountry: "Nigeria",       receiver: "Ecobank Ghana",              receiverCountry: "Ghana",          senderCcy: "NGN", receiverCcy: "GHS", rate: "0.02121", purpose: "Diaspora remittance",                               status: "completed" },
-    { sender: "UBA Senegal",                  senderCountry: "Senegal",       receiver: "Bank of Ghana",              receiverCountry: "Ghana",          senderCcy: "XOF", receiverCcy: "GHS", rate: "0.01590", purpose: "Cross-border investment settlement",                status: "completed" },
-    { sender: "Ecobank Ghana",                senderCountry: "Ghana",         receiver: "Ecobank Burkina Faso",       receiverCountry: "Burkina Faso",   senderCcy: "GHS", receiverCcy: "XOF", rate: "68.4200", purpose: "Intragroup liquidity transfer",                     status: "pending"   },
-    { sender: "National Investment Bank",     senderCountry: "Ghana",         receiver: "BNDE Sénégal",               receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "62.7300", purpose: "Infrastructure project drawdown",                   status: "pending"   },
-    { sender: "Agricultural Development Bank",senderCountry: "Ghana",         receiver: "Banque Agricole Mali",        receiverCountry: "Mali",           senderCcy: "GHS", receiverCcy: "XOF", rate: "63.1100", purpose: "Shea butter export settlement",                     status: "pending"   },
-    { sender: "CalBank Ghana",                senderCountry: "Ghana",         receiver: "Guaranty Trust Bank Nigeria", receiverCountry: "Nigeria",       senderCcy: "GHS", receiverCcy: "NGN", rate: "47.0800", purpose: "Consumer goods import payment",                     status: "completed" },
-    { sender: "GCB Bank Ltd",                 senderCountry: "Ghana",         receiver: "Rawbank DRC",                receiverCountry: "DRC",            senderCcy: "GHS", receiverCcy: "CDF", rate: "82.4500", purpose: "Mining equipment financing",                        status: "failed"    },
-    { sender: "Stanbic Bank Ghana",           senderCountry: "Ghana",         receiver: "Stanbic Bank Kenya",         receiverCountry: "Kenya",          senderCcy: "GHS", receiverCcy: "KES", rate: "9.7200",  purpose: "Tech services invoice settlement",                  status: "completed" },
-    { sender: "Ecobank Ghana",                senderCountry: "Ghana",         receiver: "Ecobank Rwanda",             receiverCountry: "Rwanda",         senderCcy: "GHS", receiverCcy: "RWF", rate: "77.6800", purpose: "Tourism services payment",                          status: "completed" },
-    { sender: "Bank of Ghana",                senderCountry: "Ghana",         receiver: "BCEAO",                      receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "63.0200", purpose: "Statutory reserve transfer",                        status: "completed" },
-    { sender: "Fidelity Bank Ghana",          senderCountry: "Ghana",         receiver: "BNI Côte d'Ivoire",         receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.0900", purpose: "Pharmaceutical import settlement",                  status: "failed"    },
-    { sender: "GCB Bank Ltd",                 senderCountry: "Ghana",         receiver: "Diamond Bank Sénégal",       receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "62.9500", purpose: "Telecoms equipment import",                         status: "completed" },
-    { sender: "Ecobank Ghana",                senderCountry: "Ghana",         receiver: "Ecobank Cameroun",           receiverCountry: "Cameroon",       senderCcy: "GHS", receiverCcy: "XAF", rate: "68.5100", purpose: "Intragroup settlement — Central Africa corridor",   status: "reversed"  },
+    // GH → CI (7 rows)
+    { sender: "GCB Bank Ltd",                 senderCountry: "Ghana",         receiver: "Société Générale CI",       receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.2400", purpose: "Trade finance — cocoa export proceeds",              status: "completed" },
+    { sender: "Fidelity Bank Ghana",          senderCountry: "Ghana",         receiver: "UBA Côte d'Ivoire",         receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.1500", purpose: "SME supplier payment — textiles",                    status: "completed" },
+    { sender: "Stanbic Bank Ghana",           senderCountry: "Ghana",         receiver: "Ecobank CI",                receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.0900", purpose: "Agricultural commodity export settlement",           status: "completed" },
+    { sender: "CalBank Ghana",                senderCountry: "Ghana",         receiver: "BNI Côte d'Ivoire",         receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.3100", purpose: "Pharmaceutical import settlement",                   status: "pending"   },
+    { sender: "National Investment Bank",     senderCountry: "Ghana",         receiver: "Société Générale CI",       receiverCountry: "Côte d'Ivoire", senderCcy: "GHS", receiverCcy: "XOF", rate: "68.2200", purpose: "Infrastructure project drawdown",                    status: "failed"    },
+    // CI → GH (3 rows)
+    { sender: "Société Générale CI",          senderCountry: "Côte d'Ivoire", receiver: "GCB Bank Ltd",              receiverCountry: "Ghana",          senderCcy: "XOF", receiverCcy: "GHS", rate: "0.01465", purpose: "Reverse settlement — excess clearing balance",       status: "completed" },
+    { sender: "Ecobank CI",                   senderCountry: "Côte d'Ivoire", receiver: "Ecobank Ghana",             receiverCountry: "Ghana",          senderCcy: "XOF", receiverCcy: "GHS", rate: "0.01462", purpose: "Intragroup liquidity rebalancing",                   status: "reversed"  },
+    { sender: "UBA Côte d'Ivoire",            senderCountry: "Côte d'Ivoire", receiver: "Fidelity Bank Ghana",       receiverCountry: "Ghana",          senderCcy: "XOF", receiverCcy: "GHS", rate: "0.01468", purpose: "Trade receivables settlement",                       status: "completed" },
+    // GH → NG (4 rows)
+    { sender: "Ecobank Ghana",                senderCountry: "Ghana",         receiver: "Access Bank Nigeria",        receiverCountry: "Nigeria",        senderCcy: "GHS", receiverCcy: "NGN", rate: "47.1200", purpose: "Remittance — family support",                        status: "completed" },
+    { sender: "Zenith Bank Ghana",            senderCountry: "Ghana",         receiver: "First Bank Nigeria",         receiverCountry: "Nigeria",        senderCcy: "GHS", receiverCcy: "NGN", rate: "47.3300", purpose: "Education fees — tertiary institution",              status: "completed" },
+    { sender: "CalBank Ghana",                senderCountry: "Ghana",         receiver: "Guaranty Trust Bank Nigeria",receiverCountry: "Nigeria",        senderCcy: "GHS", receiverCcy: "NGN", rate: "47.0800", purpose: "Consumer goods import payment",                      status: "pending"   },
+    { sender: "Stanbic Bank Ghana",           senderCountry: "Ghana",         receiver: "UBA Nigeria",                receiverCountry: "Nigeria",        senderCcy: "GHS", receiverCcy: "NGN", rate: "47.2500", purpose: "Oil & gas services invoice",                        status: "failed"    },
+    // NG → GH (2 rows)
+    { sender: "Access Bank Nigeria",          senderCountry: "Nigeria",       receiver: "Ecobank Ghana",              receiverCountry: "Ghana",          senderCcy: "NGN", receiverCcy: "GHS", rate: "0.02121", purpose: "Diaspora remittance",                                status: "completed" },
+    { sender: "First Bank Nigeria",           senderCountry: "Nigeria",       receiver: "GCB Bank Ltd",               receiverCountry: "Ghana",          senderCcy: "NGN", receiverCcy: "GHS", rate: "0.02118", purpose: "Trade corridor reverse settlement",                  status: "completed" },
+    // GH → SN (4 rows)
+    { sender: "Bank of Ghana",                senderCountry: "Ghana",         receiver: "Banque Centrale du Sénégal", receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "62.8900", purpose: "Interbank regulatory settlement",                    status: "completed" },
+    { sender: "National Investment Bank",     senderCountry: "Ghana",         receiver: "BNDE Sénégal",               receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "62.7300", purpose: "Shea butter export settlement",                      status: "completed" },
+    { sender: "GCB Bank Ltd",                 senderCountry: "Ghana",         receiver: "Diamond Bank Sénégal",       receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "62.9500", purpose: "Telecoms equipment import",                          status: "completed" },
+    { sender: "Fidelity Bank Ghana",          senderCountry: "Ghana",         receiver: "BCEAO",                      receiverCountry: "Senegal",        senderCcy: "GHS", receiverCcy: "XOF", rate: "63.0200", purpose: "Statutory reserve transfer",                         status: "pending"   },
+    // SN → GH (1 row)
+    { sender: "UBA Sénégal",                  senderCountry: "Senegal",       receiver: "Bank of Ghana",              receiverCountry: "Ghana",          senderCcy: "XOF", receiverCcy: "GHS", rate: "0.01590", purpose: "Cross-border investment settlement",                 status: "completed" },
+    // CI → SN intra-BCEAO (1 row)
+    { sender: "Société Générale CI",          senderCountry: "Côte d'Ivoire", receiver: "BCEAO",                      receiverCountry: "Senegal",        senderCcy: "XOF", receiverCcy: "XOF", rate: "1.0000",  purpose: "BCEAO intra-zone clearing settlement",               status: "reversed"  },
   ];
 
   const rows = CORRIDORS.map((c, i) => {
