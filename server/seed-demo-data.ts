@@ -96,7 +96,11 @@ async function getCollateralItems() {
 async function seedComplianceQueue() {
   const hitCount = await tableCount(watchlistHits);
   const alertCount = await tableCount(fraudAlerts);
-  if (hitCount > 0 || alertCount > 0) {
+  // Per-table idempotency: each table seeded independently so a partial-data
+  // state (one table filled, the other empty) is back-filled on next restart.
+  const needHits = hitCount === 0;
+  const needAlerts = alertCount === 0;
+  if (!needHits && !needAlerts) {
     console.log(`[DemoSeed] Compliance queue already seeded (${hitCount} hits, ${alertCount} alerts) — skipping.`);
     return;
   }
@@ -135,21 +139,24 @@ async function seedComplianceQueue() {
     { source: "sanctions_un",    provider: "UN Sanctions List",        matchedName: "Martha Dankwa",       matchDetails: "Name match (52%) — common Ghanaian name, likely false positive. Recommend verification.",                                   score: "52.00", status: "false_positive" },
   ];
 
-  const hitRows = hitTemplates.slice(0, ghBorrowers.length).map((tmpl, i) => ({
-    borrowerId: ghBorrowers[i].id,
-    source: tmpl.source,
-    provider: tmpl.provider,
-    matchScore: tmpl.score,
-    matchedName: tmpl.matchedName,
-    matchDetails: tmpl.matchDetails,
-    status: tmpl.status,
-    organizationId: bankOrgId,
-    createdAt: daysAgo(rand(1, 89)),
-    resolvedAt: (tmpl.status === "resolved" || tmpl.status === "false_positive") ? daysAgo(rand(1, 10)) : null,
-  }));
-
-  await db.insert(watchlistHits).values(hitRows);
-  console.log(`[DemoSeed] Inserted ${hitRows.length} watchlist hits.`);
+  if (needHits) {
+    // Cycle borrower IDs modulo so we always produce 10 rows regardless of
+    // how many Ghana borrowers are in the environment.
+    const hitRows = hitTemplates.map((tmpl, i) => ({
+      borrowerId: ghBorrowers[i % ghBorrowers.length].id,
+      source: tmpl.source,
+      provider: tmpl.provider,
+      matchScore: tmpl.score,
+      matchedName: tmpl.matchedName,
+      matchDetails: tmpl.matchDetails,
+      status: tmpl.status,
+      organizationId: bankOrgId,
+      createdAt: daysAgo(rand(1, 89)),
+      resolvedAt: (tmpl.status === "resolved" || tmpl.status === "false_positive") ? daysAgo(rand(1, 10)) : null,
+    }));
+    await db.insert(watchlistHits).values(hitRows);
+    console.log(`[DemoSeed] Inserted ${hitRows.length} watchlist hits.`);
+  }
 
   type FraudSeverity = "low" | "medium" | "high" | "critical";
 
@@ -168,21 +175,22 @@ async function seedComplianceQueue() {
     { ruleCode: "SYNTHETIC_005", description: "Synthetic identity indicators — NIA ID number fails checksum validation",             severity: "low",      status: "false_positive" },
   ];
 
-  const alertRows = alertTemplates.map((tmpl, i) => ({
-    borrowerId: ghBorrowers[Math.min(i + Math.floor(ghBorrowers.length / 2), ghBorrowers.length - 1)].id,
-    ruleCode: tmpl.ruleCode,
-    ruleDescription: tmpl.description,
-    severity: tmpl.severity,
-    evidence: `Automated detection at ${daysAgo(rand(1, 60)).toISOString().slice(0, 10)}. ${rand(2, 12)} corroborating data points.`,
-    relatedBorrowerIds: [] as string[],
-    status: tmpl.status,
-    organizationId: bankOrgId,
-    createdAt: daysAgo(rand(1, 60)),
-    resolvedAt: (tmpl.status === "resolved" || tmpl.status === "false_positive") ? daysAgo(rand(1, 5)) : null,
-  }));
-
-  await db.insert(fraudAlerts).values(alertRows);
-  console.log(`[DemoSeed] Inserted ${alertRows.length} fraud alerts.`);
+  if (needAlerts) {
+    const alertRows = alertTemplates.map((tmpl, i) => ({
+      borrowerId: ghBorrowers[i % ghBorrowers.length].id,
+      ruleCode: tmpl.ruleCode,
+      ruleDescription: tmpl.description,
+      severity: tmpl.severity,
+      evidence: `Automated detection at ${daysAgo(rand(1, 60)).toISOString().slice(0, 10)}. ${rand(2, 12)} corroborating data points.`,
+      relatedBorrowerIds: [] as string[],
+      status: tmpl.status,
+      organizationId: bankOrgId,
+      createdAt: daysAgo(rand(1, 60)),
+      resolvedAt: (tmpl.status === "resolved" || tmpl.status === "false_positive") ? daysAgo(rand(1, 5)) : null,
+    }));
+    await db.insert(fraudAlerts).values(alertRows);
+    console.log(`[DemoSeed] Inserted ${alertRows.length} fraud alerts.`);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -191,8 +199,12 @@ async function seedComplianceQueue() {
 
 async function seedPortfolioTriggers() {
   const subCount = await tableCount(portfolioTriggerSubscriptions);
-  if (subCount > 0) {
-    console.log(`[DemoSeed] Portfolio triggers already seeded (${subCount}) — skipping.`);
+  const evtCount = await tableCount(portfolioTriggerEvents);
+  const needSubs = subCount === 0;
+  const needEvents = evtCount === 0;
+
+  if (!needSubs && !needEvents) {
+    console.log(`[DemoSeed] Portfolio triggers already seeded (${subCount} subs, ${evtCount} events) — skipping.`);
     return;
   }
 
@@ -220,80 +232,92 @@ async function seedPortfolioTriggers() {
     { label: "Account Opening Monitor",                   triggerTypes: ["new_account", "new_inquiry"],                                                          orgId: orgIds[1] },
   ];
 
-  const subIds: string[] = [];
+  let subIds: string[] = [];
 
-  for (let i = 0; i < subscriptionDefs.length && i < ghBorrowers.length; i++) {
-    const def = subscriptionDefs[i];
-    const [inserted] = await db
-      .insert(portfolioTriggerSubscriptions)
-      .values({
-        organizationId: def.orgId,
-        borrowerId: ghBorrowers[i].id,
-        triggerTypes: def.triggerTypes,
-        status: "active",
-        label: def.label,
-        createdBy: adminUser?.id ?? null,
-        createdAt: daysAgo(rand(30, 180)),
-        updatedAt: daysAgo(rand(1, 29)),
-      })
-      .returning({ id: portfolioTriggerSubscriptions.id });
-    subIds.push(inserted.id);
-  }
-  console.log(`[DemoSeed] Inserted ${subIds.length} portfolio trigger subscriptions.`);
-
-  const eventRows: Array<{
-    subscriptionId: string;
-    organizationId: string;
-    borrowerId: string;
-    eventType: string;
-    eventData: Record<string, unknown>;
-    notifiedVia: string[];
-    webhookStatus: string | null;
-    firedAt: Date;
-  }> = [];
-
-  for (let s = 0; s < subIds.length; s++) {
-    const def = subscriptionDefs[s];
-    const borrowerId = ghBorrowers[s].id;
-    const numEvents = rand(2, 4);
-
-    for (let e = 0; e < numEvents; e++) {
-      const eventType = pick(def.triggerTypes as string[]);
-      const firedAt = daysAgo(rand(1, 60));
-
-      let eventData: Record<string, unknown>;
-      if (eventType === "score_drop") {
-        const prev = rand(550, 680);
-        const next = rand(400, prev - 20);
-        eventData = { previousScore: prev, newScore: next, drop: prev - next, reason: "Missed payment reported" };
-      } else if (eventType === "new_inquiry") {
-        eventData = { inquiringOrg: pick(["GCB Bank", "Ecobank Ghana", "Fidelity Bank", "Zenith Bank"]), purpose: "loan_application", inquiryDate: firedAt.toISOString().slice(0, 10) };
-      } else if (eventType === "new_account") {
-        eventData = { accountType: pick(["personal_loan", "overdraft", "mortgage", "auto_loan"]), lender: pick(["Bank of Ghana", "GCB Bank", "Ecobank Ghana"]), limit: rand(5000, 100000), currency: "GHS" };
-      } else if (eventType === "late_payment") {
-        eventData = { daysLate: rand(1, 90), accountType: "personal_loan", creditor: pick(["GCB Bank", "Ecobank Ghana"]), amountOverdue: rand(500, 15000), currency: "GHS" };
-      } else if (eventType === "new_judgment") {
-        eventData = { court: pick(["Accra High Court", "Kumasi District Court"]), caseRef: `GH-${rand(1000, 9999)}-2024`, amount: rand(10000, 200000), currency: "GHS" };
-      } else {
-        eventData = { from: pick(["active", "performing"]), to: pick(["non_performing", "watch_list"]), changedBy: "System" };
-      }
-
-      eventRows.push({
-        subscriptionId: subIds[s],
-        organizationId: def.orgId,
-        borrowerId,
-        eventType,
-        eventData,
-        notifiedVia: ["email", "in_app"],
-        webhookStatus: Math.random() > 0.3 ? "delivered" : null,
-        firedAt,
-      });
+  if (needSubs) {
+    for (let i = 0; i < subscriptionDefs.length && i < ghBorrowers.length; i++) {
+      const def = subscriptionDefs[i];
+      const [inserted] = await db
+        .insert(portfolioTriggerSubscriptions)
+        .values({
+          organizationId: def.orgId,
+          borrowerId: ghBorrowers[i].id,
+          triggerTypes: def.triggerTypes,
+          status: "active",
+          label: def.label,
+          createdBy: adminUser?.id ?? null,
+          createdAt: daysAgo(rand(30, 180)),
+          updatedAt: daysAgo(rand(1, 29)),
+        })
+        .returning({ id: portfolioTriggerSubscriptions.id });
+      subIds.push(inserted.id);
     }
+    console.log(`[DemoSeed] Inserted ${subIds.length} portfolio trigger subscriptions.`);
+  } else {
+    // Subscriptions already exist — load their IDs for event generation below
+    const existing = await db
+      .select({ id: portfolioTriggerSubscriptions.id })
+      .from(portfolioTriggerSubscriptions)
+      .limit(subscriptionDefs.length);
+    subIds = existing.map(r => r.id);
+    console.log(`[DemoSeed] Portfolio trigger subscriptions already seeded (${subCount}) — loading IDs for event back-fill.`);
   }
 
-  if (eventRows.length > 0) {
-    await db.insert(portfolioTriggerEvents).values(eventRows);
-    console.log(`[DemoSeed] Inserted ${eventRows.length} portfolio trigger events.`);
+  if (needEvents && subIds.length > 0) {
+    const eventRows: Array<{
+      subscriptionId: string;
+      organizationId: string;
+      borrowerId: string;
+      eventType: string;
+      eventData: Record<string, unknown>;
+      notifiedVia: string[];
+      webhookStatus: string | null;
+      firedAt: Date;
+    }> = [];
+
+    for (let s = 0; s < subIds.length; s++) {
+      const def = subscriptionDefs[s % subscriptionDefs.length];
+      const borrowerId = ghBorrowers[s % ghBorrowers.length].id;
+      const numEvents = rand(2, 4);
+
+      for (let e = 0; e < numEvents; e++) {
+        const eventType = pick(def.triggerTypes as string[]);
+        const firedAt = daysAgo(rand(1, 60));
+
+        let eventData: Record<string, unknown>;
+        if (eventType === "score_drop") {
+          const prev = rand(550, 680);
+          const next = rand(400, prev - 20);
+          eventData = { previousScore: prev, newScore: next, drop: prev - next, reason: "Missed payment reported" };
+        } else if (eventType === "new_inquiry") {
+          eventData = { inquiringOrg: pick(["GCB Bank", "Ecobank Ghana", "Fidelity Bank", "Zenith Bank"]), purpose: "loan_application", inquiryDate: firedAt.toISOString().slice(0, 10) };
+        } else if (eventType === "new_account") {
+          eventData = { accountType: pick(["personal_loan", "overdraft", "mortgage", "auto_loan"]), lender: pick(["Bank of Ghana", "GCB Bank", "Ecobank Ghana"]), limit: rand(5000, 100000), currency: "GHS" };
+        } else if (eventType === "late_payment") {
+          eventData = { daysLate: rand(1, 90), accountType: "personal_loan", creditor: pick(["GCB Bank", "Ecobank Ghana"]), amountOverdue: rand(500, 15000), currency: "GHS" };
+        } else if (eventType === "new_judgment") {
+          eventData = { court: pick(["Accra High Court", "Kumasi District Court"]), caseRef: `GH-${rand(1000, 9999)}-2024`, amount: rand(10000, 200000), currency: "GHS" };
+        } else {
+          eventData = { from: pick(["active", "performing"]), to: pick(["non_performing", "watch_list"]), changedBy: "System" };
+        }
+
+        eventRows.push({
+          subscriptionId: subIds[s],
+          organizationId: def.orgId,
+          borrowerId,
+          eventType,
+          eventData,
+          notifiedVia: ["email", "in_app"],
+          webhookStatus: Math.random() > 0.3 ? "delivered" : null,
+          firedAt,
+        });
+      }
+    }
+
+    if (eventRows.length > 0) {
+      await db.insert(portfolioTriggerEvents).values(eventRows);
+      console.log(`[DemoSeed] Inserted ${eventRows.length} portfolio trigger events.`);
+    }
   }
 }
 
@@ -302,9 +326,13 @@ async function seedPortfolioTriggers() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function seedTelcoProfiles(): Promise<string[]> {
-  const existing = await tableCount(telcoProfiles);
-  if (existing > 0) {
-    console.log(`[DemoSeed] Telco profiles already seeded (${existing}) — skipping.`);
+  const profileCount = await tableCount(telcoProfiles);
+  const scoreCount = await tableCount(telcoCreditScores);
+  const needProfiles = profileCount === 0;
+  const needScores = scoreCount === 0;
+
+  if (!needProfiles && !needScores) {
+    console.log(`[DemoSeed] Telco profiles already seeded (${profileCount} profiles, ${scoreCount} scores) — skipping.`);
     const rows = await db.select({ id: telcoProfiles.id }).from(telcoProfiles).limit(20);
     return rows.map(r => r.id);
   }
@@ -322,115 +350,117 @@ async function seedTelcoProfiles(): Promise<string[]> {
   const RISK_TIERS: RiskTier[] = ["very_low", "low", "medium", "high", "very_high"];
   const DEVICE_TYPES = ["smartphone", "feature_phone", "tablet", "basic_phone"] as const;
 
-  // Real Ghanaian MSISDN prefixes
+  // Real Ghanaian MSISDN prefixes — AirtelTigo includes +23326/+23356 (old Tigo)
+  // and +23327/+23357 (old Airtel), combined after the 2017 merger.
   const msnPrefixes: Record<TelcoProvider, string[]> = {
     mtn:      ["+23324", "+23354"],
     vodafone: ["+23320", "+23350"],
-    airtel:   ["+23327", "+23357"],
+    airtel:   ["+23326", "+23327", "+23356", "+23357"],
   };
 
-  const profileRows: Array<{
-    id: string;
-    borrowerId: string | null;
-    msisdn: string;
-    provider: TelcoProvider;
-    country: string;
-    simRegistrationDate: string;
-    kycLevel: KycLevel;
-    deviceType: string;
-    deviceChanges90d: number;
-    accountStatus: string;
-    consentGranted: boolean;
-    consentDate: Date | null;
-    organizationId: string | null;
-  }> = [];
+  // Step 1: Build and insert profiles (if needed), then resolve the IDs to use
+  // for credit score generation regardless of which path was taken.
+  let allProfileIds: string[];
 
-  const scoreRows: Array<{
-    profileId: string;
-    borrowerId: string | null;
-    riskTier: RiskTier;
-    riskScore: number;
-    creditLimit: string;
-    currency: string;
-    approvalRecommendation: boolean;
-    reasonCode: string;
-    detailedRationale: string;
-    evaluationPeriodDays: number;
-    kpiSnapshot: string;
-    country: string;
-    organizationId: string | null;
-  }> = [];
+  if (needProfiles) {
+    const profileRows: Array<{
+      id: string;
+      borrowerId: string | null;
+      msisdn: string;
+      provider: TelcoProvider;
+      country: string;
+      simRegistrationDate: string;
+      kycLevel: KycLevel;
+      deviceType: string;
+      deviceChanges90d: number;
+      accountStatus: string;
+      consentGranted: boolean;
+      consentDate: Date | null;
+      organizationId: string | null;
+    }> = [];
 
-  for (let i = 0; i < 20; i++) {
-    const profileId = randomUUID();
-    const provider = PROVIDERS[i % 3];
-    const prefix = pick(msnPrefixes[provider]);
-    const msisdn = `${prefix}${String(rand(10000000, 99999999))}`;
-    const borrowerId = i < ghBorrowers.length ? ghBorrowers[i].id : null;
-    const kycLevel = pick(KYC_LEVELS);
-    const consentGranted = Math.random() > 0.25;
-    const consentDate = consentGranted ? daysAgo(rand(10, 180)) : null;
+    for (let i = 0; i < 20; i++) {
+      const profileId = randomUUID();
+      const provider = PROVIDERS[i % 3];
+      const prefix = pick(msnPrefixes[provider]);
+      const msisdn = `${prefix}${String(rand(10000000, 99999999))}`;
+      const borrowerId = i < ghBorrowers.length ? ghBorrowers[i].id : null;
+      const kycLevel = pick(KYC_LEVELS);
+      const consentGranted = Math.random() > 0.25;
+      const consentDate = consentGranted ? daysAgo(rand(10, 180)) : null;
 
-    profileRows.push({
-      id: profileId,
-      borrowerId,
-      msisdn,
-      provider,
-      country: "Ghana",
-      simRegistrationDate: daysAgo(rand(30, 1460)).toISOString().slice(0, 10),
-      kycLevel,
-      deviceType: pick(DEVICE_TYPES),
-      deviceChanges90d: rand(0, 3),
-      accountStatus: Math.random() > 0.1 ? "active" : "suspended",
-      consentGranted,
-      consentDate,
-      organizationId: simOrgId,
-    });
+      profileRows.push({
+        id: profileId,
+        borrowerId,
+        msisdn,
+        provider,
+        country: "Ghana",
+        simRegistrationDate: daysAgo(rand(30, 1460)).toISOString().slice(0, 10),
+        kycLevel,
+        deviceType: pick(DEVICE_TYPES),
+        deviceChanges90d: rand(0, 3),
+        accountStatus: Math.random() > 0.1 ? "active" : "suspended",
+        consentGranted,
+        consentDate,
+        organizationId: simOrgId,
+      });
+    }
 
-    const riskTierIdx = Math.min(Math.floor(rand(0, 4)), 4);
-    const riskTier = RISK_TIERS[riskTierIdx];
-    const riskScore =
-      riskTierIdx === 0 ? rand(720, 850) :
-      riskTierIdx === 1 ? rand(640, 719) :
-      riskTierIdx === 2 ? rand(540, 639) :
-      riskTierIdx === 3 ? rand(420, 539) :
-      rand(300, 419);
-    const creditLimit = riskTierIdx <= 1 ? rand(500, 5000) : riskTierIdx === 2 ? rand(100, 499) : rand(50, 99);
-
-    scoreRows.push({
-      profileId,
-      borrowerId,
-      riskTier,
-      riskScore,
-      creditLimit: String(creditLimit),
-      currency: "GHS",
-      approvalRecommendation: riskTierIdx <= 2,
-      reasonCode: riskTierIdx <= 2 ? "SCORE_WITHIN_BAND" : "SCORE_BELOW_THRESHOLD",
-      detailedRationale:
-        riskTierIdx <= 1 ? "Strong mobile money activity, consistent recharge pattern, no dormancy, low device churn." :
-        riskTierIdx === 2 ? "Moderate MoMo activity. Occasional dormancy periods. Marginal approval." :
-        "Insufficient mobile money activity. High dormancy. Score below minimum threshold.",
-      evaluationPeriodDays: 90,
-      kpiSnapshot: JSON.stringify({
-        avgArpu: rand(5, 80),
-        rechargeFrequency: rand(3, 30),
-        momoTxCount: rand(2, 150),
-        dormancyDays: riskTierIdx >= 3 ? rand(20, 45) : rand(0, 10),
-        walletRetentionPct: rand(20, 95),
-        utilityPayments: rand(0, 8),
-      }),
-      country: "Ghana",
-      organizationId: simOrgId,
-    });
+    await db.insert(telcoProfiles).values(profileRows);
+    console.log(`[DemoSeed] Inserted ${profileRows.length} telco profiles.`);
+    allProfileIds = profileRows.map(p => p.id);
+  } else {
+    // Profiles exist — load their IDs so we can back-fill missing credit scores
+    const rows = await db.select({ id: telcoProfiles.id }).from(telcoProfiles).limit(20);
+    allProfileIds = rows.map(r => r.id);
+    console.log(`[DemoSeed] Telco profiles already seeded (${profileCount}) — loading IDs for score back-fill.`);
   }
 
-  await db.insert(telcoProfiles).values(profileRows);
-  console.log(`[DemoSeed] Inserted ${profileRows.length} telco profiles.`);
+  // Step 2: Build and insert credit scores (if needed)
+  if (needScores && allProfileIds.length > 0) {
+    const scoreRows = allProfileIds.map((profileId, i) => {
+      const borrowerId = i < ghBorrowers.length ? ghBorrowers[i].id : null;
+      const riskTierIdx = Math.min(Math.floor(rand(0, 4)), 4);
+      const riskTier = RISK_TIERS[riskTierIdx];
+      const riskScore =
+        riskTierIdx === 0 ? rand(720, 850) :
+        riskTierIdx === 1 ? rand(640, 719) :
+        riskTierIdx === 2 ? rand(540, 639) :
+        riskTierIdx === 3 ? rand(420, 539) :
+        rand(300, 419);
+      const creditLimit = riskTierIdx <= 1 ? rand(500, 5000) : riskTierIdx === 2 ? rand(100, 499) : rand(50, 99);
+      return {
+        profileId,
+        borrowerId,
+        riskTier,
+        riskScore,
+        creditLimit: String(creditLimit),
+        currency: "GHS",
+        approvalRecommendation: riskTierIdx <= 2,
+        reasonCode: riskTierIdx <= 2 ? "SCORE_WITHIN_BAND" : "SCORE_BELOW_THRESHOLD",
+        detailedRationale:
+          riskTierIdx <= 1 ? "Strong mobile money activity, consistent recharge pattern, no dormancy, low device churn." :
+          riskTierIdx === 2 ? "Moderate MoMo activity. Occasional dormancy periods. Marginal approval." :
+          "Insufficient mobile money activity. High dormancy. Score below minimum threshold.",
+        evaluationPeriodDays: 90,
+        kpiSnapshot: JSON.stringify({
+          avgArpu: rand(5, 80),
+          rechargeFrequency: rand(3, 30),
+          momoTxCount: rand(2, 150),
+          dormancyDays: riskTierIdx >= 3 ? rand(20, 45) : rand(0, 10),
+          walletRetentionPct: rand(20, 95),
+          utilityPayments: rand(0, 8),
+        }),
+        country: "Ghana",
+        organizationId: simOrgId,
+      };
+    });
 
-  await db.insert(telcoCreditScores).values(scoreRows);
-  console.log(`[DemoSeed] Inserted ${scoreRows.length} telco credit scores.`);
+    await db.insert(telcoCreditScores).values(scoreRows);
+    console.log(`[DemoSeed] Inserted ${scoreRows.length} telco credit scores.`);
+  }
 
-  return profileRows.map(p => p.id);
+  return allProfileIds;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
