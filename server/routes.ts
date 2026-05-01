@@ -156,6 +156,8 @@ async function requireCrossBorderAccess(req: Request, res: Response, next: NextF
 async function getAccessibleCountriesForReq(req: Request): Promise<string | string[] | undefined> {
   const country = getCountryFilter(req);
   if (!country) return undefined;
+  // Platform-privileged global view — no country restriction needed
+  if (country === GLOBAL_SCOPE) return GLOBAL_SCOPE;
 
   const agreements = await db.select().from(dataSharingAgreements).where(
     and(
@@ -1309,7 +1311,7 @@ export async function registerRoutes(
       const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const country = getCountryFilter(req);
-      if (country && borrower.country !== country) {
+      if (country && country !== GLOBAL_SCOPE && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
       }
       res.json(borrower);
@@ -1474,7 +1476,7 @@ export async function registerRoutes(
       const country = getCountryFilter(req);
       if (country) {
         const borrower = await storage.getBorrower(account.borrowerId);
-        if (borrower && borrower.country !== country) {
+        if (borrower && country !== GLOBAL_SCOPE && borrower.country !== country) {
           return res.status(403).json({ message: "Access denied: account belongs to a different country" });
         }
       }
@@ -1633,7 +1635,7 @@ export async function registerRoutes(
       const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const country = getCountryFilter(req);
-      if (country && borrower.country !== country) {
+      if (country && country !== GLOBAL_SCOPE && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
       }
       const borrowerNationalId = borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber;
@@ -6233,7 +6235,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         const account = await storage.getCreditAccount(req.params.creditAccountId as string);
         if (account) {
           const borrower = await storage.getBorrower(account.borrowerId);
-          if (borrower && borrower.country !== country) {
+          if (borrower && country !== GLOBAL_SCOPE && borrower.country !== country) {
             return res.status(403).json({ message: "Access denied" });
           }
         }
@@ -6492,7 +6494,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const borrower = await storage.getBorrower(borrowerId);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const country = getCountryFilter(req);
-      if (country && borrower.country !== country) {
+      if (country && country !== GLOBAL_SCOPE && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
       }
 
