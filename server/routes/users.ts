@@ -16,8 +16,13 @@ router.get("/api/users", requireRole("admin", "super_admin"), async (req, res) =
     enforceCountryScopeForNonSuperAdmin(req, country, "/api/users");
     await logCrossCountryAccess(req, country, "/api/users");
     const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
-    const users = await storage.getUsers(orgId, scope);
-    res.json(users.map(stripPassword));
+    const allUsers = await storage.getUsers(orgId, scope);
+    // Non-super_admin callers must never see super_admin accounts — they have
+    // no legitimate reason to view or interact with platform-owner profiles.
+    const visible = req.session?.userRole === "super_admin"
+      ? allUsers
+      : allUsers.filter(u => u.role !== "super_admin");
+    res.json(visible.map(stripPassword));
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
   }
@@ -48,6 +53,13 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
 
     const targetUser = await storage.getUser(req.params.id as string);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+    // Only platform administrators (super_admin) may modify other super_admin
+    // accounts. A regular admin must never be able to alter a platform owner's
+    // credentials, even if they share the same organization.
+    if (req.session?.userRole !== "super_admin" && targetUser.role === "super_admin") {
+      return res.status(403).json({ message: "Cannot modify platform administrator accounts" });
+    }
 
     if (req.session?.userRole !== "super_admin") {
       if (targetUser.organizationId !== req.session?.organizationId) {
@@ -87,10 +99,17 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
   }
 });
 
-router.delete("/api/users/:id", requireRole("admin"), async (req, res) => {
+router.delete("/api/users/:id", requireRole("admin", "super_admin"), async (req, res) => {
   try {
     if (req.params.id as string === req.session?.userId) {
       return res.status(400).json({ message: "Cannot delete your own account" });
+    }
+    const targetUser = await storage.getUser(req.params.id as string);
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+    // super_admin accounts may never be deleted — not even by another super_admin —
+    // to prevent accidental or malicious removal of platform owner credentials.
+    if (targetUser.role === "super_admin") {
+      return res.status(403).json({ message: "Platform administrator accounts cannot be deleted" });
     }
     const deleted = await storage.deleteUser(req.params.id as string);
     if (!deleted) return res.status(404).json({ message: "User not found" });

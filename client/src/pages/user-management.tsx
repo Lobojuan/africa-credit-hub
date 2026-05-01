@@ -169,9 +169,14 @@ export default function UserManagementPage() {
     setDateTo("");
   }
 
+  const isSuperAdmin = currentUser?.role === "super_admin";
+
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    let result = [...users];
+    // Non-super_admin callers should never see platform administrator accounts —
+    // the server already strips them from the response, but we guard here too
+    // so the UI never renders sensitive rows if data arrives from any other path.
+    let result = isSuperAdmin ? [...users] : users.filter(u => u.role !== "super_admin");
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -476,11 +481,14 @@ export default function UserManagementPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Button size="sm" variant="outline" onClick={() => openEditDialog(user)} data-testid={`button-edit-user-${user.id}`}>
-                              <Pencil className="w-3.5 h-3.5 mr-1" />
-                              {t('common.edit')}
-                            </Button>
-                            {user.id !== currentUser?.id && (
+                            {/* Super_admin accounts are only editable by other super_admins */}
+                            {(isSuperAdmin || user.role !== "super_admin") && (
+                              <Button size="sm" variant="outline" onClick={() => openEditDialog(user)} data-testid={`button-edit-user-${user.id}`}>
+                                <Pencil className="w-3.5 h-3.5 mr-1" />
+                                {t('common.edit')}
+                              </Button>
+                            )}
+                            {user.id !== currentUser?.id && user.role !== "super_admin" && (
                               <Button
                                 size="sm"
                                 variant="outline"
