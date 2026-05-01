@@ -18,12 +18,12 @@ const isPlatformOwner = (role: string | undefined) => role === "platform_owner";
 /**
  * Visibility tiers for GET /api/users:
  *   platform_owner  → sees EVERYONE (all roles, all orgs)
- *   super_admin     → sees everyone EXCEPT platform_owner accounts
- *   everyone else   → sees everyone EXCEPT super_admin and platform_owner
+ *   super_admin     → sees only admin and below (NOT other super_admin, NOT platform_owner)
+ *   everyone else   → sees only admin and below (same exclusion set)
  */
 function filterByVisibility(users: any[], callerRole: string | undefined) {
   if (isPlatformOwner(callerRole)) return users;
-  if (callerRole === "super_admin") return users.filter(u => u.role !== "platform_owner");
+  // super_admin and below can only see non-privileged accounts
   return users.filter(u => u.role !== "super_admin" && u.role !== "platform_owner");
 }
 
@@ -57,8 +57,8 @@ router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) 
     if (targetRole === "platform_owner" && !isPlatformOwner(callerRole)) {
       return res.status(403).json({ message: "Only the Platform Owner may create another Platform Owner account" });
     }
-    if (targetRole === "super_admin" && !isPlatformPrivileged(callerRole)) {
-      return res.status(403).json({ message: "Only Platform Owner or Super Admin may create Super Admin accounts" });
+    if (targetRole === "super_admin" && !isPlatformOwner(callerRole)) {
+      return res.status(403).json({ message: "Only the Platform Owner may create Super Admin accounts" });
     }
 
     const parsed = insertUserSchema.parse({ ...req.body, organizationId: orgId });
@@ -93,9 +93,9 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
       return res.status(403).json({ message: "Only the Platform Owner may modify Platform Owner accounts" });
     }
 
-    // super_admin accounts can only be modified by platform_owner or super_admin.
-    if (targetUser.role === "super_admin" && !isPlatformPrivileged(callerRole)) {
-      return res.status(403).json({ message: "Cannot modify platform administrator accounts" });
+    // super_admin accounts can only be modified by platform_owner.
+    if (targetUser.role === "super_admin" && !isPlatformOwner(callerRole)) {
+      return res.status(403).json({ message: "Only the Platform Owner may modify Super Admin accounts" });
     }
 
     // Non-privileged callers are org-scoped.

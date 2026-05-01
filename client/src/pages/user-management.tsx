@@ -179,7 +179,6 @@ export default function UserManagementPage() {
 
   const callerRole = currentUser?.role;
   const isPlatformOwner = callerRole === "platform_owner";
-  const isSuperAdminOrAbove = isPlatformOwner || callerRole === "super_admin";
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -188,9 +187,8 @@ export default function UserManagementPage() {
     let result: User[];
     if (isPlatformOwner) {
       result = [...users];
-    } else if (callerRole === "super_admin") {
-      result = users.filter(u => u.role !== "platform_owner");
     } else {
+      // super_admin and below can only see non-privileged accounts
       result = users.filter(u => u.role !== "super_admin" && u.role !== "platform_owner");
     }
 
@@ -262,7 +260,7 @@ export default function UserManagementPage() {
                     <SelectTrigger data-testid="select-role"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {isPlatformOwner && <SelectItem value="platform_owner">Platform Owner</SelectItem>}
-                      {isSuperAdminOrAbove && <SelectItem value="super_admin">{t('users.roles.super_admin', 'Super Admin')}</SelectItem>}
+                      {isPlatformOwner && <SelectItem value="super_admin">{t('users.roles.super_admin', 'Super Admin')}</SelectItem>}
                       <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
                       <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
                       <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
@@ -308,7 +306,7 @@ export default function UserManagementPage() {
                   <SelectTrigger data-testid="select-edit-role"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {isPlatformOwner && <SelectItem value="platform_owner">Platform Owner</SelectItem>}
-                    {isSuperAdminOrAbove && <SelectItem value="super_admin">{t('users.roles.super_admin', 'Super Admin')}</SelectItem>}
+                    {isPlatformOwner && <SelectItem value="super_admin">{t('users.roles.super_admin', 'Super Admin')}</SelectItem>}
                     <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
                     <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
                     <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
@@ -367,7 +365,7 @@ export default function UserManagementPage() {
                 <SelectContent>
                   <SelectItem value="all">All roles</SelectItem>
                   {isPlatformOwner && <SelectItem value="platform_owner">Platform Owner</SelectItem>}
-                  {isSuperAdminOrAbove && <SelectItem value="super_admin">Super Admin</SelectItem>}
+                  {isPlatformOwner && <SelectItem value="super_admin">Super Admin</SelectItem>}
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="regulator">Regulator</SelectItem>
                   <SelectItem value="lender">Lender</SelectItem>
@@ -507,16 +505,11 @@ export default function UserManagementPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {/* Edit: platform_owner edits anyone; super_admin can't edit platform_owner; others can't edit super_admin or platform_owner */}
-                            {(isPlatformOwner
-                              || (callerRole === "super_admin" && user.role !== "platform_owner")
-                              || (user.role !== "super_admin" && user.role !== "platform_owner")
-                            ) && (
-                              <Button size="sm" variant="outline" onClick={() => openEditDialog(user)} data-testid={`button-edit-user-${user.id}`}>
-                                <Pencil className="w-3.5 h-3.5 mr-1" />
-                                {t('common.edit')}
-                              </Button>
-                            )}
+                            {/* Edit: always show for visible rows — privileged rows are already filtered out before render */}
+                            <Button size="sm" variant="outline" onClick={() => openEditDialog(user)} data-testid={`button-edit-user-${user.id}`}>
+                              <Pencil className="w-3.5 h-3.5 mr-1" />
+                              {t('common.edit')}
+                            </Button>
                             {/* Delete: platform_owner accounts can never be deleted; super_admin only by platform_owner; self-delete blocked */}
                             {user.id !== currentUser?.id
                               && user.role !== "platform_owner"
