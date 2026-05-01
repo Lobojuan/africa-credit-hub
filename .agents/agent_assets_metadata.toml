@@ -317,3 +317,9 @@ id = "SnDEWvjFm7FDvm-ExPkIi"
 uri = "file://exports/africa-credit-hub-source.tar.gz"
 type = "unspecified"
 title = "Africa Credit Hub — full source code (11 MB)"
+
+[[outputs]]
+id = "0btIRcNW8WsehXzt1ABOJ"
+uri = "file://cdh-source.tar.gz"
+type = "unspecified"
+title = "Africa Credit Hub — CDH v2.6 Source Code"
