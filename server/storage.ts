@@ -825,7 +825,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   private buildCountryCondition(table: any, country?: string | string[]) {
-    if (!country) return undefined;
+    if (!country || (country as string) === GLOBAL_SCOPE) return undefined;
     if (Array.isArray(country)) {
       if (country.length === 0) return undefined;
       if (country.length === 1) return eq(table.country, country[0]);
@@ -835,7 +835,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   private countryOrgFilter(table: any, country?: string | string[]) {
-    if (!country) return undefined;
+    if (!country || (country as string) === GLOBAL_SCOPE) return undefined;
     if (Array.isArray(country)) {
       if (country.length === 0) return undefined;
       if (country.length === 1) return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE country = ${country[0]})`;
