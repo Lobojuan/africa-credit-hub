@@ -517,6 +517,13 @@ process.stderr.write = function (...args: any[]) {
     }
 
     try {
+      const { seedDemoData } = await import("./seed-demo-data");
+      await seedDemoData();
+    } catch (e) {
+      console.error("Demo data seed error (non-fatal):", e);
+    }
+
+    try {
       const { seedTelcoLending } = await import("./seed-telco-lending");
       await seedTelcoLending();
     } catch (e) {
