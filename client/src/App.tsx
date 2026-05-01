@@ -577,7 +577,7 @@ function AuthenticatedApp() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
+                    {(user.role === "super_admin" || user.role === "platform_owner") && !currentPath.startsWith("/command-center") && (
                       <DropdownMenuItem
                         className="gap-2"
                         onClick={async () => {
@@ -600,7 +600,7 @@ function AuthenticatedApp() {
                         Command Center
                       </DropdownMenuItem>
                     )}
-                    {user.role === "super_admin" && (
+                    {(user.role === "super_admin" || user.role === "platform_owner") && (
                       <>
                         <DropdownMenuItem className="gap-2 p-0" onSelect={(e) => e.preventDefault()}>
                           <div className="w-full"><CountrySelector /></div>
@@ -653,7 +653,7 @@ function AuthenticatedApp() {
           ) : (
             <header className="flex flex-wrap items-center gap-3 px-4 py-2.5 border-b shrink-0 ltr-header">
               <SidebarTrigger data-testid="button-sidebar-toggle" className="shrink-0" aria-label="Toggle sidebar (Ctrl+B)" />
-              {user.role === "super_admin" && !currentPath.startsWith("/command-center") && (
+              {(user.role === "super_admin" || user.role === "platform_owner") && !currentPath.startsWith("/command-center") && (
                 <Button
                   variant="outline"
                   className="h-10 gap-2 text-base font-semibold border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 px-4"
@@ -682,10 +682,10 @@ function AuthenticatedApp() {
                   Command Center
                 </Button>
               )}
-              {user.role === "super_admin" && <CountrySelector />}
-              {user.role === "super_admin" && <OrgSwitcher />}
+              {(user.role === "super_admin" || user.role === "platform_owner") && <CountrySelector />}
+              {(user.role === "super_admin" || user.role === "platform_owner") && <OrgSwitcher />}
               <WorkspaceSwitcher variant="compact" />
-              {user?.organization?.name && user.role !== "super_admin" && (
+              {user?.organization?.name && user.role !== "super_admin" && user.role !== "platform_owner" && (
                 <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
                   <Building2 className="w-5 h-5" />
                   {user.organization!.name}

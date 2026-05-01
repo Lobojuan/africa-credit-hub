@@ -18,7 +18,7 @@ export function TrialBanner() {
   const isTrial = user?.organization?.subscriptionTier === "trial";
   const role = user?.role;
   if (!isTrial || dismissed) return null;
-  if (role === "admin" || role === "super_admin") return null;
+  if (role === "admin" || role === "super_admin" || role === "platform_owner") return null;
 
   return (
     <div

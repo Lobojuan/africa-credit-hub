@@ -54,7 +54,7 @@ function clearThemeOverrides() {
 export function CountryThemeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { visualStyle } = useTheme();
-  const isSuperAdmin = user?.role === "super_admin";
+  const isSuperAdmin = user?.role === "super_admin" || user?.role === "platform_owner";
 
   const serverCountry = user?.viewingCountry ?? undefined;
 

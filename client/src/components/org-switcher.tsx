@@ -23,12 +23,14 @@ export function OrgSwitcher() {
   const { selectedOrgId, selectedOrgName, setSelectedOrg } = useOrgSwitcher();
   const [open, setOpen] = useState(false);
 
+  const isPrivileged = user?.role === "super_admin" || user?.role === "platform_owner";
+
   const { data: orgs } = useQuery<OrgListItem[]>({
     queryKey: ["/api/admin/organizations/list"],
-    enabled: user?.role === "super_admin",
+    enabled: isPrivileged,
   });
 
-  if (user?.role !== "super_admin") return null;
+  if (!isPrivileged) return null;
 
   const displayName = selectedOrgName || "All Clients";
 

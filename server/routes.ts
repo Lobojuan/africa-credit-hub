@@ -17,6 +17,7 @@ import {
   getOrgScope, getCountryFilter, logCrossCountryAccess,
   enforceCountryScopeForNonSuperAdmin, requireWriteCountry,
   resolveUserCountry, validateBorrowerCountry, safeErrorMessage,
+  isPlatformPrivileged,
 } from "./routes/middleware";
 import authRouter from "./routes/auth";
 import usersRouter from "./routes/users";
@@ -732,7 +733,7 @@ export async function registerRoutes(
     try {
       const apiStats = getApiUsageStats();
       const country = getCountryFilter(req);
-      const scope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+      const scope = country ?? (isPlatformPrivileged(req.session.userRole) ? GLOBAL_SCOPE : undefined);
       const orgs = await storage.getOrganizations(country);
       const users = await storage.getUsers(undefined, scope);
       const tierPrices: Record<string, number> = { standard: 299, professional: 799, enterprise: 1999 };
@@ -2165,7 +2166,7 @@ export async function registerRoutes(
 
   app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {
-      const isSuper = req.session?.userRole === "super_admin";
+      const isSuper = isPlatformPrivileged(req.session?.userRole);
       const orgId = isSuper ? undefined : req.session?.organizationId;
       const sovereignCountry: string | undefined = (req as any)._sovereignCountry;
       const [hitsRaw, alertsRaw] = await Promise.all([
@@ -2209,7 +2210,7 @@ export async function registerRoutes(
       }
       const hit = await storage.getWatchlistHit(req.params.id as string);
       if (!hit) return res.status(404).json({ message: "Watchlist hit not found" });
-      const isSuper = req.session?.userRole === "super_admin";
+      const isSuper = isPlatformPrivileged(req.session?.userRole);
       if (!isSuper && hit.organizationId && req.session?.organizationId && hit.organizationId !== req.session.organizationId) {
         return res.status(403).json({ message: "Access denied (organization scope)" });
       }
@@ -2236,7 +2237,7 @@ export async function registerRoutes(
       }
       const alert = await storage.getFraudAlert(req.params.id as string);
       if (!alert) return res.status(404).json({ message: "Fraud alert not found" });
-      const isSuper = req.session?.userRole === "super_admin";
+      const isSuper = isPlatformPrivileged(req.session?.userRole);
       if (!isSuper && alert.organizationId && req.session?.organizationId && alert.organizationId !== req.session.organizationId) {
         return res.status(403).json({ message: "Access denied (organization scope)" });
       }
@@ -2267,7 +2268,7 @@ export async function registerRoutes(
 
       const alert = await storage.getFraudAlert(req.params.id as string);
       if (!alert) return res.status(404).json({ message: "Fraud alert not found" });
-      const isSuper = req.session?.userRole === "super_admin";
+      const isSuper = isPlatformPrivileged(req.session?.userRole);
       if (!isSuper && alert.organizationId && req.session?.organizationId && alert.organizationId !== req.session.organizationId) {
         return res.status(403).json({ message: "Access denied (organization scope)" });
       }
@@ -2429,12 +2430,12 @@ export async function registerRoutes(
           req.session.userRole = adminUser.role;
           req.session.organizationId = adminUser.organizationId || undefined;
           req.session.lastActivity = Date.now();
-          if (adminUser.role === "super_admin") {
+          if (isPlatformPrivileged(adminUser.role)) {
             delete req.session.viewingCountry;
           } else if (organization?.country) {
             req.session.userCountry = organization.country;
           }
-          const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+          const dest = isPlatformPrivileged(adminUser.role) ? "/command-center" : "/dashboard";
           routeLogger.info(`[Admin][Google] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
             if (saveErr) {
@@ -2591,12 +2592,12 @@ export async function registerRoutes(
           req.session.userRole = adminUser.role;
           req.session.organizationId = adminUser.organizationId || undefined;
           req.session.lastActivity = Date.now();
-          if (adminUser.role === "super_admin") {
+          if (isPlatformPrivileged(adminUser.role)) {
             delete req.session.viewingCountry;
           } else if (organization?.country) {
             req.session.userCountry = organization.country;
           }
-          const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+          const dest = isPlatformPrivileged(adminUser.role) ? "/command-center" : "/dashboard";
           routeLogger.info(`[Admin][Microsoft] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role} → redirecting to ${dest}`);
           req.session.save((saveErr) => {
             if (saveErr) {
@@ -2808,12 +2809,12 @@ export async function registerRoutes(
           req.session.userRole = adminUser.role;
           req.session.organizationId = adminUser.organizationId || undefined;
           req.session.lastActivity = Date.now();
-          if (adminUser.role === "super_admin") {
+          if (isPlatformPrivileged(adminUser.role)) {
             delete req.session.viewingCountry;
           } else if (organization?.country) {
             req.session.userCountry = organization.country;
           }
-          const dest = adminUser.role === "super_admin" ? "/command-center" : "/dashboard";
+          const dest = isPlatformPrivileged(adminUser.role) ? "/command-center" : "/dashboard";
           routeLogger.info(`[Admin][SAML] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role}`);
           req.session.save(() => res.redirect(dest));
         });
@@ -3773,7 +3774,7 @@ export async function registerRoutes(
       }
 
       const reviewerOrgId = req.session?.organizationId;
-      if (req.session?.userRole !== "super_admin" && reviewerOrgId && approval.organizationId && reviewerOrgId !== approval.organizationId) {
+      if (!isPlatformPrivileged(req.session?.userRole) && reviewerOrgId && approval.organizationId && reviewerOrgId !== approval.organizationId) {
         return res.status(403).json({ message: "You cannot review approvals from a different organization" });
       }
 
@@ -5698,7 +5699,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (borrowerId) {
         const borrower = await storage.getBorrower(borrowerId);
         const country = getCountryFilter(req);
-        if (borrower && country && borrower.country !== country && req.session?.userRole !== "super_admin") {
+        if (borrower && country && borrower.country !== country && !isPlatformPrivileged(req.session?.userRole)) {
           return res.status(403).json({ message: "Borrower not accessible in current country mode" });
         }
         return res.json(await storage.getDishonouredChequesByBorrower(borrowerId));
@@ -5863,7 +5864,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications");
       await logCrossCountryAccess(req, country, "/api/notifications");
-      const scope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+      const scope = country ?? (isPlatformPrivileged(req.session.userRole) ? GLOBAL_SCOPE : undefined);
       const items = await storage.getNotifications(req.session.userId, scope);
       res.json(items);
     } catch (e: any) {
@@ -5876,7 +5877,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications/unread-count");
-      const scope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+      const scope = country ?? (isPlatformPrivileged(req.session.userRole) ? GLOBAL_SCOPE : undefined);
       const count = await storage.getUnreadNotificationCount(req.session.userId, scope);
       res.json({ count });
     } catch (e: any) {
@@ -6479,7 +6480,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
 
       const userRole = req.session?.userRole;
-      const isSuperAdmin = userRole === "super_admin";
+      const isSuperAdmin = isPlatformPrivileged(userRole);
 
       if (!isSuperAdmin && !consentId) {
         return res.status(403).json({
@@ -9341,7 +9342,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const orgId = getOrgScope(req);
       const country = getCountryFilter(req);
-      const statsScope = country ?? (req.session.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+      const statsScope = country ?? (isPlatformPrivileged(req.session.userRole) ? GLOBAL_SCOPE : undefined);
       const [portfolio, borrowerAgg, stats, disputeList, approvals, { data: instList }] = await Promise.all([
         storage.getPortfolioAggregates(orgId, country),
         storage.getBorrowerAggregates(orgId, country),
@@ -13218,7 +13219,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const borrower = await storage.getBorrower(req.params.borrowerId as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
       const user = await storage.getUser(req.session?.userId!);
-      if (user?.role !== "super_admin" && (borrower.organizationId ?? undefined) && user?.organizationId !== (borrower.organizationId ?? undefined)) {
+      if (!isPlatformPrivileged(user?.role) && (borrower.organizationId ?? undefined) && user?.organizationId !== (borrower.organizationId ?? undefined)) {
         return res.status(403).json({ message: "Access denied" });
       }
       const alerts = await storage.getBorrowerAlertsByBorrower(req.params.borrowerId as string);
@@ -13387,8 +13388,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Cross-border access check for UI gating
   app.get("/api/sata/access-check", requireAuth, async (req, res) => {
     try {
-      if (req.session?.userRole === "super_admin") {
-        return res.json({ hasAccess: true, reason: "super_admin" });
+      if (isPlatformPrivileged(req.session?.userRole)) {
+        return res.json({ hasAccess: true, reason: "privileged_admin" });
       }
       const userOrgId = req.session?.organizationId;
       if (!userOrgId) return res.json({ hasAccess: false, reason: "no_organization" });
@@ -13525,7 +13526,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       );
       if (activeAgreements.length === 0) return res.status(403).json({ message: `No active data sharing agreement between ${userCountry} and ${targetCountry}` });
 
-      if (req.session?.userRole !== "super_admin") {
+      if (!isPlatformPrivileged(req.session?.userRole)) {
         const userOrgId = req.session?.organizationId;
         const org = userOrgId ? await storage.getOrganization(userOrgId) : null;
         const orgName = org?.name || "";
@@ -13868,7 +13869,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/blockchain/anchor", requireRole("admin"), async (req, res) => {
     try {
-      if (req.session?.userRole !== "super_admin" && req.session?.userRole !== "admin") {
+      if (!isPlatformPrivileged(req.session?.userRole) && req.session?.userRole !== "admin") {
         return res.status(403).json({ message: "Admin access required" });
       }
 
@@ -14027,7 +14028,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   const exportJobs = new Map<string, ExportJob>();
 
   function verifyJobOwnership(req: any, job: ExportJob): boolean {
-    if (req.session.userRole === "super_admin" || req.session.userRole === "platform_admin") return true;
+    if (isPlatformPrivileged(req.session.userRole)) return true;
     return job.initiatorUserId === req.session.userId;
   }
 
@@ -14173,7 +14174,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const orgId = req.params.orgId as string;
       if (!orgId) return res.status(400).json({ message: "Invalid organization ID" });
 
-      if (req.session.userRole !== "super_admin" && req.session.organizationId !== orgId) {
+      if (!isPlatformPrivileged(req.session.userRole) && req.session.organizationId !== orgId) {
         return res.status(403).json({ message: "You can only export your own organization's data" });
       }
 

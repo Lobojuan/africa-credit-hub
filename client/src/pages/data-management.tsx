@@ -28,7 +28,7 @@ function ExportCenterTab() {
   const [exportType, setExportType] = useState("portfolio");
   const orgsQuery = useQuery<any[]>({
     queryKey: ["/api/organizations"],
-    enabled: user?.role === "super_admin",
+    enabled: user?.role === "super_admin" || user?.role === "platform_owner",
   });
 
   const [exportJobId, setExportJobId] = useState<string | null>(null);
@@ -166,7 +166,7 @@ function ExportCenterTab() {
             </AlertDescription>
           </Alert>
 
-          {user?.role === "super_admin" && orgsQuery.data ? (
+          {(user?.role === "super_admin" || user?.role === "platform_owner") && orgsQuery.data ? (
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Select an organization to export:</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

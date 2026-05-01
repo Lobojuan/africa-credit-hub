@@ -308,7 +308,7 @@ export default function CreditScoreMethodologyPage() {
     color === "brand-accent" ? brandColors.accent : color === "brand-secondary" ? brandColors.secondary : color;
   const [, setLocation] = useLocation();
 
-  const allowedRoles = ["admin", "lender", "super_admin"];
+  const allowedRoles = ["admin", "lender", "super_admin", "platform_owner"];
   const isAllowed = user && allowedRoles.includes(user.role);
   const isPrivilegedUser = isAllowed;
 

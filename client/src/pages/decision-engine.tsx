@@ -94,7 +94,7 @@ export default function DecisionEnginePage() {
     return <Badge className="bg-amber-500/10 text-amber-600 border-amber-200" data-testid="badge-outcome-refer">Refer</Badge>;
   };
 
-  const isAdmin = user?.role === "admin" || user?.role === "super_admin";
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin" || user?.role === "platform_owner";
 
   return (
     <div className="container max-w-7xl mx-auto py-6 px-4 space-y-6" data-testid="page-decision-engine">

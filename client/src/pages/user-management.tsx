@@ -27,11 +27,19 @@ function getStatusColor(status: string) {
 
 function getRoleColor(role: string) {
   switch (role) {
-    case "admin": return "default" as const;
+    case "platform_owner": return "destructive" as const;
+    case "super_admin": return "default" as const;
+    case "admin": return "secondary" as const;
     case "regulator": return "secondary" as const;
     case "lender": return "outline" as const;
     default: return "outline" as const;
   }
+}
+
+function getRoleBadgeClass(role: string) {
+  if (role === "platform_owner") return "bg-amber-500 text-white border-amber-600 hover:bg-amber-500";
+  if (role === "super_admin") return "bg-blue-600 text-white border-blue-700 hover:bg-blue-600";
+  return "";
 }
 
 function formatTimestamp(dateStr: string | null | undefined): { date: string; time: string; relative: string } {
@@ -169,14 +177,22 @@ export default function UserManagementPage() {
     setDateTo("");
   }
 
-  const isSuperAdmin = currentUser?.role === "super_admin";
+  const callerRole = currentUser?.role;
+  const isPlatformOwner = callerRole === "platform_owner";
+  const isSuperAdminOrAbove = isPlatformOwner || callerRole === "super_admin";
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
-    // Non-super_admin callers should never see platform administrator accounts —
-    // the server already strips them from the response, but we guard here too
-    // so the UI never renders sensitive rows if data arrives from any other path.
-    let result = isSuperAdmin ? [...users] : users.filter(u => u.role !== "super_admin");
+    // Mirror the server's visibility tiers so no sensitive row ever renders
+    // in the UI even if API response data arrives from an unexpected path.
+    let result: User[];
+    if (isPlatformOwner) {
+      result = [...users];
+    } else if (callerRole === "super_admin") {
+      result = users.filter(u => u.role !== "platform_owner");
+    } else {
+      result = users.filter(u => u.role !== "super_admin" && u.role !== "platform_owner");
+    }
 
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -245,6 +261,8 @@ export default function UserManagementPage() {
                   <Select value={formData.role} onValueChange={(v) => setFormData({ ...formData, role: v })}>
                     <SelectTrigger data-testid="select-role"><SelectValue /></SelectTrigger>
                     <SelectContent>
+                      {isPlatformOwner && <SelectItem value="platform_owner">Platform Owner</SelectItem>}
+                      {isSuperAdminOrAbove && <SelectItem value="super_admin">{t('users.roles.super_admin', 'Super Admin')}</SelectItem>}
                       <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
                       <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
                       <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
@@ -289,6 +307,8 @@ export default function UserManagementPage() {
                 <Select value={editFormData.role} onValueChange={(v) => setEditFormData({ ...editFormData, role: v })}>
                   <SelectTrigger data-testid="select-edit-role"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    {isPlatformOwner && <SelectItem value="platform_owner">Platform Owner</SelectItem>}
+                    {isSuperAdminOrAbove && <SelectItem value="super_admin">{t('users.roles.super_admin', 'Super Admin')}</SelectItem>}
                     <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
                     <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
                     <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
@@ -346,8 +366,9 @@ export default function UserManagementPage() {
                 <SelectTrigger className="h-8 text-sm" data-testid="select-filter-role"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All roles</SelectItem>
+                  {isPlatformOwner && <SelectItem value="platform_owner">Platform Owner</SelectItem>}
+                  {isSuperAdminOrAbove && <SelectItem value="super_admin">Super Admin</SelectItem>}
                   <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
                   <SelectItem value="regulator">Regulator</SelectItem>
                   <SelectItem value="lender">Lender</SelectItem>
                   <SelectItem value="viewer">Viewer</SelectItem>
@@ -466,7 +487,12 @@ export default function UserManagementPage() {
                         <TableCell className="text-sm font-mono">{user.username}</TableCell>
                         <TableCell className="text-sm">{user.institution || "—"}</TableCell>
                         <TableCell>
-                          <Badge variant={getRoleColor(user.role)} className="text-[10px] capitalize">{user.role}</Badge>
+                          <Badge
+                            variant={getRoleColor(user.role)}
+                            className={`text-[10px] capitalize ${getRoleBadgeClass(user.role)}`}
+                          >
+                            {user.role === "platform_owner" ? "Platform Owner" : user.role.replace("_", " ")}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={getStatusColor(user.status)} className="text-[10px] capitalize">{user.status}</Badge>
@@ -481,14 +507,21 @@ export default function UserManagementPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {/* Super_admin accounts are only editable by other super_admins */}
-                            {(isSuperAdmin || user.role !== "super_admin") && (
+                            {/* Edit: platform_owner edits anyone; super_admin can't edit platform_owner; others can't edit super_admin or platform_owner */}
+                            {(isPlatformOwner
+                              || (callerRole === "super_admin" && user.role !== "platform_owner")
+                              || (user.role !== "super_admin" && user.role !== "platform_owner")
+                            ) && (
                               <Button size="sm" variant="outline" onClick={() => openEditDialog(user)} data-testid={`button-edit-user-${user.id}`}>
                                 <Pencil className="w-3.5 h-3.5 mr-1" />
                                 {t('common.edit')}
                               </Button>
                             )}
-                            {user.id !== currentUser?.id && user.role !== "super_admin" && (
+                            {/* Delete: platform_owner accounts can never be deleted; super_admin only by platform_owner; self-delete blocked */}
+                            {user.id !== currentUser?.id
+                              && user.role !== "platform_owner"
+                              && (user.role !== "super_admin" || isPlatformOwner)
+                            && (
                               <Button
                                 size="sm"
                                 variant="outline"

@@ -4,10 +4,30 @@ import { storage, GLOBAL_SCOPE } from "../storage";
 import { insertUserSchema } from "@shared/schema";
 import {
   requireRole, stripPassword, getOrgScope, getCountryFilter,
-  logCrossCountryAccess, enforceCountryScopeForNonSuperAdmin, safeErrorMessage,
+  logCrossCountryAccess, enforceCountryScopeForNonSuperAdmin,
+  isPlatformPrivileged, safeErrorMessage,
 } from "./middleware";
 
 const router = Router();
+
+// ── Role-level helpers ───────────────────────────────────────────────────────
+
+/** True only for the top-of-hierarchy account type. */
+const isPlatformOwner = (role: string | undefined) => role === "platform_owner";
+
+/**
+ * Visibility tiers for GET /api/users:
+ *   platform_owner  → sees EVERYONE (all roles, all orgs)
+ *   super_admin     → sees everyone EXCEPT platform_owner accounts
+ *   everyone else   → sees everyone EXCEPT super_admin and platform_owner
+ */
+function filterByVisibility(users: any[], callerRole: string | undefined) {
+  if (isPlatformOwner(callerRole)) return users;
+  if (callerRole === "super_admin") return users.filter(u => u.role !== "platform_owner");
+  return users.filter(u => u.role !== "super_admin" && u.role !== "platform_owner");
+}
+
+// ── GET /api/users ───────────────────────────────────────────────────────────
 
 router.get("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
   try {
@@ -15,22 +35,32 @@ router.get("/api/users", requireRole("admin", "super_admin"), async (req, res) =
     const country = getCountryFilter(req);
     enforceCountryScopeForNonSuperAdmin(req, country, "/api/users");
     await logCrossCountryAccess(req, country, "/api/users");
-    const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
+    const scope = country ?? (isPlatformPrivileged(req.session?.userRole) ? GLOBAL_SCOPE : undefined);
     const allUsers = await storage.getUsers(orgId, scope);
-    // Non-super_admin callers must never see super_admin accounts — they have
-    // no legitimate reason to view or interact with platform-owner profiles.
-    const visible = req.session?.userRole === "super_admin"
-      ? allUsers
-      : allUsers.filter(u => u.role !== "super_admin");
-    res.json(visible.map(stripPassword));
+    res.json(filterByVisibility(allUsers, req.session?.userRole).map(stripPassword));
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
   }
 });
 
+// ── POST /api/users ──────────────────────────────────────────────────────────
+
 router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) => {
   try {
-    const orgId = req.session?.userRole === "super_admin" ? (req.body.organizationId || getOrgScope(req)) : getOrgScope(req);
+    const callerRole = req.session?.userRole;
+    const orgId = isPlatformPrivileged(callerRole)
+      ? (req.body.organizationId || getOrgScope(req))
+      : getOrgScope(req);
+
+    // Only platform_owner may create platform_owner or super_admin accounts.
+    const targetRole = req.body.role as string | undefined;
+    if (targetRole === "platform_owner" && !isPlatformOwner(callerRole)) {
+      return res.status(403).json({ message: "Only the Platform Owner may create another Platform Owner account" });
+    }
+    if (targetRole === "super_admin" && !isPlatformPrivileged(callerRole)) {
+      return res.status(403).json({ message: "Only Platform Owner or Super Admin may create Super Admin accounts" });
+    }
+
     const parsed = insertUserSchema.parse({ ...req.body, organizationId: orgId });
     const hashedPassword = await bcrypt.hash(parsed.password, 12);
     const user = await storage.createUser({ ...parsed, password: hashedPassword });
@@ -45,8 +75,12 @@ router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) 
   }
 });
 
+// ── PATCH /api/users/:id ─────────────────────────────────────────────────────
+
 router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, res) => {
   try {
+    const callerRole = req.session?.userRole;
+
     if (req.params.id as string === req.session?.userId && req.body.role) {
       return res.status(400).json({ message: "Cannot change your own role" });
     }
@@ -54,21 +88,32 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
     const targetUser = await storage.getUser(req.params.id as string);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
 
-    // Only platform administrators (super_admin) may modify other super_admin
-    // accounts. A regular admin must never be able to alter a platform owner's
-    // credentials, even if they share the same organization.
-    if (req.session?.userRole !== "super_admin" && targetUser.role === "super_admin") {
+    // platform_owner accounts can only be modified by another platform_owner.
+    if (targetUser.role === "platform_owner" && !isPlatformOwner(callerRole)) {
+      return res.status(403).json({ message: "Only the Platform Owner may modify Platform Owner accounts" });
+    }
+
+    // super_admin accounts can only be modified by platform_owner or super_admin.
+    if (targetUser.role === "super_admin" && !isPlatformPrivileged(callerRole)) {
       return res.status(403).json({ message: "Cannot modify platform administrator accounts" });
     }
 
-    if (req.session?.userRole !== "super_admin") {
+    // Non-privileged callers are org-scoped.
+    if (!isPlatformPrivileged(callerRole)) {
       if (targetUser.organizationId !== req.session?.organizationId) {
         return res.status(403).json({ message: "Cannot modify users outside your organization" });
       }
     }
 
     const data = { ...req.body };
-    if (req.session?.userRole !== "super_admin") {
+
+    // Only platform_owner can assign platform_owner role.
+    if (data.role === "platform_owner" && !isPlatformOwner(callerRole)) {
+      return res.status(403).json({ message: "Cannot assign the Platform Owner role" });
+    }
+
+    // Non-privileged callers cannot change role, org, or status.
+    if (!isPlatformPrivileged(callerRole)) {
       delete data.role;
       delete data.organizationId;
       delete data.status;
@@ -86,11 +131,12 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
         await pushPasswordHistory(req.params.id as string, oldHash);
       }
     }
+
     const user = await storage.updateUser(req.params.id as string, data);
     if (!user) return res.status(404).json({ message: "User not found" });
     await storage.createAuditLog({
       action: "UPDATE", entity: "user", entityId: user.id, userId: req.session?.userId,
-      details: `Updated user ${user.id.toString().slice(0,8)}...${data.password ? " (password changed by admin, history check passed)" : ""}`,
+      details: `Updated user ${user.id.toString().slice(0, 8)}...${data.password ? " (password changed)" : ""}`,
       ipAddress: req.ip || null,
     });
     res.json(stripPassword(user));
@@ -99,18 +145,29 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
   }
 });
 
+// ── DELETE /api/users/:id ────────────────────────────────────────────────────
+
 router.delete("/api/users/:id", requireRole("admin", "super_admin"), async (req, res) => {
   try {
+    const callerRole = req.session?.userRole;
+
     if (req.params.id as string === req.session?.userId) {
       return res.status(400).json({ message: "Cannot delete your own account" });
     }
+
     const targetUser = await storage.getUser(req.params.id as string);
     if (!targetUser) return res.status(404).json({ message: "User not found" });
-    // super_admin accounts may never be deleted — not even by another super_admin —
-    // to prevent accidental or malicious removal of platform owner credentials.
-    if (targetUser.role === "super_admin") {
-      return res.status(403).json({ message: "Platform administrator accounts cannot be deleted" });
+
+    // platform_owner accounts can never be deleted by anyone.
+    if (targetUser.role === "platform_owner") {
+      return res.status(403).json({ message: "Platform Owner accounts cannot be deleted" });
     }
+
+    // super_admin accounts can only be deleted by platform_owner.
+    if (targetUser.role === "super_admin" && !isPlatformOwner(callerRole)) {
+      return res.status(403).json({ message: "Only the Platform Owner may delete Super Admin accounts" });
+    }
+
     const deleted = await storage.deleteUser(req.params.id as string);
     if (!deleted) return res.status(404).json({ message: "User not found" });
     await storage.createAuditLog({

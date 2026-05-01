@@ -106,7 +106,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
-  if (req.session.userRole !== "super_admin" && req.session.organizationId) {
+  if (!isPlatformPrivileged(req.session.userRole) && req.session.organizationId) {
     const org = await storage.getOrganization(req.session.organizationId);
     if (org && org.status === "suspended") {
       return res.status(403).json({ message: "ACCOUNT_SUSPENDED", reason: "Your organization's account has been suspended due to unpaid billing. Please contact your administrator or make a payment to restore access." });
@@ -132,9 +132,15 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   next();
 }
 
+/** True for any role that has platform-wide (cross-org, cross-system) authority. */
+export function isPlatformPrivileged(role: string | undefined): boolean {
+  return role === "platform_owner" || role === "super_admin";
+}
+
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.session?.userRole || (!roles.includes(req.session.userRole) && req.session.userRole !== "super_admin")) {
+    const role = req.session?.userRole;
+    if (!role || (!roles.includes(role) && !isPlatformPrivileged(role))) {
       return res.status(403).json({ message: "Insufficient permissions" });
     }
     next();
@@ -142,7 +148,7 @@ export function requireRole(...roles: string[]) {
 }
 
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.session?.userRole !== "super_admin") {
+  if (!isPlatformPrivileged(req.session?.userRole)) {
     return res.status(403).json({ message: "Super admin access required" });
   }
   next();
@@ -161,7 +167,7 @@ export function requireConsumer(req: Request, res: Response, next: NextFunction)
 
 export function enforceDataSovereignty(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.userId) return res.status(401).json({ message: "Authentication required" });
-  if (req.session.userRole === "super_admin") return next();
+  if (isPlatformPrivileged(req.session.userRole)) return next();
   const userCountry = req.session.userCountry;
   if (!userCountry) return next();
   (req as any)._sovereignCountry = userCountry;
@@ -234,7 +240,8 @@ export async function idempotencyMiddleware(req: Request, res: Response, next: N
 }
 
 export function getOrgScope(req: Request): string | undefined {
-  if (req.session?.userRole === "super_admin") {
+  // platform_owner and super_admin can cross org boundaries freely.
+  if (isPlatformPrivileged(req.session?.userRole)) {
     return (req.query.orgId as string) || undefined;
   }
   return req.session?.organizationId || undefined;
@@ -244,11 +251,10 @@ export function getCountryFilter(req?: Request): string | undefined {
   const explicitCountry = req?.query?.country as string | undefined;
   const hasExplicit = explicitCountry && explicitCountry !== "all" && explicitCountry !== "";
 
-  if (req?.session?.userRole === "super_admin") {
+  if (isPlatformPrivileged(req?.session?.userRole)) {
     if (hasExplicit) return explicitCountry;
-    if (req.session.viewingCountry && req.session.viewingCountry !== "global") return req.session.viewingCountry;
-    // Global/unset super_admin view: return GLOBAL_SCOPE so storage layer
-    // skips country filtering and returns all records across all countries.
+    if (req?.session?.viewingCountry && req.session.viewingCountry !== "global") return req.session.viewingCountry;
+    // Global/unset privileged view: GLOBAL_SCOPE means no country filter.
     return GLOBAL_SCOPE;
   }
   if (req?.session?.userCountry) {
@@ -259,7 +265,7 @@ export function getCountryFilter(req?: Request): string | undefined {
 }
 
 export async function logCrossCountryAccess(req: Request, targetCountry: string | undefined, endpoint: string): Promise<void> {
-  if (req.session?.userRole !== "super_admin" || !targetCountry) return;
+  if (!isPlatformPrivileged(req.session?.userRole) || !targetCountry) return;
   const homeCountry = req.session?.userCountry || req.session?.viewingCountry;
   if (homeCountry && homeCountry !== "global" && homeCountry !== targetCountry) {
     try {
@@ -276,7 +282,7 @@ export async function logCrossCountryAccess(req: Request, targetCountry: string 
 }
 
 export function enforceCountryScopeForNonSuperAdmin(req: Request, country: string | undefined, endpoint: string): void {
-  if (req.session?.userRole !== "super_admin") {
+  if (!isPlatformPrivileged(req.session?.userRole)) {
     if (!country) {
       throw new Error(`Country scope required for ${endpoint}. Pass a country parameter to ensure data isolation.`);
     }

@@ -23,9 +23,25 @@ Users have a per-user `allowedProducts` field (`text[]` in the `users` table). W
 | `platform_admin` | `SEED_ADMIN_PASSWORD` env var | All 3 platforms | Platform CTO account |
 | `johndoe` | `SecuredCreditor2026!` | Credit + Collateral | Demo secured creditor |
 | `registry_admin` | `TestPass2026!` | Credit | Demo registry authority |
-| `demo_admin` | `TestPass2026!` | Credit | Demo super admin |
+| `demo_admin` | `TestPass2026!` | All 3 platforms | **Platform Owner** (top-of-hierarchy role) |
 
 > The `admin` restriction to credit-only is applied idempotently on every startup via `ensureDemoUsers()` in `server/seed.ts`. `owner_admin` is created if `OWNER_ADMIN_PASSWORD` is set and the account doesn't exist yet.
+
+## Role Hierarchy
+
+```
+platform_owner  → full access across CDH, Telco, Loto; sees all users including super_admin
+super_admin     → full access; sees all users except platform_owner; can be deleted by platform_owner
+admin           → org-scoped; can create/edit non-privileged users
+regulator / lender / viewer / dgi_officer / tax_authority_admin  → domain-scoped leaf roles
+```
+
+Key access rules enforced at both API and UI layers:
+- `platform_owner` accounts **can never be deleted** (not even by other platform_owners)
+- Only `platform_owner` can create/edit/delete `super_admin` accounts
+- Only `platform_owner` can assign the `platform_owner` role
+- `super_admin` users cannot see or modify `platform_owner` accounts
+- `isPlatformPrivileged(role)` helper (exported from `server/routes/middleware.ts`) returns true for both `platform_owner` and `super_admin`
 
 ## System Architecture
 The system employs a modern full-stack architecture built for scalability and compliance, featuring a React/TypeScript frontend with Tailwind CSS and shadcn/ui, and an Express.js API server with a PostgreSQL database managed by Drizzle ORM.

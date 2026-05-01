@@ -241,7 +241,9 @@ function getHelpItems(): NavItem[] {
 
 function filterByRole(items: NavItem[], role: string | undefined): NavItem[] {
   if (!role) return items.filter(item => !item.roles);
-  return items.filter(item => !item.roles || item.roles.includes(role));
+  // platform_owner has full access to everything super_admin can see
+  const effectiveRole = role === "platform_owner" ? "super_admin" : role;
+  return items.filter(item => !item.roles || item.roles.includes(effectiveRole));
 }
 
 function CollapsibleSection({
@@ -431,7 +433,7 @@ export function AppSidebar() {
   const visibleApiIntegration = isShared ? filterByRole(apiIntegrationItems, role) : [];
   const visibleInfrastructure = isShared ? filterByRole(infrastructureItems, role) : [];
   const visibleHelp = filterByRole(getHelpItems(), role);
-  const isSuperAdmin = role === "super_admin";
+  const isSuperAdmin = role === "super_admin" || role === "platform_owner";
   const orgName = (user as any)?.organization?.name;
 
   return (

@@ -22,7 +22,7 @@ export function CountrySelector() {
   const { activeCountry, activeConfig, isGlobalView, setCountry, isSwitching } = useCountryTheme();
   const [open, setOpen] = useState(false);
 
-  if (user?.role !== "super_admin") return null;
+  if (user?.role !== "super_admin" && user?.role !== "platform_owner") return null;
 
   const countries = getSupportedCountries();
   const displayLabel = isGlobalView ? "Global View" : (activeConfig?.name || activeCountry || "Select Country");

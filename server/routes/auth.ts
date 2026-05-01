@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import * as OTPAuth from "otpauth";
 import { storage } from "../storage";
 import { createLogger } from "../logger";
-import { loginLimiter, stripPassword, safeErrorMessage } from "./middleware";
+import { loginLimiter, stripPassword, safeErrorMessage, isPlatformPrivileged } from "./middleware";
 import { getActiveCountryName } from "../country-mode";
 
 const authLogger = createLogger("auth");
@@ -102,7 +102,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
 
-      if (user.role === "super_admin") {
+      if (isPlatformPrivileged(user.role)) {
         delete req.session.viewingCountry;
       }
 
@@ -111,7 +111,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
         organization = await storage.getOrganization(user.organizationId);
       }
 
-      if (user.role !== "super_admin" && organization?.country) {
+      if (!isPlatformPrivileged(user.role) && organization?.country) {
         req.session.userCountry = organization.country;
       }
 
@@ -125,7 +125,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       const passwordExpired = isPasswordExpired(user);
 
       let viewingCountry: string | null = null;
-      if (user.role === "super_admin") {
+      if (isPlatformPrivileged(user.role)) {
         viewingCountry = null;
       } else {
         viewingCountry = organization?.country || getActiveCountryName() || null;
@@ -254,10 +254,10 @@ router.post("/api/auth/mfa/login", async (req, res) => {
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
-      if (user.role === "super_admin") {
+      if (isPlatformPrivileged(user.role)) {
         delete req.session.viewingCountry;
       }
-      if (user.role !== "super_admin" && user.organizationId) {
+      if (!isPlatformPrivileged(user.role) && user.organizationId) {
         const org = await storage.getOrganization(user.organizationId);
         if (org?.country) {
           req.session.userCountry = org.country;
@@ -275,7 +275,7 @@ router.post("/api/auth/mfa/login", async (req, res) => {
         organization = await storage.getOrganization(user.organizationId);
       }
       let viewingCountry: string | null = null;
-      if (user.role === "super_admin") {
+      if (isPlatformPrivileged(user.role)) {
         viewingCountry = null;
       } else {
         viewingCountry = organization?.country || getActiveCountryName() || null;
@@ -385,7 +385,7 @@ router.get("/api/auth/me", async (req, res) => {
 
   if (req.session.userRole !== user.role) {
     req.session.userRole = user.role;
-    if (user.role === "super_admin") {
+    if (isPlatformPrivileged(user.role)) {
       delete req.session.viewingCountry;
     }
   }
@@ -400,7 +400,7 @@ router.get("/api/auth/me", async (req, res) => {
   }
 
   let viewingCountry: string | null = null;
-  if (user.role === "super_admin") {
+  if (isPlatformPrivileged(user.role)) {
     viewingCountry = req.session.viewingCountry && req.session.viewingCountry !== "undefined" ? req.session.viewingCountry : null;
   } else {
     viewingCountry = req.session.userCountry || organization?.country || getActiveCountryName() || null;

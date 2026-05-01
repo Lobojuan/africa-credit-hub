@@ -57,7 +57,7 @@ export default function BillingPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [recentDays, setRecentDays] = useState(0);
 
-  const canManage = user?.role === "admin" || user?.role === "regulator" || user?.role === "super_admin";
+  const canManage = user?.role === "admin" || user?.role === "regulator" || user?.role === "super_admin" || user?.role === "platform_owner";
   const [selectedRecord, setSelectedRecord] = useState<BillingRecord | null>(null);
 
   const { data: billingRecords, isLoading } = useQuery<BillingRecord[]>({
