@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CreditScoreGauge } from "@/components/credit-score-gauge";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { InquiryPurposePill, CompetingInquiryBadge, isCompetingInquiry, isStaleInquiry } from "@/components/inquiry-highlight";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -2033,15 +2034,20 @@ export default function ConsumerPortalPage() {
                           const inquiryDateLabel = inq.createdAt
                             ? new Date(inq.createdAt).toLocaleString("en-GB", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
                             : "an unknown date";
+                          const inqHighlight = { id: inq.id, institution: inq.institution, purpose: inq.purpose, inquiredAt: inq.createdAt, inquiringOrgId: inq.inquiringOrgId };
+                          const competing = isCompetingInquiry(inqHighlight, null);
+                          const stale = isStaleInquiry(inqHighlight);
                           return (
                             <div
                               key={inq.id}
                               data-testid={`inquiry-${inq.id}`}
                               data-multi-lender={inMultiLenderWindow ? "true" : "false"}
-                              className={`rounded-xl border overflow-hidden ${inMultiLenderWindow ? "border-amber-300 dark:border-amber-700" : ""}`}
+                              data-competing={competing ? "true" : "false"}
+                              data-stale={stale ? "true" : "false"}
+                              className={`rounded-xl border overflow-hidden ${stale ? "opacity-60" : ""} ${competing ? "border-amber-300 dark:border-amber-700" : inMultiLenderWindow ? "border-amber-300 dark:border-amber-700" : ""}`}
                             >
                               <button
-                                className="w-full flex items-start gap-2.5 p-2.5 text-left hover:bg-muted/30 transition-colors"
+                                className={`w-full flex items-start gap-2.5 p-2.5 text-left hover:bg-muted/30 transition-colors ${competing ? "border-l-2 border-l-amber-500 bg-amber-50/70 dark:bg-amber-950/30" : ""}`}
                                 onClick={() => setExpandedInquiryId(isOpen ? null : inq.id)}
                                 aria-expanded={isOpen}
                                 data-testid={`button-expand-inquiry-${inq.id}`}
@@ -2050,8 +2056,21 @@ export default function ConsumerPortalPage() {
                                   <Search className="w-3.5 h-3.5 text-primary" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-xs font-semibold truncate">{lenderLabel}</p>
-                                  <p className="text-[10px] text-muted-foreground">{(inq.purpose || "inquiry").replace(/_/g, " ")} · {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}</p>
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <p className="text-xs font-semibold truncate">{lenderLabel}</p>
+                                    {competing && (
+                                      <CompetingInquiryBadge testId={`badge-competing-inquiry-${inq.id}`} />
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    <InquiryPurposePill purpose={inq.purpose} testId={`pill-purpose-inquiry-${inq.id}`} />
+                                    <span className="text-[10px] text-muted-foreground">
+                                      · {inq.createdAt ? new Date(inq.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "—"}
+                                    </span>
+                                    {stale && (
+                                      <span className="text-[9px] uppercase tracking-wide text-muted-foreground" data-testid={`text-stale-inquiry-${inq.id}`}>· older</span>
+                                    )}
+                                  </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 flex-shrink-0">
                                   {inMultiLenderWindow && (
