@@ -39,15 +39,28 @@ export default function ChooseWorkspacePage() {
     document.title = `Choose your workspace — ${brand}`;
   }, [brand]);
 
-  // Auto-resume: if user already chose a workspace earlier, skip the chooser.
+  // Auto-redirect: single-workspace users skip the chooser entirely.
+  // Multi-workspace users auto-resume their last chosen workspace.
   useEffect(() => {
-    if (!user) return;
+    if (!user || accessible.length === 0) return;
+    if (accessible.length === 1) {
+      // Only one workspace available — go straight there, no choice needed.
+      const ws = accessible[0];
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(WORKSPACE_STORAGE_KEY, ws.id);
+        window.dispatchEvent(new CustomEvent<WorkspaceId>("ach:active-workspace-changed", { detail: ws.id }));
+      }
+      if (ws.id !== "shared") writeActiveProduct(ws.id as ProductId);
+      setLocation(ws.landing);
+      return;
+    }
+    // Multi-workspace: resume last chosen workspace if still accessible.
     const stored = readStoredWorkspace();
     if (stored && accessibleIds.has(stored)) {
       const ws = WORKSPACES[stored];
       setLocation(ws.landing);
     }
-  }, [user, accessibleIds, setLocation]);
+  }, [user, accessible, accessibleIds, setLocation]);
 
   const choose = (ws: WorkspaceDefinition) => {
     if (!accessibleIds.has(ws.id)) return;

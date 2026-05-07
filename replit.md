@@ -18,14 +18,21 @@ Users have a per-user `allowedProducts` field (`text[]` in the `users` table). W
 ### Login Accounts
 | Username | Password | Access | Purpose |
 |---|---|---|---|
+| `demo_admin` | `TestPass2026!` | **All 3 workspaces** | **Platform Owner** — only account with full access |
+| `credit_admin` | `CreditAdmin2026!` | Credit Bureau **only** | Dedicated Credit Bureau workspace admin |
+| `collateral_admin` | `CollateralAdmin2026!` | Collateral Registry **only** | Dedicated Collateral Registry workspace admin |
+| `loto_admin` | `LotoAdmin2026!` | Loto Fiscal **only** | Dedicated Loto Fiscal workspace admin |
 | `admin` | `SEED_ADMIN_PASSWORD` env var | Credit Bureau only | Shared client / demo login |
 | `owner_admin` | `OWNER_ADMIN_PASSWORD` env var | All 3 platforms | Private owner super-admin |
-| `platform_admin` | `SEED_ADMIN_PASSWORD` env var | All 3 platforms | Platform CTO account |
 | `johndoe` | `SecuredCreditor2026!` | Credit + Collateral | Demo secured creditor |
 | `registry_admin` | `TestPass2026!` | Credit | Demo registry authority |
-| `demo_admin` | `TestPass2026!` | All 3 platforms | **Platform Owner** (top-of-hierarchy role) |
 
-> The `admin` restriction to credit-only is applied idempotently on every startup via `ensureDemoUsers()` in `server/seed.ts`. `owner_admin` is created if `OWNER_ADMIN_PASSWORD` is set and the account doesn't exist yet.
+### Workspace Separation Rules
+- **Platform Owner** (`demo_admin`) is the **only** account that sees all 3 workspaces. On login, the workspace chooser is shown so they can pick where to go.
+- **Single-workspace accounts** (`credit_admin`, `collateral_admin`, `loto_admin`) skip the workspace chooser entirely and land directly in their workspace. The workspace switcher shows only their assigned workspace — they cannot navigate to other workspaces.
+- Workspace access is controlled by the `allowedProducts` field on the `users` table. `null` = unrestricted; `{credit}` / `{collateral}` / `{loto}` = locked to that workspace.
+- These restrictions are enforced at both the UI layer (workspace chooser, sidebar switcher) and the API layer (route guards).
+- All demo workspace accounts are seeded idempotently on every server start via `ensureDemoUsers()` in `server/seed.ts`.
 
 ## Role Hierarchy
 

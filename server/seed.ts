@@ -347,36 +347,82 @@ export async function ensureDemoUsers() {
       console.log("[Demo Seed] Created Africa Credit Hub (Demo) organization");
     }
 
-    const demoUsers = [
+    // --- Core demo users (created once, never re-created if they exist) ---
+    const demoUsers: Array<{
+      username: string; password: string; fullName: string; email: string;
+      role: "platform_owner" | "super_admin" | "admin" | "regulator" | "lender" | "viewer";
+      status: "active"; institution: string; organizationId: number;
+      allowedProducts?: string[];
+    }> = [
       {
         username: "johndoe",
         password: "SecuredCreditor2026!",
         fullName: "John Doe",
         email: "john@demo-bank.test",
-        role: "admin" as const,
-        status: "active" as const,
+        role: "admin",
+        status: "active",
         institution: "Demo Bank Ltd",
         organizationId: demoOrg.id,
+        allowedProducts: ["credit", "collateral"],
       },
       {
         username: "registry_admin",
         password: "TestPass2026!",
         fullName: "Registry Authority Administrator",
         email: "registry-admin@demo-authority.test",
-        role: "admin" as const,
-        status: "active" as const,
+        role: "admin",
+        status: "active",
         institution: "Bank of Ghana (Demo)",
         organizationId: authorityOrg.id,
+        allowedProducts: ["credit"],
       },
       {
+        // Platform owner — full access to all 3 workspaces, no allowedProducts restriction.
         username: "demo_admin",
         password: "TestPass2026!",
-        fullName: "Demo Super Admin",
+        fullName: "Demo Platform Owner",
         email: "demo-admin@africacredithub.test",
-        role: "super_admin" as const,
-        status: "active" as const,
+        role: "platform_owner",
+        status: "active",
         institution: "Africa Credit Hub (Demo)",
         organizationId: platformOrg.id,
+      },
+      // ── Dedicated single-workspace admin accounts ──────────────────────────
+      {
+        // Credit Bureau workspace admin — can ONLY access the Credit Bureau.
+        username: "credit_admin",
+        password: "CreditAdmin2026!",
+        fullName: "Credit Bureau Admin",
+        email: "credit-admin@demo-bank.test",
+        role: "admin",
+        status: "active",
+        institution: "Demo Bank Ltd",
+        organizationId: demoOrg.id,
+        allowedProducts: ["credit"],
+      },
+      {
+        // Collateral Registry workspace admin — can ONLY access Collateral Registry.
+        username: "collateral_admin",
+        password: "CollateralAdmin2026!",
+        fullName: "Collateral Registry Admin",
+        email: "collateral-admin@demo-bank.test",
+        role: "admin",
+        status: "active",
+        institution: "Demo Bank Ltd",
+        organizationId: demoOrg.id,
+        allowedProducts: ["collateral"],
+      },
+      {
+        // Loto Fiscal workspace admin — can ONLY access Loto Fiscal.
+        username: "loto_admin",
+        password: "LotoAdmin2026!",
+        fullName: "Loto Fiscal Admin",
+        email: "loto-admin@demo-bank.test",
+        role: "admin",
+        status: "active",
+        institution: "Demo Bank Ltd",
+        organizationId: demoOrg.id,
+        allowedProducts: ["loto"],
       },
     ];
 
@@ -392,7 +438,8 @@ export async function ensureDemoUsers() {
           status: u.status,
           institution: u.institution,
           organizationId: u.organizationId,
-        });
+          ...(u.allowedProducts ? { allowedProducts: u.allowedProducts } : {}),
+        } as any);
         console.log(`[Demo Seed] Created demo user: ${u.username}`);
       } else {
         const row = existing[0] as any;
@@ -403,15 +450,23 @@ export async function ensureDemoUsers() {
           updates.failedLoginAttempts = 0;
         }
         if (row.status !== "active") updates.status = "active";
+        // Idempotently upgrade demo_admin to platform_owner.
+        if (u.username === "demo_admin" && row.role !== "platform_owner") {
+          updates.role = "platform_owner";
+          updates.allowedProducts = null;
+        }
+        // Idempotently enforce allowedProducts for workspace-specific accounts.
+        if (u.allowedProducts && JSON.stringify(row.allowedProducts?.sort()) !== JSON.stringify([...u.allowedProducts].sort())) {
+          updates.allowedProducts = u.allowedProducts;
+        }
         if (Object.keys(updates).length > 0) {
           await db.update(users).set(updates as any).where(eq(users.username, u.username));
-          console.log(`[Demo Seed] Reset lock/status on demo user: ${u.username}`);
+          console.log(`[Demo Seed] Updated demo user: ${u.username}`);
         }
       }
     }
 
-    // Restrict the shared 'admin' account to Credit Bureau only so clients
-    // testing credit scoring cannot see Loto Fiscal or Collateral Registry.
+    // Restrict the shared 'admin' account to Credit Bureau only.
     const adminUser = await db.select().from(users).where(eq(users.username, "admin")).limit(1);
     if (adminUser.length > 0 && (adminUser[0] as any).allowedProducts === null) {
       await db.update(users)
