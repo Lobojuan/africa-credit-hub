@@ -844,5 +844,9 @@ export async function migrateNewTables() {
   )`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_monitoring_alerts_consumer ON consumer_monitoring_alerts(consumer_account_id)`);
 
+  await db.execute(sql`ALTER TABLE loto_consumer_messaging_prefs ADD COLUMN IF NOT EXISTS otp_pending_phone text`);
+  await db.execute(sql`ALTER TABLE loto_consumer_messaging_prefs ADD COLUMN IF NOT EXISTS otp_hash text`);
+  await db.execute(sql`ALTER TABLE loto_consumer_messaging_prefs ADD COLUMN IF NOT EXISTS otp_expires_at timestamp`);
+
   console.log('[NewTables] Migration complete');
 }

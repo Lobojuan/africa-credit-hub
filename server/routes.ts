@@ -18791,45 +18791,123 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Returns the consumer's stored messaging prefs (or sensible defaults if
   // they've never opted-in/out before). Winner SMS still sends regardless of
   // optOutReminders — only marketing-style reminders honour the opt-out.
-  app.get("/api/loto/messaging-prefs", requireConsumer, async (req, res) => {
+  app.get("/api/loto/messaging-prefs", requireAuth, async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = req.session.userId!;
       const prefs = await storage.getLotoConsumerMessagingPrefs(userId);
-      res.json(prefs ?? {
-        userId,
-        optOutReminders: false,
-        language: "en",
-        verifiedPhone: null,
-        verifiedAt: null,
-      });
+      // Return only safe fields — never expose otp_hash, otp_pending_phone,
+      // or otp_expires_at which would allow offline OTP brute-force.
+      const safe = prefs
+        ? {
+            userId: prefs.userId,
+            optOutReminders: prefs.optOutReminders,
+            language: prefs.language,
+            verifiedPhone: prefs.verifiedPhone,
+            verifiedAt: prefs.verifiedAt,
+            fiscalCode: prefs.fiscalCode,
+          }
+        : {
+            userId,
+            optOutReminders: false,
+            language: "en",
+            verifiedPhone: null,
+            verifiedAt: null,
+          };
+      res.json(safe);
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.put("/api/loto/messaging-prefs", requireConsumer, async (req, res) => {
+  app.put("/api/loto/messaging-prefs", requireAuth, async (req, res) => {
     try {
-      const userId = req.user!.id;
+      const userId = req.session.userId!;
+      // verifiedPhone and verifiedAt are intentionally NOT accepted here —
+      // phone ownership must be proven via the OTP flow (/verify-phone + /confirm-otp).
       const schema = z.object({
         optOutReminders: z.boolean().optional(),
         language: z.enum(["en", "fr", "pt", "ar", "sw"]).optional(),
-        verifiedPhone: z.string().nullable().optional(),
       });
       const body = schema.parse(req.body);
-      // Strongly-typed patch — mirrors the partial shape of
-      // upsertLotoConsumerMessagingPrefs's second arg without any cast.
       const patch: {
         optOutReminders?: boolean;
         language?: "en" | "fr" | "pt" | "ar" | "sw";
-        verifiedPhone?: string | null;
-        verifiedAt?: Date | null;
       } = { ...body };
-      if (body.verifiedPhone !== undefined) {
-        // Re-normalise on write — never trust the client to deliver E.164.
-        const normalised = lotoMessagingAdapter.toE164(body.verifiedPhone ?? null);
-        patch.verifiedPhone = normalised;
-        patch.verifiedAt = normalised ? new Date() : null;
-      }
       const updated = await storage.upsertLotoConsumerMessagingPrefs(userId, patch);
-      res.json(updated);
+      res.json({
+        userId: updated.userId,
+        optOutReminders: updated.optOutReminders,
+        language: updated.language,
+        verifiedPhone: updated.verifiedPhone,
+        verifiedAt: updated.verifiedAt,
+        fiscalCode: updated.fiscalCode,
+      });
+    } catch (e) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Per-user OTP rate limiters — prevent brute-force and SMS flooding.
+  const otpSendLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 min
+    max: 3, // max 3 send attempts per 10 min per user
+    message: { message: "Too many code requests. Please wait before requesting a new code." },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: any) => req.session?.userId || rateLimitKeyGenerator(req),
+    validate: { keyGeneratorIpFallback: false },
+  });
+  const otpConfirmLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 min
+    max: 5, // max 5 confirm attempts per 10 min per user
+    message: { message: "Too many verification attempts. Please request a new code." },
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req: any) => req.session?.userId || rateLimitKeyGenerator(req),
+    validate: { keyGeneratorIpFallback: false },
+  });
+
+  // Send a 6-digit OTP to the supplied phone number so the user can
+  // prove ownership before we mark it as verified.
+  app.put("/api/loto/messaging-prefs/verify-phone", requireAuth, otpSendLimiter, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({ phone: z.string().min(5) });
+      const { phone } = schema.parse(req.body);
+
+      const e164 = lotoMessagingAdapter.toE164(phone);
+      if (!e164) return res.status(400).json({ message: "Invalid phone number. Use E.164 format, e.g. +22507000000." });
+
+      const otp = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
+      const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      await storage.savePhoneOtp(userId, e164, otpHash, expiresAt);
+
+      const adapter = lotoMessagingAdapter.selectAdapter(null);
+      await adapter.sendSms({
+        to: e164,
+        countryCode: e164.slice(1, 3),
+        templateKey: "otp_verification",
+        body: `Your Loto Fiscal verification code is: ${otp}. It expires in 10 minutes.`,
+      });
+
+      res.json({ sent: true, phone: e164 });
+    } catch (e) { res.status(400).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Confirm the OTP the user received. On success, marks verifiedPhone
+  // and verifiedAt in the messaging prefs row.
+  app.post("/api/loto/messaging-prefs/confirm-otp", requireAuth, otpConfirmLimiter, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const schema = z.object({ code: z.string().length(6) });
+      const { code } = schema.parse(req.body);
+
+      const otpHash = crypto.createHash("sha256").update(code).digest("hex");
+      const result = await storage.consumePhoneOtp(userId, otpHash);
+
+      if (!result) {
+        return res.status(400).json({ message: "Invalid or expired verification code." });
+      }
+
+      res.json({ verified: true, verifiedPhone: result.phone });
     } catch (e) { res.status(400).json({ message: safeErrorMessage(e) }); }
   });
 

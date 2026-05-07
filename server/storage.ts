@@ -553,6 +553,8 @@ export interface IStorage {
     fiscalCode?: string | null;
     language?: string;
   }): Promise<LotoConsumerMessagingPrefs | null>;
+  savePhoneOtp(userId: string, pendingPhone: string, otpHash: string, expiresAt: Date): Promise<void>;
+  consumePhoneOtp(userId: string, otpHash: string): Promise<{ phone: string } | null>;
   getNextLotoDrawForCountry(countryCode: string): Promise<LotoDraw | undefined>;
   countConsumerTicketsForDraw(args: {
     phone: string; countryCode: string; periodStart: Date; periodEnd: Date;
@@ -4294,6 +4296,44 @@ export class DatabaseStorage implements IStorage {
       fiscalCode: args.fiscalCode,
       language: args.language,
     });
+  }
+
+  async savePhoneOtp(userId: string, pendingPhone: string, otpHash: string, expiresAt: Date): Promise<void> {
+    const existing = await this.getLotoConsumerMessagingPrefs(userId);
+    if (existing) {
+      await db.update(lotoConsumerMessagingPrefs)
+        .set({ otpPendingPhone: pendingPhone, otpHash, otpExpiresAt: expiresAt, updatedAt: new Date() })
+        .where(eq(lotoConsumerMessagingPrefs.userId, userId));
+    } else {
+      await db.insert(lotoConsumerMessagingPrefs).values({
+        userId,
+        optOutReminders: false,
+        language: "en",
+        otpPendingPhone: pendingPhone,
+        otpHash,
+        otpExpiresAt: expiresAt,
+      });
+    }
+  }
+
+  async consumePhoneOtp(userId: string, otpHash: string): Promise<{ phone: string } | null> {
+    const row = await this.getLotoConsumerMessagingPrefs(userId);
+    if (!row) return null;
+    if (!row.otpHash || row.otpHash !== otpHash) return null;
+    if (!row.otpExpiresAt || row.otpExpiresAt < new Date()) return null;
+    const phone = row.otpPendingPhone;
+    if (!phone) return null;
+    await db.update(lotoConsumerMessagingPrefs)
+      .set({
+        verifiedPhone: phone,
+        verifiedAt: new Date(),
+        otpHash: null,
+        otpExpiresAt: null,
+        otpPendingPhone: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(lotoConsumerMessagingPrefs.userId, userId));
+    return { phone };
   }
 
   /**

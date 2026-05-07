@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
@@ -342,12 +342,17 @@ export default function LotoWorkspacePage() {
 function LotoMessagingPreferences() {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [phoneInput, setPhoneInput] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [isChangingPhone, setIsChangingPhone] = useState(false);
+
   const prefsQ = useQuery<{
     optOutReminders: boolean; language: string; verifiedPhone: string | null; verifiedAt: string | null;
   }>({ queryKey: ["/api/loto/messaging-prefs"] });
 
   const updateMut = useMutation({
-    mutationFn: async (patch: { optOutReminders?: boolean; language?: string; verifiedPhone?: string | null }) => {
+    mutationFn: async (patch: { optOutReminders?: boolean; language?: string }) => {
       const r = await apiRequest("PUT", "/api/loto/messaging-prefs", patch);
       return r.json();
     },
@@ -357,6 +362,50 @@ function LotoMessagingPreferences() {
     },
     onError: (e: unknown) => toast({
       title: t("loto.messagingPrefs.errorTitle", "Could not save"),
+      description: e instanceof Error ? e.message : String(e),
+      variant: "destructive",
+    }),
+  });
+
+  const sendOtpMut = useMutation({
+    mutationFn: async (phone: string) => {
+      const r = await apiRequest("PUT", "/api/loto/messaging-prefs/verify-phone", { phone });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? "Failed to send code");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      setCodeSent(true);
+      toast({ title: t("loto.messagingPrefs.codeSentTitle", "Code sent"), description: t("loto.messagingPrefs.codeSentBody", "Check your phone for a 6-digit code. It expires in 10 minutes.") });
+    },
+    onError: (e: unknown) => toast({
+      title: t("loto.messagingPrefs.sendCodeErrorTitle", "Could not send code"),
+      description: e instanceof Error ? e.message : String(e),
+      variant: "destructive",
+    }),
+  });
+
+  const confirmOtpMut = useMutation({
+    mutationFn: async (code: string) => {
+      const r = await apiRequest("POST", "/api/loto/messaging-prefs/confirm-otp", { code });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? "Verification failed");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/messaging-prefs"] });
+      setCodeSent(false);
+      setIsChangingPhone(false);
+      setPhoneInput("");
+      setCodeInput("");
+      toast({ title: t("loto.messagingPrefs.verifiedTitle", "Phone verified"), description: t("loto.messagingPrefs.verifiedBody", "Your phone number has been confirmed.") });
+    },
+    onError: (e: unknown) => toast({
+      title: t("loto.messagingPrefs.confirmErrorTitle", "Incorrect code"),
       description: e instanceof Error ? e.message : String(e),
       variant: "destructive",
     }),
@@ -392,27 +441,105 @@ function LotoMessagingPreferences() {
       <CardContent className="space-y-5">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="prefs-phone">
-            {t("loto.messagingPrefs.phone", "Verified phone (E.164, e.g. +22507000000)")}
+            {t("loto.messagingPrefs.phone", "Phone number (E.164, e.g. +22507000000)")}
           </label>
-          <div className="flex gap-2">
-            <input
-              id="prefs-phone"
-              data-testid="input-prefs-phone"
-              defaultValue={prefs.verifiedPhone ?? ""}
-              placeholder="+225 07 00 00 00 00"
-              className="flex-1 px-3 py-2 border rounded-md bg-background"
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                if (v && v !== prefs.verifiedPhone) updateMut.mutate({ verifiedPhone: v });
-                if (!v && prefs.verifiedPhone) updateMut.mutate({ verifiedPhone: null });
-              }}
-            />
-          </div>
-          {prefs.verifiedAt && (
-            <p className="text-xs text-emerald-700 flex items-center gap-1" data-testid="text-prefs-verified-at">
-              <BadgeCheck className="w-3.5 h-3.5" />
-              {t("loto.messagingPrefs.verifiedAt", "Verified")} — {new Date(prefs.verifiedAt).toLocaleString()}
-            </p>
+
+          {prefs.verifiedAt && prefs.verifiedPhone && !isChangingPhone ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-background">
+                <BadgeCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span className="flex-1 text-sm" data-testid="text-prefs-verified-phone">{prefs.verifiedPhone}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  data-testid="button-change-phone"
+                  onClick={() => {
+                    setPhoneInput(prefs.verifiedPhone ?? "");
+                    setCodeSent(false);
+                    setCodeInput("");
+                    setIsChangingPhone(true);
+                  }}
+                >
+                  {t("loto.messagingPrefs.changePhone", "Change")}
+                </Button>
+              </div>
+              <p className="text-xs text-emerald-700 flex items-center gap-1" data-testid="text-prefs-verified-at">
+                <BadgeCheck className="w-3.5 h-3.5" />
+                {t("loto.messagingPrefs.verifiedAt", "Verified")} — {new Date(prefs.verifiedAt).toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  id="prefs-phone"
+                  data-testid="input-prefs-phone"
+                  value={phoneInput}
+                  onChange={(e) => { setPhoneInput(e.target.value); setCodeSent(false); }}
+                  placeholder="+225 07 00 00 00 00"
+                  className="flex-1 px-3 py-2 border rounded-md bg-background text-sm"
+                  disabled={sendOtpMut.isPending}
+                />
+                <Button
+                  data-testid="button-send-otp"
+                  onClick={() => sendOtpMut.mutate(phoneInput.trim())}
+                  disabled={!phoneInput.trim() || sendOtpMut.isPending}
+                  size="sm"
+                >
+                  {sendOtpMut.isPending
+                    ? t("loto.messagingPrefs.sending", "Sending…")
+                    : t("loto.messagingPrefs.sendCode", "Send code")}
+                </Button>
+              </div>
+              {isChangingPhone && prefs.verifiedPhone && !codeSent && (
+                <button
+                  data-testid="button-cancel-change-phone"
+                  className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                  onClick={() => { setIsChangingPhone(false); setPhoneInput(""); setCodeSent(false); }}
+                >
+                  {t("loto.messagingPrefs.cancelChange", "Cancel")}
+                </button>
+              )}
+
+              {codeSent && (
+                <div className="space-y-2 pt-1">
+                  <label className="text-xs text-muted-foreground" htmlFor="prefs-otp">
+                    {t("loto.messagingPrefs.enterCode", "Enter the 6-digit code sent to your phone")}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="prefs-otp"
+                      data-testid="input-prefs-otp"
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="123456"
+                      maxLength={6}
+                      inputMode="numeric"
+                      className="flex-1 px-3 py-2 border rounded-md bg-background text-sm tracking-widest"
+                      disabled={confirmOtpMut.isPending}
+                    />
+                    <Button
+                      data-testid="button-confirm-otp"
+                      onClick={() => confirmOtpMut.mutate(codeInput)}
+                      disabled={codeInput.length !== 6 || confirmOtpMut.isPending}
+                      size="sm"
+                    >
+                      {confirmOtpMut.isPending
+                        ? t("loto.messagingPrefs.verifying", "Verifying…")
+                        : t("loto.messagingPrefs.verify", "Verify")}
+                    </Button>
+                  </div>
+                  <button
+                    data-testid="button-resend-otp"
+                    className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                    onClick={() => sendOtpMut.mutate(phoneInput.trim())}
+                    disabled={sendOtpMut.isPending}
+                  >
+                    {t("loto.messagingPrefs.resendCode", "Resend code")}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 

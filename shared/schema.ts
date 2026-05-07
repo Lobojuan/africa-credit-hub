@@ -2473,6 +2473,12 @@ export const lotoConsumerMessagingPrefs = pgTable("loto_consumer_messaging_prefs
   // back-office to attribute receipts that were issued against the same TIN
   // before the consumer first registered.
   fiscalCode: text("fiscal_code"),
+  // Short-lived OTP for phone ownership verification.
+  // otpPendingPhone is the number awaiting confirmation; otpHash is
+  // SHA-256(plaintext_code) so we never persist the raw digits.
+  otpPendingPhone: text("otp_pending_phone"),
+  otpHash: text("otp_hash"),
+  otpExpiresAt: timestamp("otp_expires_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
