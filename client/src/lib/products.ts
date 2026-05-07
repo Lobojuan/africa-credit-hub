@@ -36,8 +36,9 @@ export interface ProductDefinition {
 }
 
 const ALL_LOGGED_IN = [
-  "super_admin", "admin", "regulator", "lender", "viewer",
-  "consumer", "tax_auditor", "registry_authority",
+  "platform_owner", "super_admin", "admin", "regulator", "lender", "viewer",
+  "consumer", "tax_auditor", "registry_authority", "loan_officer", "underwriter",
+  "dgi_officer", "tax_authority_admin",
 ];
 
 export const PRODUCT_REGISTRY: Record<ProductId, ProductDefinition> = {
@@ -111,7 +112,10 @@ export const PRODUCT_REGISTRY: Record<ProductId, ProductDefinition> = {
     accentFrom: "hsl(142 65% 42%)",
     accentTo: "hsl(28 85% 50%)",
     accentText: "hsl(142 60% 30%)",
-    allowedRoles: ["super_admin", "admin", "regulator", "tax_auditor"],
+    allowedRoles: [
+      "platform_owner", "super_admin", "admin", "regulator",
+      "tax_auditor", "dgi_officer", "tax_authority_admin",
+    ],
     insideRoutePrefixes: ["/loto", "/loto-fiscal"],
   },
 };

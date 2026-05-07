@@ -26,8 +26,9 @@ export interface WorkspaceDefinition {
 }
 
 const ALL_LOGGED_IN_ROLES = [
-  "super_admin", "admin", "regulator", "lender", "viewer",
+  "platform_owner", "super_admin", "admin", "regulator", "lender", "viewer",
   "consumer", "tax_auditor", "registry_authority", "loan_officer", "underwriter",
+  "dgi_officer", "tax_authority_admin",
 ];
 
 const SHARED_ROUTE_PREFIXES = [
