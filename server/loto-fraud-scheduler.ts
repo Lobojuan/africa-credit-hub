@@ -1,7 +1,11 @@
 /**
  * Loto Fiscal — scheduled fraud scan.
  *
- * Runs `runFraudScan` once per hour for every active loto country.
+ * Polls every POLL_INTERVAL_MS (15 min by default) and scans each active
+ * country if `now − lastScannedAt >= fraudScanIntervalMinutes * 60 000`.
+ * The interval is read from `loto_country_draw_config.fraud_scan_interval_minutes`
+ * on every poll tick so admin changes take effect without a server restart.
+ *
  * For each newly-inserted high/critical flag the `merchant.flagged`
  * webhook is fired so subscribers receive near-real-time alerts.
  *
@@ -20,12 +24,22 @@ import { storage } from "./storage";
 const HIGH_SEVERITY = new Set<DetectedFlag["severity"]>(["high", "critical"]);
 const LABEL = "[loto-fraud-scheduler]";
 
+/** Base polling resolution — scheduler checks every 15 minutes which
+ *  countries are due for a scan based on their per-country interval. */
+const POLL_INTERVAL_MS = 15 * 60 * 1000;
+
 /**
  * In-process guard: tracks countries whose scan is currently in-flight.
  * Prevents a slow scan from overlapping with the next scheduled tick.
  * For multi-instance deployments a DB advisory lock should replace this.
  */
 const inFlight = new Set<string>();
+
+/**
+ * Tracks when each country was last scanned (epoch ms).
+ * Reset on restart; countries will scan once within the first poll tick.
+ */
+const lastScannedAt = new Map<string, number>();
 
 /**
  * Resolve merchant IDs affected by a flag.
@@ -70,6 +84,8 @@ async function scanCountry(countryCode: string): Promise<void> {
     return;
   }
 
+  lastScannedAt.set(countryCode, Date.now());
+
   const summary = `Auto-scan ${countryCode}: ${result.detectionsFound} detections, ${result.flagsUpserted} upserted (${result.newFlags.length} new)`;
   console.log(`${LABEL} ${summary}`);
 
@@ -111,35 +127,48 @@ async function scanCountry(countryCode: string): Promise<void> {
 }
 
 async function runScheduledScan(): Promise<void> {
-  let countries: string[];
+  let rows: { countryCode: string; fraudScanIntervalMinutes: number }[];
   try {
-    const rows = await db
-      .select({ countryCode: lotoCountryDrawConfig.countryCode })
+    rows = await db
+      .select({
+        countryCode: lotoCountryDrawConfig.countryCode,
+        fraudScanIntervalMinutes: lotoCountryDrawConfig.fraudScanIntervalMinutes,
+      })
       .from(lotoCountryDrawConfig)
       .where(eq(lotoCountryDrawConfig.active, true));
-    countries = rows.map((r) => r.countryCode);
   } catch (err) {
     console.error(`${LABEL} Failed to fetch active countries:`, (err as Error).message);
     return;
   }
 
-  if (countries.length === 0) {
+  if (rows.length === 0) {
     console.log(`${LABEL} No active loto countries — skipping scan`);
     return;
   }
 
-  console.log(`${LABEL} Starting scheduled scan for countries: ${countries.join(", ")}`);
+  const now = Date.now();
+  const due = rows.filter(({ countryCode, fraudScanIntervalMinutes }) => {
+    const intervalMs = fraudScanIntervalMinutes * 60 * 1000;
+    const last = lastScannedAt.get(countryCode) ?? 0;
+    return now - last >= intervalMs;
+  });
 
-  await Promise.allSettled(countries.map((cc) => scanCountry(cc)));
+  if (due.length === 0) {
+    return;
+  }
+
+  console.log(`${LABEL} Starting scheduled scan for countries: ${due.map((r) => r.countryCode).join(", ")}`);
+
+  await Promise.allSettled(due.map(({ countryCode }) => scanCountry(countryCode)));
 }
 
 /**
- * Start the recurring fraud scan. Fires an initial scan 30 seconds after
- * boot (so the DB is fully warmed up), then every `intervalHours` hours.
+ * Start the recurring fraud scan.
+ * Fires an initial scan 30 seconds after boot (so the DB is fully warmed up),
+ * then polls every POLL_INTERVAL_MS, scanning countries whose configured
+ * interval has elapsed since their last scan.
  */
-export function startLotoFraudScheduler(intervalHours = 1): void {
-  const intervalMs = intervalHours * 60 * 60 * 1000;
-
+export function startLotoFraudScheduler(): void {
   setTimeout(() => {
     runScheduledScan().catch((e) =>
       console.error(`${LABEL} Initial scan error:`, (e as Error).message),
@@ -150,7 +179,7 @@ export function startLotoFraudScheduler(intervalHours = 1): void {
     runScheduledScan().catch((e) =>
       console.error(`${LABEL} Scheduled scan error:`, (e as Error).message),
     );
-  }, intervalMs);
+  }, POLL_INTERVAL_MS);
 
-  console.log(`${LABEL} Scheduler started — fraud scan runs every ${intervalHours}h (initial run in 30s)`);
+  console.log(`${LABEL} Scheduler started — polling every ${POLL_INTERVAL_MS / 60000}min, per-country intervals from DB (initial run in 30s)`);
 }

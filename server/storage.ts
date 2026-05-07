@@ -466,6 +466,7 @@ export interface IStorage {
   // ── Loto Draw Engine (Task #283) ─────────────────────────────────────
   getLotoCountryDrawConfig(countryCode: string): Promise<LotoCountryDrawConfig | undefined>;
   upsertLotoCountryDrawConfig(input: InsertLotoCountryDrawConfig): Promise<LotoCountryDrawConfig>;
+  updateLotoCountryFraudInterval(countryCode: string, intervalMinutes: number): Promise<LotoCountryDrawConfig | undefined>;
   listLotoCountryDrawConfigs(): Promise<LotoCountryDrawConfig[]>;
   getLotoDraw(id: string): Promise<LotoDraw | undefined>;
   listLotoDraws(filter?: { countryCode?: string; limit?: number }): Promise<LotoDraw[]>;
@@ -3806,6 +3807,14 @@ export class DatabaseStorage implements IStorage {
       return row;
     }
     const [row] = await db.insert(lotoCountryDrawConfig).values(input).returning();
+    return row;
+  }
+  async updateLotoCountryFraudInterval(countryCode: string, intervalMinutes: number): Promise<LotoCountryDrawConfig | undefined> {
+    const [row] = await db
+      .update(lotoCountryDrawConfig)
+      .set({ fraudScanIntervalMinutes: intervalMinutes, updatedAt: new Date() })
+      .where(eq(lotoCountryDrawConfig.countryCode, countryCode))
+      .returning();
     return row;
   }
   async listLotoCountryDrawConfigs(): Promise<LotoCountryDrawConfig[]> {

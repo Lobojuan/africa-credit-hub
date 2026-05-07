@@ -749,7 +749,7 @@ process.stderr.write = function (...args: any[]) {
     startIntegrityScheduler(24);
 
     const { startLotoFraudScheduler } = await import("./loto-fraud-scheduler");
-    startLotoFraudScheduler(1);
+    startLotoFraudScheduler();
 
     const { startBackupScheduler } = await import("./backup-service");
     startBackupScheduler();

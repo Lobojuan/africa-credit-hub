@@ -2250,6 +2250,7 @@ export const lotoCountryDrawConfig = pgTable("loto_country_draw_config", {
   payoutProvider: text("payout_provider").notNull().default("simulated"),
   currency: text("currency").notNull(),
   active: boolean("active").notNull().default(true),
+  fraudScanIntervalMinutes: integer("fraud_scan_interval_minutes").notNull().default(60),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

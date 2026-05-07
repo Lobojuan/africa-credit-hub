@@ -848,5 +848,16 @@ export async function migrateNewTables() {
   await db.execute(sql`ALTER TABLE loto_consumer_messaging_prefs ADD COLUMN IF NOT EXISTS otp_hash text`);
   await db.execute(sql`ALTER TABLE loto_consumer_messaging_prefs ADD COLUMN IF NOT EXISTS otp_expires_at timestamp`);
 
+  // Task #303: configurable fraud scan interval per loto country (minutes, multiples of 15)
+  await db.execute(sql`ALTER TABLE loto_country_draw_config ADD COLUMN IF NOT EXISTS fraud_scan_interval_minutes integer NOT NULL DEFAULT 60`);
+  await db.execute(sql`
+    DO $$ BEGIN
+      ALTER TABLE loto_country_draw_config
+        ADD CONSTRAINT loto_country_draw_config_fraud_interval_check
+        CHECK (fraud_scan_interval_minutes >= 15 AND fraud_scan_interval_minutes <= 10080 AND fraud_scan_interval_minutes % 15 = 0);
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+
   console.log('[NewTables] Migration complete');
 }

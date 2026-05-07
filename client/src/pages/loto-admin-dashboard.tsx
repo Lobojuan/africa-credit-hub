@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Activity, Receipt, Building2, AlertTriangle, ShieldCheck, Map, BarChart3,
-  Webhook, FileSpreadsheet, FileText, RefreshCw, History, Trash2,
+  Webhook, FileSpreadsheet, FileText, RefreshCw, History, Trash2, Clock,
 } from "lucide-react";
 
 interface KPIData {
@@ -156,6 +156,10 @@ export default function LotoAdminDashboardPage() {
   const complianceQ = useQuery<CompliancePayload>({ queryKey: ["/api/loto/admin/compliance-scorecard"], enabled: tab === "compliance" || tab === "overview" });
   const upliftQ = useQuery<VatUpliftPayload>({ queryKey: ["/api/loto/admin/vat-uplift"] });
   const fraudOpenQ = useQuery<{ flags: FraudFlag[] }>({ queryKey: ["/api/loto/admin/fraud-flags"], enabled: tab === "fraud" });
+  const countryConfigQ = useQuery<{ config: { fraudScanIntervalMinutes: number; countryCode: string } | null; isSuperAdmin: boolean; noCountrySelected?: boolean }>({
+    queryKey: ["/api/loto/admin/country-config/fraud-settings"],
+    enabled: tab === "fraud",
+  });
   const webhooksQ = useQuery<WebhookPayload>({ queryKey: ["/api/loto/admin/webhooks"], enabled: tab === "webhooks" });
   const auditQ = useQuery<AuditPayload>({ queryKey: ["/api/loto/admin/audit"], enabled: tab === "audit" });
 
@@ -178,6 +182,21 @@ export default function LotoAdminDashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/kpi"] });
       queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/audit"] });
       toast({ title: tx("Flag updated", "Drapeau mis à jour") });
+    },
+    onError: (e: any) => toast({ title: tx("Update failed", "Échec de la mise à jour"), description: e.message, variant: "destructive" }),
+  });
+
+  // ─── Fraud scan interval form state ──────────────────────────────────
+  const [intervalInput, setIntervalInput] = useState<string>("");
+
+  const updateIntervalMu = useMutation({
+    mutationFn: async (intervalMinutes: number) =>
+      apiRequest("PATCH", "/api/loto/admin/country-config/fraud-settings", { intervalMinutes }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/country-config/fraud-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/audit"] });
+      toast({ title: tx("Interval updated", "Intervalle mis à jour"), description: tx("The fraud scan interval has been saved.", "L'intervalle d'analyse de fraude a été enregistré.") });
+      setIntervalInput("");
     },
     onError: (e: any) => toast({ title: tx("Update failed", "Échec de la mise à jour"), description: e.message, variant: "destructive" }),
   });
@@ -356,6 +375,73 @@ export default function LotoAdminDashboardPage() {
 
         {/* ────── Fraud queue ────── */}
         <TabsContent value="fraud" className="space-y-4">
+          {/* Auto-scan interval settings */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
+              <div>
+                <CardTitle className="flex items-center gap-2"><Clock className="h-4 w-4" /> {tx("Auto-scan schedule", "Planification de l'analyse automatique")}</CardTitle>
+                <CardDescription>
+                  {tx(
+                    "Controls how often the background fraud scanner runs for this country. Changes take effect within the next 15-minute polling cycle.",
+                    "Contrôle la fréquence d'exécution du scanner de fraude en arrière-plan pour ce pays. Les modifications prennent effet lors du prochain cycle de 15 minutes.",
+                  )}
+                </CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {countryConfigQ.isLoading ? (
+                <Skeleton className="h-10 w-64" />
+              ) : countryConfigQ.data?.noCountrySelected ? (
+                <p className="text-sm text-muted-foreground" data-testid="text-no-country-selected">
+                  {tx("Select a country to view or change the auto-scan interval.", "Sélectionnez un pays pour afficher ou modifier l'intervalle d'analyse automatique.")}
+                </p>
+              ) : countryConfigQ.data?.config ? (
+                <div className="flex items-end gap-3 flex-wrap">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">{tx("Current interval", "Intervalle actuel")}</p>
+                    <p className="text-2xl font-semibold" data-testid="text-current-interval">
+                      {countryConfigQ.data.config.fraudScanIntervalMinutes}
+                      <span className="text-base font-normal text-muted-foreground ml-1">{tx("min", "min")}</span>
+                    </p>
+                  </div>
+                  {countryConfigQ.data.isSuperAdmin && (
+                    <div className="flex items-end gap-2">
+                      <div>
+                        <Label htmlFor="interval-input">{tx("New interval (multiples of 15 min, up to 10080)", "Nouvel intervalle (multiples de 15 min, jusqu'à 10080)")}</Label>
+                        <Input
+                          id="interval-input"
+                          type="number"
+                          min={15}
+                          max={10080}
+                          step={15}
+                          className="w-32"
+                          placeholder={String(countryConfigQ.data.config.fraudScanIntervalMinutes)}
+                          value={intervalInput}
+                          onChange={(e) => setIntervalInput(e.target.value)}
+                          data-testid="input-fraud-interval"
+                        />
+                      </div>
+                      <Button
+                        disabled={updateIntervalMu.isPending || !intervalInput || isNaN(parseInt(intervalInput)) || parseInt(intervalInput) < 15 || parseInt(intervalInput) % 15 !== 0}
+                        onClick={() => {
+                          const m = parseInt(intervalInput);
+                          if (!isNaN(m) && m >= 15 && m <= 10080 && m % 15 === 0) updateIntervalMu.mutate(m);
+                        }}
+                        data-testid="button-save-interval"
+                      >
+                        {tx("Save", "Enregistrer")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground" data-testid="text-no-country-config">
+                  {tx("No fraud scan configuration found for this country.", "Aucune configuration d'analyse de fraude trouvée pour ce pays.")}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
               <div>

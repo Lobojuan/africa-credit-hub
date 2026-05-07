@@ -32,16 +32,34 @@ import {
 import {
   requireAuth,
   requireRole,
+  requireSuperAdmin,
   getCountryFilter,
   enforceCountryScopeForNonSuperAdmin,
   logCrossCountryAccess,
 } from "./middleware";
-import { storage } from "../storage";
+import { storage, GLOBAL_SCOPE } from "../storage";
+import { COUNTRY_REGISTRY } from "../country-mode";
 import { runFraudScan, computeMerchantComplianceScore } from "../loto-fraud-rules";
 import { deliverWebhook, WEBHOOK_EVENTS } from "../webhook-delivery";
 import PDFDocument from "pdfkit";
 
 const lotoAdminRouter = Router();
+
+/**
+ * Map a country value from the session/query (e.g. "Côte d'Ivoire" or "CI")
+ * to the 2-letter country code stored in loto_country_draw_config.
+ * Falls back to the original value if no match is found.
+ */
+function toLotoCountryCode(country: string): string {
+  // Direct match: already a 2-letter code
+  const upper = country.trim().toUpperCase();
+  const byCode = Object.values(COUNTRY_REGISTRY).find(c => c.code === upper);
+  if (byCode) return byCode.code;
+  // Match by full country name
+  const byName = Object.values(COUNTRY_REGISTRY).find(c => c.name === country.trim());
+  if (byName) return byName.code;
+  return country;
+}
 
 // All routes share the same gate.
 const gate = [requireAuth, requireRole("dgi_officer", "tax_authority_admin")];
@@ -696,6 +714,69 @@ lotoAdminRouter.delete("/webhooks/:id", ...gate, async (req, res) => {
     res.status(500).json({ message: (err as Error).message });
   }
 });
+
+// ─── 8b. Country config (fraud scan interval) ───────────────────────────
+
+/** GET /api/loto/admin/country-config/fraud-settings — Returns the draw config
+ *  for the current country, including fraudScanIntervalMinutes. Visible to all
+ *  gate-passing roles. Distinct path avoids conflict with the existing
+ *  GET /api/loto/admin/country-config (draw-config listing) in routes.ts. */
+lotoAdminRouter.get("/country-config/fraud-settings", ...gate, async (req, res) => {
+  try {
+    const raw = getCountryFilter(req);
+    const isSuperAdmin = req.session?.userRole === "super_admin";
+
+    if (!raw || raw === GLOBAL_SCOPE) {
+      return res.status(200).json({ config: null, isSuperAdmin, noCountrySelected: true });
+    }
+
+    const countryCode = toLotoCountryCode(raw);
+    const config = await storage.getLotoCountryDrawConfig(countryCode);
+    if (!config) return res.status(404).json({ message: "Country config not found" });
+
+    res.json({ config, isSuperAdmin });
+  } catch (err) {
+    console.error("[loto-admin] country-config/fraud-settings GET failed", err);
+    res.status(500).json({ message: (err as Error).message });
+  }
+});
+
+const fraudIntervalBody = z.object({
+  intervalMinutes: z
+    .number()
+    .int()
+    .min(15)
+    .max(10080)
+    .refine((v) => v % 15 === 0, { message: "Interval must be a multiple of 15 minutes (matching the scheduler poll resolution)" }),
+});
+
+/** PATCH /api/loto/admin/country-config/fraud-settings — Super-admin-only.
+ *  Updates fraudScanIntervalMinutes for the current country.
+ *  Minimum 15 minutes (scheduler poll resolution); maximum 10 080 min (7 days). */
+lotoAdminRouter.patch(
+  "/country-config/fraud-settings",
+  requireAuth,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const raw = getCountryFilter(req);
+      if (!raw || raw === GLOBAL_SCOPE) return res.status(400).json({ message: "A specific country must be selected to update its fraud scan interval" });
+
+      const country = toLotoCountryCode(raw);
+      const parsed = fraudIntervalBody.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid body", errors: parsed.error.errors });
+
+      const updated = await storage.updateLotoCountryFraudInterval(country, parsed.data.intervalMinutes);
+      if (!updated) return res.status(404).json({ message: "Country config not found" });
+
+      await audit(req, "LOTO_FRAUD_INTERVAL_UPDATE", country, `Fraud scan interval for ${country} set to ${parsed.data.intervalMinutes} min`);
+      res.json({ config: updated });
+    } catch (err) {
+      console.error("[loto-admin] country-config/fraud-settings PATCH failed", err);
+      res.status(500).json({ message: (err as Error).message });
+    }
+  },
+);
 
 // ─── 8. Loto-scoped audit log ───────────────────────────────────────────
 lotoAdminRouter.get("/audit", ...gate, async (req, res) => {
