@@ -5,9 +5,10 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, ArrowRightLeft, Clock, XCircle, CheckCircle2, Activity } from "lucide-react";
+import { Shield, ArrowRightLeft, Clock, XCircle, CheckCircle2, Activity, Eye, Lock } from "lucide-react";
 
 interface CrossProductConsent {
   id: string;
@@ -19,6 +20,11 @@ interface CrossProductConsent {
   grantedAt: string;
   expiresAt: string;
   revokedAt: string | null;
+}
+
+interface CollateralCreditViewStatus {
+  consent: CrossProductConsent | null;
+  borrowerId: string | null;
 }
 
 const PRODUCT_LABEL: Record<string, { tKey: string; fallback: string }> = {
@@ -44,12 +50,17 @@ export default function DataSharingPage() {
     queryKey: ["/api/cross-product/consents"],
   });
 
+  const { data: ccvStatus, isLoading: ccvLoading } = useQuery<CollateralCreditViewStatus>({
+    queryKey: ["/api/cross-product/consents/collateral-credit-view/me"],
+  });
+
   const revokeMutation = useMutation({
     mutationFn: async (id: string) => {
       return apiRequest("POST", `/api/cross-product/consents/${id}/revoke`, { reason: "user_revoked" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents/collateral-credit-view/me"] });
       toast({
         title: t("dataSharing.toast.revokedTitle", "Permission revoked"),
         description: t("dataSharing.toast.revokedBody", "Data sharing for that purpose has stopped immediately."),
@@ -62,9 +73,46 @@ export default function DataSharingPage() {
     }),
   });
 
+  const grantCcvMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/cross-product/consents/collateral-credit-view/grant", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents/collateral-credit-view/me"] });
+      toast({
+        title: t("dataSharing.toast.grantedTitle", "Permission granted"),
+        description: t("dataSharing.toast.ccvGrantedBody", "Secured creditors can now view your recent credit inquiries."),
+      });
+    },
+    onError: (err: any) => {
+      const msg = String(err?.message ?? "");
+      const desc = msg.includes("no_linked_borrower")
+        ? t("dataSharing.toast.noLinkedBorrower", "No borrower profile is linked to your account. Contact support.")
+        : t("dataSharing.toast.grantFailed", "Could not grant that permission. Please try again.");
+      toast({ title: t("common.error", "Error"), description: desc, variant: "destructive" });
+    },
+  });
+
+  const ccvConsent = ccvStatus?.consent ?? null;
+  const ccvExpired = ccvConsent?.status === "active" &&
+    !!ccvConsent.expiresAt && new Date(ccvConsent.expiresAt) <= new Date();
+  const ccvActive = ccvConsent?.status === "active" && !ccvExpired;
+  const ccvConsentId = ccvStatus?.consent?.id;
+
+  function handleCcvToggle(checked: boolean) {
+    if (checked) {
+      grantCcvMutation.mutate();
+    } else if (ccvConsentId) {
+      revokeMutation.mutate(ccvConsentId);
+    }
+  }
+
   const filtered = (consents ?? []).filter(c => filter === "all" ? true : c.status === filter);
   const activeCount = (consents ?? []).filter(c => c.status === "active").length;
   const revokedCount = (consents ?? []).filter(c => c.status === "revoked").length;
+
+  const isCcvPending = grantCcvMutation.isPending || revokeMutation.isPending;
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto" data-testid="page-data-sharing">
@@ -115,6 +163,82 @@ export default function DataSharingPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Collateral credit-view self-service toggle */}
+      <Card className="mb-6 border-blue-200 dark:border-blue-900" data-testid="card-collateral-credit-view">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-950 flex items-center justify-center shrink-0">
+                <Eye className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">
+                  {t("dataSharing.ccv.title", "Secured creditor inquiry access")}
+                </CardTitle>
+                <CardDescription className="mt-0.5">
+                  {t("dataSharing.ccv.description", "Allow secured creditors to view your recent credit inquiries alongside any collateral they hold. Revoke at any time.")}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pt-1">
+              {ccvLoading ? (
+                <Skeleton className="h-6 w-11 rounded-full" data-testid="skeleton-ccv-toggle" />
+              ) : (
+                <Switch
+                  checked={ccvActive}
+                  onCheckedChange={handleCcvToggle}
+                  disabled={isCcvPending || !ccvStatus?.borrowerId}
+                  data-testid="toggle-collateral-credit-view"
+                  aria-label={t("dataSharing.ccv.toggleLabel", "Toggle secured creditor inquiry access")}
+                />
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs font-medium" data-testid="badge-ccv-source">
+                {t(PRODUCT_LABEL.credit.tKey, PRODUCT_LABEL.credit.fallback)}
+              </Badge>
+              <ArrowRightLeft className="w-3 h-3" />
+              <Badge variant="outline" className="text-xs font-medium" data-testid="badge-ccv-target">
+                {t(PRODUCT_LABEL.collateral.tKey, PRODUCT_LABEL.collateral.fallback)}
+              </Badge>
+            </div>
+            {ccvActive && ccvStatus?.consent && (
+              <span data-testid="text-ccv-granted-at">
+                {t("dataSharing.granted", "Granted")}: {new Date(ccvStatus.consent.grantedAt).toLocaleDateString()}
+                {" · "}
+                {t("dataSharing.expires", "Expires")}: {new Date(ccvStatus.consent.expiresAt).toLocaleDateString()}
+              </span>
+            )}
+            {ccvStatus?.consent?.status === "revoked" && ccvStatus.consent.revokedAt && (
+              <span className="text-muted-foreground" data-testid="text-ccv-revoked-at">
+                {t("dataSharing.revoked", "Revoked")}: {new Date(ccvStatus.consent.revokedAt).toLocaleDateString()}
+              </span>
+            )}
+            {!ccvStatus?.borrowerId && !ccvLoading && (
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400" data-testid="text-ccv-no-borrower">
+                <Lock className="w-3 h-3" />
+                {t("dataSharing.ccv.noBorrower", "No borrower profile linked to your account")}
+              </span>
+            )}
+            <Badge
+              variant={ccvActive ? "default" : "secondary"}
+              className={ccvActive ? "bg-emerald-600" : ""}
+              data-testid="badge-ccv-status"
+            >
+              {ccvLoading ? "…" : ccvActive
+                ? t("dataSharing.status.active", "active")
+                : ccvExpired
+                  ? t("dataSharing.status.expired", "expired")
+                  : t("dataSharing.status.revoked", "revoked")}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex gap-2 mb-4">
         {(["all", "active", "revoked"] as const).map(f => (

@@ -53,6 +53,7 @@ import {
   registryCountryConfig,
   collateralItems,
   collateralAmendmentRequests,
+  crossProductConsents,
   type InsertCollateralItem,
   type CollateralItem,
   type CrossProductConsent,
@@ -17959,7 +17960,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const reason = String(req.body?.reason ?? "user_revoked");
       const userId = req.session?.userId as string | undefined;
       const userRole = req.session?.userRole as string | undefined;
-      // Look up the consent and ensure the caller owns it (by userId or by owning the linked merchant), or is an admin/super_admin.
+      // Look up the consent and ensure the caller owns it (by userId, by owning the linked merchant,
+      // or — for borrower-linked consents — by email-matching the linked borrower), or is an admin/super_admin.
       const existing = await storage.getCrossProductConsentById(req.params.id);
       if (!existing) return res.status(404).json({ message: "not_found" });
       const isAdmin = userRole === "admin" || userRole === "super_admin";
@@ -17969,10 +17971,102 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const m = await storage.getLotoMerchantByUserId(userId);
         if (m && m.id === existing.merchantId) owns = true;
       }
+      // Borrower ownership: consent may have been created with only borrowerId (e.g. via seed or
+      // admin tooling). Allow the session user to revoke it if their email matches the borrower.
+      if (!owns && existing.borrowerId && userId) {
+        const linkedBorrower = await findBorrowerForUser(userId);
+        if (linkedBorrower && linkedBorrower.id === existing.borrowerId) owns = true;
+      }
       if (!owns && !isAdmin) return res.status(403).json({ message: "forbidden" });
       const row = await revokeConsentAndPurge(req.params.id, reason);
       if (!row) return res.status(404).json({ message: "not_found" });
+      // Audit the revocation.
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_revoked",
+          entity: "cross_product_consents",
+          entityId: row.id,
+          userId: userId ?? null,
+          details: JSON.stringify({
+            sourceProduct: row.sourceProduct,
+            targetProduct: row.targetProduct,
+            purpose: row.purpose,
+            borrowerId: row.borrowerId ?? null,
+            reason,
+            selfService: !isAdmin,
+          }),
+          ipAddress: req.ip ?? null,
+        });
+      } catch (auditErr) {
+        console.error("[cross-product] revoke audit log write failed", auditErr);
+      }
       res.json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ----- Borrower self-service: collateral_credit_view consent -----
+  // Allows a borrower (consumer user) to grant or revoke the consent that lets
+  // secured creditors view their recent credit inquiries via the snapshot panel.
+  // Ownership is proved by matching the session user's email to a borrower record.
+
+  async function findBorrowerForUser(userId: string) {
+    const user = await storage.getUser(userId);
+    if (!user?.email) return null;
+    const [borrower] = await db.select().from(borrowers).where(eq(borrowers.email, user.email)).limit(1);
+    return borrower ?? null;
+  }
+
+  app.get("/api/cross-product/consents/collateral-credit-view/me", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId as string | undefined;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const borrower = await findBorrowerForUser(userId);
+      if (!borrower) return res.json({ consent: null, borrowerId: null });
+      const [consent] = await db.select().from(crossProductConsents)
+        .where(and(
+          eq(crossProductConsents.borrowerId, borrower.id),
+          eq(crossProductConsents.sourceProduct, "credit"),
+          eq(crossProductConsents.targetProduct, "collateral"),
+          eq(crossProductConsents.purpose, "collateral_credit_view"),
+        ))
+        .orderBy(desc(crossProductConsents.grantedAt))
+        .limit(1);
+      res.json({ consent: consent ?? null, borrowerId: borrower.id });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/cross-product/consents/collateral-credit-view/grant", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId as string | undefined;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const borrower = await findBorrowerForUser(userId);
+      if (!borrower) return res.status(404).json({ message: "no_linked_borrower" });
+      const months = DEFAULT_CONSENT_DURATION_MONTHS;
+      const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + months);
+      const row = await storage.createCrossProductConsent({
+        userId,
+        borrowerId: borrower.id,
+        merchantId: null,
+        sourceProduct: "credit",
+        targetProduct: "collateral",
+        purpose: "collateral_credit_view",
+        scopeNote: "Borrower self-granted: allow secured creditors to view recent credit inquiries",
+        expiresAt,
+        grantedByIp: req.ip ?? null,
+      });
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_granted",
+          entity: "cross_product_consents",
+          entityId: row.id,
+          userId: userId ?? null,
+          details: JSON.stringify({ sourceProduct: "credit", targetProduct: "collateral", purpose: "collateral_credit_view", borrowerId: borrower.id, selfService: true }),
+          ipAddress: req.ip ?? null,
+        });
+      } catch (auditErr) {
+        console.error("[cross-product] grant audit log write failed", auditErr);
+      }
+      res.status(201).json(row);
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
