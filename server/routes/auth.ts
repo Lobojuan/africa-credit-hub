@@ -380,6 +380,24 @@ router.get("/api/auth/me", async (req, res) => {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Not authenticated" });
   }
+
+  const isE2ETestAuth = process.env.ENABLE_E2E_TEST_AUTH === "true"
+    && process.env.NODE_ENV !== "production"
+    && process.env.PRODUCTION_MODE !== "true";
+  if (isE2ETestAuth && req.session._testRole) {
+    const testRole = req.session._testRole;
+    const viewingCountry = req.session.userCountry || null;
+    return res.json({
+      id: req.session.userId,
+      email: `test-${testRole}@e2e.test`,
+      role: testRole,
+      country: viewingCountry,
+      viewingCountry,
+      passwordExpired: false,
+      organization: null,
+    });
+  }
+
   const user = await storage.getUser(req.session.userId);
   if (!user) return res.status(401).json({ message: "User not found" });
 

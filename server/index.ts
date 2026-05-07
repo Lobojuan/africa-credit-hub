@@ -190,6 +190,8 @@ declare module "express-session" {
     webauthnUserId: string;
     csrfToken: string;
     institution?: string;
+    /** Non-production only: e2e test bypass role set via /api/test/set-session */
+    _testRole?: string;
   }
 }
 

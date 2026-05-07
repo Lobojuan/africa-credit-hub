@@ -509,6 +509,22 @@ export async function registerRoutes(
     }));
   }
 
+  if (
+    process.env.ENABLE_E2E_TEST_AUTH === "true" &&
+    process.env.NODE_ENV !== "production" &&
+    process.env.PRODUCTION_MODE !== "true"
+  ) {
+    app.post("/api/test/set-session", (req, res) => {
+      const ip = req.ip ?? "";
+      if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
+        return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
+      }
+      Object.assign(req.session, req.body);
+      res.json({ ok: true });
+    });
+  }
+
+
   app.use("/api", apiLimiter, (req, res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);

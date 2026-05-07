@@ -44,7 +44,7 @@ export interface DetectedFlag {
   evidence: Record<string, unknown>;
 }
 
-interface ReceiptRow {
+export interface ReceiptRow {
   id: string;
   merchantId: string;
   fiscalCode: string;
@@ -55,7 +55,7 @@ interface ReceiptRow {
   countryCode: string;
 }
 
-interface MerchantRow {
+export interface MerchantRow {
   id: string;
   shopName: string;
   countryCode: string;
@@ -74,7 +74,7 @@ function sig(...parts: (string | number | undefined | null)[]) {
 }
 
 /** Rule 1: identical fiscal codes issued more than once (replay / cloning). */
-function ruleDuplicateFiscalCodes(receipts: ReceiptRow[]): DetectedFlag[] {
+export function ruleDuplicateFiscalCodes(receipts: ReceiptRow[]): DetectedFlag[] {
   const groups = new Map<string, ReceiptRow[]>();
   for (const r of receipts) {
     const key = `${r.countryCode}|${r.fiscalCode}`;
@@ -101,7 +101,7 @@ function ruleDuplicateFiscalCodes(receipts: ReceiptRow[]): DetectedFlag[] {
 }
 
 /** Rule 2: structured small amounts that cluster just below a prize-eligibility band. */
-function ruleStructuredSubthreshold(receipts: ReceiptRow[]): DetectedFlag[] {
+export function ruleStructuredSubthreshold(receipts: ReceiptRow[]): DetectedFlag[] {
   const byMerchant = new Map<string, ReceiptRow[]>();
   for (const r of receipts) {
     if (!byMerchant.has(r.merchantId)) byMerchant.set(r.merchantId, []);
@@ -133,7 +133,7 @@ function ruleStructuredSubthreshold(receipts: ReceiptRow[]): DetectedFlag[] {
 }
 
 /** Rule 3: merchants registered >30d ago with zero verified receipts. */
-function ruleGhostMerchant(merchants: MerchantRow[], receipts: ReceiptRow[]): DetectedFlag[] {
+export function ruleGhostMerchant(merchants: MerchantRow[], receipts: ReceiptRow[]): DetectedFlag[] {
   const receiptCounts = new Map<string, number>();
   for (const r of receipts) receiptCounts.set(r.merchantId, (receiptCounts.get(r.merchantId) ?? 0) + 1);
   const cutoff = Date.now() - GHOST_MERCHANT_DAYS * 24 * 3600 * 1000;
@@ -155,7 +155,7 @@ function ruleGhostMerchant(merchants: MerchantRow[], receipts: ReceiptRow[]): De
 }
 
 /** Rule 4: receipts issued in the 0..5 AM local window (proxied as UTC for the pilot). */
-function ruleAbnormalHour(receipts: ReceiptRow[]): DetectedFlag[] {
+export function ruleAbnormalHour(receipts: ReceiptRow[]): DetectedFlag[] {
   const byMerchant = new Map<string, ReceiptRow[]>();
   for (const r of receipts) {
     const h = r.issuedAt.getUTCHours();
@@ -180,7 +180,7 @@ function ruleAbnormalHour(receipts: ReceiptRow[]): DetectedFlag[] {
 }
 
 /** Rule 5: device or merchant emitting >4 receipts/minute (replay / scripted). */
-function ruleSingleDeviceBurst(receipts: ReceiptRow[]): DetectedFlag[] {
+export function ruleSingleDeviceBurst(receipts: ReceiptRow[]): DetectedFlag[] {
   const byMerchant = new Map<string, ReceiptRow[]>();
   for (const r of receipts) {
     if (!byMerchant.has(r.merchantId)) byMerchant.set(r.merchantId, []);
