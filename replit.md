@@ -23,7 +23,7 @@ Users have a per-user `allowedProducts` field (`text[]` in the `users` table). W
 | `collateral_admin` | `Collat26` | Collateral Registry **only** | Dedicated Collateral Registry workspace admin |
 | `loto_admin` | `Loto2026` | Loto Fiscal **only** | Dedicated Loto Fiscal workspace admin |
 | `admin` | `SEED_ADMIN_PASSWORD` env var | Credit Bureau only | Shared client / demo login |
-| `owner_admin` | `OWNER_ADMIN_PASSWORD` env var | All 3 platforms | Private owner super-admin |
+| `owner` | `OWNER_ADMIN_PASSWORD` env var | All 3 platforms | Private owner super-admin |
 | `johndoe` | `SecuredCreditor2026!` | Credit + Collateral | Demo secured creditor |
 | `registry_admin` | `TestPass2026!` | Credit | Demo registry authority |
 

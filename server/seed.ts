@@ -482,13 +482,13 @@ export async function ensureDemoUsers() {
     }
 
     // Create the private owner super-admin account with full access to all products.
-    // Password comes from OWNER_ADMIN_PASSWORD env var. Username is 'owner_admin'.
+    // Password comes from OWNER_ADMIN_PASSWORD env var. Username is 'owner'.
     const ownerPassword = process.env.OWNER_ADMIN_PASSWORD;
     if (ownerPassword) {
-      const ownerExists = await db.select().from(users).where(eq(users.username, "owner_admin")).limit(1);
+      const ownerExists = await db.select().from(users).where(eq(users.username, "owner")).limit(1);
       if (ownerExists.length === 0) {
         await db.insert(users).values({
-          username: "owner_admin",
+          username: "owner",
           password: hash(ownerPassword),
           fullName: "Platform Owner",
           email: process.env.PLATFORM_SUPPORT_EMAIL || "owner@africacredithub.com",
@@ -496,10 +496,10 @@ export async function ensureDemoUsers() {
           status: "active",
           institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
         } as any);
-        console.log("[Demo Seed] Created owner_admin super-admin with full product access");
+        console.log("[Demo Seed] Created owner super-admin with full product access");
       }
     } else {
-      console.warn("[Demo Seed] OWNER_ADMIN_PASSWORD not set — owner_admin account not created");
+      console.warn("[Demo Seed] OWNER_ADMIN_PASSWORD not set — owner account not created");
     }
   } catch (e) {
     console.error("[Demo Seed] ensureDemoUsers error (non-fatal):", e);
