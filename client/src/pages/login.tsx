@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [consumerNationalId, setConsumerNationalId] = useState("");
   const [consumerPassword, setConsumerPassword] = useState("");
   const [showConsumerPassword, setShowConsumerPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [consumerLoading, setConsumerLoading] = useState(false);
   const [consumerError, setConsumerError] = useState("");
 
@@ -770,13 +771,23 @@ export default function LoginPage() {
                       <Input
                         id="password"
                         data-testid="input-password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder={t('login.enterPassword')}
                         required
-                        className="h-11 pl-10 rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-200"
+                        className="h-11 pl-10 pr-10 rounded-xl border-slate-200 focus:border-blue-400 focus:ring-blue-200"
                       />
+                      <button
+                        type="button"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                        style={{ color: "hsl(215 15% 60%)" }}
+                        onClick={() => setShowPassword((v) => !v)}
+                        data-testid="button-toggle-password"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
                   <button

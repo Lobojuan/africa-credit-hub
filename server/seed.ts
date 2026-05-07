@@ -391,7 +391,7 @@ export async function ensureDemoUsers() {
       {
         // Credit Bureau workspace admin — can ONLY access the Credit Bureau.
         username: "credit_admin",
-        password: "CreditAdmin2026!",
+        password: "Credit26",
         fullName: "Credit Bureau Admin",
         email: "credit-admin@demo-bank.test",
         role: "admin",
@@ -403,7 +403,7 @@ export async function ensureDemoUsers() {
       {
         // Collateral Registry workspace admin — can ONLY access Collateral Registry.
         username: "collateral_admin",
-        password: "CollateralAdmin2026!",
+        password: "Collat26",
         fullName: "Collateral Registry Admin",
         email: "collateral-admin@demo-bank.test",
         role: "admin",
@@ -415,7 +415,7 @@ export async function ensureDemoUsers() {
       {
         // Loto Fiscal workspace admin — can ONLY access Loto Fiscal.
         username: "loto_admin",
-        password: "LotoAdmin2026!",
+        password: "Loto2026",
         fullName: "Loto Fiscal Admin",
         email: "loto-admin@demo-bank.test",
         role: "admin",

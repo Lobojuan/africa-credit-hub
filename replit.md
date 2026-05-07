@@ -19,9 +19,9 @@ Users have a per-user `allowedProducts` field (`text[]` in the `users` table). W
 | Username | Password | Access | Purpose |
 |---|---|---|---|
 | `demo_admin` | `TestPass2026!` | **All 3 workspaces** | **Platform Owner** — only account with full access |
-| `credit_admin` | `CreditAdmin2026!` | Credit Bureau **only** | Dedicated Credit Bureau workspace admin |
-| `collateral_admin` | `CollateralAdmin2026!` | Collateral Registry **only** | Dedicated Collateral Registry workspace admin |
-| `loto_admin` | `LotoAdmin2026!` | Loto Fiscal **only** | Dedicated Loto Fiscal workspace admin |
+| `credit_admin` | `Credit26` | Credit Bureau **only** | Dedicated Credit Bureau workspace admin |
+| `collateral_admin` | `Collat26` | Collateral Registry **only** | Dedicated Collateral Registry workspace admin |
+| `loto_admin` | `Loto2026` | Loto Fiscal **only** | Dedicated Loto Fiscal workspace admin |
 | `admin` | `SEED_ADMIN_PASSWORD` env var | Credit Bureau only | Shared client / demo login |
 | `owner_admin` | `OWNER_ADMIN_PASSWORD` env var | All 3 platforms | Private owner super-admin |
 | `johndoe` | `SecuredCreditor2026!` | Credit + Collateral | Demo secured creditor |
