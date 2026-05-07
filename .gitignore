@@ -11,6 +11,8 @@ vite.config.ts.*
 e2e/.auth/
 e2e/test-results-artifacts/
 e2e/report/
+test-results/
+playwright-report/
 backups/
 *.sql.gz
 attached_assets/
