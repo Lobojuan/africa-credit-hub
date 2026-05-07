@@ -450,6 +450,12 @@ export async function ensureDemoUsers() {
           updates.failedLoginAttempts = 0;
         }
         if (row.status !== "active") updates.status = "active";
+        // Always re-apply the canonical password for workspace admin accounts so
+        // a manual DB edit or prior migration can never leave them with a stale hash.
+        const workspaceAdmins = ["credit_admin", "collateral_admin", "loto_admin", "demo_admin"];
+        if (workspaceAdmins.includes(u.username)) {
+          updates.password = hash(u.password);
+        }
         // Idempotently upgrade demo_admin to platform_owner.
         if (u.username === "demo_admin" && row.role !== "platform_owner") {
           updates.role = "platform_owner";
