@@ -467,6 +467,8 @@ export interface IStorage {
   getLotoCountryDrawConfig(countryCode: string): Promise<LotoCountryDrawConfig | undefined>;
   upsertLotoCountryDrawConfig(input: InsertLotoCountryDrawConfig): Promise<LotoCountryDrawConfig>;
   updateLotoCountryFraudInterval(countryCode: string, intervalMinutes: number): Promise<LotoCountryDrawConfig | undefined>;
+  applyLotoCountryBoostScan(countryCode: string, boostIntervalMinutes: number, boostUntil: Date): Promise<LotoCountryDrawConfig | undefined>;
+  clearLotoCountryBoostScan(countryCode: string): Promise<LotoCountryDrawConfig | undefined>;
   listLotoCountryDrawConfigs(): Promise<LotoCountryDrawConfig[]>;
   getLotoDraw(id: string): Promise<LotoDraw | undefined>;
   listLotoDraws(filter?: { countryCode?: string; limit?: number }): Promise<LotoDraw[]>;
@@ -3813,6 +3815,22 @@ export class DatabaseStorage implements IStorage {
     const [row] = await db
       .update(lotoCountryDrawConfig)
       .set({ fraudScanIntervalMinutes: intervalMinutes, updatedAt: new Date() })
+      .where(eq(lotoCountryDrawConfig.countryCode, countryCode))
+      .returning();
+    return row;
+  }
+  async applyLotoCountryBoostScan(countryCode: string, boostIntervalMinutes: number, boostUntil: Date): Promise<LotoCountryDrawConfig | undefined> {
+    const [row] = await db
+      .update(lotoCountryDrawConfig)
+      .set({ boostIntervalMinutes, boostUntil, updatedAt: new Date() })
+      .where(eq(lotoCountryDrawConfig.countryCode, countryCode))
+      .returning();
+    return row;
+  }
+  async clearLotoCountryBoostScan(countryCode: string): Promise<LotoCountryDrawConfig | undefined> {
+    const [row] = await db
+      .update(lotoCountryDrawConfig)
+      .set({ boostIntervalMinutes: null, boostUntil: null, updatedAt: new Date() })
       .where(eq(lotoCountryDrawConfig.countryCode, countryCode))
       .returning();
     return row;

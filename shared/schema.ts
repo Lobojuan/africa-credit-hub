@@ -2251,6 +2251,10 @@ export const lotoCountryDrawConfig = pgTable("loto_country_draw_config", {
   currency: text("currency").notNull(),
   active: boolean("active").notNull().default(true),
   fraudScanIntervalMinutes: integer("fraud_scan_interval_minutes").notNull().default(60),
+  /** Temporary scan-frequency boost: interval override requested by DGI officers. */
+  boostIntervalMinutes: integer("boost_interval_minutes"),
+  /** When the boost expires (NULL = no active boost). */
+  boostUntil: timestamp("boost_until"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

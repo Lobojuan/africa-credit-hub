@@ -19,7 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Activity, Receipt, Building2, AlertTriangle, ShieldCheck, Map, BarChart3,
-  Webhook, FileSpreadsheet, FileText, RefreshCw, History, Trash2, Clock,
+  Webhook, FileSpreadsheet, FileText, RefreshCw, History, Trash2, Clock, Zap,
 } from "lucide-react";
 
 interface KPIData {
@@ -156,9 +156,15 @@ export default function LotoAdminDashboardPage() {
   const complianceQ = useQuery<CompliancePayload>({ queryKey: ["/api/loto/admin/compliance-scorecard"], enabled: tab === "compliance" || tab === "overview" });
   const upliftQ = useQuery<VatUpliftPayload>({ queryKey: ["/api/loto/admin/vat-uplift"] });
   const fraudOpenQ = useQuery<{ flags: FraudFlag[] }>({ queryKey: ["/api/loto/admin/fraud-flags"], enabled: tab === "fraud" });
-  const countryConfigQ = useQuery<{ config: { fraudScanIntervalMinutes: number; countryCode: string } | null; isSuperAdmin: boolean; noCountrySelected?: boolean }>({
+  const countryConfigQ = useQuery<{
+    config: { fraudScanIntervalMinutes: number; countryCode: string; boostIntervalMinutes: number | null; boostUntil: string | null } | null;
+    isSuperAdmin: boolean;
+    boostActive: boolean;
+    noCountrySelected?: boolean;
+  }>({
     queryKey: ["/api/loto/admin/country-config/fraud-settings"],
     enabled: tab === "fraud",
+    refetchInterval: 30_000,
   });
   const webhooksQ = useQuery<WebhookPayload>({ queryKey: ["/api/loto/admin/webhooks"], enabled: tab === "webhooks" });
   const auditQ = useQuery<AuditPayload>({ queryKey: ["/api/loto/admin/audit"], enabled: tab === "audit" });
@@ -184,6 +190,33 @@ export default function LotoAdminDashboardPage() {
       toast({ title: tx("Flag updated", "Drapeau mis à jour") });
     },
     onError: (e: any) => toast({ title: tx("Update failed", "Échec de la mise à jour"), description: e.message, variant: "destructive" }),
+  });
+
+  // ─── Boost scan mutation ──────────────────────────────────────────────
+  const boostScanMu = useMutation({
+    mutationFn: async () => apiRequest("POST", "/api/loto/admin/country-config/boost-scan", {}),
+    onSuccess: async (resp) => {
+      const data = await resp.json();
+      const until = data.boostUntil ? new Date(data.boostUntil).toLocaleTimeString() : "";
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/country-config/fraud-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/audit"] });
+      toast({
+        title: tx("Boost activated", "Boost activé"),
+        description: tx(`Scan frequency set to 15 min until ${until}`, `Fréquence d'analyse réglée à 15 min jusqu'à ${until}`),
+      });
+    },
+    onError: (e: any) => {
+      const is409 = typeof e?.message === "string" && e.message.startsWith("409");
+      toast({
+        title: is409
+          ? tx("Boost already active", "Boost déjà actif")
+          : tx("Boost failed", "Échec du boost"),
+        description: is409
+          ? tx("A scan frequency boost is already running for this country.", "Un boost de fréquence d'analyse est déjà actif pour ce pays.")
+          : e.message,
+        variant: "destructive",
+      });
+    },
   });
 
   // ─── Fraud scan interval form state ──────────────────────────────────
@@ -375,7 +408,7 @@ export default function LotoAdminDashboardPage() {
 
         {/* ────── Fraud queue ────── */}
         <TabsContent value="fraud" className="space-y-4">
-          {/* Auto-scan interval settings */}
+          {/* Auto-scan interval settings + boost */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2 flex-wrap">
               <div>
@@ -396,42 +429,92 @@ export default function LotoAdminDashboardPage() {
                   {tx("Select a country to view or change the auto-scan interval.", "Sélectionnez un pays pour afficher ou modifier l'intervalle d'analyse automatique.")}
                 </p>
               ) : countryConfigQ.data?.config ? (
-                <div className="flex items-end gap-3 flex-wrap">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">{tx("Current interval", "Intervalle actuel")}</p>
-                    <p className="text-2xl font-semibold" data-testid="text-current-interval">
-                      {countryConfigQ.data.config.fraudScanIntervalMinutes}
-                      <span className="text-base font-normal text-muted-foreground ml-1">{tx("min", "min")}</span>
-                    </p>
-                  </div>
-                  {countryConfigQ.data.isSuperAdmin && (
-                    <div className="flex items-end gap-2">
-                      <div>
-                        <Label htmlFor="interval-input">{tx("New interval (multiples of 15 min, up to 10080)", "Nouvel intervalle (multiples de 15 min, jusqu'à 10080)")}</Label>
-                        <Input
-                          id="interval-input"
-                          type="number"
-                          min={15}
-                          max={10080}
-                          step={15}
-                          className="w-32"
-                          placeholder={String(countryConfigQ.data.config.fraudScanIntervalMinutes)}
-                          value={intervalInput}
-                          onChange={(e) => setIntervalInput(e.target.value)}
-                          data-testid="input-fraud-interval"
-                        />
-                      </div>
-                      <Button
-                        disabled={updateIntervalMu.isPending || !intervalInput || isNaN(parseInt(intervalInput)) || parseInt(intervalInput) < 15 || parseInt(intervalInput) % 15 !== 0}
-                        onClick={() => {
-                          const m = parseInt(intervalInput);
-                          if (!isNaN(m) && m >= 15 && m <= 10080 && m % 15 === 0) updateIntervalMu.mutate(m);
-                        }}
-                        data-testid="button-save-interval"
-                      >
-                        {tx("Save", "Enregistrer")}
-                      </Button>
+                <div className="space-y-4">
+                  <div className="flex items-end gap-3 flex-wrap">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">{tx("Current interval", "Intervalle actuel")}</p>
+                      <p className="text-2xl font-semibold" data-testid="text-current-interval">
+                        {countryConfigQ.data.boostActive
+                          ? countryConfigQ.data.config.boostIntervalMinutes
+                          : countryConfigQ.data.config.fraudScanIntervalMinutes}
+                        <span className="text-base font-normal text-muted-foreground ml-1">{tx("min", "min")}</span>
+                        {countryConfigQ.data.boostActive && (
+                          <Badge className="ml-2 bg-amber-500 text-white text-xs" data-testid="badge-boost-active">
+                            <Zap className="h-3 w-3 mr-1" />
+                            {tx("BOOST", "BOOST")}
+                          </Badge>
+                        )}
+                      </p>
                     </div>
+                    {/* Boost scan — available to all DGI officers */}
+                    {countryConfigQ.data?.config && (
+                      <div className="flex flex-col gap-1">
+                        <Button
+                          size="sm"
+                          variant={countryConfigQ.data.boostActive ? "secondary" : "default"}
+                          className={countryConfigQ.data.boostActive ? "border-amber-400" : "bg-amber-500 hover:bg-amber-600 text-white"}
+                          onClick={() => boostScanMu.mutate()}
+                          disabled={boostScanMu.isPending || countryConfigQ.data?.boostActive}
+                          data-testid="button-boost-scan"
+                        >
+                          <Zap className="h-4 w-4 mr-1" />
+                          {countryConfigQ.data.boostActive
+                            ? tx("Boost active", "Boost actif")
+                            : tx("Boost scan frequency", "Booster la fréquence d'analyse")}
+                        </Button>
+                        <p className="text-xs text-muted-foreground">
+                          {countryConfigQ.data.boostActive && countryConfigQ.data.config.boostUntil
+                            ? tx(
+                                `15 min scans active until ${new Date(countryConfigQ.data.config.boostUntil).toLocaleTimeString()}`,
+                                `Analyses toutes les 15 min jusqu'à ${new Date(countryConfigQ.data.config.boostUntil).toLocaleTimeString()}`,
+                              )
+                            : tx("Sets scan interval to 15 min for 2 hours", "Règle l'intervalle à 15 min pendant 2 heures")}
+                        </p>
+                      </div>
+                    )}
+                    {countryConfigQ.data.isSuperAdmin && (
+                      <div className="flex items-end gap-2">
+                        <div>
+                          <Label htmlFor="interval-input">{tx("New interval (multiples of 15 min, up to 10080)", "Nouvel intervalle (multiples de 15 min, jusqu'à 10080)")}</Label>
+                          <Input
+                            id="interval-input"
+                            type="number"
+                            min={15}
+                            max={10080}
+                            step={15}
+                            className="w-32"
+                            placeholder={String(countryConfigQ.data.config.fraudScanIntervalMinutes)}
+                            value={intervalInput}
+                            onChange={(e) => setIntervalInput(e.target.value)}
+                            data-testid="input-fraud-interval"
+                          />
+                        </div>
+                        <Button
+                          disabled={updateIntervalMu.isPending || !intervalInput || isNaN(parseInt(intervalInput)) || parseInt(intervalInput) < 15 || parseInt(intervalInput) % 15 !== 0}
+                          onClick={() => {
+                            const m = parseInt(intervalInput);
+                            if (!isNaN(m) && m >= 15 && m <= 10080 && m % 15 === 0) updateIntervalMu.mutate(m);
+                          }}
+                          data-testid="button-save-interval"
+                        >
+                          {tx("Save", "Enregistrer")}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                  {countryConfigQ.data.boostActive && (
+                    <Alert className="border-amber-400 bg-amber-50 dark:bg-amber-950/20" data-testid="alert-boost-active">
+                      <Zap className="h-4 w-4 text-amber-600" />
+                      <AlertTitle className="text-amber-700 dark:text-amber-400">
+                        {tx("High-frequency scan mode active", "Mode d'analyse haute fréquence actif")}
+                      </AlertTitle>
+                      <AlertDescription className="text-amber-600 dark:text-amber-300">
+                        {tx(
+                          `The fraud scanner is running every ${countryConfigQ.data.config.boostIntervalMinutes} minutes. This boost expires at ${countryConfigQ.data.config.boostUntil ? new Date(countryConfigQ.data.config.boostUntil).toLocaleTimeString() : "—"} and will revert automatically to ${countryConfigQ.data.config.fraudScanIntervalMinutes} min.`,
+                          `Le scanner de fraude s'exécute toutes les ${countryConfigQ.data.config.boostIntervalMinutes} minutes. Ce boost expire à ${countryConfigQ.data.config.boostUntil ? new Date(countryConfigQ.data.config.boostUntil).toLocaleTimeString() : "—"} et reviendra automatiquement à ${countryConfigQ.data.config.fraudScanIntervalMinutes} min.`,
+                        )}
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
               ) : (

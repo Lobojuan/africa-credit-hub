@@ -161,12 +161,14 @@ async function scanCountry(countryCode: string): Promise<void> {
 }
 
 async function runScheduledScan(): Promise<void> {
-  let rows: { countryCode: string; fraudScanIntervalMinutes: number }[];
+  let rows: { countryCode: string; fraudScanIntervalMinutes: number; boostIntervalMinutes: number | null; boostUntil: Date | null }[];
   try {
     rows = await db
       .select({
         countryCode: lotoCountryDrawConfig.countryCode,
         fraudScanIntervalMinutes: lotoCountryDrawConfig.fraudScanIntervalMinutes,
+        boostIntervalMinutes: lotoCountryDrawConfig.boostIntervalMinutes,
+        boostUntil: lotoCountryDrawConfig.boostUntil,
       })
       .from(lotoCountryDrawConfig)
       .where(eq(lotoCountryDrawConfig.active, true));
@@ -180,11 +182,25 @@ async function runScheduledScan(): Promise<void> {
     return;
   }
 
-  const now = Date.now();
-  const due = rows.filter(({ countryCode, fraudScanIntervalMinutes }) => {
-    const intervalMs = fraudScanIntervalMinutes * 60 * 1000;
+  const nowTs = Date.now();
+  const now = new Date(nowTs);
+
+  // Clear expired boost metadata so config state stays canonical.
+  const expiredBoosts = rows.filter(
+    ({ boostUntil, boostIntervalMinutes }) => boostIntervalMinutes !== null && boostUntil !== null && boostUntil <= now,
+  );
+  for (const { countryCode } of expiredBoosts) {
+    storage.clearLotoCountryBoostScan(countryCode).catch((e: Error) =>
+      console.error(`${LABEL} Failed to clear expired boost for ${countryCode}:`, e.message),
+    );
+  }
+
+  const due = rows.filter(({ countryCode, fraudScanIntervalMinutes, boostIntervalMinutes, boostUntil }) => {
+    const boostActive = !!(boostUntil && boostUntil > now && boostIntervalMinutes);
+    const effectiveInterval = boostActive ? boostIntervalMinutes! : fraudScanIntervalMinutes;
+    const intervalMs = effectiveInterval * 60 * 1000;
     const last = lastScannedAt.get(countryCode) ?? 0;
-    return now - last >= intervalMs;
+    return nowTs - last >= intervalMs;
   });
 
   if (due.length === 0) {

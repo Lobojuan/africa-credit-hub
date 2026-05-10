@@ -718,9 +718,9 @@ lotoAdminRouter.delete("/webhooks/:id", ...gate, async (req, res) => {
 // ─── 8b. Country config (fraud scan interval) ───────────────────────────
 
 /** GET /api/loto/admin/country-config/fraud-settings — Returns the draw config
- *  for the current country, including fraudScanIntervalMinutes. Visible to all
- *  gate-passing roles. Distinct path avoids conflict with the existing
- *  GET /api/loto/admin/country-config (draw-config listing) in routes.ts. */
+ *  for the current country, including fraudScanIntervalMinutes and active boost.
+ *  Visible to all gate-passing roles. Distinct path avoids conflict with the
+ *  existing GET /api/loto/admin/country-config (draw-config listing) in routes.ts. */
 lotoAdminRouter.get("/country-config/fraud-settings", ...gate, async (req, res) => {
   try {
     const raw = getCountryFilter(req);
@@ -734,7 +734,10 @@ lotoAdminRouter.get("/country-config/fraud-settings", ...gate, async (req, res) 
     const config = await storage.getLotoCountryDrawConfig(countryCode);
     if (!config) return res.status(404).json({ message: "Country config not found" });
 
-    res.json({ config, isSuperAdmin });
+    const now = new Date();
+    const boostActive = !!(config.boostUntil && config.boostUntil > now && config.boostIntervalMinutes);
+
+    res.json({ config, isSuperAdmin, boostActive });
   } catch (err) {
     console.error("[loto-admin] country-config/fraud-settings GET failed", err);
     res.status(500).json({ message: (err as Error).message });
@@ -748,6 +751,48 @@ const fraudIntervalBody = z.object({
     .min(15)
     .max(10080)
     .refine((v) => v % 15 === 0, { message: "Interval must be a multiple of 15 minutes (matching the scheduler poll resolution)" }),
+});
+
+/** POST /api/loto/admin/country-config/boost-scan — Available to all DGI officers.
+ *  Temporarily sets the fraud scan interval to 15 minutes for 2 hours.
+ *  The scheduler will automatically revert to the normal interval once boostUntil passes. */
+const BOOST_INTERVAL_MINUTES = 15;
+const BOOST_DURATION_HOURS = 2;
+
+lotoAdminRouter.post("/country-config/boost-scan", ...gate, async (req, res) => {
+  try {
+    const raw = getCountryFilter(req);
+    if (!raw || raw === GLOBAL_SCOPE) {
+      return res.status(400).json({ message: "A specific country must be selected to apply a boost" });
+    }
+
+    const country = toLotoCountryCode(raw);
+    const config = await storage.getLotoCountryDrawConfig(country);
+    if (!config) return res.status(404).json({ message: "Country config not found" });
+
+    const now = new Date();
+    if (config.boostUntil && config.boostUntil > now) {
+      return res.status(409).json({
+        message: "A scan frequency boost is already active for this country",
+        boostUntil: config.boostUntil.toISOString(),
+      });
+    }
+
+    const boostUntil = new Date(Date.now() + BOOST_DURATION_HOURS * 60 * 60 * 1000);
+    const updated = await storage.applyLotoCountryBoostScan(country, BOOST_INTERVAL_MINUTES, boostUntil);
+
+    await audit(
+      req,
+      "LOTO_FRAUD_BOOST_SCAN",
+      country,
+      `Scan frequency boosted to ${BOOST_INTERVAL_MINUTES}min for ${BOOST_DURATION_HOURS}h until ${boostUntil.toISOString()} by ${req.session?.userId}`,
+    );
+
+    res.json({ config: updated, boostUntil: boostUntil.toISOString(), boostIntervalMinutes: BOOST_INTERVAL_MINUTES });
+  } catch (err) {
+    console.error("[loto-admin] boost-scan failed", err);
+    res.status(500).json({ message: (err as Error).message });
+  }
 });
 
 /** PATCH /api/loto/admin/country-config/fraud-settings — Super-admin-only.
