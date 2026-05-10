@@ -1805,7 +1805,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "contactLocation": `创始人：${CO_AUTHOR} | 阿克拉，加纳共和国 | 知识产权参考：${CO_REF}`,
     "contactDesc": "如有许可咨询、版权事宜或侵权举报，请通过官方渠道联系公司。",
     "downloadComplete": "下载完整版权文件 (PDF)",
-    "downloadNote": "可下载的 PDF 包含带有签名页的完整 15 节法律文件。"
+    "downloadNote": "可下载的 PDF 包含带有签名页的完整 15 节法律文件。",
     "backToHome": "返回首页",
     "termsTitle": "服务条款",
     "privacyTitle": "隐私政策",

@@ -20,8 +20,8 @@ function QualityBar({ label, total, missing, color }: { label: string; total: nu
 }
 
 export function CommandCenterDataQualityTab() {
-  const { data, isLoading } = useQuery<{
   const { t } = useTranslation();
+  const { data, isLoading } = useQuery<{
     borrowers: { total: number; missingNationalId: number; missingEmail: number; missingPhone: number; missingDob: number; missingAddress: number };
     accounts: { total: number; missingBalance: number; missingInstitution: number };
     relatedEntities: { consents: number; disputes: number; payments: number; judgments: number; dishonouredCheques: number };

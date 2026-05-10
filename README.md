@@ -76,9 +76,10 @@ The platform is developed by **Africa Credit Hub** in partnership with **Systems
 - SMS notifications (Twilio) and email alerts (SMTP)
 
 ### Internationalisation
-- 5 African Union languages: English, French, Portuguese, Arabic, Swahili
+- 8 languages: English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese, Traditional Chinese
 - Full RTL (right-to-left) support for Arabic
 - Currency formatting for 42+ African and international currencies
+- LanguageSwitcher available on all public-facing pages
 
 ---
 
@@ -223,6 +224,21 @@ The platform is designed for deployment on Replit with built-in PostgreSQL, TLS,
 | User Manual | `docs/Users_Manual.md` | End users |
 | Data Dictionary | `docs/Data_Dictionary.md` | Database administrators |
 | Deployment Guide | `docs/Deployment_Guide.md` | DevOps engineers |
+
+---
+
+## Changelog
+
+### v2.8 — May 2026
+- **Loto Notifications, USSD & SMS Fallback**: Pluggable `MessagingAdapter` (SimulatedAdapter default; Africa's Talking / Twilio stubs active in `PRODUCTION_MODE=true`). Winner SMS, T-24h draw reminders, prize-claim instructions, and merchant inactivity alerts. USSD state machine at `POST /api/loto/ussd/session` compatible with Africa's Talking gateways. Exponential-backoff retry worker (1m/2m/4m/8m/16m). Consumer notification preferences tab on `/loto-fiscal`. Admin delivery dashboard at `/loto/admin/messaging` with per-template and per-country breakdowns and manual retry.
+- **DGI Government Admin Dashboard**: `/admin/loto-fiscal` for `dgi_officer` / `tax_authority_admin` / `super_admin` with KPI strip, Côte d'Ivoire regional heatmap, merchant compliance scorecard, fraud queue triage, VAT uplift, webhook outbox CRUD, and audit log view.
+- **i18n Expansion**: Platform now ships 8 languages (added Spanish, Simplified Chinese, Traditional Chinese alongside EN/FR/AR/PT/SW). All 13 new translation sections wired; `LanguageSwitcher` present on every public page.
+- **Self-Service Cross-Product Consent Toggle**: Borrowers grant/revoke `collateral_credit_view` consent from `/data-sharing` without admin intervention.
+- **Score History & Simulator**: Consumer portal adds Recharts AreaChart score history, What-If score simulator, personalised improvement tips, dispute status tracker, inquiry feed, credit freeze toggle, PWA push opt-in, and lender pre-qualification offers.
+- **Borrower Record Merge**: Deduplication tool re-pointing all child records and consolidating profile data.
+
+### v2.7 and earlier
+See `docs/Systems_Documentation.md` for prior release history.
 
 ---
 

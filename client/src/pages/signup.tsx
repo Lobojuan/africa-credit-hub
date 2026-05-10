@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Loader2, Eye, EyeOff, Landmark, Coins, Shield, Smartphone, Zap, Building2, ArrowLeft, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -122,9 +123,10 @@ export default function SignUpPage() {
   if (step === 1) {
     const selectedInfo = INSTITUTION_TYPES.find(i => i.type === institutionType);
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" data-testid="page-signup-step1" style={{
+      <div className="relative min-h-screen flex items-center justify-center p-4" data-testid="page-signup-step1" style={{
         background: "linear-gradient(160deg, #0a0e1a 0%, #0d1524 30%, #0f1a2e 60%, #0a1220 100%)",
       }}>
+        <div className="absolute top-4 right-4 z-10"><LanguageSwitcher /></div>
         <div className="w-full max-w-[600px]" style={{
           opacity: mounted ? 1 : 0,
           transform: mounted ? "translateY(0)" : "translateY(20px)",
@@ -173,9 +175,10 @@ export default function SignUpPage() {
   const selectedTypeInfo = INSTITUTION_TYPES.find(i => i.type === institutionType);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" data-testid="page-signup" style={{
+    <div className="relative min-h-screen flex items-center justify-center p-4" data-testid="page-signup" style={{
       background: "linear-gradient(160deg, #0a0e1a 0%, #0d1524 30%, #0f1a2e 60%, #0a1220 100%)",
     }}>
+      <div className="absolute top-4 right-4 z-10"><LanguageSwitcher /></div>
       <style>{`
         @keyframes signupFadeUp {
           from { opacity: 0; transform: translateY(24px); }

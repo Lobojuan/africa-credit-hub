@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -163,6 +164,7 @@ export default function MarketValidationPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <LanguageSwitcher />
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/solutions")} data-testid="link-back-solutions">Platform Overview</Button>
             <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/security")} data-testid="link-security">Security</Button>
             <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
