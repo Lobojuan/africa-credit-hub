@@ -382,7 +382,7 @@ lotoAdminRouter.post("/fraud-flags/:id/triage", ...gate, async (req, res) => {
     const parsed = triageBody.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ message: "Invalid body", errors: parsed.error.errors });
 
-    const [existing] = await db.select().from(lotoFraudFlags).where(eq(lotoFraudFlags.id, req.params.id));
+    const [existing] = await db.select().from(lotoFraudFlags).where(eq(lotoFraudFlags.id, req.params.id as string));
     if (!existing) return res.status(404).json({ message: "Flag not found" });
     if (existing.countryCode !== country) {
       return res.status(403).json({ message: "Cross-country triage forbidden" });
@@ -400,7 +400,7 @@ lotoAdminRouter.post("/fraud-flags/:id/triage", ...gate, async (req, res) => {
         triagedBy: req.session!.userId!,
         triagedAt: new Date(),
       })
-      .where(eq(lotoFraudFlags.id, req.params.id))
+      .where(eq(lotoFraudFlags.id, req.params.id as string))
       .returning();
 
     await audit(req, `LOTO_FRAUD_${newStatus.toUpperCase()}`, updated.id, `Flag ${updated.ruleCode}/${updated.signature} -> ${newStatus}`);
@@ -703,8 +703,8 @@ lotoAdminRouter.delete("/webhooks/:id", ...gate, async (req, res) => {
   try {
     const orgId = req.session?.organizationId;
     const where = orgId
-      ? and(eq(webhookSubscriptions.id, req.params.id), eq(webhookSubscriptions.organizationId, orgId))
-      : eq(webhookSubscriptions.id, req.params.id);
+      ? and(eq(webhookSubscriptions.id, req.params.id as string), eq(webhookSubscriptions.organizationId, orgId))
+      : eq(webhookSubscriptions.id, req.params.id as string);
     const [deleted] = await db.delete(webhookSubscriptions).where(where).returning();
     if (!deleted) return res.status(404).json({ message: "Subscription not found" });
     await audit(req, "LOTO_WEBHOOK_REMOVED", deleted.id, `Removed ${deleted.url}`);

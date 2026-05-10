@@ -380,3 +380,5 @@ export function CommandCenterRevenueSplitTab() {
     </div>
   );
 }
+
+export default CommandCenterRevenueSplitTab;

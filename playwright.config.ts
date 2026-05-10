@@ -18,7 +18,7 @@ export default defineConfig({
   webServer: {
     command: "ENABLE_E2E_TEST_AUTH=true PORT=5000 npx tsx server/index.ts",
     url: "http://localhost:5000/api/health",
-    reuseExistingServer: false,
+    reuseExistingServer: !process.env.CI,
     timeout: 60000,
     env: {
       ENABLE_E2E_TEST_AUTH: "true",

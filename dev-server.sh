@@ -3,6 +3,7 @@ set +e +o pipefail
 
 export NODE_ENV=development
 export RUN_SEED="${RUN_SEED:-false}"
+export ENABLE_E2E_TEST_AUTH=true
 export VITE_COUNTRY_MODE="${VITE_COUNTRY_MODE:-ghana}"
 
 export VITE_PLATFORM_COMPANY_NAME="${PLATFORM_COMPANY_NAME:-Africa Credit Hub}"

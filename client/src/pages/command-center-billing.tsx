@@ -446,3 +446,5 @@ export function CommandCenterBillingTab() {
     </div>
   );
 }
+
+export default CommandCenterBillingTab;

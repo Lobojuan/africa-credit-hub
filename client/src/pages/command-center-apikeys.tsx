@@ -150,3 +150,5 @@ export function CommandCenterApiKeysTab() {
     </div>
   );
 }
+
+export default CommandCenterApiKeysTab;

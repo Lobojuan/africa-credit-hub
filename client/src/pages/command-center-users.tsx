@@ -988,3 +988,5 @@ export function CommandCenterUsersTab() {
     </div>
   );
 }
+
+export default CommandCenterUsersTab;

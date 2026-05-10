@@ -151,3 +151,5 @@ export function CommandCenterDataQualityTab() {
     </div>
   );
 }
+
+export default CommandCenterDataQualityTab;

@@ -1378,3 +1378,5 @@ export function CommandCenterSystemTab() {
     </div>
   );
 }
+
+export default CommandCenterSystemTab;

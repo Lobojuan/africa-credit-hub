@@ -61,13 +61,13 @@ export function CrossProductCreditExtras({ borrowerId }: Props) {
           <CardContent className="space-y-2">
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold" data-testid="text-vat-score">
-                {vatProfile.features.vatActivityScore}
+                {vatProfile.features?.vatActivityScore}
               </span>
               <span className="text-xs text-muted-foreground">/ 850</span>
             </div>
             <div className="text-xs text-muted-foreground">
-              {vatProfile.features.totalReceipts} {t("loto.receipts.count")} ·{" "}
-              {vatProfile.features.monthsWithActivity} {t("merchantCredit.monthsActive")}
+              {vatProfile.features?.totalReceipts} {t("loto.receipts.count")} ·{" "}
+              {vatProfile.features?.monthsWithActivity} {t("merchantCredit.monthsActive")}
             </div>
             {vatProfile.merchant?.id && (
               <Link

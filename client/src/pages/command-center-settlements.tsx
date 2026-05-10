@@ -641,3 +641,5 @@ export function CommandCenterSettlementsTab() {
     </div>
   );
 }
+
+export default CommandCenterSettlementsTab;

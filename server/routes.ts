@@ -3581,7 +3581,7 @@ export async function registerRoutes(
       doc.moveDown(0.3);
 
       const activeAccts = accounts.filter(a => a.status !== "closed");
-      const overdue = accounts.filter(a => a.status === "delinquent" || a.status === "non_performing" || (Number(a.daysInArrears) || 0) > 0);
+      const overdue = accounts.filter(a => a.status === "delinquent" || (a.status as string) === "non_performing" || (Number(a.daysInArrears) || 0) > 0);
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat((a.currentBalance as any) || "0"), 0);
       const currency = accounts.length > 0 ? ((accounts[0] as any).currency || "GHS") : "GHS";
 
@@ -3610,11 +3610,11 @@ export async function registerRoutes(
           const acctCur = (acct as any).currency || currency;
           const statusLabel = acct.status === "closed" ? "Closed"
             : acct.status === "delinquent" ? "Delinquent"
-            : acct.status === "non_performing" ? "Non-Performing"
+            : (acct.status as string) === "non_performing" ? "Non-Performing"
             : acct.status === "written_off" ? "Written Off"
             : "Active";
           const statusColor = acct.status === "closed" ? C_GRAY
-            : acct.status === "active" ? C_GREEN
+            : (acct.status as string) === "active" ? C_GREEN
             : C_RED;
           const openDate = (acct as any).openDate
             ? new Date((acct as any).openDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })
@@ -13797,8 +13797,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const writtenOff = accounts.filter(a => a.status === "written_off");
       const restructured = accounts.filter(a => a.status === "restructured");
       const recentInquiries = inquiries.filter(i => {
-        if (!i.requestedDate) return false;
-        return (now - new Date(i.requestedDate).getTime()) < msIn30Days * 2;
+        if (!i.createdAt) return false;
+        return (now - new Date(i.createdAt).getTime()) < msIn30Days * 2;
       });
       const activeJudgments = judgments.filter((j: any) => j.status === "active");
 
@@ -14089,8 +14089,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
             const row = [
               b.firstName || b.companyName || "",
               b.lastName || "",
-              b.ghanaCardNumber || b.nationalId || b.registrationNumber || "",
-              a.facilityType || "TML",
+              b.ghanaCardNumber || b.nationalId || (b as any).registrationNumber || "",
+              a.facilityTypeCode || "TML",
               a.status || "current",
               a.currentBalance || "0",
               a.currency || "USD",
@@ -15843,8 +15843,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const enriched = items.map(item => ({
         ...item,
         lenderInstitutionName: item.lenderOrganizationId
-          ? (orgMap.get(item.lenderOrganizationId) ?? item.lenderInstitution ?? "Unknown Institution")
-          : (item.lenderInstitution ?? null),
+          ? (orgMap.get(item.lenderOrganizationId) ?? (item as any).lenderInstitution ?? "Unknown Institution")
+          : ((item as any).lenderInstitution ?? null),
         resubmittedFromRegistrationNumber: item.resubmittedFromId
           ? (parentRegMap.get(item.resubmittedFromId) ?? null)
           : null,
@@ -15907,14 +15907,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!isSuperAdmin && !callerCountry) {
         return res.status(400).json({ message: "Could not determine country — check organisation record" });
       }
-      const rootItem = await storage.getCollateralItem(req.params.id);
+      const rootItem = await storage.getCollateralItem(req.params.id as string);
       if (!rootItem) return res.status(404).json({ message: "Not found" });
       // Enforce country jurisdiction on the initial item for RA users — fail closed if country is missing or mismatched
       if (!isSuperAdmin && (!rootItem.countryCode || rootItem.countryCode !== callerCountry)) {
         return res.status(403).json({ message: "Access denied: item is outside your jurisdiction" });
       }
       const chain: CollateralItem[] = [];
-      let currentId: string | null = req.params.id;
+      let currentId: string | null = req.params.id as string;
       const visited = new Set<string>();
       while (currentId && !visited.has(currentId)) {
         visited.add(currentId);
@@ -16353,9 +16353,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // Record amendment history (fire-and-forget if no fields changed)
       if (Object.keys(changedFields).length > 0) {
         const amendingUserId = req.session?.userId as string | undefined;
-        const amendingUserName = req.session?.userFullName as string | undefined;
+        const amendingUserName = (req.session as any)?.userFullName as string | undefined;
         storage.createCollateralAmendment({
-          collateralItemId: req.params.id,
+          collateralItemId: req.params.id as string,
           amendedBy: amendingUserId ?? null,
           amendedByName: amendingUserName ?? null,
           changedFields: JSON.stringify(changedFields),
@@ -16396,7 +16396,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Submit an amendment request for an approved (active) collateral item — lenders only
   app.post("/api/collateral/:id/amendment", requireRole("lender", "admin", "super_admin"), async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       const orgId = req.session?.organizationId;
       const isSuperAdmin = req.session?.userRole === "super_admin";
@@ -16455,7 +16455,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // List amendment requests for a specific collateral item
   app.get("/api/collateral/:id/amendment-requests", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
       const orgId = req.session?.organizationId;
       const isSuperAdmin = req.session?.userRole === "super_admin";
@@ -16474,7 +16474,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           return res.status(403).json({ message: "Access denied" });
         }
       }
-      const requests = await storage.getCollateralAmendmentRequestsForItem(req.params.id);
+      const requests = await storage.getCollateralAmendmentRequestsForItem(req.params.id as string);
       res.json(requests);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -16491,7 +16491,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!isSuperAdmin) {
         const [amReq] = await db.select({ collateralItemId: collateralAmendmentRequests.collateralItemId })
           .from(collateralAmendmentRequests)
-          .where(eq(collateralAmendmentRequests.id, req.params.requestId));
+          .where(eq(collateralAmendmentRequests.id, req.params.requestId as string));
         if (!amReq) return res.status(404).json({ message: "Amendment request not found" });
         const item = await storage.getCollateralItem(amReq.collateralItemId);
         if (!item) return res.status(404).json({ message: "Collateral item not found" });
@@ -16501,7 +16501,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           return res.status(403).json({ message: "Cross-country approval not permitted" });
         }
       }
-      const result = await storage.approveCollateralAmendmentRequest(req.params.requestId, userId);
+      const result = await storage.approveCollateralAmendmentRequest(req.params.requestId as string, userId);
       if ("error" in result) {
         if (result.error === "not_found") return res.status(404).json({ message: "Amendment request not found" });
         if (result.error === "not_pending") return res.status(409).json({ message: "Only pending amendment requests can be approved" });
@@ -16528,7 +16528,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!isSuperAdmin) {
         const [amReq] = await db.select({ collateralItemId: collateralAmendmentRequests.collateralItemId })
           .from(collateralAmendmentRequests)
-          .where(eq(collateralAmendmentRequests.id, req.params.requestId));
+          .where(eq(collateralAmendmentRequests.id, req.params.requestId as string));
         if (!amReq) return res.status(404).json({ message: "Amendment request not found" });
         const item = await storage.getCollateralItem(amReq.collateralItemId);
         if (!item) return res.status(404).json({ message: "Collateral item not found" });
@@ -16538,7 +16538,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           return res.status(403).json({ message: "Cross-country rejection not permitted" });
         }
       }
-      const result = await storage.rejectCollateralAmendmentRequest(req.params.requestId, userId, reviewNotes.trim());
+      const result = await storage.rejectCollateralAmendmentRequest(req.params.requestId as string, userId, reviewNotes.trim());
       if ("error" in result) {
         if (result.error === "not_found") return res.status(404).json({ message: "Amendment request not found" });
         if (result.error === "not_pending") return res.status(409).json({ message: "Only pending amendment requests can be rejected" });
@@ -16807,7 +16807,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Amendment history — accessible by item owner, RA (same country), or super_admin
   app.get("/api/collateral/:id/amendment-history", requireAuth, async (req, res) => {
     try {
-      const item = await storage.getCollateralItem(req.params.id);
+      const item = await storage.getCollateralItem(req.params.id as string);
       if (!item) return res.status(404).json({ message: "Not found" });
 
       const isSuperAdmin = req.session?.userRole === "super_admin";
@@ -16826,7 +16826,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
       }
 
-      const history = await storage.getCollateralAmendments(req.params.id);
+      const history = await storage.getCollateralAmendments(req.params.id as string);
       res.json(history);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -17707,7 +17707,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const tips: { id: string; title: string; detail: string; estimatedImpact: "high" | "medium" | "low"; icon: string }[] = [];
-      const delinquentAccounts = accounts.filter(a => a.status === "delinquent" || a.daysInArrears > 0);
+      const delinquentAccounts = accounts.filter(a => a.status === "delinquent" || (a.daysInArrears ?? 0) > 0);
       const recentInquiries = inquiries.filter(i => i.createdAt && new Date(i.createdAt).getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000);
 
       if (delinquentAccounts.length > 0) {
@@ -17979,7 +17979,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const userRole = req.session?.userRole as string | undefined;
       // Look up the consent and ensure the caller owns it (by userId, by owning the linked merchant,
       // or — for borrower-linked consents — by email-matching the linked borrower), or is an admin/super_admin.
-      const existing = await storage.getCrossProductConsentById(req.params.id);
+      const existing = await storage.getCrossProductConsentById(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "not_found" });
       const isAdmin = userRole === "admin" || userRole === "super_admin";
       let owns = false;
@@ -17995,7 +17995,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         if (linkedBorrower && linkedBorrower.id === existing.borrowerId) owns = true;
       }
       if (!owns && !isAdmin) return res.status(403).json({ message: "forbidden" });
-      const row = await revokeConsentAndPurge(req.params.id, reason);
+      const row = await revokeConsentAndPurge(req.params.id as string, reason);
       if (!row) return res.status(404).json({ message: "not_found" });
       // Audit the revocation.
       try {
@@ -18176,12 +18176,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/cross-product/consents/:id/approve", requireAuth, async (req, res) => {
     try {
-      const existing = await storage.getCrossProductConsentById(req.params.id);
+      const existing = await storage.getCrossProductConsentById(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "not_found" });
       if (existing.status !== "pending") return res.status(400).json({ message: "not_pending" });
       const owns = await callerOwnsConsentSubject(req, existing);
       if (!owns) return res.status(403).json({ message: "forbidden" });
-      const row = await storage.approveCrossProductConsent(req.params.id);
+      const row = await storage.approveCrossProductConsent(req.params.id as string);
       if (!row) return res.status(409).json({ message: "not_pending" });
       try {
         await storage.createAuditLog({
@@ -18199,13 +18199,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/cross-product/consents/:id/deny", requireAuth, async (req, res) => {
     try {
-      const existing = await storage.getCrossProductConsentById(req.params.id);
+      const existing = await storage.getCrossProductConsentById(req.params.id as string);
       if (!existing) return res.status(404).json({ message: "not_found" });
       if (existing.status !== "pending") return res.status(400).json({ message: "not_pending" });
       const owns = await callerOwnsConsentSubject(req, existing);
       if (!owns) return res.status(403).json({ message: "forbidden" });
       const reason = String(req.body?.reason ?? "denied_by_owner");
-      const row = await storage.denyPendingCrossProductConsent(req.params.id, reason);
+      const row = await storage.denyPendingCrossProductConsent(req.params.id as string, reason);
       if (!row) return res.status(409).json({ message: "not_pending" });
       try {
         await storage.createAuditLog({
@@ -18258,9 +18258,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/cross-product/merchant-credit-profile/:merchantId", requireAuth, async (req, res) => {
     try {
-      const auth = await requireMerchantAccess(req, req.params.merchantId);
+      const auth = await requireMerchantAccess(req, req.params.merchantId as string);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
-      const result = await gateway.getMerchantReceiptFeatures(req.params.merchantId, gatewayCallerCtx(req));
+      const result = await gateway.getMerchantReceiptFeatures(req.params.merchantId as string, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
   });
@@ -18271,18 +18271,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const auth = requireLenderOnly(req);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
-      const merchant = await storage.getLotoMerchantByBorrowerId(req.params.borrowerId);
+      const merchant = await storage.getLotoMerchantByBorrowerId(req.params.borrowerId as string);
       if (!merchant) return res.status(204).end();
       const result = await gateway.getMerchantReceiptFeatures(merchant.id, gatewayCallerCtx(req));
-      res.json({ merchant, ...result });
+      res.json({ ...result, merchant });
     } catch (e) { handleGatewayError(res, e); }
   });
 
   app.get("/api/cross-product/consumer-spending/:userId", requireAuth, async (req, res) => {
     try {
-      const auth = requireConsumerOrLender(req, req.params.userId);
+      const auth = requireConsumerOrLender(req, req.params.userId as string);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
-      const result = await gateway.getConsumerSpendingFeatures(req.params.userId, gatewayCallerCtx(req));
+      const result = await gateway.getConsumerSpendingFeatures(req.params.userId as string, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
   });
@@ -18291,7 +18291,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const auth = requireLenderOnly(req);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
-      const result = await gateway.getCollateralForBorrower(req.params.borrowerId, gatewayCallerCtx(req));
+      const result = await gateway.getCollateralForBorrower(req.params.borrowerId as string, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
   });
@@ -18300,7 +18300,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const auth = requireLenderOnly(req);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
-      const result = await gateway.getCreditSnapshotForBorrower(req.params.borrowerId, gatewayCallerCtx(req));
+      const result = await gateway.getCreditSnapshotForBorrower(req.params.borrowerId as string, gatewayCallerCtx(req));
       res.json(result);
     } catch (e) { handleGatewayError(res, e); }
   });
@@ -18315,8 +18315,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const auth = requireLenderOnly(req);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
       const result = await gateway.getInquiryProfileLink(
-        req.params.borrowerId,
-        req.params.inquiryId,
+        req.params.borrowerId as string,
+        req.params.inquiryId as string,
         gatewayCallerCtx(req),
       );
       res.json(result);
@@ -18325,9 +18325,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/cross-product/bureau-badge/:merchantId", requireAuth, async (req, res) => {
     try {
-      const auth = await requireMerchantAccess(req, req.params.merchantId);
+      const auth = await requireMerchantAccess(req, req.params.merchantId as string);
       if (!auth.ok) return res.status(auth.status).json({ message: auth.message });
-      const result = await gateway.getBureauBadgeForMerchant(req.params.merchantId, gatewayCallerCtx(req));
+      const result = await gateway.getBureauBadgeForMerchant(req.params.merchantId as string, gatewayCallerCtx(req));
       res.json(result ?? { hasBureauProfile: false, tier: null });
     } catch (e) { handleGatewayError(res, e); }
   });
@@ -18762,7 +18762,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/loto/admin/draws/:id/run", requireAuth, requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const result = await runDraw(req.params.id);
+      const result = await runDraw(req.params.id as string);
       res.json({ draw: result.draw, winners: result.winners, tiers: result.tiers, alreadyRun: result.alreadyRun });
     } catch (e) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -19113,7 +19113,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           const { formatted } = await lotoMessagingAdapter
             .selectAdapter("simulated")
             .sendUssdSession(
-              { sessionId, phoneNumber: e164, countryCode, text, language, state: existing?.state ?? "menu:main", context: enrichedCtx },
+              { sessionId, phoneNumber: e164, countryCode, text, language, state: existing?.state ?? "menu:main", context: enrichedCtx as Record<string, unknown> },
               () => ({
                 response: denied.response,
                 terminate: true,
@@ -19132,7 +19132,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // just to recover its action.
       const adapter = lotoMessagingAdapter.selectAdapter("simulated");
       const { formatted, result } = await adapter.sendUssdSession(
-        { sessionId, phoneNumber: e164, countryCode, text, language, state: existing?.state ?? "menu:main", context: enrichedCtx },
+        { sessionId, phoneNumber: e164, countryCode, text, language, state: existing?.state ?? "menu:main", context: enrichedCtx as Record<string, unknown> },
         (i) => {
           const r = lotoUssd.runUssd({
             sessionId: i.sessionId,
@@ -19272,7 +19272,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     requireRole("admin", "super_admin"),
     async (req, res) => {
       try {
-        const updated = await storage.updateLotoOutboundMessageStatus(req.params.id, {
+        const updated = await storage.updateLotoOutboundMessageStatus(req.params.id as string, {
           status: "pending",
           scheduledAt: new Date(),
           lastError: null,

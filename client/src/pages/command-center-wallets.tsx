@@ -358,3 +358,5 @@ export function CommandCenterWalletsTab() {
     </div>
   );
 }
+
+export default CommandCenterWalletsTab;

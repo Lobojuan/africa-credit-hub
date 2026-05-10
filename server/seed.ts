@@ -351,7 +351,7 @@ export async function ensureDemoUsers() {
     const demoUsers: Array<{
       username: string; password: string; fullName: string; email: string;
       role: "platform_owner" | "super_admin" | "admin" | "regulator" | "lender" | "viewer";
-      status: "active"; institution: string; organizationId: number;
+      status: "active"; institution: string; organizationId: string;
       allowedProducts?: string[];
     }> = [
       {

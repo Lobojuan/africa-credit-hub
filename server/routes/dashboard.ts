@@ -98,7 +98,7 @@ router.get("/api/dashboard/details/:type", requireAuth, async (req, res) => {
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
-    const details = await storage.getDashboardDetails(req.params.type, orgId, country);
+    const details = await storage.getDashboardDetails(req.params.type as string, orgId, country);
     res.json(details);
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });

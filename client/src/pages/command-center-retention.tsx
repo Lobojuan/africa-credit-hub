@@ -202,3 +202,5 @@ export function CommandCenterRetentionTab() {
     </div>
   );
 }
+
+export default CommandCenterRetentionTab;

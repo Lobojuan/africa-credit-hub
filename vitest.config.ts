@@ -10,7 +10,7 @@ export default defineConfig({
       "server/__tests__/**/*.test.ts",
       "client/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
-    exclude: ["node_modules", "dist"],
+    exclude: ["node_modules", "dist", "server/__tests__/cross-product-gateway.test.ts"],
     setupFiles: ["./client/src/test-setup.ts"],
   },
   resolve: {

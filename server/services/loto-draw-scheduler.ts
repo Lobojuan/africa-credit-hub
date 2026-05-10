@@ -69,7 +69,6 @@ export async function scheduleNewDraw(args: ScheduleArgs) {
   }));
   const result = await storage.createLotoDrawWithTiers({
     draw: {
-      id: drawId,
       countryCode: args.countryCode,
       drawNumber,
       status: "scheduled",
@@ -99,7 +98,6 @@ export async function scheduleNewDraw(args: ScheduleArgs) {
         tiers: tiers.length,
       }),
       ipAddress: null,
-      userAgent: null,
       organizationId: null,
     };
     await storage.createAuditLog(auditLog);

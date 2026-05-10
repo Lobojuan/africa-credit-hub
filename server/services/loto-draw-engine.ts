@@ -43,7 +43,6 @@ async function writeAudit(
       userId: null,
       details: JSON.stringify({ countryCode: draw.countryCode, drawNumber: draw.drawNumber, ...details }),
       ipAddress: null,
-      userAgent: null,
       organizationId: null,
     };
     await storage.createAuditLog(log);
