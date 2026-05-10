@@ -46,9 +46,6 @@ integrations = ["stripe:1.0.0", "javascript_openai_ai_integrations:2.0.0", "java
 
 [userenv.shared]
 SMTP_HOST = "smtp.gmail.com"
-SMTP_USER = "uffe.carlson@gmail.com"
-SMTP_FROM = "uffe.carlson@gmail.com"
-OWNER_ADMIN_PASSWORD = "ACHWDIxAEk8LQI!Ow9"
 
 [userenv.development]
 GHANA_DVLA_API_URL = "http://localhost:5000/api/registry-sandbox/ghana_dvla"
