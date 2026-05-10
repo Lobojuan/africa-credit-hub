@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -755,6 +756,7 @@ function MaintenanceToggle() {
 
 export function CommandCenterSystemTab() {
   const { data: stats, isLoading, isRefetching } = useQuery<SystemStats>({
+  const { t } = useTranslation();
     queryKey: ["/api/platform/system-stats"],
     staleTime: 15000,
     refetchInterval: 30000,

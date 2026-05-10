@@ -1,8 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   ArrowLeft, Shield, Wallet, CreditCard, Building2, Smartphone, Landmark,
   ChevronDown, ChevronRight, ArrowRightLeft, FileText, Globe, Server,
@@ -91,13 +93,17 @@ function PricingTable() {
 }
 
 export default function PartnerDocsPage() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="mb-6">
-          <Button asChild variant="ghost" size="sm" data-testid="link-back-home">
-            <Link href="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back to Home</Link>
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button asChild variant="ghost" size="sm" data-testid="link-back-home">
+              <Link href="/"><ArrowLeft className="w-4 h-4 mr-1" />{t("partnerDocs.backToHome")}</Link>
+            </Button>
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <div className="mb-10">
@@ -152,7 +158,7 @@ export default function PartnerDocsPage() {
           <Section id="overview" title="Platform Overview" icon={Globe} defaultOpen={true}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>
-                <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (Africa Credit Hub v2.6) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
+                <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (Africa Credit Hub v2.8) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
               </p>
               <p>
                 The platform operates on a flexible multi-tier model that adapts to the size and needs of each participant:

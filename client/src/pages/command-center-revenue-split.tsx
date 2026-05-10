@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +74,7 @@ function SplitBar({ platform, bureau, total }: { platform: number; bureau: numbe
 
 export function CommandCenterRevenueSplitTab() {
   const cs = getCurrencySymbol(detectLocalCurrency());
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [editingOrg, setEditingOrg] = useState<string | null>(null);
   const [editFeePercent, setEditFeePercent] = useState("");

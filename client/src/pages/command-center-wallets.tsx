@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ interface WalletData {
 
 export function CommandCenterWalletsTab() {
   const cs = getCurrencySymbol(detectLocalCurrency());
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [expandedWallet, setExpandedWallet] = useState<string | null>(null);
   const [showTopup, setShowTopup] = useState<string | null>(null);

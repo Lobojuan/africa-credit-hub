@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -347,6 +348,7 @@ interface PersistedCountrySettings {
 
 export function CommandCenterSettingsTab() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const brandColors = useBrandColors();
   const countries = getSupportedCountries();
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);

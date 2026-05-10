@@ -6770,7 +6770,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   const PDF_LABELS: Record<string, Record<string, string>> = {
     en: {
       headerTitle: "Comprehensive Credit Information Report",
-      headerSub: "Cross-Jurisdictional Central Data Hub v2.6 | Africa Credit Hub",
+      headerSub: "Cross-Jurisdictional Central Data Hub v2.8 | Africa Credit Hub",
       orderNumber: "ORDER NUMBER",
       cirNumber: "CIR NUMBER",
       reportOrderDate: "Report Order Date",
@@ -6840,11 +6840,11 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       account: "Account",
       endOfReport: "End of Credit Information Report",
       disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Africa Credit Hub endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
-      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.6 | Africa Credit Hub | Confidential & Proprietary",
+      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8 | Africa Credit Hub | Confidential & Proprietary",
     },
     fr: {
       headerTitle: "Rapport Complet d'Information de Crédit",
-      headerSub: "Hub Central de Données Inter-Juridictionnel v2.6 | Africa Credit Hub",
+      headerSub: "Hub Central de Données Inter-Juridictionnel v2.8 | Africa Credit Hub",
       orderNumber: "NUMÉRO DE COMMANDE",
       cirNumber: "NUMÉRO CIR",
       reportOrderDate: "Date de Commande du Rapport",
@@ -6914,11 +6914,11 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       account: "Compte",
       endOfReport: "Fin du Rapport d'Information de Crédit",
       disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Africa Credit Hub s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
-      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.6 | Africa Credit Hub | Confidentiel & Propriétaire",
+      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.8 | Africa Credit Hub | Confidentiel & Propriétaire",
     },
     pt: {
       headerTitle: "Relatório Abrangente de Informação de Crédito",
-      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.6 | Africa Credit Hub",
+      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.8 | Africa Credit Hub",
       orderNumber: "NÚMERO DO PEDIDO",
       cirNumber: "NÚMERO CIR",
       reportOrderDate: "Data do Pedido do Relatório",
@@ -6988,7 +6988,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       account: "Conta",
       endOfReport: "Fim do Relatório de Informação de Crédito",
       disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Africa Credit Hub se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
-      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.6 | Africa Credit Hub | Confidencial & Proprietário",
+      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.8 | Africa Credit Hub | Confidencial & Proprietário",
     },
     ar: {
       headerTitle: "تقرير معلومات الائتمان الشامل",
@@ -7066,7 +7066,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     },
     sw: {
       headerTitle: "Ripoti Kamili ya Taarifa za Mikopo",
-      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.6 | Africa Credit Hub",
+      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.8 | Africa Credit Hub",
       orderNumber: "NAMBARI YA AGIZO",
       cirNumber: "NAMBARI YA CIR",
       reportOrderDate: "Tarehe ya Agizo la Ripoti",
@@ -7136,7 +7136,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       account: "Akaunti",
       endOfReport: "Mwisho wa Ripoti ya Taarifa za Mikopo",
       disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Africa Credit Hub inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
-      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.6 | Africa Credit Hub | Siri na Mali",
+      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.8 | Africa Credit Hub | Siri na Mali",
     },
   };
 
@@ -10826,7 +10826,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           totalInstitutions: allOrgs.length,
           activeCountries,
           supportedCountries: supportedCountries.length,
-          systemVersion: "Africa Credit Hub v2.6",
+          systemVersion: "Africa Credit Hub v2.8",
           systemStatus: "operational",
         },
         countries: countriesWithData,
@@ -12396,7 +12396,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!message || typeof message !== "string") {
         return res.status(400).json({ message: "message required" });
       }
-      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.6). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
+      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.8). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
 
 ===== COMPANY =====
 - Built by ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}

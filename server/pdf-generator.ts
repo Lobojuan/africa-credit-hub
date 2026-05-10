@@ -99,7 +99,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
       Title: title,
       Author: process.env.PLATFORM_ADMIN_NAME || process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
       Creator: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
-      Producer: `CDH v2.6 | ${process.env.PLATFORM_REGISTRY_REF || "CDH-2026-001"}`,
+      Producer: `CDH v2.8 | ${process.env.PLATFORM_REGISTRY_REF || "CDH-2026-001"}`,
       Subject: `Credit Report — ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} Pan-African Credit Registry`,
     },
   });
@@ -127,7 +127,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   doc.font("Helvetica-Bold").fontSize(20).fillColor(NORDIC_BLUE).text(title);
   doc.moveDown(0.3);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
-    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.6`);
+    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8`);
   doc.moveDown(0.2);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
     .text(`Generated: ${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}`);
@@ -341,7 +341,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     .stroke();
   doc.moveDown(0.5);
   doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY)
-    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.6`, { align: "center" });
+    .text(`${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8`, { align: "center" });
   doc.text(`© 2026 ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}. All rights reserved.`, { align: "center" });
 
   const totalPages = doc.bufferedPageRange().count;

@@ -927,7 +927,7 @@ export default function LoginPage() {
         transitionDelay: "0.6s",
       }}>
         <p className="text-xs" style={{ color: "hsl(215 10% 58%)" }}>
-          {PLATFORM_COMPANY_NAME}&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.6" : "Africa Credit Hub v2.6"}
+          {PLATFORM_COMPANY_NAME}&trade; &middot; {isGhanaMode() ? "Ghana Credit Registry v2.8" : "Africa Credit Hub v2.8"}
         </p>
         <p className="text-[10px] mt-1" style={{ color: "hsl(215 10% 68%)" }}>
           &copy; {PLATFORM_COPYRIGHT_YEAR} {PLATFORM_COMPANY_NAME}. {t('login.allRightsReserved')}

@@ -119,7 +119,7 @@ function footer(doc: PDFDoc, page: number, total: number) {
   doc.save().rect(ml, fy, cw, 0.5).fill(RULE_COLOR).restore();
   doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY)
     .text("CONFIDENTIAL — SKIP-TRACE REPORT", ml, fy + 5, { width: cw / 3, align: "left" })
-    .text("Africa Credit Hub v2.6 — Tracing Module", ml + cw / 3, fy + 5, { width: cw / 3, align: "center" })
+    .text("Africa Credit Hub v2.8 — Tracing Module", ml + cw / 3, fy + 5, { width: cw / 3, align: "center" })
     .text(`Page ${page} of ${total}`, ml + (cw * 2 / 3), fy + 5, { width: cw / 3, align: "right" });
 }
 

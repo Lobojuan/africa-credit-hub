@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -1542,6 +1543,7 @@ function RegistryStatusPanel() {
 }
 
 export default function SystemStatusPage() {
+  const { t } = useTranslation();
   const brandColors = useBrandColors();
   const { data: status, isLoading, isError, refetch } = useQuery<any>({
     queryKey: ["/api/admin/status-detail"],

@@ -1,4 +1,4 @@
-# CDH v2.1 — User Access Level Blueprint
+# CDH v2.8 — User Access Level Blueprint
 
 Last updated: March 2026
 

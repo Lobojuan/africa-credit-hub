@@ -51,8 +51,8 @@ export function AppFooter() {
           <p className="text-[11px] text-muted-foreground/60" data-testid="footer-copyright">
             &copy; 2024–2026 {PLATFORM_COMPANY_NAME}. All rights reserved.
           </p>
-          <p className="text-[11px] text-muted-foreground/40" data-testid="footer-version" title={`Africa Credit Hub v2.6 · ${__BUILD_HASH__} · ${__BUILD_DATE__}`}>
-            Africa Credit Hub v2.6 · {__BUILD_HASH__} · {__BUILD_DATE__}
+          <p className="text-[11px] text-muted-foreground/40" data-testid="footer-version" title={`Africa Credit Hub v2.8 · ${__BUILD_HASH__} · ${__BUILD_DATE__}`}>
+            Africa Credit Hub v2.8 · {__BUILD_HASH__} · {__BUILD_DATE__}
           </p>
         </div>
       </div>

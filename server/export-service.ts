@@ -56,7 +56,7 @@ export interface FullPortabilityExport {
 }
 
 const EXPORT_AUTHORSHIP = {
-  platform: `${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} (CDH v2.6)`,
+  platform: `${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} (CDH v2.8)`,
   author: process.env.PLATFORM_ADMIN_NAME || "Platform Administrator",
   company: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
   registryRef: process.env.PLATFORM_REGISTRY_REF || "CDH-2026-001",

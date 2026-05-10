@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,6 +50,7 @@ const PRICING_TIERS = [
 ];
 
 export default function ForLendersPage() {
+  const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const year = new Date().getFullYear();
 

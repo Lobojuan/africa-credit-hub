@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 import { Building2, Mail, Phone, MapPin, ArrowLeft, Send, Shield, Globe, Loader2 } from "lucide-react";
 import { PLATFORM_CONTACT_PHONE } from "@/lib/platform-config";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function ContactSalesPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -75,11 +78,14 @@ export default function ContactSalesPage() {
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
-          <Button asChild variant="ghost" size="sm" data-testid="link-back-home">
-            <Link href="/">
-              <ArrowLeft className="w-4 h-4 mr-1" /> Back to Home
-            </Link>
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button asChild variant="ghost" size="sm" data-testid="link-back-home">
+              <Link href="/">
+                <ArrowLeft className="w-4 h-4 mr-1" />{t("legal.backToHome")}
+              </Link>
+            </Button>
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">

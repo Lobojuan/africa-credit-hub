@@ -710,7 +710,7 @@ export function AppSidebar() {
             {PLATFORM_COPYRIGHT_YEAR} All rights reserved.
           </p>
           <p className="text-[9px] text-sidebar-foreground/25 font-mono mt-0.5" data-testid="text-build-version">
-            v2.6 · {__BUILD_HASH__} · {__BUILD_DATE__}
+            v2.8 · {__BUILD_HASH__} · {__BUILD_DATE__}
           </p>
         </div>
       </SidebarFooter>

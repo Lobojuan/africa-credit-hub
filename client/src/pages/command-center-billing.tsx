@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { TrendingUp, FileText, CreditCard, Building2, Tag, Globe, ChevronDown, Calendar, Hash, DollarSign, Clock, Landmark } from "lucide-react";
@@ -44,6 +45,7 @@ function formatPrice(cents: number, currency: string) {
 
 export function CommandCenterBillingTab() {
   const cs = getCurrencySymbol(detectLocalCurrency());
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [editingTier, setEditingTier] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");

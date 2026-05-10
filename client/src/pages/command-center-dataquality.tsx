@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Database, AlertTriangle, CheckCircle, BarChart3, Globe } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +21,7 @@ function QualityBar({ label, total, missing, color }: { label: string; total: nu
 
 export function CommandCenterDataQualityTab() {
   const { data, isLoading } = useQuery<{
+  const { t } = useTranslation();
     borrowers: { total: number; missingNationalId: number; missingEmail: number; missingPhone: number; missingDob: number; missingAddress: number };
     accounts: { total: number; missingBalance: number; missingInstitution: number };
     relatedEntities: { consents: number; disputes: number; payments: number; judgments: number; dishonouredCheques: number };

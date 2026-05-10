@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Search, Filter, Clock, User, Shield, Activity, ChevronLeft, ChevronRight } from "lucide-react";
@@ -23,6 +24,7 @@ function getActionColor(action: string) {
 
 export function CommandCenterAuditTab() {
   const [page, setPage] = useState(0);
+  const { t } = useTranslation();
   const [filterAction, setFilterAction] = useState("all");
   const [filterEntity, setFilterEntity] = useState("all");
   const pageSize = 50;

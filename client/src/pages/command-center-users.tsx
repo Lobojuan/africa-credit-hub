@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import React, { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -491,6 +492,7 @@ function OrgEditDialog({ org, open, onOpenChange }: { org: Organization | null; 
 
 export function CommandCenterUsersTab() {
   const { user: currentUser } = useAuth();
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [subTab, setSubTab] = useState("users");
   const [userSearch, setUserSearch] = useState("");

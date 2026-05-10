@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,7 @@ interface SettlementSummary {
 
 export function CommandCenterSettlementsTab() {
   const cs = getCurrencySymbol(detectLocalCurrency());
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [showAddSchedule, setShowAddSchedule] = useState(false);

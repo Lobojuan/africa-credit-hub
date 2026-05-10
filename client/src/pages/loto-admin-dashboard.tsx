@@ -20,7 +20,9 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Activity, Receipt, Building2, AlertTriangle, ShieldCheck, Map, BarChart3,
   Webhook, FileSpreadsheet, FileText, RefreshCw, History, Trash2, Clock, Zap,
+  MessageCircle,
 } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface KPIData {
   countryCode: string;
@@ -146,7 +148,8 @@ function MonthlyBars({ rows }: { rows: VatUpliftPayload["monthly"] }) {
 export default function LotoAdminDashboardPage() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"overview" | "compliance" | "fraud" | "webhooks" | "audit">("overview");
+  const [tab, setTab] = useState<"overview" | "compliance" | "fraud" | "webhooks" | "audit" | "messaging">("overview");
+  const [, navigate] = useLocation();
   const isFr = i18n.language?.startsWith("fr");
 
   const tx = (en: string, fr: string) => (isFr ? fr : en);
@@ -308,6 +311,7 @@ export default function LotoAdminDashboardPage() {
           <TabsTrigger value="fraud" data-testid="tab-fraud"><AlertTriangle className="h-4 w-4 mr-1" /> {tx("Fraud queue", "File de fraude")}</TabsTrigger>
           <TabsTrigger value="webhooks" data-testid="tab-webhooks"><Webhook className="h-4 w-4 mr-1" /> {tx("Webhooks", "Webhooks")}</TabsTrigger>
           <TabsTrigger value="audit" data-testid="tab-audit"><History className="h-4 w-4 mr-1" /> {tx("Audit", "Audit")}</TabsTrigger>
+          <TabsTrigger value="messaging" data-testid="tab-messaging"><MessageCircle className="h-4 w-4 mr-1" /> {tx("Messaging", "Messagerie")}</TabsTrigger>
         </TabsList>
 
         {/* ────── Overview ────── */}
@@ -668,6 +672,40 @@ export default function LotoAdminDashboardPage() {
                     </TableBody>
                   </Table>
                 )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ────── Messaging ────── */}
+        <TabsContent value="messaging" className="space-y-4">
+          <Card data-testid="card-messaging-intro">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5 text-amber-600" />
+                {tx("Loto Messaging — Delivery Dashboard", "Loto Messagerie — Tableau de bord de livraison")}
+              </CardTitle>
+              <CardDescription>
+                {tx(
+                  "Monitor outbound SMS, USSD and push notifications. View delivery statistics by purpose and country, and manually retry failed messages.",
+                  "Surveillez les SMS sortants, USSD et notifications push. Consultez les statistiques de livraison par objet et par pays, et relancez manuellement les messages échoués.",
+                )}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-start gap-4">
+              <p className="text-sm text-muted-foreground">
+                {tx(
+                  "The messaging pipeline runs in simulated mode on this demo environment — no real SMS or USSD messages are dispatched to handsets. Every outbound row is persisted so you can audit templates, delivery rates, and retry history.",
+                  "Le pipeline de messagerie fonctionne en mode simulé sur cet environnement de démo — aucun SMS ni USSD réel n'est envoyé aux appareils. Chaque ligne sortante est conservée pour vous permettre d'auditer les modèles, les taux de livraison et l'historique des tentatives.",
+                )}
+              </p>
+              <Button
+                onClick={() => navigate("/loto/admin/messaging")}
+                data-testid="button-open-messaging-dashboard"
+                className="gap-2"
+              >
+                <MessageCircle className="h-4 w-4" />
+                {tx("Open full messaging dashboard", "Ouvrir le tableau de bord complet")}
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

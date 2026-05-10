@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Archive, Shield, Globe, Clock, Plus, Check, X } from "lucide-react";
@@ -19,6 +20,7 @@ const COUNTRIES = [
 
 export function CommandCenterRetentionTab() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ country: "", entityType: "", retentionYears: "7", archiveAfterYears: "5", description: "" });
 

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import {
@@ -347,6 +348,7 @@ function RoleBadge({ role }: { role: UserRole }) {
 }
 
 export default function AppGuidePage() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { accent: primary } = useBrandColors();
   const [selectedRole, setSelectedRole] = useState<UserRole | "all">("all");

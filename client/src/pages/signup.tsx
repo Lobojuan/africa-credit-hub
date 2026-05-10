@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Eye, EyeOff, Landmark, Coins, Shield, Smartphone, Zap, Building2, ArrowLeft, Check } from "lucide-react";
@@ -16,6 +17,7 @@ const INSTITUTION_TYPES = [
 ] as const;
 
 export default function SignUpPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const brandColors = useBrandColors();
 

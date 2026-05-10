@@ -549,7 +549,7 @@ export default function StartTrialPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-[11px] text-muted-foreground/80">
             <div className="space-y-1.5">
               <p className="text-xs font-semibold text-foreground">Africa Credit Hub</p>
-              <p>Pan-African Credit Registry — Africa Credit Hub v2.6</p>
+              <p>Pan-African Credit Registry — Africa Credit Hub v2.8</p>
               <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /><span>Accra, Ghana</span></div>
             </div>
             <div className="space-y-1.5">

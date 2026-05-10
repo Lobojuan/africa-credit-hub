@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +56,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function PlatformMetricsPage() {
+  const { t } = useTranslation();
   const brandColors = useBrandColors();
   const cs = getCurrencySymbol(detectLocalCurrency());
   const COLORS = [brandColors.accent, brandColors.accentLight, brandColors.chartSecondary, brandColors.chartAccent];

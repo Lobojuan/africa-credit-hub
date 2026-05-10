@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Key, Globe, Shield, AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export function CommandCenterApiKeysTab() {
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const { data, isLoading } = useQuery<{
     keys: any[];

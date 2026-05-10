@@ -1,9 +1,12 @@
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function PrivacyPolicyPage() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
@@ -11,16 +14,19 @@ export default function PrivacyPolicyPage() {
           <Link href="/">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" data-testid="link-back-home">
               <ArrowLeft className="w-4 h-4" />
-              Back to Home
+              {t("legal.backToHome")}
             </Button>
           </Link>
-          <span className="text-sm font-semibold text-foreground">Africa Credit Hub</span>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <span className="text-sm font-semibold text-foreground">Africa Credit Hub</span>
+          </div>
         </nav>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="privacy-page">
-        <h1 className="text-3xl font-bold text-foreground mb-2">Privacy Policy</h1>
-        <p className="text-sm text-muted-foreground mb-8">Last updated: April 2, 2026</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">{t("legal.privacyTitle")}</h1>
+        <p className="text-sm text-muted-foreground mb-8">{t("legal.lastUpdated", { date: "April 2, 2026" })}</p>
 
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-8">
           <section>

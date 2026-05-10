@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">Africa Credit Hub (CDH v2.1)</h1>
+  <h1 align="center">Africa Credit Hub (CDH v2.8)</h1>
   <p align="center"><strong>Pan-African Credit Registry Infrastructure</strong></p>
   <p align="center">
     Enterprise-grade, multi-tenant SaaS credit data hub serving all 54 African countries,<br/>
