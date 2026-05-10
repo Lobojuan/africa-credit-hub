@@ -240,7 +240,10 @@ export const creditAccounts = pgTable("credit_accounts", {
   organizationId: varchar("organization_id").references(() => organizations.id),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => ({
+  borrowerAccountLenderIdx: uniqueIndex("credit_accounts_borrower_account_lender_idx")
+    .on(table.borrowerId, table.accountNumber, table.lenderInstitution),
+}));
 
 export const guarantors = pgTable("guarantors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

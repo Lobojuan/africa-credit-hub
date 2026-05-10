@@ -1230,7 +1230,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount> {
-    const [created] = await db.insert(creditAccounts).values(account).returning();
+    // InsertCreditAccount already omits id/createdAt/updatedAt (see schema.ts omit).
+    // Destructure the unique key columns; everything else is safe to update on conflict.
+    const { borrowerId, accountNumber, lenderInstitution, ...mutableFields } = account;
+    const [created] = await db.insert(creditAccounts)
+      .values(account)
+      .onConflictDoUpdate({
+        target: [creditAccounts.borrowerId, creditAccounts.accountNumber, creditAccounts.lenderInstitution],
+        set: { ...mutableFields, updatedAt: new Date() },
+      })
+      .returning();
     // Refresh borrower contact-event last-seen on every account open
     try {
       const b = await this.getBorrower(created.borrowerId);

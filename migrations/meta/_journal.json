@@ -120,6 +120,13 @@
       "when": 1746144000000,
       "tag": "0016_loto_boost_scan",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1778426539578,
+      "tag": "0017_quick_zzzax",
+      "breakpoints": true
     }
   ]
 }

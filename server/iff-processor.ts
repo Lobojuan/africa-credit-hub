@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { borrowers, creditAccounts, dishonouredCheques, courtJudgments, guarantors } from "@shared/schema";
-import { eq, and, or } from "drizzle-orm";
+import { eq, and, or, sql } from "drizzle-orm";
 
 function normaliseGender(val: string | null): string | null {
   if (!val) return null;
@@ -139,17 +139,32 @@ async function upsertCreditAccount(
   borrowerId: string
 ): Promise<{ id: string; created: boolean }> {
   const accountNumber = accountData.accountNumber;
-  if (accountNumber) {
+  const lenderInstitution = accountData.lenderInstitution;
+
+  if (accountNumber && lenderInstitution) {
     const existing = await db.select().from(creditAccounts)
-      .where(and(eq(creditAccounts.accountNumber, accountNumber), eq(creditAccounts.borrowerId, borrowerId)))
+      .where(and(
+        eq(creditAccounts.accountNumber, accountNumber),
+        eq(creditAccounts.borrowerId, borrowerId),
+        eq(creditAccounts.lenderInstitution, lenderInstitution),
+      ))
       .limit(1);
     if (existing.length > 0) {
       await db.update(creditAccounts).set({ ...accountData, updatedAt: new Date() }).where(eq(creditAccounts.id, existing[0].id));
       return { id: existing[0].id, created: false };
     }
   }
-  const [created] = await db.insert(creditAccounts).values(accountData).returning();
-  return { id: created.id, created: true };
+
+  const { borrowerId: _borrowerId, accountNumber: _an, lenderInstitution: _li, ...mutableFields } = accountData;
+  const [upserted] = await db.insert(creditAccounts)
+    .values(accountData)
+    .onConflictDoUpdate({
+      target: [creditAccounts.borrowerId, creditAccounts.accountNumber, creditAccounts.lenderInstitution],
+      set: { ...mutableFields, updatedAt: new Date() },
+    })
+    .returning({ id: creditAccounts.id, xmax: sql<string>`xmax::text` });
+  // PostgreSQL sets xmax=0 for freshly inserted rows; non-zero indicates an updated row.
+  return { id: upserted.id, created: upserted.xmax === "0" };
 }
 
 async function upsertDishonouredCheque(

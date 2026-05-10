@@ -4148,18 +4148,18 @@ export async function registerRoutes(
     if (allAccountNumbers.length > 0) {
       for (let i = 0; i < allAccountNumbers.length; i += CHUNK_SIZE) {
         const chunkAcctNums = allAccountNumbers.slice(i, i + CHUNK_SIZE);
-        const existing = await db.select({ id: creditAccounts.id, accountNumber: creditAccounts.accountNumber, borrowerId: creditAccounts.borrowerId })
+        const existing = await db.select({ id: creditAccounts.id, accountNumber: creditAccounts.accountNumber, borrowerId: creditAccounts.borrowerId, lenderInstitution: creditAccounts.lenderInstitution })
           .from(creditAccounts)
           .where(inArray(creditAccounts.accountNumber, chunkAcctNums));
         for (const e of existing) {
-          existingMap.set(`${e.accountNumber}::${e.borrowerId}`, e.id);
+          existingMap.set(`${e.accountNumber}::${e.borrowerId}::${e.lenderInstitution}`, e.id);
         }
       }
     }
 
     for (const item of activeItems) {
       const { _skip, ...cleanData } = item.data;
-      const key = `${cleanData.accountNumber}::${cleanData.borrowerId}`;
+      const key = `${cleanData.accountNumber}::${cleanData.borrowerId}::${cleanData.lenderInstitution}`;
       const existingId = existingMap.get(key);
       if (existingId) {
         toUpdate.push({ id: existingId, data: cleanData, index: item.index });
@@ -4168,21 +4168,22 @@ export async function registerRoutes(
       }
     }
 
-    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
-      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+    // Per-row upsert: idempotent against the unique (borrowerId, accountNumber, lenderInstitution)
+    // constraint. Using each row's own values in the set clause is correct because for a
+    // single-row INSERT the attempted values equal EXCLUDED.
+    for (const item of toInsert) {
+      const { borrowerId, accountNumber, lenderInstitution, ...mutableFields } = item.data;
       try {
-        await db.insert(creditAccounts).values(chunk.map(c => c.data));
-        results.successCount += chunk.length;
-      } catch (batchErr: any) {
-        for (const item of chunk) {
-          try {
-            await db.insert(creditAccounts).values(item.data);
-            results.successCount++;
-          } catch (innerErr: any) {
-            results.errorCount++;
-            results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
-          }
-        }
+        await db.insert(creditAccounts)
+          .values(item.data)
+          .onConflictDoUpdate({
+            target: [creditAccounts.borrowerId, creditAccounts.accountNumber, creditAccounts.lenderInstitution],
+            set: { ...mutableFields, updatedAt: new Date() },
+          });
+        results.successCount++;
+      } catch (innerErr: any) {
+        results.errorCount++;
+        results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
       }
     }
 
