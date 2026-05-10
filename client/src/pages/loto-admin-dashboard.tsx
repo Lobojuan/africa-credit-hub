@@ -480,7 +480,7 @@ export default function LotoAdminDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle>{tx("Webhook outbox", "Outbox des webhooks")}</CardTitle>
-              <CardDescription>{tx("Subscribe ministry endpoints to merchant.flagged, receipt.verified and draw.closed events.", "Abonnez les endpoints du ministère aux événements merchant.flagged, receipt.verified et draw.closed.")}</CardDescription>
+              <CardDescription>{tx("Subscribe ministry endpoints to merchant.flagged, receipt.verified, draw.closed and scan.failed events.", "Abonnez les endpoints du ministère aux événements merchant.flagged, receipt.verified, draw.closed et scan.failed.")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-3">
@@ -499,7 +499,7 @@ export default function LotoAdminDashboardPage() {
                 <div>
                   <Label>{tx("Events", "Événements")}</Label>
                   <div className="flex flex-col gap-2 mt-2">
-                    {(["merchant.flagged", "receipt.verified", "draw.closed"] as const).map((evt) => (
+                    {(["merchant.flagged", "receipt.verified", "draw.closed", "scan.failed"] as const).map((evt) => (
                       <label key={evt} className="flex items-center gap-2 text-sm">
                         <Checkbox
                           checked={whEvents.includes(evt)}

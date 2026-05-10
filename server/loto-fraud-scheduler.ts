@@ -29,6 +29,12 @@ const LABEL = "[loto-fraud-scheduler]";
 const POLL_INTERVAL_MS = 15 * 60 * 1000;
 
 /**
+ * Number of consecutive failures before an operator alert webhook is fired.
+ * The counter resets to 0 on the next successful scan for that country.
+ */
+const FAILURE_ALERT_THRESHOLD = 3;
+
+/**
  * In-process guard: tracks countries whose scan is currently in-flight.
  * Prevents a slow scan from overlapping with the next scheduled tick.
  * For multi-instance deployments a DB advisory lock should replace this.
@@ -40,6 +46,12 @@ const inFlight = new Set<string>();
  * Reset on restart; countries will scan once within the first poll tick.
  */
 const lastScannedAt = new Map<string, number>();
+
+/**
+ * Counts consecutive scan failures per country.
+ * Reset to 0 on every successful scan.
+ */
+const consecutiveFailures = new Map<string, number>();
 
 /**
  * Resolve merchant IDs affected by a flag.
@@ -67,23 +79,45 @@ async function scanCountry(countryCode: string): Promise<void> {
     result = await runFraudScan({ countryCode });
   } catch (scanErr) {
     const errMsg = (scanErr as Error).message;
+    const failedAt = new Date().toISOString();
     console.error(`${LABEL} Scan failed for country ${countryCode}:`, errMsg);
+
+    const failures = (consecutiveFailures.get(countryCode) ?? 0) + 1;
+    consecutiveFailures.set(countryCode, failures);
 
     try {
       await storage.createAuditLog({
         action: "LOTO_FRAUD_SCAN_AUTO",
         entity: "loto_fraud_flags",
         entityId: countryCode,
-        details: `Auto-scan ${countryCode} FAILED: ${errMsg}`,
+        details: `Auto-scan ${countryCode} FAILED (consecutive #${failures}): ${errMsg}`,
       });
     } catch (auditErr) {
       console.error(`${LABEL} Audit log write failed for ${countryCode}:`, (auditErr as Error).message);
+    }
+
+    // Fire once at the threshold, then once per additional threshold multiple
+    // (e.g. at 3, 6, 9 … consecutive failures) to avoid operator alert fatigue.
+    if (failures >= FAILURE_ALERT_THRESHOLD && failures % FAILURE_ALERT_THRESHOLD === 0) {
+      console.error(
+        `${LABEL} ALERT: ${failures} consecutive scan failures for ${countryCode} — firing scan.failed webhook`,
+      );
+      deliverWebhook("scan.failed", {
+        countryCode,
+        consecutiveFailures: failures,
+        errorMessage: errMsg,
+        failedAt,
+        alertThreshold: FAILURE_ALERT_THRESHOLD,
+      }).catch((e: Error) =>
+        console.error(`${LABEL} scan.failed webhook delivery error for ${countryCode}:`, e.message),
+      );
     }
 
     inFlight.delete(countryCode);
     return;
   }
 
+  consecutiveFailures.set(countryCode, 0);
   lastScannedAt.set(countryCode, Date.now());
 
   const summary = `Auto-scan ${countryCode}: ${result.detectionsFound} detections, ${result.flagsUpserted} upserted (${result.newFlags.length} new)`;

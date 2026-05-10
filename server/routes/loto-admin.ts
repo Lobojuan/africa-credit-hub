@@ -653,7 +653,7 @@ lotoAdminRouter.get("/export.pdf", ...gate, async (req, res) => {
 });
 
 // ─── 7. Webhook outbox config ───────────────────────────────────────────
-const LOTO_EVENTS = ["merchant.flagged", "receipt.verified", "draw.closed"] as const;
+const LOTO_EVENTS = ["merchant.flagged", "receipt.verified", "draw.closed", "scan.failed"] as const;
 
 lotoAdminRouter.get("/webhooks", ...gate, async (req, res) => {
   try {

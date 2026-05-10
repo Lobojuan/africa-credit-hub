@@ -22,6 +22,7 @@ export const WEBHOOK_EVENTS = [
   "merchant.flagged",
   "receipt.verified",
   "draw.closed",
+  "scan.failed",
 ] as const;
 
 export type WebhookEvent = typeof WEBHOOK_EVENTS[number];
