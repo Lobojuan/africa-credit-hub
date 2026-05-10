@@ -5,7 +5,7 @@ export default defineConfig({
   timeout: 30000,
   retries: 1,
   use: {
-    baseURL: "http://localhost:5001",
+    baseURL: "http://localhost:5000",
     headless: true,
     ignoreHTTPSErrors: true,
   },
@@ -16,13 +16,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "ENABLE_E2E_TEST_AUTH=true PORT=5001 npx tsx server/index.ts",
-    url: "http://localhost:5001/api/health",
+    command: "ENABLE_E2E_TEST_AUTH=true PORT=5000 npx tsx server/index.ts",
+    url: "http://localhost:5000/api/health",
     reuseExistingServer: false,
     timeout: 60000,
     env: {
       ENABLE_E2E_TEST_AUTH: "true",
-      PORT: "5001",
+      PORT: "5000",
     },
   },
 });

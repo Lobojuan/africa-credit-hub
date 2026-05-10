@@ -114,7 +114,17 @@ const LegalCopyrightPage = lazy(() => import("@/pages/legal-copyright"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
 const PortfolioTriggersPage = lazy(() => import("@/pages/portfolio-triggers"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
-const CommandCenterPage = lazy(() => import("@/pages/country-selection"));
+const CommandCenterSystemPage = lazy(() => import("@/pages/command-center-system"));
+const CommandCenterSettingsPage = lazy(() => import("@/pages/command-center-settings"));
+const CommandCenterUsersPage = lazy(() => import("@/pages/command-center-users"));
+const CommandCenterBillingPage = lazy(() => import("@/pages/command-center-billing"));
+const CommandCenterApiKeysPage = lazy(() => import("@/pages/command-center-apikeys"));
+const CommandCenterAuditPage = lazy(() => import("@/pages/command-center-audit"));
+const CommandCenterDataQualityPage = lazy(() => import("@/pages/command-center-dataquality"));
+const CommandCenterRetentionPage = lazy(() => import("@/pages/command-center-retention"));
+const CommandCenterRevenueSplitPage = lazy(() => import("@/pages/command-center-revenue-split"));
+const CommandCenterSettlementsPage = lazy(() => import("@/pages/command-center-settlements"));
+const CommandCenterWalletsPage = lazy(() => import("@/pages/command-center-wallets"));
 const AIDemoPage = lazy(() => import("@/pages/ai-demo"));
 const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
 const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
@@ -255,6 +265,8 @@ function Router() {
         <Route path="/admin/loto-fiscal" component={LotoAdminDashboardPage} />
         <Route path="/loto/draws/verify/:drawId" component={LotoVerifyDrawPage} />
         <Route path="/loto/admin/messaging" component={LotoMessagingAdminPage} />
+        <Route path="/loto/admin/devices" component={LotoDevicesAdminPage} />
+        <Route path="/loto-pos" component={LotoPosPage} />
         <Route path="/data-sharing" component={DataSharingPage} />
         <Route path="/merchant-credit-profile/:merchantId" component={MerchantCreditProfilePage} />
         <Route path="/financial-inclusion" component={FinancialInclusionPage} />
@@ -269,9 +281,18 @@ function Router() {
         <Route path="/portfolio-intelligence" component={PortfolioIntelligencePage} />
         <Route path="/portfolio-triggers" component={PortfolioTriggersPage} />
         <Route path="/ai-command-center" component={AICommandCenterPage} />
-        <Route path="/command-center" component={CommandCenterPage} />
-        <Route path="/command-center/:rest*" component={CommandCenterPage} />
-        <Route path="/command-center-settings" component={CommandCenterPage} />
+        <Route path="/command-center" component={() => <Redirect to="/command-center-system" />} />
+        <Route path="/command-center-system" component={CommandCenterSystemPage} />
+        <Route path="/command-center-settings" component={CommandCenterSettingsPage} />
+        <Route path="/command-center-users" component={CommandCenterUsersPage} />
+        <Route path="/command-center-billing" component={CommandCenterBillingPage} />
+        <Route path="/command-center-apikeys" component={CommandCenterApiKeysPage} />
+        <Route path="/command-center-audit" component={CommandCenterAuditPage} />
+        <Route path="/command-center-dataquality" component={CommandCenterDataQualityPage} />
+        <Route path="/command-center-retention" component={CommandCenterRetentionPage} />
+        <Route path="/command-center-revenue-split" component={CommandCenterRevenueSplitPage} />
+        <Route path="/command-center-settlements" component={CommandCenterSettlementsPage} />
+        <Route path="/command-center-wallets" component={CommandCenterWalletsPage} />
         <Route path="/credit-score-methodology" component={CreditScoreMethodologyPage} />
         <Route path="/regulatory-dashboard" component={RegulatoryDashboardPage} />
         <Route path="/borrower-alerts" component={BorrowerAlertsPage} />

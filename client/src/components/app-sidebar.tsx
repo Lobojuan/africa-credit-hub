@@ -196,7 +196,7 @@ const crossBorderItems: NavItem[] = [
 ];
 
 const adminItems: NavItem[] = [
-  { label: "Command Center", tKey: "sidebar.systemConfig", url: "/command-center", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
+  { label: "Command Center", tKey: "sidebar.systemConfig", url: "/command-center-system", icon: Monitor, testId: "nav-command-center", roles: ["super_admin"] },
   { label: "Organizations", tKey: "sidebar.organizations", url: "/organizations", icon: Building2, testId: "nav-organizations", roles: ["super_admin"] },
   { label: "User Management", tKey: "sidebar.userManagement", url: "/users", icon: Settings, testId: "nav-user-management", roles: ["admin", "super_admin"] },
   { label: "Institutions", tKey: "sidebar.institutions", url: "/institutions", icon: Building2, testId: "nav-institutions", roles: ["admin", "super_admin"] },
@@ -264,7 +264,7 @@ function CollapsibleSection({
   onToggle: (label: string) => void;
 }) {
   const { t } = useTranslation();
-  const hasActive = items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")));
+  const hasActive = items.some(item => location === item.url || (item.url === "/command-center-system" && location.startsWith("/command-center")));
 
   if (items.length === 0) return null;
 
@@ -304,7 +304,7 @@ function CollapsibleSection({
             <SidebarGroupContent>
               <SidebarMenu>
                 {items.map((item) => {
-                  const isActive = location === item.url || (item.url === "/command-center" && location.startsWith("/command-center"));
+                  const isActive = location === item.url || (item.url === "/command-center-system" && location.startsWith("/command-center"));
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild data-active={isActive} className={isActive ? "bg-primary/10 text-primary font-semibold border-r-2 border-primary" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-foreground/5"}>
@@ -350,7 +350,7 @@ function sectionMatchesProduct(productIds: ProductId[] | undefined, active: Prod
 
 function getActiveSectionLabel(location: string): string | null {
   for (const sec of SECTION_ITEMS_MAP) {
-    if (sec.items.some(item => location === item.url || (item.url === "/command-center" && location.startsWith("/command-center")))) {
+    if (sec.items.some(item => location === item.url || (item.url === "/command-center-system" && location.startsWith("/command-center")))) {
       return sec.label;
     }
   }
