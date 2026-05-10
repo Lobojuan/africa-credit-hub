@@ -110,11 +110,11 @@ export default function PartnerDocsPage() {
           <div className="flex items-center gap-3 mb-3">
             <BookOpen className="w-8 h-8 text-teal-500" />
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight" data-testid="text-partner-docs-title">
-              Platform Documentation
+              {t("partnerDocs.pageHeadingMain")}
             </h1>
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl" data-testid="text-partner-docs-subtitle">
-            Whether you're a consumer checking your own credit, a fintech building on our API, a commercial bank integrating at scale, or a central bank deploying sovereign infrastructure — this guide covers everything you need to connect to {PLATFORM_COMPANY_NAME}.
+            {t("partnerDocs.pageSubtitleMain")}
           </p>
           <div className="flex flex-wrap gap-2 mt-4">
             <Badge variant="outline" className="bg-teal-500/10 text-teal-500 border-teal-500/30">Ghana Deployment</Badge>
@@ -125,26 +125,26 @@ export default function PartnerDocsPage() {
         </div>
 
         <nav className="mb-8 rounded-xl border border-border bg-muted/30 p-4" data-testid="nav-table-of-contents">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Table of Contents</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">{t("partnerDocs.tocTitle")}</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-sm">
             {[
-              { href: "#overview", label: "Platform Overview", icon: Globe },
-              { href: "#client-tiers", label: "Client Tiers & Who Connects", icon: Layers },
-              { href: "#consumers", label: "Consumer Accounts", icon: User },
-              { href: "#medium-clients", label: "MFIs, Fintechs & Medium Clients", icon: TrendingUp },
-              { href: "#licensed-institutions", label: "Licensed Banks & Bureaus", icon: Landmark },
-              { href: "#sovereign", label: "Central Banks & Sovereign Deployment", icon: Crown },
-              { href: "#pricing", label: "Pricing & Fees", icon: CreditCard },
-              { href: "#wallet", label: "Prepaid Wallet System", icon: Wallet },
-              { href: "#payment-methods", label: "Accepted Payment Methods", icon: Banknote },
-              { href: "#revenue-split", label: "Revenue Split Model", icon: ArrowRightLeft },
-              { href: "#onboarding", label: "Onboarding Steps", icon: CheckCircle2 },
-              { href: "#technical", label: "Technical Integration", icon: Server },
-              { href: "#compliance", label: "Compliance & Security", icon: Shield },
-              { href: "#sla", label: "SLA & Support", icon: Clock },
-              { href: "#partnership-mou", label: "Partnership Agreement (MOU)", icon: FileText },
-              { href: "#faq", label: "Frequently Asked Questions", icon: HelpCircle },
-              { href: "#contact", label: "Contact & Next Steps", icon: PhoneCall },
+              { href: "#overview", label: t("partnerDocs.sectionPlatformOverview"), icon: Globe },
+              { href: "#client-tiers", label: t("partnerDocs.sectionClientTiers"), icon: Layers },
+              { href: "#consumers", label: t("partnerDocs.sectionConsumers"), icon: User },
+              { href: "#medium-clients", label: t("partnerDocs.sectionMediumClients"), icon: TrendingUp },
+              { href: "#licensed-institutions", label: t("partnerDocs.sectionLicensedInstitutions"), icon: Landmark },
+              { href: "#sovereign", label: t("partnerDocs.sectionSovereign"), icon: Crown },
+              { href: "#pricing", label: t("partnerDocs.sectionPricing"), icon: CreditCard },
+              { href: "#wallet", label: t("partnerDocs.sectionWallet"), icon: Wallet },
+              { href: "#payment-methods", label: t("partnerDocs.sectionPaymentMethods"), icon: Banknote },
+              { href: "#revenue-split", label: t("partnerDocs.sectionRevenueSplit"), icon: ArrowRightLeft },
+              { href: "#onboarding", label: t("partnerDocs.sectionOnboarding"), icon: CheckCircle2 },
+              { href: "#technical", label: t("partnerDocs.sectionTechnical"), icon: Server },
+              { href: "#compliance", label: t("partnerDocs.sectionCompliance"), icon: Shield },
+              { href: "#sla", label: t("partnerDocs.sectionSla"), icon: Clock },
+              { href: "#partnership-mou", label: t("partnerDocs.sectionMou"), icon: FileText },
+              { href: "#faq", label: t("partnerDocs.sectionFaq"), icon: HelpCircle },
+              { href: "#contact", label: t("partnerDocs.sectionContact"), icon: PhoneCall },
             ].map(item => (
               <a key={item.href} href={item.href} className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-muted transition-colors text-foreground">
                 <item.icon className="w-3.5 h-3.5 text-teal-500" />
@@ -155,7 +155,7 @@ export default function PartnerDocsPage() {
         </nav>
 
         <div className="space-y-3">
-          <Section id="overview" title="Platform Overview" icon={Globe} defaultOpen={true}>
+          <Section id="overview" title={t("partnerDocs.sectionPlatformOverview")} icon={Globe} defaultOpen={true}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>
                 <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (Africa Credit Hub v2.8) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
@@ -187,7 +187,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="client-tiers" title="Client Tiers & Who Connects" icon={Layers}>
+          <Section id="client-tiers" title={t("partnerDocs.sectionClientTiers")} icon={Layers}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>The platform serves four distinct tiers. Each tier has different access levels, pricing, and integration requirements:</p>
 
@@ -240,7 +240,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="consumers" title="Consumer Accounts" icon={User}>
+          <Section id="consumers" title={t("partnerDocs.sectionConsumers")} icon={User}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>
                 Individual consumers can access the platform to manage their own credit profile. Consumer accounts are <strong className="text-foreground">free of charge</strong> and designed for personal use.
@@ -286,7 +286,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="medium-clients" title="MFIs, Fintechs & Medium Clients (Growth Tier)" icon={TrendingUp}>
+          <Section id="medium-clients" title={t("partnerDocs.sectionMediumClients")} icon={TrendingUp}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>
                 The <strong className="text-foreground">Growth tier</strong> is designed for digital lenders, microfinance institutions, and fintech companies that need API access to credit data without the complexity of enterprise integration.
@@ -335,7 +335,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="licensed-institutions" title="Licensed Banks & Credit Bureaus (Commercial Tier)" icon={Landmark}>
+          <Section id="licensed-institutions" title={t("partnerDocs.sectionLicensedInstitutions")} icon={Landmark}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>
                 The <strong className="text-foreground">Commercial tier</strong> is built for tier-1 and tier-2 commercial banks, licensed credit bureaus, and major financial institutions that need enterprise-grade integration, compliance workflows, and high-volume processing.
@@ -398,7 +398,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="sovereign" title="Central Banks & Sovereign Deployment" icon={Crown}>
+          <Section id="sovereign" title={t("partnerDocs.sectionSovereign")} icon={Crown}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>
                 The <strong className="text-foreground">Sovereign tier</strong> is designed exclusively for central banks, national regulators, and government financial oversight bodies. It provides a <strong className="text-foreground">fully isolated, dedicated deployment</strong> of the {PLATFORM_COMPANY_NAME} platform — no shared infrastructure, no shared data, complete control.
@@ -464,7 +464,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="pricing" title="Pricing & Transaction Fees" icon={CreditCard}>
+          <Section id="pricing" title={t("partnerDocs.sectionPricing")} icon={CreditCard}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>
                 {PLATFORM_COMPANY_NAME} uses a <strong className="text-foreground">per-transaction pricing model</strong> for Growth and Commercial tiers. Consumer accounts are free. Sovereign pricing is custom.
@@ -491,7 +491,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="wallet" title="Prepaid Wallet System" icon={Wallet}>
+          <Section id="wallet" title={t("partnerDocs.sectionWallet")} icon={Wallet}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>
                 All paying institutions (Growth, Commercial, and Bureau licensees) operate on a <strong className="text-foreground">prepaid wallet model</strong>. Fund your wallet first, then process transactions. This ensures zero credit risk and guarantees uninterrupted service.
@@ -546,7 +546,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="payment-methods" title="Accepted Payment Methods" icon={Banknote}>
+          <Section id="payment-methods" title={t("partnerDocs.sectionPaymentMethods")} icon={Banknote}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>Fund your wallet using any of the following methods. All amounts are in Ghana Cedis ({GHS_SYMBOL}).</p>
 
@@ -595,7 +595,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="revenue-split" title="Revenue Split Model (Bureaus)" icon={ArrowRightLeft}>
+          <Section id="revenue-split" title={t("partnerDocs.sectionRevenueSplit")} icon={ArrowRightLeft}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>
                 Credit bureaus that license {PLATFORM_COMPANY_NAME} as their infrastructure operate under a <strong className="text-foreground">revenue-sharing model</strong>:
@@ -632,7 +632,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="onboarding" title="Onboarding Steps" icon={CheckCircle2}>
+          <Section id="onboarding" title={t("partnerDocs.sectionOnboarding")} icon={CheckCircle2}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>The onboarding process varies by client type. Select your path:</p>
 
@@ -720,7 +720,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="technical" title="Technical Integration Requirements" icon={Server}>
+          <Section id="technical" title={t("partnerDocs.sectionTechnical")} icon={Server}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>Connect to {PLATFORM_COMPANY_NAME} via REST API, web portal, or batch file upload — depending on your tier and needs:</p>
 
@@ -770,7 +770,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="compliance" title="Compliance & Security" icon={Shield}>
+          <Section id="compliance" title={t("partnerDocs.sectionCompliance")} icon={Shield}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>{PLATFORM_COMPANY_NAME} is built with security and regulatory compliance at its core — across all tiers:</p>
 
@@ -794,7 +794,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="sla" title="Service Level Agreement (SLA)" icon={Clock}>
+          <Section id="sla" title={t("partnerDocs.sectionSla")} icon={Clock}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse" data-testid="table-sla">
@@ -830,7 +830,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="partnership-mou" title="Technology Partnership Agreement (MOU)" icon={FileText}>
+          <Section id="partnership-mou" title={t("partnerDocs.sectionMou")} icon={FileText}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>
                 The following outlines the standard terms of the <strong className="text-foreground">Technology Partnership Memorandum of Understanding (MOU)</strong> between {PLATFORM_COMPANY_NAME} ("Platform Provider") and the licensed credit bureau ("Partner"). This framework governs white-label deployments, revenue sharing, service levels, and data governance.
@@ -1040,7 +1040,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="faq" title="Frequently Asked Questions" icon={HelpCircle}>
+          <Section id="faq" title={t("partnerDocs.sectionFaq")} icon={HelpCircle}>
             <div className="mt-4 space-y-4 text-sm">
               {[
                 { q: "I'm an individual — can I check my own credit for free?", a: "Yes. Consumer accounts are completely free. Visit the Consumer Portal or My Credit page, register with your Ghana Card details, and view your full credit report at no charge. This is your legal right under the Bank of Ghana Credit Reporting Act." },
@@ -1064,7 +1064,7 @@ export default function PartnerDocsPage() {
             </div>
           </Section>
 
-          <Section id="contact" title="Contact & Next Steps" icon={PhoneCall}>
+          <Section id="contact" title={t("partnerDocs.sectionContact")} icon={PhoneCall}>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">
               <p>Ready to connect? Choose the path that fits your needs:</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

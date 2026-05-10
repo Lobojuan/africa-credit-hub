@@ -176,30 +176,29 @@ export default function MarketValidationPage() {
 
       <section className="py-16 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <Badge variant="outline" className="mb-4">Market Validation</Badge>
+          <Badge variant="outline" className="mb-4">{t("marketValidation.pageTitle")}</Badge>
           <h1 className="text-3xl md:text-4xl font-bold mb-4" data-testid="text-mv-title">
-            Why Africa Needs Africa Credit Hub — And Why Now
+            {t("marketValidation.heroTitle")}
           </h1>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-4">
-            Data-backed market validation for pan-African credit infrastructure.
-            Every claim is sourced, every pricing tier is benchmarked, and every competitor gap is documented.
+            {t("marketValidation.heroSubtitle")}
           </p>
           <div className="flex items-center justify-center gap-6 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>$47B Market by 2028</span>
+              <span>{t("marketValidation.stat1")}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>37+ Central Bank Mandates</span>
+              <span>{t("marketValidation.stat2")}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>350M+ Underserved Adults</span>
+              <span>{t("marketValidation.stat3")}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>Zero Pan-African Competitors</span>
+              <span>{t("marketValidation.stat4")}</span>
             </div>
           </div>
         </div>
@@ -207,9 +206,9 @@ export default function MarketValidationPage() {
 
       <section className="py-12 px-4 bg-muted/30" data-testid="section-tam">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Total Addressable Market by Region</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("marketValidation.tamSectionTitle")}</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            500+ financial institutions across 54 countries — segmented by region with institution counts
+            {t("marketValidation.tamSectionSubtitle")}
           </p>
           <div className="space-y-3">
             {TAM_DATA.map((r) => (
@@ -226,15 +225,15 @@ export default function MarketValidationPage() {
                     <div className="flex gap-6 flex-shrink-0">
                       <div className="text-center">
                         <div className="text-lg font-bold text-primary">{r.banks}</div>
-                        <p className="text-[10px] text-muted-foreground">Banks</p>
+                        <p className="text-[10px] text-muted-foreground">{t("marketValidation.banksCol")}</p>
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-bold text-primary">{r.mfis}</div>
-                        <p className="text-[10px] text-muted-foreground">MFIs</p>
+                        <p className="text-[10px] text-muted-foreground">{t("marketValidation.mfisCol")}</p>
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-bold text-primary">{r.fintechs}</div>
-                        <p className="text-[10px] text-muted-foreground">Fintechs</p>
+                        <p className="text-[10px] text-muted-foreground">{t("marketValidation.fintechsCol")}</p>
                       </div>
                     </div>
                     <div className="flex-1 text-xs text-muted-foreground bg-muted/50 rounded-lg p-2.5">
@@ -250,19 +249,19 @@ export default function MarketValidationPage() {
             <div className="inline-flex items-center gap-4 px-6 py-3 rounded-full border border-primary/30 bg-primary/5">
               <div className="text-center">
                 <div className="text-xl font-bold text-primary">555</div>
-                <p className="text-[10px] text-muted-foreground">Banks</p>
+                <p className="text-[10px] text-muted-foreground">{t("marketValidation.banksCol")}</p>
               </div>
               <div className="text-center">
                 <div className="text-xl font-bold text-primary">1,205</div>
-                <p className="text-[10px] text-muted-foreground">MFIs</p>
+                <p className="text-[10px] text-muted-foreground">{t("marketValidation.mfisCol")}</p>
               </div>
               <div className="text-center">
                 <div className="text-xl font-bold text-primary">940</div>
-                <p className="text-[10px] text-muted-foreground">Fintechs</p>
+                <p className="text-[10px] text-muted-foreground">{t("marketValidation.fintechsCol")}</p>
               </div>
               <div className="text-center border-l border-primary/20 pl-4">
                 <div className="text-xl font-bold text-primary">2,700+</div>
-                <p className="text-[10px] text-muted-foreground">Total Addressable</p>
+                <p className="text-[10px] text-muted-foreground">{t("marketValidation.totalAddressable")}</p>
               </div>
             </div>
           </div>
@@ -271,9 +270,9 @@ export default function MarketValidationPage() {
 
       <section className="py-12 px-4" data-testid="section-demand">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Demand Signals & Market Evidence</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("marketValidation.demandSectionTitle")}</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            Six independent data points validating urgent market demand for pan-African credit infrastructure
+            {t("marketValidation.demandSectionSubtitle")}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {DEMAND_SIGNALS.map((signal) => (
@@ -285,11 +284,11 @@ export default function MarketValidationPage() {
                       <h3 className="font-semibold text-sm">{signal.title}</h3>
                     </div>
                     <Badge variant="outline" className={signal.strength === "Very Strong" ? "bg-green-500/10 text-green-600 border-green-500/20 text-[10px]" : "bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px]"}>
-                      {signal.strength}
+                      {signal.strength === "Very Strong" ? t("marketValidation.strengthVeryStrong") : t("marketValidation.strengthStrong")}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed mb-3">{signal.evidence}</p>
-                  <p className="text-[10px] text-muted-foreground/70 italic">Source: {signal.source}</p>
+                  <p className="text-[10px] text-muted-foreground/70 italic">{t("marketValidation.sourceLabel")}: {signal.source}</p>
                 </CardContent>
               </Card>
             ))}
@@ -299,9 +298,9 @@ export default function MarketValidationPage() {
 
       <section className="py-12 px-4 bg-muted/30" data-testid="section-competitors">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Competitive Landscape Analysis</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("marketValidation.competitorSectionTitle")}</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            No existing player covers more than a single African region. Africa Credit Hub is the only pan-continental solution.
+            {t("marketValidation.competitorSectionSubtitle")}
           </p>
           <div className="space-y-3">
             {COMPETITIVE_LANDSCAPE.map((comp) => (
@@ -310,13 +309,13 @@ export default function MarketValidationPage() {
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
                     <div className="lg:col-span-2">
                       <h3 className="font-semibold text-sm">{comp.name}</h3>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">Coverage: {comp.coverage}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">{t("marketValidation.coverageLabel")}: {comp.coverage}</p>
                     </div>
                     <div className="lg:col-span-5">
                       <div className="flex items-start gap-2">
                         <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="text-[10px] font-medium text-red-600 mb-0.5">Their Limitation</p>
+                          <p className="text-[10px] font-medium text-red-600 mb-0.5">{t("marketValidation.limitationLabel")}</p>
                           <p className="text-xs text-muted-foreground">{comp.weakness}</p>
                         </div>
                       </div>
@@ -325,7 +324,7 @@ export default function MarketValidationPage() {
                       <div className="flex items-start gap-2">
                         <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
                         <div>
-                          <p className="text-[10px] font-medium text-green-600 mb-0.5">Our Advantage</p>
+                          <p className="text-[10px] font-medium text-green-600 mb-0.5">{t("marketValidation.advantageLabel")}</p>
                           <p className="text-xs text-muted-foreground">{comp.ourAdvantage}</p>
                         </div>
                       </div>
@@ -339,12 +338,8 @@ export default function MarketValidationPage() {
             <div className="flex items-start gap-3">
               <Target className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium">Key Takeaway</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Every existing competitor is confined to a single country or sub-region. None offer multi-currency support, 
-                  cross-border entity resolution, or alternative data scoring. Africa Credit Hub is the only platform designed from day one 
-                  for pan-African operation — creating a category of one.
-                </p>
+                <p className="text-sm font-medium">{t("marketValidation.keyTakeaway")}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("marketValidation.keyTakeawayBody")}</p>
               </div>
             </div>
           </div>
@@ -353,9 +348,9 @@ export default function MarketValidationPage() {
 
       <section className="py-12 px-4" data-testid="section-pricing-validation">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Pricing Validation Against Market Benchmarks</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("marketValidation.pricingSectionTitle")}</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            Every pricing tier validated against real African SaaS revenue data and comparable platforms
+            {t("marketValidation.pricingSectionSubtitle")}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {PRICING_VALIDATION.map((pv) => (
@@ -370,7 +365,7 @@ export default function MarketValidationPage() {
                       pv.verdict === "Conservative" ? "bg-green-500/10 text-green-600 border-green-500/20 text-[10px]" :
                       "bg-blue-500/10 text-blue-600 border-blue-500/20 text-[10px]"
                     }>
-                      {pv.verdict}
+                      {pv.verdict === "Conservative" ? t("marketValidation.verdictConservative") : pv.verdict === "Market-Standard" ? t("marketValidation.verdictStandard") : t("marketValidation.verdictAligned")}
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">{pv.marketRef}</p>
@@ -400,9 +395,9 @@ export default function MarketValidationPage() {
 
       <section className="py-12 px-4 bg-muted/30" data-testid="section-traction">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Traction & Milestone Roadmap</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("marketValidation.tractionSectionTitle")}</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            What's been built, what's next, and the path to market
+            {t("marketValidation.tractionSectionSubtitle")}
           </p>
           <div className="max-w-3xl mx-auto">
             <div className="space-y-2">
@@ -423,7 +418,7 @@ export default function MarketValidationPage() {
                     m.status === "next" ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20 text-[10px]" :
                     "text-[10px]"
                   }>
-                    {m.status === "complete" ? "Built" : m.status === "next" ? "Next" : "Vision"}
+                    {m.status === "complete" ? t("marketValidation.milestoneBuilt") : m.status === "next" ? t("marketValidation.milestoneNext") : t("marketValidation.milestoneVision")}
                   </Badge>
                 </div>
               ))}
@@ -434,9 +429,9 @@ export default function MarketValidationPage() {
 
       <section className="py-12 px-4" data-testid="section-why-now">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-2">Why Now — Convergence of Forces</h2>
+          <h2 className="text-2xl font-bold text-center mb-2">{t("marketValidation.whyNowTitle")}</h2>
           <p className="text-muted-foreground text-center mb-8 text-sm">
-            Five macro-trends creating a once-in-a-generation window for pan-African credit infrastructure
+            {t("marketValidation.whyNowSubtitle")}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {[
@@ -461,19 +456,17 @@ export default function MarketValidationPage() {
       <section className="py-16 px-4 bg-muted/30">
         <div className="max-w-3xl mx-auto text-center">
           <Shield className="w-12 h-12 mx-auto mb-4 text-primary" />
-          <h2 className="text-2xl font-bold mb-4">The Opportunity is Clear</h2>
+          <h2 className="text-2xl font-bold mb-4">{t("marketValidation.opportunityTitle")}</h2>
           <p className="text-muted-foreground mb-6 text-sm max-w-xl mx-auto">
-            A $47B market with mandatory demand, zero pan-African competitors, and a production-ready platform 
-            already covering all 54 countries. The question is not whether Africa needs credit infrastructure — 
-            it's who builds it first.
+            {t("marketValidation.opportunityBody")}
           </p>
           <div className="flex items-center justify-center gap-4 flex-wrap">
             <Button size="lg" onClick={() => navigate("/start-trial")} data-testid="button-cta-trial">
-              Start Free Trial
+              {t("marketValidation.ctaTrial")}
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
             <Button size="lg" variant="outline" onClick={() => navigate("/solutions")} data-testid="button-cta-solutions">
-              Platform Overview
+              {t("marketValidation.ctaOverview")}
             </Button>
           </div>
         </div>

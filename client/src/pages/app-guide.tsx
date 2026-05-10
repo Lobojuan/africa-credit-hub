@@ -379,15 +379,15 @@ export default function AppGuidePage() {
               <BookOpen className="w-5 h-5" style={{ color: primary }} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Step-by-Step Platform Guide</h1>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Pick your role to see exactly what you need to learn</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("appGuideExtended.pageTitle")}</h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t("appGuideExtended.pageSubtitle")}</p>
             </div>
           </div>
         </div>
 
         {/* Role Selector */}
         <div className="mb-8">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Filter by Role</p>
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">{t("appGuideExtended.filterByRole")}</p>
           <div className="flex flex-wrap gap-2">
             {roleButtons.map((rb) => {
               const isActive = selectedRole === rb.value;

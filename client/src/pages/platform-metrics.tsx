@@ -77,10 +77,10 @@ export default function PlatformMetricsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4" data-testid="metrics-error">
         <Activity className="w-10 h-10 text-destructive" />
-        <p className="text-muted-foreground">Failed to load platform metrics</p>
+        <p className="text-muted-foreground">{t("platformMetrics.failedToLoad")}</p>
         <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Retry
+          {t("platformMetrics.retry")}
         </Button>
       </div>
     );
@@ -92,8 +92,8 @@ export default function PlatformMetricsPage() {
     <div className="space-y-6" data-testid="platform-metrics-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Platform Metrics</h1>
-          <p className="text-muted-foreground text-sm mt-1">Business intelligence, investor KPIs, and operational analytics</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">{t("platformMetrics.pageTitle")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("platformMetrics.bizIntelSubtitle")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-metrics">
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -103,26 +103,26 @@ export default function PlatformMetricsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Monthly Revenue"
+          title={t("platformMetrics.monthlyRevenue")}
           value={`${cs}${(revenue.mrr || 0).toLocaleString()}`}
           subtitle={`ARR: ${cs}${(revenue.arr || 0).toLocaleString()}`}
           icon={DollarSign}
           trend="Recurring"
         />
         <MetricCard
-          title="Active Organizations"
+          title={t("platformMetrics.activeOrganizations")}
           value={organizations.active}
           subtitle={`${organizations.total} total | ${subscriptions.trialCount || 0} trials | ${subscriptions.churnedCount || 0} churned`}
           icon={Building2}
         />
         <MetricCard
-          title="Total Users"
+          title={t("platformMetrics.totalUsers")}
           value={users.total}
           subtitle={`${users.active} active, ${users.admins} admins`}
           icon={Users}
         />
         <MetricCard
-          title="API Requests Today"
+          title={t("platformMetrics.apiRequestsToday")}
           value={(api.todayRequests || 0).toLocaleString()}
           subtitle={`${api.totalRequests?.toLocaleString() || 0} all-time`}
           icon={Activity}
@@ -134,7 +134,7 @@ export default function PlatformMetricsPage() {
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Award className="w-4 h-4" />
-              Investor Readiness Scorecard
+              {t("platformMetrics.investorReadinessTitle")}
               <Badge className="ml-auto text-sm px-3" variant={investorReadiness.grade.startsWith("A") ? "default" : "secondary"}>
                 Grade: {investorReadiness.grade}
               </Badge>
@@ -182,7 +182,7 @@ export default function PlatformMetricsPage() {
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <Target className="w-4 h-4" />
-            Unit Economics & SaaS Metrics
+            {t("platformMetrics.unitEconomicsTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -248,7 +248,7 @@ export default function PlatformMetricsPage() {
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <Briefcase className="w-4 h-4" />
-            Valuation Estimate
+            {t("platformMetrics.valuationTitle")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -287,7 +287,7 @@ export default function PlatformMetricsPage() {
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
                 <ArrowUpRight className="w-4 h-4" />
-                12-Month Revenue Projection
+                {t("platformMetrics.revenueProjectionTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -310,7 +310,7 @@ export default function PlatformMetricsPage() {
             <CardHeader>
               <CardTitle className="text-sm flex items-center gap-2">
                 <TrendingDown className="w-4 h-4" />
-                Cohort Retention (6 Months)
+                {t("platformMetrics.cohortRetentionTitle")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -377,7 +377,7 @@ export default function PlatformMetricsPage() {
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
-              API Traffic (24h)
+              {t("platformMetrics.apiTrafficTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -398,7 +398,7 @@ export default function PlatformMetricsPage() {
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Activity className="w-4 h-4" />
-              Daily Request Volume (7d)
+              {t("platformMetrics.dailyVolumeTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -421,7 +421,7 @@ export default function PlatformMetricsPage() {
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <PieChart className="w-4 h-4" />
-              Subscription Breakdown
+              {t("platformMetrics.subscriptionTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -462,7 +462,7 @@ export default function PlatformMetricsPage() {
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
               <Server className="w-4 h-4" />
-              Top API Endpoints
+              {t("platformMetrics.topEndpointsTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>

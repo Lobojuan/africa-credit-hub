@@ -14,45 +14,55 @@ import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 import { Seo } from "@/components/seo";
 
 interface ValueProp { icon: typeof Banknote; title: string; body: string; }
-const VALUE_PROPS: ValueProp[] = [
-  { icon: TrendingUp, title: "Approve more, lose less", body: "Pull a unified credit report combining traditional bureau data, collateral history, and fiscal-receipt activity — the deepest applicant picture available in Africa." },
-  { icon: Zap, title: "240ms decision latency", body: "Real-time scoring, batch portfolio refresh, and webhook callbacks. No 24-hour bureau lag." },
-  { icon: ShieldCheck, title: "Regulator-ready by default", body: "Every report carries a consent ID, purpose, and audit trail. BoG, CBN, BCEAO, BEAC, CBK, BSL-formatted exports built in." },
-  { icon: Receipt, title: "See thin-file merchants", body: "Fiscal-receipt-derived VAT Activity Score (300–850) lets you safely lend to merchants with no traditional credit history." },
-  { icon: Network, title: "Cross-bureau lookup", body: "One query searches across all participating institutions. No duplicate inquiries, no blind spots." },
-  { icon: Database, title: "API + UI + bulk", body: "REST API, web console, batch CSV upload, webhook events. Plug in within a week." },
-];
-
-const STEPS = [
-  { n: 1, title: "Apply for institutional access", body: "Submit credentials and your central-bank lending license. Approval typically within 5 business days." },
-  { n: 2, title: "Provision API keys & users", body: "Get sandbox + production keys, invite analysts and risk officers, set RBAC." },
-  { n: 3, title: "Pull your first report", body: "Search by national ID, business registration, or phone. Receive a full credit report with optional VAT Activity, collateral, and inter-bureau data." },
-  { n: 4, title: "Scale with batch & webhooks", body: "Refresh portfolios overnight. Subscribe to default events. Run regulator exports monthly." },
-];
-
-const REPORT_INCLUDES = [
-  "Credit score (300–850) with reason codes",
-  "12-month payment history across all participating lenders",
-  "Active and closed credit accounts",
-  "Inquiries log (last 24 months)",
-  "Disputes and resolutions",
-  "Court judgments and dishonoured cheques",
-  "Collateral interests filed against the borrower",
-  "VAT Activity Score (where consented)",
-  "Cross-bureau matches (where consented)",
-  "Identity verification result",
-];
-
-const PRICING_TIERS = [
-  { tier: "Pilot", price: "Free 30 days", desc: "Up to 500 reports, sandbox + production, all features.", testid: "tier-pilot" },
-  { tier: "Growth", price: "From $0.45 / report", desc: "Pay-as-you-go, volume tiers, monthly billing.", testid: "tier-growth" },
-  { tier: "Enterprise", price: "Custom", desc: "Annual commitment, SLA, dedicated success manager, on-prem option.", testid: "tier-enterprise" },
-];
+interface Step { n: number; title: string; body: string; }
+interface PricingTier { tier: string; price: string; desc: string; testid: string; }
 
 export default function ForLendersPage() {
   const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const year = new Date().getFullYear();
+
+  const VALUE_PROPS: ValueProp[] = [
+    { icon: TrendingUp, title: t("forLenders.prop1Title"), body: t("forLenders.prop1Body") },
+    { icon: Zap,        title: t("forLenders.prop2Title"), body: t("forLenders.prop2Body") },
+    { icon: ShieldCheck,title: t("forLenders.prop3Title"), body: t("forLenders.prop3Body") },
+    { icon: Receipt,    title: t("forLenders.prop4Title"), body: t("forLenders.prop4Body") },
+    { icon: Network,    title: t("forLenders.prop5Title"), body: t("forLenders.prop5Body") },
+    { icon: Database,   title: t("forLenders.prop6Title"), body: t("forLenders.prop6Body") },
+  ];
+
+  const STEPS: Step[] = [
+    { n: 1, title: t("forLenders.step1Title"), body: t("forLenders.step1Body") },
+    { n: 2, title: t("forLenders.step2Title"), body: t("forLenders.step2Body") },
+    { n: 3, title: t("forLenders.step3Title"), body: t("forLenders.step3Body") },
+    { n: 4, title: t("forLenders.step4Title"), body: t("forLenders.step4Body") },
+  ];
+
+  const REPORT_INCLUDES: string[] = [
+    t("forLenders.reportItem1"),
+    t("forLenders.reportItem2"),
+    t("forLenders.reportItem3"),
+    t("forLenders.reportItem4"),
+    t("forLenders.reportItem5"),
+    t("forLenders.reportItem6"),
+    t("forLenders.reportItem7"),
+    t("forLenders.reportItem8"),
+    t("forLenders.reportItem9"),
+    t("forLenders.reportItem10"),
+  ];
+
+  const PRICING_TIERS: PricingTier[] = [
+    { tier: t("forLenders.tierPilot"),      price: t("forLenders.tierPilotPrice"),      desc: t("forLenders.tierPilotDesc"),      testid: "tier-pilot" },
+    { tier: t("forLenders.tierGrowth"),     price: t("forLenders.tierGrowthPrice"),     desc: t("forLenders.tierGrowthDesc"),     testid: "tier-growth" },
+    { tier: t("forLenders.tierEnterprise"), price: t("forLenders.tierEnterprisePrice"), desc: t("forLenders.tierEnterpriseDesc"), testid: "tier-enterprise" },
+  ];
+
+  const STATS = [
+    { icon: Activity,    value: "240ms", label: t("forLenders.statLatency") },
+    { icon: TrendingUp,  value: "94.2%", label: t("forLenders.statAccuracy") },
+    { icon: Globe,       value: "54",    label: t("forLenders.statCountries") },
+    { icon: ShieldCheck, value: "100%",  label: t("forLenders.statAudited") },
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-slate-50 dark:from-emerald-950/30 dark:via-slate-900 dark:to-slate-950" data-testid="page-for-lenders">
@@ -78,33 +88,28 @@ export default function ForLendersPage() {
             <Link href="/api-docs" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-api-docs">API docs</Button></Link>
             <ThemeToggle />
             <LanguageSwitcher />
-            <Link href="/contact-sales"><Button size="sm" data-testid="button-talk-to-sales">Talk to sales</Button></Link>
+            <Link href="/contact-sales"><Button size="sm" data-testid="button-talk-to-sales">{t("forLenders.contactCta")}</Button></Link>
           </nav>
         </div>
       </header>
 
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-20 pb-12 text-center">
-        <Badge className="mb-5 bg-emerald-600 text-white"><Banknote className="w-3 h-3 mr-1.5" />Built for banks, MFIs, fintechs & lessors</Badge>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-slate-50 leading-[1.05]" data-testid="text-hero-title">
-          Approve more borrowers.<br className="hidden md:inline" /> Lose fewer naira.
+        <Badge className="mb-5 bg-emerald-600 text-white"><Banknote className="w-3 h-3 mr-1.5" />{t("forLenders.badgeLabel")}</Badge>
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-slate-900 dark:text-slate-50 leading-[1.05] whitespace-pre-line" data-testid="text-hero-title">
+          {t("forLenders.headline")}
         </h1>
         <p className="mt-6 text-base md:text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto" data-testid="text-hero-subtitle">
-          The most complete view of an African applicant: credit history, collateral interests, and fiscal-receipt activity — through one regulator-ready API.
+          {t("forLenders.subheadline")}
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/start-trial"><Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700" data-testid="button-cta-trial">Start a 30-day pilot <ArrowRight className="w-4 h-4" /></Button></Link>
-          <Link href="/api-docs"><Button size="lg" variant="outline" data-testid="button-cta-api"><FileSearch className="w-4 h-4 mr-2" />Read the API docs</Button></Link>
+          <Link href="/start-trial"><Button size="lg" className="gap-2 bg-emerald-600 hover:bg-emerald-700" data-testid="button-cta-trial">{t("forLenders.ctaTrial")} <ArrowRight className="w-4 h-4" /></Button></Link>
+          <Link href="/api-docs"><Button size="lg" variant="outline" data-testid="button-cta-api"><FileSearch className="w-4 h-4 mr-2" />{t("forLenders.ctaApiDocs")}</Button></Link>
         </div>
       </section>
 
       <section className="max-w-6xl mx-auto px-4 md:px-6 pb-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { icon: Activity, value: "240ms", label: "decision latency" },
-            { icon: TrendingUp, value: "94.2%", label: "match accuracy" },
-            { icon: Globe, value: "54", label: "countries covered" },
-            { icon: ShieldCheck, value: "100%", label: "audit-logged" },
-          ].map((s) => {
+          {STATS.map((s) => {
             const Icon = s.icon;
             return (
               <Card key={s.label} className="border-slate-200/80 dark:border-slate-800" data-testid={`stat-${s.label.replace(/\s+/g, "-")}`}>
@@ -120,7 +125,7 @@ export default function ForLendersPage() {
       </section>
 
       <section className="max-w-6xl mx-auto px-4 md:px-6 pb-14">
-        <h2 className="text-xs uppercase tracking-widest font-semibold text-slate-500 dark:text-slate-400 text-center mb-6">Why lenders pick us</h2>
+        <h2 className="text-xs uppercase tracking-widest font-semibold text-slate-500 dark:text-slate-400 text-center mb-6">{t("forLenders.whyUsTitle")}</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {VALUE_PROPS.map((v) => {
             const Icon = v.icon;
@@ -142,8 +147,8 @@ export default function ForLendersPage() {
       <section className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 border-y border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-14">
           <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">From sign-up to first decision in a week</h2>
-            <p className="mt-3 text-slate-600 dark:text-slate-300">Most lenders are pulling live reports within 5 business days of approval.</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{t("forLenders.stepsHeading")}</h2>
+            <p className="mt-3 text-slate-600 dark:text-slate-300">{t("forLenders.stepsSubtitle")}</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {STEPS.map((s) => (
@@ -162,8 +167,8 @@ export default function ForLendersPage() {
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-2">What's in a credit report</h2>
-            <p className="text-slate-600 dark:text-slate-300 mb-5">Single API call returns the full picture — opt-in fields are gated by active consent and tagged in the response.</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-2">{t("forLenders.reportSectionTitle")}</h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-5">{t("forLenders.reportSubtitle")}</p>
             <Card className="border-slate-200/80 dark:border-slate-800">
               <CardContent className="p-0 divide-y divide-slate-200 dark:divide-slate-800">
                 {REPORT_INCLUDES.map((line, i) => (
@@ -176,8 +181,8 @@ export default function ForLendersPage() {
             </Card>
           </div>
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-2">Pricing</h2>
-            <p className="text-slate-600 dark:text-slate-300 mb-5">Transparent. No setup fees. No surprise add-ons.</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-2">{t("forLenders.pricingSectionTitle")}</h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-5">{t("forLenders.pricingSubtitle")}</p>
             <div className="space-y-3">
               {PRICING_TIERS.map((p) => (
                 <Card key={p.tier} className="border-slate-200/80 dark:border-slate-800" data-testid={p.testid}>
@@ -192,8 +197,8 @@ export default function ForLendersPage() {
               ))}
             </div>
             <div className="mt-5 flex gap-3">
-              <Link href="/pricing"><Button variant="outline" size="sm" data-testid="button-full-pricing">See full pricing</Button></Link>
-              <Link href="/contact-sales"><Button size="sm" data-testid="button-talk-pricing">Talk to sales</Button></Link>
+              <Link href="/pricing"><Button variant="outline" size="sm" data-testid="button-full-pricing">{t("forLenders.linkFullPricing")}</Button></Link>
+              <Link href="/contact-sales"><Button size="sm" data-testid="button-talk-pricing">{t("forLenders.contactCta")}</Button></Link>
             </div>
           </div>
         </div>
@@ -204,13 +209,11 @@ export default function ForLendersPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
             <div className="md:col-span-2">
               <BarChart3 className="w-10 h-10 text-emerald-600 mb-3" />
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-3">Lend to merchants you'd previously have to decline</h2>
-              <p className="text-slate-600 dark:text-slate-300 mb-4">
-                Verified VAT receipts from each country's tax authority — branded <em>Loto Fiscal</em> in Côte d'Ivoire and Francophone markets, <em>Verified Receipts</em> elsewhere (FIRS in Nigeria, KRA in Kenya, GRA in Ghana, SARS in South Africa, RRA in Rwanda, and so on across all 54 markets) — compose a 300–850 score for thin-file merchants. With consent, you see monthly turnover, frequency, growth trend, and reason codes in the merchant's local currency — the same way you'd read a traditional credit report.
-              </p>
+              <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-3">{t("forLenders.merchantTitle")}</h2>
+              <p className="text-slate-600 dark:text-slate-300 mb-4">{t("forLenders.merchantBody")}</p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link href="/financial-inclusion"><Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" data-testid="button-see-impact">See the impact <ArrowRight className="w-4 h-4" /></Button></Link>
-                <Link href="/loto"><Button variant="outline" data-testid="button-about-loto">About Loto Fiscal</Button></Link>
+                <Link href="/financial-inclusion"><Button className="gap-2 bg-emerald-600 hover:bg-emerald-700" data-testid="button-see-impact">{t("forLenders.merchantCtaImpact")} <ArrowRight className="w-4 h-4" /></Button></Link>
+                <Link href="/loto"><Button variant="outline" data-testid="button-about-loto">{t("forLenders.merchantCtaLoto")}</Button></Link>
               </div>
             </div>
             <div className="space-y-3">
@@ -223,18 +226,16 @@ export default function ForLendersPage() {
 
       <section className="max-w-6xl mx-auto px-4 md:px-6 py-16 text-center">
         <Lock className="w-10 h-10 mx-auto text-slate-700 dark:text-slate-300 mb-3" />
-        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-3">Compliance, baked in.</h2>
-        <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">
-          PII encrypted at rest. MFA & RBAC for every operator. Consent ID and purpose recorded for every cross-product call. Blockchain-anchored audit trail. Regulator-formatted exports for BoG, CBN, BCEAO, BEAC, CBK, BSL.
-        </p>
-        <Link href="/security"><Button size="lg" variant="outline" className="gap-2" data-testid="button-security"><ShieldCheck className="w-4 h-4" />Read the security & compliance brief</Button></Link>
+        <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50 mb-3">{t("forLenders.complianceTitle")}</h2>
+        <p className="text-slate-600 dark:text-slate-300 max-w-2xl mx-auto mb-6">{t("forLenders.complianceBody")}</p>
+        <Link href="/security"><Button size="lg" variant="outline" className="gap-2" data-testid="button-security"><ShieldCheck className="w-4 h-4" />{t("forLenders.complianceCta")}</Button></Link>
       </section>
 
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <Building2 className="w-4 h-4" />
-            <span>© {year} {brand}. Built for African lenders.</span>
+            <span>© {year} {brand}. {t("forLenders.footerTagline")}</span>
           </div>
           <div className="flex items-center gap-4 text-xs">
             <Link href="/" className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Home</Link>
