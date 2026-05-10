@@ -4399,10 +4399,10 @@ export class DatabaseStorage implements IStorage {
   }): Promise<number> {
     const r = await db.execute<{ c: number }>(sql`
       SELECT COUNT(r.id)::int AS c
-      FROM users u
-      INNER JOIN loto_receipts r ON r.consumer_user_id = u.id
+      FROM loto_consumer_messaging_prefs p
+      INNER JOIN loto_receipts r ON r.consumer_user_id = p.user_id
       INNER JOIN loto_merchants m ON m.id = r.merchant_id
-      WHERE u.phone = ${args.phone}
+      WHERE p.verified_phone = ${args.phone}
         AND m.country_code = ${args.countryCode}
         AND r.issued_at >= ${args.periodStart}
         AND r.issued_at <= ${args.periodEnd}
