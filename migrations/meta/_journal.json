@@ -127,6 +127,13 @@
       "when": 1778426539578,
       "tag": "0017_quick_zzzax",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1778426539579,
+      "tag": "0018_user_allowed_products",
+      "breakpoints": true
     }
   ]
 }
