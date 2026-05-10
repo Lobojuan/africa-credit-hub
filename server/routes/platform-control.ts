@@ -16,7 +16,13 @@ import { ReplitConnectors } from "@replit/connectors-sdk";
 
 const logger = createLogger("platform-control");
 
-const MASTER_PASSWORD = process.env.MASTER_CONTROL_PASSWORD || "";
+const MASTER_PASSWORD = process.env.MASTER_CONTROL_PASSWORD ?? "";
+if (!MASTER_PASSWORD) {
+  if (process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true") {
+    throw new Error("CRITICAL: MASTER_CONTROL_PASSWORD must be set in production — platform control panel is inaccessible without it.");
+  }
+  console.warn("[SECURITY] WARNING: MASTER_CONTROL_PASSWORD not set — platform control panel login will always fail. Set this secret before deploying.");
+}
 const SESSION_TOKEN_EXPIRY_MS = 4 * 60 * 60 * 1000;
 const activeSessions = new Map<string, { expiresAt: number }>();
 

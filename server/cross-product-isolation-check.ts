@@ -90,8 +90,7 @@ export function runCrossProductIsolationCheck(opts: { failOnViolation?: boolean 
       `Add the file to ALLOWLIST in server/cross-product-isolation-check.ts only if it is a sanctioned\n` +
       `internal collaborator of the gateway.\n`;
     if (opts.failOnViolation) {
-      console.error(msg);
-      process.exit(1);
+      throw new Error(msg);
     } else {
       console.warn(msg);
     }

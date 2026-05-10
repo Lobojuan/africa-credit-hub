@@ -82,7 +82,8 @@ export function decryptPII(ciphertext: string): string {
     let decrypted = decipher.update(encrypted, "hex", "utf8");
     decrypted += decipher.final("utf8");
     return decrypted;
-  } catch {
+  } catch (e: any) {
+    console.error("[Encryption] decryptPII failed — returning raw value. Check PII_ENCRYPTION_KEY/SALT:", e?.message);
     return ciphertext;
   }
 }

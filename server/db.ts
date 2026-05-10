@@ -43,6 +43,8 @@ export function startPoolHealthCheck(intervalMs = 60000) {
   }, intervalMs);
 }
 
-pool.query("CREATE EXTENSION IF NOT EXISTS pg_trgm").catch(() => {});
+pool.query("CREATE EXTENSION IF NOT EXISTS pg_trgm").catch((err: any) => {
+  console.warn("[DB] pg_trgm extension unavailable:", err.message);
+});
 
 export const db = drizzle(pool, { schema });

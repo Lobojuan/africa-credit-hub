@@ -5,6 +5,9 @@ import { getActiveCountryName } from "../country-mode";
 import { pool, db } from "../db";
 import { sql, and, or, eq } from "drizzle-orm";
 import { dataSharingAgreements } from "../../shared/schema";
+import crypto from "crypto";
+import { createLogger } from "../logger";
+const middlewareLogger = createLogger("middleware");
 
 export const rateLimitKeyGenerator = (req: Request) => {
   const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
@@ -352,10 +355,6 @@ export async function validateBorrowerCountry(borrowerId: string, req: Request):
   }
   return false;
 }
-
-import crypto from "crypto";
-import { createLogger } from "../logger";
-const middlewareLogger = createLogger("middleware");
 
 export function safeErrorMessage(e: any, statusCode: number = 500): string {
   const msg = e?.message || "An error occurred";
