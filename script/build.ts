@@ -156,6 +156,19 @@ async function buildAll() {
     "telco-scoring",
     "terms",
     "training",
+    "command-center-system",
+    "command-center-users",
+    "command-center-billing",
+    "command-center-apikeys",
+    "command-center-audit",
+    "command-center-dataquality",
+    "command-center-retention",
+    "command-center-revenue-split",
+    "command-center-settlements",
+    "command-center-wallets",
+    "loto-pos",
+    "loto-admin",
+    "admin",
   ];
   console.log("creating SPA fallback routes...");
   for (const route of spaRoutes) {
