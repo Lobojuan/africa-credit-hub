@@ -47,7 +47,6 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 import { ProductSwitcher } from "@/components/product-switcher";
-import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { WorkspaceThemeProvider } from "@/components/workspace-theme-provider";
 import { CrossProductInbox } from "@/components/cross-product-inbox";
 const Dashboard = lazy(() => import("@/pages/dashboard"));
@@ -705,7 +704,7 @@ function AuthenticatedApp() {
               )}
               {(user.role === "super_admin" || user.role === "platform_owner") && <CountrySelector />}
               {(user.role === "super_admin" || user.role === "platform_owner") && <OrgSwitcher />}
-              <WorkspaceSwitcher variant="compact" />
+
               {user?.organization?.name && user.role !== "super_admin" && user.role !== "platform_owner" && (
                 <span className="text-base text-muted-foreground inline-flex items-center gap-2" data-testid="text-org-context">
                   <Building2 className="w-5 h-5" />
