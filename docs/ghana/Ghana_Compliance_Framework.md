@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Regulatory Compliance Framework
 
 **Africa Credit Hub**
-**Version 2.5 | Bank of Ghana CRB Standards Compliance | CDH v2.5**
+**Version 2.5 | Bank of Ghana CRB Standards Compliance | CDH v2.8**
 
 ---
 

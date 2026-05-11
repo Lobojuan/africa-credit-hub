@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Data Connections and Exchange Policy
 
 **Africa Credit Hub**
-**Version 2.5 | Regulatory Data Exchange Framework | CDH v2.5**
+**Version 2.5 | Regulatory Data Exchange Framework | CDH v2.8**
 
 ---
 

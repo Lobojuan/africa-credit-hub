@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Data Protection and Privacy Policy
 
 **Africa Credit Hub**
-**Version 2.5 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.5**
+**Version 2.5 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.8**
 
 ---
 

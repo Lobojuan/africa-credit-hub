@@ -1,4 +1,4 @@
-# CDH v2.5 — Change Management Policy
+# CDH v2.8 — Change Management Policy
 
 **Document Classification:** INTERNAL
 **Version:** 2.5.0
@@ -112,4 +112,4 @@ Changes affecting regulatory compliance require:
 
 ---
 
-*This document is maintained as part of CDH v2.5 and is subject to version control.*
+*This document is maintained as part of CDH v2.8 and is subject to version control.*

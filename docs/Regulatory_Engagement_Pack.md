@@ -14,7 +14,7 @@
 
 ### 1.1 System Summary
 
-The Pan-African Credit Registry System (CDH v2.5) is a multi-tenant, SaaS credit bureau platform designed to serve all 54 African countries. It provides financial institutions with comprehensive credit reporting, risk intelligence, and regulatory compliance capabilities.
+The Pan-African Credit Registry System (CDH v2.8) is a multi-tenant, SaaS credit bureau platform designed to serve all 54 African countries. It provides financial institutions with comprehensive credit reporting, risk intelligence, and regulatory compliance capabilities.
 
 | Attribute | Detail |
 |-----------|--------|

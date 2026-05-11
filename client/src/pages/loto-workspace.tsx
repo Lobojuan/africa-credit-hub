@@ -120,7 +120,7 @@ export default function LotoWorkspacePage() {
           <TabsTrigger value="receipts" data-testid="tab-receipts">{t("loto.tabs.receipts", "Receipts")}</TabsTrigger>
           <TabsTrigger value="spending" data-testid="tab-spending">{t("loto.tabs.spending", "Spending")}</TabsTrigger>
           <TabsTrigger value="credit-profile" data-testid="tab-credit-profile">{t("loto.tabs.creditProfile", "Build Credit")}</TabsTrigger>
-          <TabsTrigger value="notifications" data-testid="tab-notifications">{t("loto.tabs.notifications", "Notifications")}</TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications">{t("lotoNotifications.tabTitle")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="lottery" className="mt-4">
@@ -358,10 +358,10 @@ function LotoMessagingPreferences() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/loto/messaging-prefs"] });
-      toast({ title: t("loto.messagingPrefs.savedTitle", "Preferences saved") });
+      toast({ title: t("lotoNotifications.savedToast") });
     },
     onError: (e: unknown) => toast({
-      title: t("loto.messagingPrefs.errorTitle", "Could not save"),
+      title: t("lotoNotifications.errorToast"),
       description: e instanceof Error ? e.message : String(e),
       variant: "destructive",
     }),
@@ -418,8 +418,7 @@ function LotoMessagingPreferences() {
     return (
       <Card data-testid="card-messaging-prefs-unavailable">
         <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          {t("loto.messagingPrefs.consumerOnly",
-            "Messaging preferences are only available to consumer accounts enrolled in the Loto Fiscal pilot.")}
+          {t("loto.messagingPrefs.consumerOnly", "Messaging preferences are only available to consumer accounts enrolled in the Loto Fiscal pilot.")}
         </CardContent>
       </Card>
     );
@@ -431,17 +430,16 @@ function LotoMessagingPreferences() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-amber-600" />
-          {t("loto.messagingPrefs.title", "How we contact you")}
+          {t("lotoNotifications.prefTitle")}
         </CardTitle>
         <CardDescription>
-          {t("loto.messagingPrefs.subtitle",
-            "Choose how the Loto Fiscal pilot reaches you. Winner notifications always send by SMS to your verified phone — only marketing-style reminders honour the opt-out below.")}
+          {t("lotoNotifications.prefSubtitle")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="prefs-phone">
-            {t("loto.messagingPrefs.phone", "Phone number (E.164, e.g. +22507000000)")}
+            {t("lotoNotifications.phoneLabel")}
           </label>
 
           {prefs.verifiedAt && prefs.verifiedPhone && !isChangingPhone ? (
@@ -545,7 +543,7 @@ function LotoMessagingPreferences() {
 
         <div className="space-y-2">
           <label className="text-sm font-medium" htmlFor="prefs-lang">
-            {t("loto.messagingPrefs.language", "Preferred language for SMS")}
+            {t("lotoNotifications.languageLabel")}
           </label>
           <select
             id="prefs-lang"
@@ -564,11 +562,8 @@ function LotoMessagingPreferences() {
 
         <div className="flex items-center justify-between border rounded-md p-3">
           <div className="flex-1 pr-3">
-            <p className="text-sm font-medium">{t("loto.messagingPrefs.optOutTitle", "Pause draw reminders")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("loto.messagingPrefs.optOutBody",
-                "Stops the T-24h reminder SMS before each draw. Winner notifications and prize-claim instructions are still sent.")}
-            </p>
+            <p className="text-sm font-medium">{t("lotoNotifications.optOutLabel")}</p>
+            <p className="text-xs text-muted-foreground">{t("lotoNotifications.optOutNote")}</p>
           </div>
           <Switch
             checked={prefs.optOutReminders}
@@ -580,11 +575,8 @@ function LotoMessagingPreferences() {
 
         <Alert>
           <ShieldAlert className="w-4 h-4" />
-          <AlertTitle>{t("loto.messagingPrefs.demoTitle", "Demo mode — no real SMS sent")}</AlertTitle>
-          <AlertDescription>
-            {t("loto.messagingPrefs.demoBody",
-              "This pilot environment uses a simulated SMS adapter. Every outbound message is logged so administrators can audit delivery, but no message reaches a real handset.")}
-          </AlertDescription>
+          <AlertTitle>{t("lotoNotifications.demoModeTitle")}</AlertTitle>
+          <AlertDescription>{t("lotoNotifications.demoModeBody")}</AlertDescription>
         </Alert>
       </CardContent>
     </Card>

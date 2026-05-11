@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Service Level Agreement (SLA)
 
 **Africa Credit Hub**
-**Version 2.5 | Effective Date: January 2026 | CDH v2.5**
+**Version 2.5 | Effective Date: January 2026 | CDH v2.8**
 **Regulatory Framework: Credit Reporting Act, 2007 (Act 726)**
 
 ---

@@ -1,4 +1,4 @@
-# CDH v2.5 — Penetration Test Readiness Report
+# CDH v2.8 — Penetration Test Readiness Report
 
 **Document Classification:** CONFIDENTIAL
 **Version:** 2.5.0
@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-This document details the security controls implemented in CDH v2.5 and their readiness for formal penetration testing by a certified third-party security firm.
+This document details the security controls implemented in CDH v2.8 and their readiness for formal penetration testing by a certified third-party security firm.
 
 ## 2. Authentication Security Controls
 
@@ -149,4 +149,4 @@ This document details the security controls implemented in CDH v2.5 and their re
 
 ---
 
-*This document is maintained as part of CDH v2.5 and is subject to version control.*
+*This document is maintained as part of CDH v2.8 and is subject to version control.*

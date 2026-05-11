@@ -26,7 +26,8 @@ export default function TermsOfServicePage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="terms-page">
         <h1 className="text-3xl font-bold text-foreground mb-2">{t("legal.termsTitle")}</h1>
-        <p className="text-sm text-muted-foreground mb-8">{t("legal.lastUpdated", { date: "April 2, 2026" })}</p>
+        <p className="text-sm text-muted-foreground mb-2">{t("legal.lastUpdated", { date: "April 2, 2026" })}</p>
+        <p className="text-xs text-muted-foreground/70 italic mb-8">{t("legalPages.englishOnly")}</p>
 
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-8">
           <section>

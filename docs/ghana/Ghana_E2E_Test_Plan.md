@@ -1,7 +1,7 @@
 # Ghana Credit Registry — End-to-End Test Plan
 
 **Africa Credit Hub**
-**Version 2.5 | BoG CRB Standards Compliance Testing | CDH v2.5**
+**Version 2.5 | BoG CRB Standards Compliance Testing | CDH v2.8**
 
 ---
 

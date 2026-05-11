@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
+import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertCircle, Home } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function NotFound() {
@@ -15,6 +17,14 @@ export default function NotFound() {
             <h1 className="text-2xl font-bold text-foreground">{t("notFound.title")}</h1>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">{t("notFound.subtitle")}</p>
+          <div className="mt-6">
+            <Link href="/">
+              <Button variant="outline" className="gap-2" data-testid="link-back-home">
+                <Home className="w-4 h-4" />
+                {t("notFound.backHome")}
+              </Button>
+            </Link>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -1,7 +1,7 @@
 # Ghana Credit Registry — API Integration Guide
 
 **Africa Credit Hub**
-**Version 2.5 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.5**
+**Version 2.5 | Bank of Ghana CRB v1.1 Compliant API | CDH v2.8**
 
 ---
 

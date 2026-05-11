@@ -11,7 +11,7 @@
 
 ## 1. Executive Summary
 
-This guide details the data protection controls, policies, and compliance mechanisms implemented within the Pan-African Credit Registry System (CDH v2.5). The platform processes personal and financial data of individuals and businesses across 54 African jurisdictions and is designed to comply with the full spectrum of continental data protection legislation.
+This guide details the data protection controls, policies, and compliance mechanisms implemented within the Pan-African Credit Registry System (CDH v2.8). The platform processes personal and financial data of individuals and businesses across 54 African jurisdictions and is designed to comply with the full spectrum of continental data protection legislation.
 
 The system's data protection architecture is built on four pillars:
 

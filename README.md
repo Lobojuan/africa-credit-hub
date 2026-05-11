@@ -3,11 +3,22 @@
   <p align="center"><strong>Pan-African Credit Registry Infrastructure</strong></p>
   <p align="center">
     Enterprise-grade, multi-tenant SaaS credit data hub serving all 54 African countries,<br/>
-    42+ currencies, and 5 African Union languages.
+    42+ currencies, and 8 languages (EN, FR, PT, AR, SW, ES, zh-CN, zh-TW).
   </p>
 </p>
 
 ---
+
+## What's New in v2.8
+
+| Area | Change |
+|---|---|
+| **i18n Complete** | All 120 pages use useTranslation across 8 languages |
+| **Loto Notifications** | SMS/USSD/push notification system (Task #286): 6 templates × 5 languages, USSD state machine, retry worker with exponential backoff, consumer Notifications tab, admin delivery dashboard |
+| **Command Center** | 11 routed sub-pages: System, Settings, Users, Billing, API Keys, Audit, Data Quality, Retention, Revenue Split, Settlements, Wallets |
+| **Loto POS & Devices** | /loto-pos and /loto/admin/devices pages live |
+| **Security** | PII_ENCRYPTION_KEY + PII_ENCRYPTION_SALT validated at startup. MASTER_CONTROL_PASSWORD required in production |
+| **Migrations** | Sequential journal 0000–0018, no duplicate prefixes |
 
 ## Overview
 

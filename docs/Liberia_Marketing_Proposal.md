@@ -80,7 +80,7 @@ The World Bank's Doing Business indicators highlight credit information systems 
 
 ## 3. Solution Overview
 
-### CDH v2.5 Platform at a Glance
+### CDH v2.8 Platform at a Glance
 
 | Feature | Description |
 |---------|-------------|
@@ -96,7 +96,7 @@ The World Bank's Doing Business indicators highlight credit information systems 
 
 ### Platform Screenshots
 
-The CDH v2.5 platform provides an intuitive, modern interface designed for financial professionals:
+The CDH v2.8 platform provides an intuitive, modern interface designed for financial professionals:
 
 - **Dashboard**: Real-time portfolio analytics with drill-down capabilities
 - **Borrower Profiles**: 360-degree view of individual and commercial borrowers
@@ -181,7 +181,7 @@ Our credit reports follow international best practices and include the following
 
 ### 5.1 CBL Credit Reference Bureau Regulations Compliance
 
-| Regulation Area | CBL Requirement | CDH v2.5 Status | Notes |
+| Regulation Area | CBL Requirement | CDH v2.8 Status | Notes |
 |----------------|-----------------|------------------|-------|
 | Licensing & Registration | CRB must be licensed by CBL | Ready for Application | Platform meets all technical requirements |
 | Data Collection Scope | All licensed financial institutions must submit data | Supported | Automated submission tracking and reminders |
@@ -229,7 +229,7 @@ Based on our assessment against CBL regulations and international standards:
                      +------------+--------------+
                                   |
                      +------------v--------------+
-                     |   CDH v2.5 Platform        |
+                     |   CDH v2.8 Platform        |
                      |   (Cloud-Hosted SaaS)      |
                      |                            |
                      |  +--------+  +---------+  |
@@ -382,7 +382,7 @@ Each credit score is accompanied by transparent reason codes explaining the key 
 
 ### 9.1 Currency Support
 
-The CDH v2.5 platform supports all currencies relevant to Liberia's economic environment:
+The CDH v2.8 platform supports all currencies relevant to Liberia's economic environment:
 
 | Currency | Code | Use Case |
 |----------|------|----------|
@@ -468,7 +468,7 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 
 ### 11.3 Value Proposition
 
-| Without CDH v2.5 | With CDH v2.5 |
+| Without CDH v2.8 | With CDH v2.8 |
 |-------------------|---------------|
 | NPL ratio 15-25% | Target NPL ratio 8-12% |
 | Manual credit checks (2-5 days) | Instant automated credit reports |

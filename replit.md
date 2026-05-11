@@ -1,5 +1,8 @@
 # Africa Credit Hub — Compressed
 
+## Platform Version: CDH v2.8
+All 120 pages i18n-complete. Loto Fiscal SMS/USSD notification system live (Task #286). Language switcher active on every page including public-facing pages.
+
 ## Overview
 This project is a web-based Pan-African Credit Registry System (Africa Credit Hub) designed to centralize credit information, manage borrower records, and support credit risk assessment for financial institutions across Africa. It handles multiple African currencies plus USD/EUR/GBP and major global currencies, enforces jurisdiction-specific data retention, ensures regulatory compliance, and facilitates cross-border entity resolution. The system aims to bolster financial stability and responsible lending through robust security, adherence to regulatory workflows, fault tolerance, multi-tenant SaaS capabilities, AI-powered portfolio intelligence, blockchain audit anchoring, and a consumer self-service portal. The system is designed for scalability, supporting over 10 million records and offers transaction-based monetization with a two-tier revenue split and a comprehensive settlement and payout system. It includes an investor-focused competitive intelligence section highlighting its market position and advantages.
 

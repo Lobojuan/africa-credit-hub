@@ -414,7 +414,7 @@ export default function AppGuidePage() {
           {selectedRole !== "all" && (
             <div className={`mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${ROLE_CONFIG[selectedRole as UserRole].bg} ${ROLE_CONFIG[selectedRole as UserRole].color}`}>
               <Lightbulb className="w-4 h-4 flex-shrink-0" />
-              {ROLE_CONFIG[selectedRole as UserRole].description}
+              {t(`appGuideRoles.${selectedRole as UserRole}Desc`)}
             </div>
           )}
         </div>

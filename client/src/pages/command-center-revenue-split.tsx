@@ -100,7 +100,7 @@ export function CommandCenterRevenueSplitTab() {
     },
   });
 
-  const t = data?.totals;
+  const totals = data?.totals;
   const bureaus = data?.bureaus || [];
   const trend = data?.monthlyTrend || [];
 
@@ -125,33 +125,33 @@ export function CommandCenterRevenueSplitTab() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
             <PiggyBank className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-emerald-400" data-testid="text-platform-revenue-month">{fmt(t?.monthPlatformCents || 0, cs)}</p>
+            <p className="text-lg font-bold text-emerald-400" data-testid="text-platform-revenue-month">{fmt(totals?.monthPlatformCents || 0, cs)}</p>
             <p className="text-[10px] text-muted-foreground">Your Revenue (This Month)</p>
           </div>
           <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-3 text-center">
             <Building2 className="w-4 h-4 text-blue-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-blue-400" data-testid="text-bureau-revenue-month">{fmt(t?.monthBureauCents || 0, cs)}</p>
+            <p className="text-lg font-bold text-blue-400" data-testid="text-bureau-revenue-month">{fmt(totals?.monthBureauCents || 0, cs)}</p>
             <p className="text-[10px] text-muted-foreground">Bureau Revenue (This Month)</p>
           </div>
           <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-center">
             <DollarSign className="w-4 h-4 text-emerald-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-emerald-400" data-testid="text-platform-revenue-all">{fmt(t?.allTimePlatformCents || 0, cs)}</p>
+            <p className="text-lg font-bold text-emerald-400" data-testid="text-platform-revenue-all">{fmt(totals?.allTimePlatformCents || 0, cs)}</p>
             <p className="text-[10px] text-muted-foreground">Your Revenue (All Time)</p>
           </div>
           <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-center">
             <Wallet className="w-4 h-4 text-amber-400 mx-auto mb-1" />
-            <p className="text-lg font-bold text-amber-400" data-testid="text-license-fees">{fmt(t?.totalLicenseFeeCents || 0, cs)}</p>
+            <p className="text-lg font-bold text-amber-400" data-testid="text-license-fees">{fmt(totals?.totalLicenseFeeCents || 0, cs)}</p>
             <p className="text-[10px] text-muted-foreground">Monthly License Fees</p>
           </div>
         </div>
 
-        {(t?.monthTotalCents || 0) > 0 && (
+        {(totals?.monthTotalCents || 0) > 0 && (
           <div className="mt-4">
             <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> Your Cut</span>
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Bureau Cut</span>
             </div>
-            <SplitBar platform={t?.monthPlatformCents || 0} bureau={t?.monthBureauCents || 0} total={t?.monthTotalCents || 0} />
+            <SplitBar platform={totals?.monthPlatformCents || 0} bureau={totals?.monthBureauCents || 0} total={totals?.monthTotalCents || 0} />
           </div>
         )}
       </div>

@@ -755,8 +755,8 @@ function MaintenanceToggle() {
 }
 
 export function CommandCenterSystemTab() {
-  const { data: stats, isLoading, isRefetching } = useQuery<SystemStats>({
   const { t } = useTranslation();
+  const { data: stats, isLoading, isRefetching } = useQuery<SystemStats>({
     queryKey: ["/api/platform/system-stats"],
     staleTime: 15000,
     refetchInterval: 30000,

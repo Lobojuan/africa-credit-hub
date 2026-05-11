@@ -1,4 +1,4 @@
-# CDH v2.5 — Disaster Recovery & Business Continuity Plan
+# CDH v2.8 — Disaster Recovery & Business Continuity Plan
 
 **Document Classification:** CONFIDENTIAL
 **Version:** 2.5.0
@@ -148,4 +148,4 @@ This plan is reviewed:
 
 ---
 
-*This document is maintained as part of CDH v2.5 and is subject to version control.*
+*This document is maintained as part of CDH v2.8 and is subject to version control.*

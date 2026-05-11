@@ -11,7 +11,7 @@
 
 ## 1. Purpose & Scope
 
-This manual defines the operational procedures for credit data management within the Pan-African Credit Registry System (CDH v2.5). It covers the complete data lifecycle — from institutional onboarding and data submission through report generation, scoring, dispute resolution, and regulatory reporting.
+This manual defines the operational procedures for credit data management within the Pan-African Credit Registry System (CDH v2.8). It covers the complete data lifecycle — from institutional onboarding and data submission through report generation, scoring, dispute resolution, and regulatory reporting.
 
 **Applicable jurisdictions:** All 54 African countries supported by the platform.
 

@@ -1,7 +1,7 @@
 # Ghana Credit Registry — Operational Procedures Manual
 
 **Africa Credit Hub**
-**Version 2.5 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.5**
+**Version 2.5 | Standard Operating Procedures for Ghana CRB Operations | CDH v2.8**
 
 ---
 
