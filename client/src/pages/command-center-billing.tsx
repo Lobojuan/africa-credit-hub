@@ -124,7 +124,7 @@ export function CommandCenterBillingTab() {
       </div>
 
       {isLoading ? (
-        <div className="text-center text-muted-foreground text-sm py-8">Loading billing data...</div>
+        <div className="text-center text-muted-foreground text-sm py-8">Loading…</div>
       ) : (
         <>
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">

@@ -183,7 +183,7 @@ export function CommandCenterRevenueSplitTab() {
         </div>
 
         {isLoading ? (
-          <div className="text-center text-muted-foreground text-sm py-8">Loading revenue data...</div>
+          <div className="text-center text-muted-foreground text-sm py-8">Loading…</div>
         ) : bureaus.length === 0 ? (
           <div className="text-center text-muted-foreground text-sm py-8">No organizations registered yet</div>
         ) : (

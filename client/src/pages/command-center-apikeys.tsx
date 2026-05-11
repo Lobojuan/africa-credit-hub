@@ -59,7 +59,7 @@ export function CommandCenterApiKeysTab() {
           <h3 className="text-sm font-semibold text-foreground">API Keys</h3>
         </div>
         {isLoading ? (
-          <div className="text-center text-muted-foreground text-sm py-8">Loading API keys...</div>
+          <div className="text-center text-muted-foreground text-sm py-8">Loading…</div>
         ) : keys.length === 0 ? (
           <div className="text-center text-muted-foreground text-sm py-8">No API keys issued yet</div>
         ) : (

@@ -1567,10 +1567,10 @@ export default function SystemStatusPage() {
     return (
       <div className="flex flex-col items-center justify-center h-64 gap-4" data-testid="status-error">
         <AlertTriangle className="w-10 h-10 text-destructive" />
-        <p className="text-muted-foreground">Failed to load system status</p>
+        <p className="text-muted-foreground">{t("systemStatusPage.failedToLoad")}</p>
         <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-retry">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Retry
+          {t("systemStatusPage.retry")}
         </Button>
       </div>
     );
@@ -1585,12 +1585,12 @@ export default function SystemStatusPage() {
     <div className="space-y-6" data-testid="system-status-page">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">System Status</h1>
-          <p className="text-muted-foreground text-sm mt-1">Real-time platform health and uptime monitoring</p>
+          <h1 className="text-2xl font-bold" data-testid="text-page-title">{t("systemStatusPage.pageTitle")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("systemStatusPage.pageSubtitle")}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="button-refresh-status">
           <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
+          {t("systemStatusPage.refresh")}
         </Button>
       </div>
 
@@ -1604,7 +1604,7 @@ export default function SystemStatusPage() {
             )}
             <div>
               <h2 className="text-xl font-semibold" data-testid="text-overall-status">
-                {allOperational ? "All Systems Operational" : "Some Systems Degraded"}
+                {allOperational ? t("systemStatusPage.allOperational") : t("systemStatusPage.someDegraded")}
               </h2>
               <p className="text-sm text-muted-foreground">
                 {status?.platform} v{status?.version} — Up since {status?.uptime?.since ? new Date(status.uptime.since).toLocaleDateString() : "N/A"}

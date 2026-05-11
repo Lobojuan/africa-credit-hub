@@ -360,12 +360,12 @@ export default function AppGuidePage() {
   }, [selectedRole]);
 
   const roleButtons: { value: UserRole | "all"; label: string }[] = [
-    { value: "all", label: "All Roles" },
-    { value: "super_admin", label: "Super Admin" },
-    { value: "admin", label: "Administrator" },
-    { value: "lender", label: "Lender" },
-    { value: "regulator", label: "Regulator" },
-    { value: "viewer", label: "Viewer" },
+    { value: "all", label: t("appGuideRoles.allRoles") },
+    { value: "super_admin", label: t("appGuideRoles.super_adminLabel") },
+    { value: "admin", label: t("appGuideRoles.adminLabel") },
+    { value: "lender", label: t("appGuideRoles.lenderLabel") },
+    { value: "regulator", label: t("appGuideRoles.regulatorLabel") },
+    { value: "viewer", label: t("appGuideRoles.viewerLabel") },
   ];
 
   return (
@@ -421,8 +421,8 @@ export default function AppGuidePage() {
 
         {/* Count */}
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Showing <span className="font-semibold text-gray-700 dark:text-gray-200">{filteredGuides.length}</span> guide{filteredGuides.length !== 1 ? "s" : ""}
-          {selectedRole !== "all" ? ` for ${ROLE_CONFIG[selectedRole as UserRole].label}` : ""}
+          {t("appGuideRoles.topicCount", { count: filteredGuides.length })}
+          {selectedRole !== "all" ? ` — ${t(`appGuideRoles.${selectedRole}Label`)}` : ""}
         </p>
 
         {/* Guide Cards */}

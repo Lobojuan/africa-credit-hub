@@ -102,7 +102,7 @@ export function CommandCenterAuditTab() {
           <span className="w-[130px] text-right">Timestamp</span>
         </div>
         {isLoading ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">Loading audit trail...</div>
+          <div className="p-8 text-center text-muted-foreground text-sm">Loading…</div>
         ) : (data?.logs || []).length === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">No audit events found</div>
         ) : (

@@ -80,7 +80,7 @@ export function CommandCenterRetentionTab() {
       </div>
 
       {isLoading ? (
-        <div className="text-center text-muted-foreground text-sm py-8">Loading retention policies...</div>
+        <div className="text-center text-muted-foreground text-sm py-8">Loading…</div>
       ) : (policies || []).length === 0 ? (
         <div className="rounded-xl border border-border bg-muted p-8 text-center">
           <Archive className="w-8 h-8 text-muted-foreground mx-auto mb-2" />

@@ -134,10 +134,10 @@ export default function SignUpPage() {
         }}>
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-white tracking-tight" data-testid="text-signup-step1-title">
-              Register Your Institution
+              {t("signupPage.title")}
             </h1>
             <p className="text-sm mt-2" style={{ color: "rgba(255,255,255,0.5)" }}>
-              What best describes your organization?
+              {t("signupPage.subtitle")}
             </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -160,11 +160,11 @@ export default function SignUpPage() {
           </div>
           <div className="flex items-center justify-center gap-6 mt-6">
             <a href="/login" className="text-sm hover:underline flex items-center gap-1" style={{ color: "rgba(255,255,255,0.4)" }} data-testid="link-back-portal">
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Login
+              <ArrowLeft className="w-3.5 h-3.5" /> {t("signupPage.backToLogin")}
             </a>
             <span style={{ color: "rgba(255,255,255,0.2)" }}>·</span>
             <a href="/" className="text-sm hover:underline flex items-center gap-1" style={{ color: "rgba(255,255,255,0.4)" }} data-testid="link-back-home">
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
+              <ArrowLeft className="w-3.5 h-3.5" /> {t("signupPage.backToHome")}
             </a>
           </div>
         </div>
@@ -247,7 +247,7 @@ export default function SignUpPage() {
             <span className="text-white/90 font-semibold text-lg tracking-tight">Africa Credit Hub</span>
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight" data-testid="text-signup-title">
-            Sign up to Africa Credit Hub
+            {t("signupPage.step2Title")}
           </h1>
         </div>
 
@@ -324,7 +324,7 @@ export default function SignUpPage() {
           )}
 
           <div>
-            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>Institution Name</label>
+            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>{t("signupPage.institutionName")}</label>
             <input
               className={`signup-input ${fieldErrors.organizationName ? "signup-input-error" : ""}`}
               placeholder="e.g. ABC Microfinance Ltd"
@@ -336,7 +336,7 @@ export default function SignUpPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>Business Registration Number</label>
+            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>{t("signupPage.registrationNumber")}</label>
             <input
               className={`signup-input ${fieldErrors.registrationNumber ? "signup-input-error" : ""}`}
               placeholder="e.g. CS123456789"
@@ -349,13 +349,13 @@ export default function SignUpPage() {
           </div>
 
           <div className="pt-1" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>Administrator Details</label>
+            <label className="block text-xs font-medium mb-1.5 ml-1" style={{ color: "rgba(255,255,255,0.5)" }}>{t("signupPage.adminDetails")}</label>
           </div>
 
           <div>
             <input
               className={`signup-input ${fieldErrors.fullName ? "signup-input-error" : ""}`}
-              placeholder="Full Name"
+              placeholder={t("signupPage.fullName")}
               value={fullName}
               onChange={(e) => { setFullName(e.target.value); setFieldErrors(p => ({ ...p, fullName: "" })); }}
               data-testid="input-signup-name"
@@ -366,7 +366,7 @@ export default function SignUpPage() {
           <div>
             <input
               className={`signup-input ${fieldErrors.email ? "signup-input-error" : ""}`}
-              placeholder="Official Email"
+              placeholder={t("signupPage.email")}
               type="email"
               value={email}
               onChange={(e) => { setEmail(e.target.value); setFieldErrors(p => ({ ...p, email: "" })); }}
@@ -379,7 +379,7 @@ export default function SignUpPage() {
             <div className="relative">
               <input
                 className={`signup-input ${fieldErrors.password ? "signup-input-error" : ""}`}
-                placeholder="Password"
+                placeholder={t("signupPage.password")}
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setFieldErrors(p => ({ ...p, password: "" })); }}
@@ -406,23 +406,23 @@ export default function SignUpPage() {
             data-testid="button-signup-submit"
           >
             {loading ? (
-              <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t("signupPage.submitting")}</>
             ) : (
-              "Submit for Review"
+              t("signupPage.submitButton")
             )}
           </button>
         </form>
 
         <div className="text-center mt-6">
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.5)" }}>
-            Already have an account?{" "}
+            {t("signupPage.alreadyHaveAccount")}{" "}
             <a
               href="/login"
               className="font-medium hover:underline"
               style={{ color: "#a78bfa" }}
               data-testid="link-signin"
             >
-              Sign in
+              {t("signupPage.signInLink")}
             </a>
           </p>
         </div>
@@ -434,15 +434,15 @@ export default function SignUpPage() {
             style={{ color: "rgba(255,255,255,0.35)" }}
             data-testid="link-back-home-step2"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Home
+            <ArrowLeft className="w-3.5 h-3.5" /> {t("signupPage.backToHome")}
           </a>
         </div>
 
         <div className="text-center mt-4">
           <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>
-            By signing up, you agree to our{" "}
-            <a href="/terms" className="hover:underline" style={{ color: "#a78bfa" }}>Terms of Service</a>{" "}
-            and{" "}
+            {t("signupPage.termsNote").split("Terms of Service")[0]}
+            <a href="/terms" className="hover:underline" style={{ color: "#a78bfa" }}>Terms of Service</a>
+            {t("signupPage.termsNote").split("Terms of Service")[1]?.split("Privacy Policy")[0]}
             <a href="/privacy" className="hover:underline" style={{ color: "#a78bfa" }}>Privacy Policy</a>
           </p>
         </div>

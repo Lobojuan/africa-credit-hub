@@ -56,7 +56,7 @@ type VersionEntry = {
 
 const versions: VersionEntry[] = [
   {
-    version: "v2.6",
+    version: "v2.8",
     dateKey: "versionHistory.v26.date",
     tagKey: "versionHistory.v26.tag",
     descriptionKey: "versionHistory.v26.description",

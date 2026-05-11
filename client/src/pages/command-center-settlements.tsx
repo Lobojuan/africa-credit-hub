@@ -517,7 +517,7 @@ export function CommandCenterSettlementsTab() {
         </div>
 
         {isLoading ? (
-          <div className="text-center text-muted-foreground text-sm py-8">Loading settlement data...</div>
+          <div className="text-center text-muted-foreground text-sm py-8">Loading…</div>
         ) : batches.length === 0 ? (
           <div className="text-center text-muted-foreground text-xs py-6">
             <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
