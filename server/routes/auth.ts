@@ -426,4 +426,38 @@ router.get("/api/auth/me", async (req, res) => {
   res.json({ ...userData, passwordExpired, organization, viewingCountry });
 });
 
+// ── Guide-mode auto-login ────────────────────────────────────────────────────
+// GET /api/auto-login?token=<MASTER_CONTROL_PASSWORD>[&as=demo_admin][&redirect=/dashboard]
+// Instantly creates a full session for AI user-guide generation or teaching demos.
+// Protected by MASTER_CONTROL_PASSWORD — never usable without the secret.
+router.get("/api/auto-login", async (req, res) => {
+  const MASTER = process.env.MASTER_CONTROL_PASSWORD;
+  if (!MASTER) {
+    return res.status(503).send("Auto-login is not configured (MASTER_CONTROL_PASSWORD not set).");
+  }
+
+  const supplied = (req.query.token as string) ?? "";
+  if (!supplied || supplied !== MASTER) {
+    return res.status(401).send("Invalid token.");
+  }
+
+  const username = (req.query.as as string) || "demo_admin";
+  const user = await storage.getUserByUsername(username);
+  if (!user) {
+    return res.status(404).send(`User "${username}" not found.`);
+  }
+
+  const redirect = (req.query.redirect as string) || "/choose-workspace";
+
+  req.session.regenerate((err) => {
+    if (err) return res.status(500).send("Session error.");
+    req.session.userId          = user.id;
+    req.session.userRole        = user.role;
+    req.session.lastActivity    = Date.now();
+    // platform_owner / super_admin see all countries — clear any country lock
+    delete req.session.viewingCountry;
+    req.session.save(() => res.redirect(redirect));
+  });
+});
+
 export default router;
