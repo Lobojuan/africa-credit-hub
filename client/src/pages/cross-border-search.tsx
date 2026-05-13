@@ -10,8 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import {
   Search, Globe, User, Building2, MapPin, Shield, ArrowRight,
-  Loader2, AlertCircle, FileSearch,
+  Loader2, AlertCircle, FileSearch, ShieldOff, ExternalLink,
 } from "lucide-react";
+import { Link } from "wouter";
 import type { DataSharingAgreement } from "@shared/schema";
 
 const SUPPORTED_COUNTRIES = [
@@ -38,6 +39,7 @@ export default function CrossBorderSearchPage() {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [searchMeta, setSearchMeta] = useState<{ agreementId: string; sourceCountry: string; targetCountry: string } | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
+  const [noAgreementError, setNoAgreementError] = useState(false);
 
   const { data: agreements = [] } = useQuery<DataSharingAgreement[]>({
     queryKey: ["/api/sata/my-agreements"],
@@ -56,17 +58,24 @@ export default function CrossBorderSearchPage() {
       return res.json();
     },
     onSuccess: (data: any) => {
+      setNoAgreementError(false);
       setResults(data.results || []);
       setSearchMeta({ agreementId: data.agreementId, sourceCountry: data.sourceCountry, targetCountry: data.targetCountry });
       setHasSearched(true);
-      if ((data.results || []).length === 0) {
-        toast({ title: "No results", description: `No matching borrowers found in ${targetCountry}` });
-      }
+      // No toast for empty results — the empty state card explains it clearly enough
     },
     onError: (e: any) => {
-      toast({ title: "Search Failed", description: e.message, variant: "destructive" });
-      setHasSearched(true);
+      const is403 = e.message?.includes("403") || e.message?.toLowerCase().includes("agreement");
+      if (is403) {
+        // 403 = no agreement for this country pair — not a real error, the UI already explains it
+        setNoAgreementError(true);
+        setHasSearched(false);
+      } else {
+        toast({ title: "Search failed", description: e.message, variant: "destructive" });
+        setHasSearched(true);
+      }
       setResults([]);
+      setSearchMeta(null);
     },
   });
 
@@ -75,6 +84,8 @@ export default function CrossBorderSearchPage() {
       toast({ title: "Missing fields", description: "Enter a search term and select a target country", variant: "destructive" });
       return;
     }
+    setNoAgreementError(false);
+    setHasSearched(false);
     searchMutation.mutate();
   };
 
@@ -141,12 +152,25 @@ export default function CrossBorderSearchPage() {
             </div>
           )}
 
-          {activeAgreements.length === 0 && (
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+          {(activeAgreements.length === 0 || noAgreementError) && (
+            <div className="flex items-start gap-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
               <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">
-                No active data sharing agreements found. Cross-border searches require an active bilateral SATA agreement. Go to Cross-Border Agreements to create one.
-              </p>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  {noAgreementError
+                    ? `No active agreement with ${targetCountry}`
+                    : "No active data sharing agreements"}
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                  {noAgreementError
+                    ? `A bilateral SATA agreement between your registry and ${targetCountry} is required before you can search their borrower records.`
+                    : "Cross-border searches require an active bilateral SATA agreement."}
+                  {" "}
+                  <Link href="/cross-border-agreements" className="underline font-medium hover:text-amber-900 dark:hover:text-amber-200">
+                    Set up an agreement <ExternalLink className="w-3 h-3 inline" />
+                  </Link>
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
@@ -162,9 +186,12 @@ export default function CrossBorderSearchPage() {
       {hasSearched && results.length === 0 && !searchMutation.isPending && (
         <Card>
           <CardContent className="p-12 text-center">
-            <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
-            <h3 className="font-semibold" data-testid="text-no-results">No results found</h3>
-            <p className="text-sm text-muted-foreground mt-1">Try different search terms or check that you have an active agreement with the target country.</p>
+            <ShieldOff className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-30" />
+            <h3 className="font-semibold" data-testid="text-no-results">No matching borrowers found</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+              No records in <span className="font-medium text-foreground">{targetCountry}</span> matched{" "}
+              <span className="font-medium text-foreground">"{query}"</span>. Try a different name, national ID, or passport number.
+            </p>
           </CardContent>
         </Card>
       )}
