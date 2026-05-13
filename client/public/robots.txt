@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /master-control/
+
+Sitemap: https://africacredithub.com/sitemap.xml

@@ -158,6 +158,9 @@ app.use(compression());
 app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
+  if (!req.path.startsWith("/api")) {
+    res.setHeader("X-Robots-Tag", "index, follow");
+  }
 
   if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
