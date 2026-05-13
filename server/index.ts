@@ -665,6 +665,28 @@ process.stderr.write = function (...args: any[]) {
     return res.status(status).json({ message });
   });
 
+  app.get("/robots.txt", (_req, res) => {
+    res.setHeader("Content-Type", "text/plain");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(
+      "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\nDisallow: /master-control/\n\nSitemap: https://africacredithub.com/sitemap.xml\n"
+    );
+  });
+
+  app.get("/sitemap.xml", (_req, res) => {
+    res.setHeader("Content-Type", "application/xml");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.send(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://africacredithub.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://africacredithub.com/login</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://africacredithub.com/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://africacredithub.com/consumer-portal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+</urlset>`
+    );
+  });
+
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
