@@ -73,7 +73,7 @@ router.post("/api/auth/webauthn/register-verify", loginLimiter, async (req, res)
 
     await db.insert(webauthnCredentials).values({
       userId: req.session.userId,
-      credentialId: Buffer.from(credential.id).toString("base64url"),
+      credentialId: typeof credential.id === "string" ? credential.id : Buffer.from(credential.id as any).toString("base64url"),
       publicKey: Buffer.from(credential.publicKey).toString("base64url"),
       counter: credential.counter,
       deviceType: credentialDeviceType,
