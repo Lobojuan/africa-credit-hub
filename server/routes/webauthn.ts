@@ -130,11 +130,41 @@ router.post("/api/auth/webauthn/login-options", loginLimiter, async (req, res) =
   }
 });
 
+// Discoverable-credential (passkey) flow — no username required.
+// The device presents saved passkeys directly; the server identifies
+// the user from the returned credential ID after verification.
+router.post("/api/auth/webauthn/login-options-discoverable", loginLimiter, async (req, res) => {
+  try {
+    const { generateAuthenticationOptions } = await import("@simplewebauthn/server");
+    const rpID = ((req.headers["x-forwarded-host"] as string)?.split(",")[0].trim().split(":")[0]) || req.hostname || "localhost";
+
+    const options = await generateAuthenticationOptions({
+      rpID,
+      allowCredentials: [],   // empty = let the device show all saved passkeys for this site
+      userVerification: "required",
+    });
+
+    req.session.webauthnChallenge = options.challenge;
+    delete req.session.webauthnUserId;  // will be resolved after credential returned
+    res.json(options);
+  } catch (e: any) {
+    res.status(500).json({ message: safeErrorMessage(e) });
+  }
+});
+
 router.post("/api/auth/webauthn/login-verify", loginLimiter, async (req, res) => {
   try {
     const challenge = req.session?.webauthnChallenge;
-    const userId = req.session?.webauthnUserId;
-    if (!challenge || !userId) return res.status(400).json({ message: "No authentication challenge found" });
+    if (!challenge) return res.status(400).json({ message: "No authentication challenge found" });
+
+    // Discoverable flow: no userId in session — look up the user from the returned credential ID
+    let userId = req.session?.webauthnUserId;
+    if (!userId) {
+      const credId = typeof req.body.id === "string" ? req.body.id : Buffer.from(req.body.rawId).toString("base64url");
+      const [found] = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.credentialId, credId));
+      if (!found) return res.status(400).json({ message: "Credential not found" });
+      userId = found.userId;
+    }
 
     const user = await storage.getUser(userId);
     if (!user) return res.status(404).json({ message: "User not found" });

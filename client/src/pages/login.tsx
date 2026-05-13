@@ -41,32 +41,46 @@ export default function LoginPage() {
   const { t } = useTranslation();
 
   const handlePasskeyLogin = async () => {
-    if (!username.trim()) {
-      setError("Please enter your username above first.");
-      return;
-    }
     setPasskeyLoading(true);
     setError("");
     try {
-      const optRes = await fetch("/api/auth/webauthn/login-options", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: username.trim() }),
-        credentials: "include",
-      });
-      if (!optRes.ok) {
-        const err = await optRes.json();
-        if (err.message === "Biometric login not available" || err.code === "NO_PASSKEY") {
-          setPasskeySetupNeeded(true);
-          setError("");
-        } else {
-          setError(err.message || "Passkey login failed.");
-        }
-        return;
-      }
-      const options = await optRes.json();
       const { startAuthentication } = await import("@simplewebauthn/browser");
+
+      // Step 1: Try discoverable-credential flow (no username needed).
+      // The OS/browser shows a passkey picker for this site automatically.
+      // Fall back to username-scoped flow only if a username is already typed.
+      let optRes: Response;
+      if (username.trim()) {
+        optRes = await fetch("/api/auth/webauthn/login-options", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: username.trim() }),
+          credentials: "include",
+        });
+        if (!optRes.ok) {
+          const err = await optRes.json();
+          if (err.message === "Biometric login not available" || err.code === "NO_PASSKEY") {
+            setPasskeySetupNeeded(true);
+            setError("");
+          } else {
+            setError(err.message || "Passkey login failed.");
+          }
+          return;
+        }
+      } else {
+        optRes = await fetch("/api/auth/webauthn/login-options-discoverable", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!optRes.ok) {
+          setError("No saved fingerprint found on this device. Enter your username and try again.");
+          return;
+        }
+      }
+
+      const options = await optRes.json();
       const credential = await startAuthentication({ optionsJSON: options });
+
       const verRes = await fetch("/api/auth/webauthn/login-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -83,7 +97,7 @@ export default function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
     } catch (e: any) {
       if (e.name === "NotAllowedError") {
-        setError("Passkey prompt was dismissed. Try again or use your password.");
+        setError("Fingerprint prompt was dismissed. Try again or use your password.");
       } else {
         setError(e.message || "Passkey login failed.");
       }
