@@ -2,41 +2,142 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Africa Credit Hub — Consent-first credit infrastructure for Africa</title>
-    <meta name="description" content="Africa Credit Hub: pan-African credit bureau, movable-asset collateral registry, and verified-receipt scoring (Loto Fiscal) on one consent-first platform. 54 countries · 7 languages · 4 legal regimes · regulator-ready." />
+    <meta name="description" content="Africa Credit Hub: pan-African credit bureau, movable-asset collateral registry, and verified-receipt scoring (Loto Fiscal) on one consent-first platform. 54 countries · 8 languages · 4 legal regimes · regulator-ready." />
     <meta name="keywords" content="African credit bureau, pan-African credit infrastructure, collateral registry, OHADA, fiscal receipts, financial inclusion, fintech Africa, consent-first credit, alternative data scoring" />
     <meta name="author" content="Africa Credit Hub" />
     <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="Africa Credit Hub — Consent-first credit infrastructure for Africa" />
-    <meta property="og:description" content="One platform: pan-African credit bureau + collateral registry + verified-receipt scoring. 54 countries, 7 languages, consent-first architecture." />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://africacredithub.com" />
-    <meta property="og:site_name" content="Africa Credit Hub" />
-    <meta property="og:image" content="/og-image.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Africa Credit Hub — Consent-first credit infrastructure for Africa" />
-    <meta property="og:locale" content="en_US" />
+
+    <!-- hreflang — 8 supported languages, all served from the same SPA URL -->
+    <link rel="alternate" hreflang="x-default" href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="en"      href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="fr"      href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="pt"      href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="ar"      href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="sw"      href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="es"      href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="zh-Hans" href="https://africacredithub.com/" />
+    <link rel="alternate" hreflang="zh-Hant" href="https://africacredithub.com/" />
+
+    <!-- Open Graph -->
+    <meta property="og:title"            content="Africa Credit Hub — Consent-first credit infrastructure for Africa" />
+    <meta property="og:description"      content="One platform: pan-African credit bureau + collateral registry + verified-receipt scoring. 54 countries, 8 languages, consent-first architecture." />
+    <meta property="og:type"             content="website" />
+    <meta property="og:url"              content="https://africacredithub.com" />
+    <meta property="og:site_name"        content="Africa Credit Hub" />
+    <meta property="og:image"            content="https://africacredithub.com/og-image.png" />
+    <meta property="og:image:width"      content="1200" />
+    <meta property="og:image:height"     content="630" />
+    <meta property="og:image:alt"        content="Africa Credit Hub — Consent-first credit infrastructure for Africa" />
+    <meta property="og:locale"           content="en_US" />
     <meta property="og:locale:alternate" content="fr_FR" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Africa Credit Hub — Consent-first credit infrastructure for Africa" />
-    <meta name="twitter:description" content="One platform: pan-African credit bureau + collateral registry + verified-receipt scoring. 54 countries, 7 languages, consent-first." />
-    <meta name="twitter:image" content="/og-image.png" />
-    <link rel="canonical" href="https://africacredithub.com" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="manifest" href="/manifest.json" />
+    <meta property="og:locale:alternate" content="pt_PT" />
+    <meta property="og:locale:alternate" content="ar_SA" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:locale:alternate" content="zh_CN" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card"        content="summary_large_image" />
+    <meta name="twitter:title"       content="Africa Credit Hub — Consent-first credit infrastructure for Africa" />
+    <meta name="twitter:description" content="One platform: pan-African credit bureau + collateral registry + verified-receipt scoring. 54 countries, 8 languages, consent-first." />
+    <meta name="twitter:image"       content="https://africacredithub.com/og-image.png" />
+
+    <link rel="canonical"        href="https://africacredithub.com" />
+    <link rel="icon"             type="image/png" href="/favicon.png" />
+    <link rel="manifest"         href="/manifest.json" />
     <link rel="apple-touch-icon" href="/pwa-icon-192.png" />
-    <meta name="theme-color" content="#115e59" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+
+    <meta name="theme-color"                    content="#115e59" />
+    <meta name="apple-mobile-web-app-capable"   content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="CDH Registry" />
+    <meta name="apple-mobile-web-app-title"     content="CDH Registry" />
+
+    <!-- Fonts: only the two families actually used -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&display=swap">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://africacredithub.com/#organization",
+          "name": "Africa Credit Hub",
+          "url": "https://africacredithub.com",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://africacredithub.com/favicon.png",
+            "width": 192,
+            "height": 192
+          },
+          "description": "Pan-African credit bureau, movable-asset collateral registry, and verified-receipt scoring platform serving 54 African countries.",
+          "areaServed": {
+            "@type": "Place",
+            "name": "Africa"
+          },
+          "knowsLanguage": ["en", "fr", "pt", "ar", "sw", "es", "zh-Hans", "zh-Hant"],
+          "sameAs": []
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://africacredithub.com/#website",
+          "url": "https://africacredithub.com",
+          "name": "Africa Credit Hub",
+          "description": "Consent-first credit infrastructure for Africa",
+          "publisher": { "@id": "https://africacredithub.com/#organization" },
+          "inLanguage": ["en", "fr", "pt", "ar", "sw", "es", "zh-Hans", "zh-Hant"]
+        },
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://africacredithub.com/#app",
+          "name": "Africa Credit Hub",
+          "applicationCategory": "FinanceApplication",
+          "operatingSystem": "Web",
+          "url": "https://africacredithub.com",
+          "description": "A SaaS platform providing pan-African credit bureau services, movable-asset collateral registry, and Loto Fiscal verified-receipt scoring across 54 African jurisdictions.",
+          "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Contact for enterprise pricing"
+          },
+          "featureList": [
+            "Pan-African credit bureau (54 countries)",
+            "Movable-asset collateral registry",
+            "Loto Fiscal verified-receipt scoring",
+            "Consent-first borrower data access",
+            "Multi-currency support",
+            "8-language interface",
+            "Regulatory compliance dashboard",
+            "AI-powered credit risk assessment"
+          ],
+          "provider": { "@id": "https://africacredithub.com/#organization" }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
+    <!-- Crawlable content for search engines — hidden visually, visible to bots -->
+    <h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">
+      Africa Credit Hub — Pan-African Credit Bureau &amp; Collateral Registry
+    </h1>
+    <p style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;">
+      Consent-first credit infrastructure for Africa: credit bureau, collateral registry, and Loto Fiscal receipt scoring across 54 countries in 8 languages.
+    </p>
+    <nav style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;" aria-label="Main navigation">
+      <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/login">Sign In</a></li>
+        <li><a href="/register">Register Institution</a></li>
+        <li><a href="/consumer-portal">Consumer Credit Portal</a></li>
+      </ul>
+    </nav>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
