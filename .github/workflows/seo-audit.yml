@@ -1,0 +1,70 @@
+name: ACH SEO & Performance Audit
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"   # Every Monday 06:00 UTC (06:00 Accra time, no DST)
+  workflow_dispatch:       # "Run workflow" button in the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Lighthouse CI against production
+        uses: treosh/lighthouse-ci-action@v11
+        with:
+          urls: |
+            https://africacredithub.com/
+            https://africacredithub.com/login
+          configPath: .lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Check robots.txt is plain text
+        run: |
+          CONTENT_TYPE=$(curl -sI https://africacredithub.com/robots.txt | grep -i content-type | head -1)
+          echo "robots.txt Content-Type: $CONTENT_TYPE"
+          if echo "$CONTENT_TYPE" | grep -q "text/html"; then
+            echo "❌ robots.txt is returning HTML — check Express route"
+            exit 1
+          fi
+          echo "✅ robots.txt OK"
+
+      - name: Check sitemap.xml is valid XML
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://africacredithub.com/sitemap.xml)
+          echo "sitemap.xml HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ sitemap.xml not reachable (HTTP $STATUS)"
+            exit 1
+          fi
+          echo "✅ sitemap.xml OK"
+
+      - name: Check X-Robots-Tag header
+        run: |
+          HEADER=$(curl -sI https://africacredithub.com/ | grep -i x-robots-tag || echo "(none)")
+          echo "X-Robots-Tag: $HEADER"
+
+      - name: Check structured data present
+        run: |
+          BODY=$(curl -sL https://africacredithub.com/)
+          if echo "$BODY" | grep -q "application/ld+json"; then
+            echo "✅ JSON-LD structured data found"
+          else
+            echo "❌ JSON-LD structured data missing from HTML"
+            exit 1
+          fi
+
+      - name: Check hreflang tags
+        run: |
+          BODY=$(curl -sL https://africacredithub.com/)
+          if echo "$BODY" | grep -q 'hreflang="x-default"'; then
+            echo "✅ hreflang x-default found"
+          else
+            echo "❌ hreflang x-default missing"
+            exit 1
+          fi
