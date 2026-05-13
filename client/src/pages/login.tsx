@@ -95,12 +95,15 @@ export default function LoginPage() {
       const data = await verRes.json();
       queryClient.setQueryData(["/api/auth/me"], data.user);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      // Explicit redirect — same as password login; don't rely on React re-render alone
+      sessionStorage.setItem("passkey_prompt", "1");
+      window.location.replace("/choose-product");
     } catch (e: any) {
-      if (e.name === "NotAllowedError") {
-        setError("Fingerprint prompt was dismissed. Try again or use your password.");
-      } else {
-        setError(e.message || "Passkey login failed.");
-      }
+      const msg = e.name === "NotAllowedError"
+        ? "Fingerprint prompt was dismissed. Try again or use your password."
+        : (e.message || "Passkey login failed.");
+      setError(msg);
+      toast({ title: "Sign-in failed", description: msg, variant: "destructive" });
     } finally {
       setPasskeyLoading(false);
     }

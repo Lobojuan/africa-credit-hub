@@ -146,7 +146,10 @@ router.post("/api/auth/webauthn/login-options-discoverable", loginLimiter, async
 
     req.session.webauthnChallenge = options.challenge;
     delete req.session.webauthnUserId;  // will be resolved after credential returned
-    res.json(options);
+    req.session.save((err) => {
+      if (err) return res.status(500).json({ message: "Session save failed" });
+      res.json(options);
+    });
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
   }
