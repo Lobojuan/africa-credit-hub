@@ -58,6 +58,12 @@ interface SystemHealthData {
     google: string;
     microsoft: string;
     saml: string;
+    samlMetadata: string;
+    googleSecretsConfigured: boolean;
+    microsoftSecretsConfigured: boolean;
+    samlIdpConfigured: boolean;
+    microsoftTenantId: string;
+    samlIssuer: string;
   };
   envConfig: Record<string, string>;
   security: Record<string, boolean>;
@@ -493,6 +499,16 @@ function OAuthCallbackUrlRow({ label, url, copiedKey, onCopy }: { label: string;
   );
 }
 
+interface OAuthProbeResult {
+  probeTime: string;
+  expectedDomain: string;
+  canonicalConfigured: boolean;
+  baseUrl: string;
+  google: { redirect_uri: string | null; expectedCallbackUrl: string; urlExactMatch: boolean; secretsConfigured: boolean; pass: boolean; note: string; initiationStatus: number; initiationError: string | null };
+  microsoft: { redirect_uri: string | null; expectedCallbackUrl: string; urlExactMatch: boolean; secretsConfigured: boolean; pass: boolean; note: string; initiationStatus: number; initiationError: string | null };
+  saml: { acsUrlFromMetadata: string | null; expectedAcsUrl: string; urlExactMatch: boolean; metadataFetchOk: boolean; metadataError: string | null; idpConfigured: boolean; issuer: string; pass: boolean; note: string };
+}
+
 function IntegrationsPanel() {
   const { data } = useQuery<SystemHealthData>({
     queryKey: ["/api/platform-control/system-health"],
@@ -500,6 +516,9 @@ function IntegrationsPanel() {
     staleTime: 15000,
   });
   const [copiedKey, setCopiedKey] = useState("");
+  const [probeResult, setProbeResult] = useState<OAuthProbeResult | null>(null);
+  const [probeLoading, setProbeLoading] = useState(false);
+  const [probeError, setProbeError] = useState<string | null>(null);
 
   if (!data) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
@@ -516,11 +535,24 @@ function IntegrationsPanel() {
   const totalIntegrations = Object.values(data.integrations).length;
 
   const cb = data.oauthCallbacks;
-  const callbackRows = cb ? [
-    { label: "Google", url: cb.google },
-    { label: "Microsoft", url: cb.microsoft },
-    { label: "SAML ACS", url: cb.saml },
-  ] : [];
+
+  async function handleRunProbe() {
+    setProbeLoading(true);
+    setProbeError(null);
+    setProbeResult(null);
+    try {
+      const r = await pcFetch("/api/platform-control/oauth-probe");
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        setProbeError((err as any).message || `HTTP ${r.status}`);
+      } else {
+        setProbeResult(await r.json());
+      }
+    } catch (e: any) {
+      setProbeError(e.message || "Network error");
+    }
+    setProbeLoading(false);
+  }
 
   function handleCopy(key: string, url: string) {
     navigator.clipboard.writeText(url).catch(() => {});
@@ -528,10 +560,54 @@ function IntegrationsPanel() {
     setTimeout(() => setCopiedKey(""), 2000);
   }
 
+  const oauthProviders = cb ? [
+    {
+      key: "google",
+      label: "Google OAuth",
+      icon: Key,
+      secretsOk: cb.googleSecretsConfigured,
+      callbackLabel: "Redirect URI",
+      callbackUrl: cb.google,
+      extraRows: [] as { label: string; url: string }[],
+      setupNote: "Add the Redirect URI as an Authorised redirect URI on your OAuth 2.0 Client ID.",
+      consoleUrl: "https://console.cloud.google.com/apis/credentials",
+      consoleLabel: "Google Cloud Console",
+    },
+    {
+      key: "microsoft",
+      label: "Microsoft Entra",
+      icon: Building2,
+      secretsOk: cb.microsoftSecretsConfigured,
+      callbackLabel: "Redirect URI",
+      callbackUrl: cb.microsoft,
+      extraRows: [] as { label: string; url: string }[],
+      setupNote: `Add the Redirect URI as a Web Redirect URI on your App Registration. Tenant: ${cb.microsoftTenantId}`,
+      consoleUrl: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+      consoleLabel: "Microsoft Entra Admin",
+    },
+    {
+      key: "saml",
+      label: "SAML 2.0 SSO",
+      icon: Shield,
+      secretsOk: cb.samlIdpConfigured,
+      callbackLabel: "ACS URL",
+      callbackUrl: cb.saml,
+      extraRows: [{ label: "SP Metadata", url: cb.samlMetadata }],
+      setupNote: `Set the ACS URL at your IdP. SP entity ID: ${cb.samlIssuer}. Download SP metadata for automated setup.`,
+      consoleUrl: null,
+      consoleLabel: null,
+    },
+  ] : [];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/30">{totalConnected}/{totalIntegrations} connected</Badge>
+        {cb && (
+          <Badge variant="outline" className={`text-[10px] h-5 ${cb.canonicalConfigured ? "border-emerald-500/40 text-emerald-600" : "border-amber-500/40 text-amber-600"}`}>
+            {cb.canonicalConfigured ? `Domain: ${cb.canonicalUrl}` : "⚠ CANONICAL_URL not set — using fallback"}
+          </Badge>
+        )}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {groups.map(g => (
@@ -553,20 +629,109 @@ function IntegrationsPanel() {
       </div>
 
       {cb && (
-        <div className={`rounded-lg border p-3 space-y-1 ${cb.canonicalConfigured ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`} data-testid="oauth-callback-urls-panel">
-          <div className="flex items-center gap-2 mb-2">
+        <div className={`rounded-lg border p-3 space-y-3 ${cb.canonicalConfigured ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`} data-testid="oauth-callback-urls-panel">
+          <div className="flex items-center gap-2 flex-wrap">
             <Link2 className={`w-3.5 h-3.5 ${cb.canonicalConfigured ? "text-emerald-500" : "text-amber-500"}`} />
-            <p className="text-xs font-semibold uppercase tracking-wider">OAuth Callback URLs</p>
+            <p className="text-xs font-semibold uppercase tracking-wider">OAuth / SSO Provider Setup</p>
             <Badge variant="outline" className={`text-[10px] h-4 ${cb.canonicalConfigured ? "border-emerald-500/40 text-emerald-600" : "border-amber-500/40 text-amber-600"}`}>
               {cb.canonicalConfigured ? "CANONICAL_URL set" : "fallback domain"}
             </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              className="ml-auto h-6 text-[11px] px-2 gap-1"
+              onClick={handleRunProbe}
+              disabled={probeLoading}
+              data-testid="button-run-oauth-probe"
+            >
+              {probeLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <TestTube className="w-3 h-3" />}
+              {probeLoading ? "Running…" : "Run Probe"}
+            </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground mb-2">
-            Register these exact URLs at Google Cloud Console, Microsoft Entra, and your SAML IdP.
+          <p className="text-[11px] text-muted-foreground">
+            Register these exact callback URLs at each provider. Click <strong>Run Probe</strong> to verify callback URLs are correctly constructed using the active domain.
           </p>
-          {callbackRows.map(row => (
-            <OAuthCallbackUrlRow key={row.label} label={row.label} url={row.url} copiedKey={copiedKey} onCopy={handleCopy} />
-          ))}
+
+          {probeError && (
+            <div className="rounded border border-red-500/30 bg-red-500/5 p-2 text-[11px] text-red-600" data-testid="oauth-probe-error">
+              Probe failed: {probeError}
+            </div>
+          )}
+
+          {probeResult && (
+            <div className="rounded border border-border bg-background p-2.5 space-y-2" data-testid="oauth-probe-results">
+              <div className="flex items-center gap-2 mb-1">
+                <Activity className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-semibold">Probe Results</span>
+                <span className="text-[10px] text-muted-foreground ml-auto">{new Date(probeResult.probeTime).toLocaleTimeString()} · domain: {probeResult.expectedDomain}</span>
+              </div>
+              {[
+                { key: "google", label: "Google", r: probeResult.google, urlLabel: "redirect_uri", url: probeResult.google.redirect_uri || "—" },
+                { key: "microsoft", label: "Microsoft", r: probeResult.microsoft, urlLabel: "redirect_uri", url: probeResult.microsoft.redirect_uri || "—" },
+                { key: "saml", label: "SAML", r: probeResult.saml, urlLabel: "ACS URL", url: probeResult.saml.acsUrlFromMetadata || "—" },
+              ].map(({ key, label, r, urlLabel, url }) => (
+                <div key={key} className={`rounded border p-2 space-y-0.5 ${r.pass ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`} data-testid={`probe-result-${key}`}>
+                  <div className="flex items-center gap-1.5">
+                    {r.pass
+                      ? <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                      : <AlertTriangle className="w-3 h-3 text-amber-500 shrink-0" />}
+                    <span className="text-xs font-semibold">{label}</span>
+                    <span className={`text-[10px] font-medium ml-auto ${r.pass ? "text-emerald-600" : "text-amber-600"}`}>
+                      {r.pass ? "PASS" : "FAIL"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 pl-4">
+                    <span className="text-[10px] text-muted-foreground w-16 shrink-0">{urlLabel}</span>
+                    <code className="text-[10px] font-mono truncate flex-1">{url}</code>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground pl-4 leading-relaxed">{r.note}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {oauthProviders.map(p => {
+              const ProviderIcon = p.icon;
+              const probeR = probeResult
+                ? (p.key === "google" ? probeResult.google : p.key === "microsoft" ? probeResult.microsoft : probeResult.saml)
+                : null;
+              return (
+                <div key={p.key} className={`rounded border bg-background p-2.5 space-y-1.5 ${probeR ? (probeR.pass ? "border-emerald-500/40" : "border-amber-500/40") : "border-border"}`} data-testid={`oauth-provider-card-${p.key}`}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ProviderIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs font-semibold">{p.label}</span>
+                    {probeR ? (
+                      probeR.pass
+                        ? <CheckCircle2 className="w-3 h-3 text-emerald-500 ml-auto" />
+                        : <AlertTriangle className="w-3 h-3 text-amber-500 ml-auto" />
+                    ) : (
+                      <span className={`ml-auto text-[10px] font-medium ${p.secretsOk ? "text-emerald-600" : "text-amber-500"}`}>
+                        {p.secretsOk ? "secrets ✓" : "secrets missing"}
+                      </span>
+                    )}
+                  </div>
+                  <OAuthCallbackUrlRow label={p.callbackLabel} url={p.callbackUrl} copiedKey={copiedKey} onCopy={handleCopy} />
+                  {p.extraRows.map(r => (
+                    <OAuthCallbackUrlRow key={r.label} label={r.label} url={r.url} copiedKey={copiedKey} onCopy={handleCopy} />
+                  ))}
+                  <p className="text-[10px] text-muted-foreground leading-relaxed pt-0.5">{p.setupNote}</p>
+                  {p.consoleUrl && (
+                    <a
+                      href={p.consoleUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:underline"
+                      data-testid={`link-provider-console-${p.key}`}
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" />
+                      {p.consoleLabel}
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

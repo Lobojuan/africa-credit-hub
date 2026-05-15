@@ -2560,7 +2560,139 @@ export async function registerRoutes(
     }
   });
 
-  // /api/auth/oauth-status is registered by registerOAuthRoutes(app) above.
+  // ── OAuth Health / Diagnostic Endpoint ──────────────────────────────────────
+  // GET /api/auth/oauth-health
+  // Returns OAuth provider configuration status and exact callback URLs that
+  // must be registered at each provider. Useful for quick production verification.
+  // Only accessible to authenticated super_admin / platform_owner users.
+  app.get("/api/auth/oauth-health", requireAuth, requireSuperAdmin, (req, res) => {
+    const base = getOAuthCallbackBase();
+    const canonicalConfigured = !!process.env.CANONICAL_URL;
+
+    const google = {
+      callbackUrl: `${base}/api/consumer/auth/google/callback`,
+      secretsConfigured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      clientIdHint: process.env.GOOGLE_CLIENT_ID ? `${process.env.GOOGLE_CLIENT_ID.slice(0, 8)}...` : null,
+      providerConsoleUrl: "https://console.cloud.google.com/apis/credentials",
+      setupNote: "Add the callbackUrl as an Authorised redirect URI on your OAuth 2.0 Client ID.",
+    };
+
+    const microsoft = {
+      callbackUrl: `${base}/api/auth/microsoft/callback`,
+      secretsConfigured: !!(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET),
+      tenantId: process.env.MICROSOFT_TENANT_ID || "common",
+      clientIdHint: process.env.MICROSOFT_CLIENT_ID ? `${process.env.MICROSOFT_CLIENT_ID.slice(0, 8)}...` : null,
+      providerConsoleUrl: "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+      setupNote: "Add the callbackUrl as a Web Redirect URI on your App Registration.",
+    };
+
+    const saml = {
+      acsUrl: `${base}/api/auth/saml/callback`,
+      metadataUrl: `${base}/api/auth/saml/metadata`,
+      idpConfigured: !!(process.env.SAML_IDP_ENTRY_POINT && process.env.SAML_ISSUER),
+      issuer: process.env.SAML_ISSUER || "pan-african-credit-registry",
+      setupNote: "Set the acsUrl as the Assertion Consumer Service URL at your SAML IdP. Download SP metadata from metadataUrl.",
+    };
+
+    res.json({
+      canonicalConfigured,
+      baseUrl: base,
+      providers: { google, microsoft, saml },
+      generatedAt: new Date().toISOString(),
+    });
+  });
+
+  // ── OAuth Smoke-Test Probe ───────────────────────────────────────────────────
+  // POST /api/auth/oauth-probe
+  // Exercises the same callback-URL construction logic used by the real OAuth
+  // handlers (getGoogleRedirectUri, getMicrosoftRedirectUri, getSamlAcsUrl) and
+  // fetches the live SAML SP metadata to parse and verify the ACS URL.
+  // Returns per-provider pass/fail with the computed URLs so an admin can confirm
+  // these match what is registered at each provider console.
+  app.get("/api/auth/oauth-probe", requireAuth, requireSuperAdmin, async (req, res) => {
+    const base = getOAuthCallbackBase();
+    const expectedDomain = process.env.CANONICAL_URL
+      ? new URL(process.env.CANONICAL_URL).hostname
+      : "universalcredithub.com";
+
+    // Google — compute callback URL using the same logic as the real handler
+    const googleCallbackUrl = getGoogleRedirectUri(req);
+    const googleDomainMatch = googleCallbackUrl.includes(expectedDomain);
+
+    // Microsoft — compute callback URL using the same logic as the real handler
+    const microsoftCallbackUrl = getMicrosoftRedirectUri(req);
+    const microsoftDomainMatch = microsoftCallbackUrl.includes(expectedDomain);
+
+    // SAML — fetch live metadata from this server and parse the ACS URL
+    let samlAcsFromMetadata: string | null = null;
+    let samlMetadataFetchOk = false;
+    let samlAcsDomainMatch = false;
+    let samlMetadataError: string | null = null;
+    try {
+      const metadataUrl = `http://localhost:${process.env.PORT || 5000}/api/auth/saml/metadata`;
+      const metaResp = await fetch(metadataUrl);
+      if (metaResp.ok) {
+        samlMetadataFetchOk = true;
+        const xml = await metaResp.text();
+        const acsMatch = xml.match(/AssertionConsumerService[^>]*Location="([^"]+)"/);
+        samlAcsFromMetadata = acsMatch?.[1] ?? null;
+        samlAcsDomainMatch = !!(samlAcsFromMetadata && samlAcsFromMetadata.includes(expectedDomain));
+      } else {
+        samlMetadataError = `HTTP ${metaResp.status}`;
+      }
+    } catch (e: any) {
+      samlMetadataError = e.message;
+    }
+
+    const results = {
+      probeTime: new Date().toISOString(),
+      expectedDomain,
+      canonicalConfigured: !!process.env.CANONICAL_URL,
+      baseUrl: base,
+      google: {
+        callbackUrl: googleCallbackUrl,
+        domainMatchesCanonical: googleDomainMatch,
+        secretsConfigured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+        pass: googleDomainMatch,
+        note: googleDomainMatch
+          ? "Callback URL domain matches. Register this URL in Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client IDs."
+          : `Domain mismatch: expected ${expectedDomain} in callback URL.`,
+      },
+      microsoft: {
+        callbackUrl: microsoftCallbackUrl,
+        domainMatchesCanonical: microsoftDomainMatch,
+        secretsConfigured: !!(process.env.MICROSOFT_CLIENT_ID && process.env.MICROSOFT_CLIENT_SECRET),
+        tenantId: process.env.MICROSOFT_TENANT_ID || "common",
+        pass: microsoftDomainMatch,
+        note: microsoftDomainMatch
+          ? "Callback URL domain matches. Register this URL in Microsoft Entra → App Registrations → your app → Authentication → Web Redirect URIs."
+          : `Domain mismatch: expected ${expectedDomain} in callback URL.`,
+      },
+      saml: {
+        acsUrl: getSamlAcsUrl(req),
+        acsUrlFromLiveMetadata: samlAcsFromMetadata,
+        metadataFetchOk: samlMetadataFetchOk,
+        metadataError: samlMetadataError,
+        domainMatchesCanonical: samlAcsDomainMatch,
+        idpConfigured: !!(process.env.SAML_IDP_ENTRY_POINT && process.env.SAML_ISSUER),
+        issuer: process.env.SAML_ISSUER || "pan-african-credit-registry",
+        pass: samlMetadataFetchOk && samlAcsDomainMatch,
+        note: !samlMetadataFetchOk
+          ? `Could not fetch SP metadata: ${samlMetadataError}`
+          : !samlAcsDomainMatch
+          ? `ACS URL in live metadata (${samlAcsFromMetadata}) does not contain expected domain (${expectedDomain}).`
+          : "ACS URL in live SP metadata matches canonical domain. Set this URL as the Assertion Consumer Service URL at your SAML IdP.",
+      },
+    };
+
+    routeLogger.info("[oauth-probe] Results", {
+      google: { pass: results.google.pass, url: results.google.callbackUrl },
+      microsoft: { pass: results.microsoft.pass, url: results.microsoft.callbackUrl },
+      saml: { pass: results.saml.pass, acsFromMetadata: results.saml.acsUrlFromLiveMetadata },
+    });
+
+    res.json(results);
+  });
 
   const contactSalesLimiter = rateLimit({
     validate: { trustProxy: false },

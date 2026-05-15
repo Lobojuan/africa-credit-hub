@@ -359,6 +359,12 @@ export function registerPlatformControlRoutes(app: Express) {
         google: `${canonicalBase}/api/consumer/auth/google/callback`,
         microsoft: `${canonicalBase}/api/auth/microsoft/callback`,
         saml: `${canonicalBase}/api/auth/saml/callback`,
+        samlMetadata: `${canonicalBase}/api/auth/saml/metadata`,
+        googleSecretsConfigured: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        microsoftSecretsConfigured: !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
+        samlIdpConfigured: !!(env.SAML_IDP_ENTRY_POINT && env.SAML_ISSUER),
+        microsoftTenantId: env.MICROSOFT_TENANT_ID || "common",
+        samlIssuer: env.SAML_ISSUER || "pan-african-credit-registry",
       };
 
       const envConfig = {
@@ -1029,6 +1035,161 @@ export function registerPlatformControlRoutes(app: Express) {
   app.patch("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider as string}`));
   app.delete("/api/admin/registry-credentials/:provider", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider as string}`));
   app.post("/api/admin/registry-credentials/:provider/test", requireMasterAuth, (req, res) => res.redirect(307, `/api/platform-control/registry-credentials/${req.params.provider as string}/test`));
+
+  // ── OAuth Smoke-Test Probe ────────────────────────────────────────────────
+  // GET /api/platform-control/oauth-probe
+  // Exercises the actual OAuth initiation HTTP handlers by requesting each
+  // initiation endpoint without following redirects, then:
+  //   - Parses the Location header to extract the redirect_uri parameter
+  //   - Compares the redirect_uri hostname against the canonical domain (exact match)
+  //   - Fetches the live /api/auth/saml/metadata XML and parses the ACS URL
+  //
+  // Pass criteria (all must be true for a provider to pass):
+  //   Google / Microsoft: redirect_uri hostname == canonical domain
+  //                       AND secrets are configured (client_id + client_secret)
+  //   SAML:               ACS URL hostname from live metadata == canonical domain
+  //                       AND IdP is configured (entry_point + issuer set)
+  app.get("/api/platform-control/oauth-probe", requireMasterAuth, async (req: Request, res: Response) => {
+    const env = process.env;
+    const canonicalBase = getOAuthCallbackBase();
+    let expectedHostname: string;
+    try {
+      expectedHostname = new URL(canonicalBase).hostname;
+    } catch {
+      expectedHostname = "universalcredithub.com";
+    }
+    const port = env.PORT || "5000";
+    const localBase = `http://localhost:${port}`;
+
+    // Helper: fetch an initiation URL (no redirects), return Location header
+    async function probeInitiation(path: string): Promise<{ redirectTo: string | null; statusCode: number; error: string | null }> {
+      try {
+        const r = await fetch(`${localBase}${path}`, { redirect: "manual", headers: { "x-probe": "1" } });
+        const loc = r.headers.get("location") || r.headers.get("Location");
+        return { redirectTo: loc, statusCode: r.status, error: null };
+      } catch (e: any) {
+        return { redirectTo: null, statusCode: 0, error: e.message };
+      }
+    }
+
+    // Extract redirect_uri from an OAuth authorization URL
+    function extractRedirectUri(locationUrl: string | null): string | null {
+      if (!locationUrl) return null;
+      try {
+        const u = new URL(locationUrl);
+        return u.searchParams.get("redirect_uri");
+      } catch {
+        return null;
+      }
+    }
+
+    // Expected exact callback URLs (scheme + host + path)
+    const expectedGoogleCallback = `${canonicalBase}/api/consumer/auth/google/callback`;
+    const expectedMsCallback = `${canonicalBase}/api/auth/microsoft/callback`;
+    const expectedSamlAcs = `${canonicalBase}/api/auth/saml/callback`;
+
+    // Google probe
+    const googleInitPath = "/api/consumer/auth/google";
+    const googleProbe = await probeInitiation(googleInitPath);
+    const googleRedirectUri = extractRedirectUri(googleProbe.redirectTo);
+    const googleSecretsOk = !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+    const googleUrlExactMatch = googleRedirectUri === expectedGoogleCallback;
+    const googlePass = googleSecretsOk && googleUrlExactMatch;
+
+    // Microsoft probe
+    const msInitPath = "/api/auth/microsoft";
+    const msProbe = await probeInitiation(msInitPath);
+    const msRedirectUri = extractRedirectUri(msProbe.redirectTo);
+    const msSecretsOk = !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET);
+    const msUrlExactMatch = msRedirectUri === expectedMsCallback;
+    const msPass = msSecretsOk && msUrlExactMatch;
+
+    // SAML probe: fetch live metadata and parse ACS URL
+    let samlAcsFromMetadata: string | null = null;
+    let samlMetadataFetchOk = false;
+    let samlMetadataError: string | null = null;
+    try {
+      const metaResp = await fetch(`${localBase}/api/auth/saml/metadata`);
+      if (metaResp.ok) {
+        samlMetadataFetchOk = true;
+        const xml = await metaResp.text();
+        const acsMatch = xml.match(/AssertionConsumerService[^>]*Location="([^"]+)"/);
+        samlAcsFromMetadata = acsMatch?.[1] ?? null;
+      } else {
+        samlMetadataError = `HTTP ${metaResp.status}`;
+      }
+    } catch (e: any) {
+      samlMetadataError = e.message;
+    }
+    const samlIdpOk = !!(env.SAML_IDP_ENTRY_POINT && env.SAML_ISSUER);
+    const samlAcsExactMatch = samlAcsFromMetadata === expectedSamlAcs;
+    const samlPass = samlIdpOk && samlAcsExactMatch;
+
+    const result = {
+      probeTime: new Date().toISOString(),
+      canonicalConfigured: !!env.CANONICAL_URL,
+      expectedDomain: expectedHostname,
+      baseUrl: canonicalBase,
+      google: {
+        initiationPath: googleInitPath,
+        initiationStatus: googleProbe.statusCode,
+        initiationError: googleProbe.error,
+        redirectTo: googleProbe.redirectTo ? googleProbe.redirectTo.split("?")[0] + "?…" : null,
+        redirect_uri: googleRedirectUri,
+        expectedCallbackUrl: expectedGoogleCallback,
+        urlExactMatch: googleUrlExactMatch,
+        secretsConfigured: googleSecretsOk,
+        pass: googlePass,
+        note: googlePass
+          ? `PASS — redirect_uri exactly matches expected callback URL. Register ${expectedGoogleCallback} in Google Cloud Console → Credentials → OAuth 2.0 Client IDs.`
+          : !googleSecretsOk
+          ? "FAIL — GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET not set. Configure secrets first."
+          : `FAIL — redirect_uri (${googleRedirectUri ?? "null"}) does not exactly match expected (${expectedGoogleCallback}). Check CANONICAL_URL.`,
+      },
+      microsoft: {
+        initiationPath: msInitPath,
+        initiationStatus: msProbe.statusCode,
+        initiationError: msProbe.error,
+        redirectTo: msProbe.redirectTo ? msProbe.redirectTo.split("?")[0] + "?…" : null,
+        redirect_uri: msRedirectUri,
+        expectedCallbackUrl: expectedMsCallback,
+        urlExactMatch: msUrlExactMatch,
+        secretsConfigured: msSecretsOk,
+        pass: msPass,
+        note: msPass
+          ? `PASS — redirect_uri exactly matches expected callback URL. Register ${expectedMsCallback} in Microsoft Entra → App Registrations → Authentication → Web Redirect URIs.`
+          : !msSecretsOk
+          ? "FAIL — MICROSOFT_CLIENT_ID and/or MICROSOFT_CLIENT_SECRET not set. Configure secrets first."
+          : `FAIL — redirect_uri (${msRedirectUri ?? "null"}) does not exactly match expected (${expectedMsCallback}). Check CANONICAL_URL.`,
+      },
+      saml: {
+        metadataUrl: `${canonicalBase}/api/auth/saml/metadata`,
+        metadataFetchOk: samlMetadataFetchOk,
+        metadataError: samlMetadataError,
+        acsUrlFromMetadata: samlAcsFromMetadata,
+        expectedAcsUrl: expectedSamlAcs,
+        urlExactMatch: samlAcsExactMatch,
+        idpConfigured: samlIdpOk,
+        issuer: env.SAML_ISSUER || "pan-african-credit-registry",
+        pass: samlPass,
+        note: !samlMetadataFetchOk
+          ? `FAIL — Could not fetch SP metadata: ${samlMetadataError}`
+          : !samlIdpOk
+          ? `FAIL — SAML_IDP_ENTRY_POINT and/or SAML_ISSUER not set. Configure secrets first. ACS URL to register: ${expectedSamlAcs}`
+          : !samlAcsExactMatch
+          ? `FAIL — ACS URL in live metadata (${samlAcsFromMetadata}) does not exactly match expected (${expectedSamlAcs}). Check CANONICAL_URL.`
+          : `PASS — ACS URL in live SP metadata exactly matches expected. Set ${samlAcsFromMetadata} as the ACS URL at your SAML IdP.`,
+      },
+    };
+
+    logger.info("OAuth probe executed", {
+      google: { pass: result.google.pass, redirect_uri: result.google.redirect_uri },
+      microsoft: { pass: result.microsoft.pass, redirect_uri: result.microsoft.redirect_uri },
+      saml: { pass: result.saml.pass, acsFromMetadata: result.saml.acsUrlFromMetadata },
+    });
+
+    res.json(result);
+  });
 
   // Load DB-stored registry credentials into in-memory cache at startup
   loadRegistryCredentialsFromDb().catch((err: Error) => {
