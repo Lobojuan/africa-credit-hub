@@ -9,6 +9,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
+import { warnIfCanonicalUrlMissing } from "./base-url";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 
@@ -88,6 +89,7 @@ function validateProductionConfig() {
 }
 
 validateProductionConfig();
+warnIfCanonicalUrlMissing();
 
 const app = express();
 app.set("trust proxy", 1);
@@ -112,6 +114,10 @@ app.get("/health", async (_req, res) => {
     uptime: Math.floor(uptime),
     uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
     timestamp: new Date().toISOString(),
+    domain: {
+      canonical: process.env.CANONICAL_URL || "https://universalcredithub.com",
+      configured: !!process.env.CANONICAL_URL,
+    },
     checks: {
       database: { status: dbOk ? "ok" : "error", latencyMs: dbLatency, pool: { total: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount } },
       memory: { rss: Math.round(mem.rss / 1024 / 1024), heapUsed: Math.round(mem.heapUsed / 1024 / 1024), heapTotal: Math.round(mem.heapTotal / 1024 / 1024), unit: "MB" },

@@ -5,7 +5,7 @@ import express from "express";
 import type { UssdContext } from "./services/loto-ussd-state-machine";
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { getBaseUrl } from "./base-url";
+import { getBaseUrl, getOAuthCallbackBase } from "./base-url";
 import { createLogger } from "./logger";
 import { isSafeWebhookUrl } from "./lib/url-safety";
 const routeLogger = createLogger("routes");
@@ -2349,13 +2349,11 @@ export async function registerRoutes(
   const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || "";
 
   function getGoogleRedirectUri(req: Request) {
-    if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/consumer/auth/google/callback`;
+    const base = getOAuthCallbackBase();
+    if (process.env.CANONICAL_URL || !req.get('host')) return `${base}/api/consumer/auth/google/callback`;
     const host = req.get('host');
-    if (host) {
-      const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
-      return `${protocol}://${host}/api/consumer/auth/google/callback`;
-    }
-    return `https://universalcredithub.com/api/consumer/auth/google/callback`;
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+    return `${protocol}://${host}/api/consumer/auth/google/callback`;
   }
 
   const ALLOWED_RETURN_PATHS = ["/my-credit", "/start-trial", "/dashboard", "/solutions", "/pricing", "/ai-demo"];
@@ -2528,13 +2526,11 @@ export async function registerRoutes(
   const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || "common";
 
   function getMicrosoftRedirectUri(req: Request) {
-    if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/auth/microsoft/callback`;
+    const base = getOAuthCallbackBase();
+    if (process.env.CANONICAL_URL || !req.get('host')) return `${base}/api/auth/microsoft/callback`;
     const host = req.get('host');
-    if (host) {
-      const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
-      return `${protocol}://${host}/api/auth/microsoft/callback`;
-    }
-    return `https://universalcredithub.com/api/auth/microsoft/callback`;
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+    return `${protocol}://${host}/api/auth/microsoft/callback`;
   }
 
   app.get("/api/auth/microsoft", (req, res) => {
@@ -2660,13 +2656,11 @@ export async function registerRoutes(
   }, 5 * 60 * 1000);
 
   function getSamlAcsUrl(req: Request) {
-    if (process.env.CANONICAL_URL) return `${process.env.CANONICAL_URL}/api/auth/saml/callback`;
+    const base = getOAuthCallbackBase();
+    if (process.env.CANONICAL_URL || !req.get('host')) return `${base}/api/auth/saml/callback`;
     const host = req.get('host');
-    if (host) {
-      const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
-      return `${protocol}://${host}/api/auth/saml/callback`;
-    }
-    return `https://universalcredithub.com/api/auth/saml/callback`;
+    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
+    return `${protocol}://${host}/api/auth/saml/callback`;
   }
 
   app.get("/api/auth/saml/metadata", (req, res) => {
