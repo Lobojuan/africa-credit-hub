@@ -2694,7 +2694,7 @@ const zhTW = {
     aiTrendDesc: "對整個投資組合的逾期和違約趨勢進行 3-6 個月的預測。提前規劃撥備。",
     aiCollectionTitle: "催收優先級",
     aiCollectionDesc: "AI 按催收可能性對逾期賬戶進行排名，並推薦具體行動——電話、重組或升級。",
-    aiMlBadge: "ACH v1.0",
+    aiMlBadge: "UCH v1.0",
     aiMlTitle: "機器學習信用評分",
     aiMlDesc: "專有評分模型以 300-850 的區間對借款人進行評級，帶置信區間。超越還款歷史，納入速度、利用率趨勢和跨境活動。",
     aiFraudBadge: "即時",

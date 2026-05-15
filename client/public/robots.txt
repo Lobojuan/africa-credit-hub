@@ -4,4 +4,4 @@ Disallow: /api/
 Disallow: /admin/
 Disallow: /master-control/
 
-Sitemap: https://africacredithub.com/sitemap.xml
+Sitemap: https://universalcredithub.com/sitemap.xml

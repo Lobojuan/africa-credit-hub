@@ -12453,7 +12453,7 @@ STANDARD — $299/month ($239/month annual)
 PROFESSIONAL — $799/month ($639/month annual) [MOST POPULAR]
 - For growing institutions needing advanced analytics
 - Up to 50 users, multi-country deployment (up to 5 countries)
-- Everything in Standard plus: Advanced credit scoring (ACH Scorecard v1.0), cross-border credit searches, portfolio intelligence suite
+- Everything in Standard plus: Advanced credit scoring (UCH Scorecard v1.0), cross-border credit searches, portfolio intelligence suite
 - Priority API access (10,000 calls/day)
 - WebAuthn biometric authentication, maker-checker workflows
 - Regulatory compliance dashboards, batch upload processing
@@ -15173,7 +15173,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const borrower = await storage.getBorrower(borrowerId);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
 
-      const requestRef = `ACH-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      const requestRef = `UCH-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
       const { queryXdsGhana } = await import("./xds-ghana");
       const { xdsBureauQueries } = await import("@shared/schema");

@@ -2002,7 +2002,7 @@ const pt = {
     aiTrendDesc: "Projeções de 3 a 6 meses sobre tendências de incumprimento e atraso em todo o seu portfólio. Planeie provisões, não reaja a surpresas.",
     aiCollectionTitle: "Prioridades de Cobrança",
     aiCollectionDesc: "A IA classifica contas em atraso por probabilidade de recuperação e recomenda ações específicas — ligar, reestruturar ou escalar — para que a sua equipa se concentre onde importa.",
-    aiMlBadge: "ACH v1.0",
+    aiMlBadge: "UCH v1.0",
     aiMlTitle: "Scoring de Crédito ML",
     aiMlDesc: "Modelo de scoring proprietário pontua mutuários de 300-850 com intervalos de confiança. Vai além do histórico de pagamentos para considerar velocidade, tendências de utilização e atividade transfronteiriça.",
     aiFraudBadge: "Tempo Real",

@@ -1,5 +1,5 @@
 <p align="center">
-  <h1 align="center">Africa Credit Hub (CDH v2.8)</h1>
+  <h1 align="center">Universal Credit Hub (UCH v2.8)</h1>
   <p align="center"><strong>Pan-African Credit Registry Infrastructure</strong></p>
   <p align="center">
     Enterprise-grade, multi-tenant SaaS credit data hub serving all 54 African countries,<br/>
@@ -22,9 +22,9 @@
 
 ## Overview
 
-Africa Credit Hub is a centralised credit registry platform purpose-built for the African financial ecosystem. It enables banks, microfinance institutions, fintechs, regulators, and development finance institutions to share, query, and analyse credit data across jurisdictions while maintaining strict data sovereignty, regulatory compliance, and consumer privacy.
+Universal Credit Hub is a centralised credit registry platform purpose-built for the African financial ecosystem. It enables banks, microfinance institutions, fintechs, regulators, and development finance institutions to share, query, and analyse credit data across jurisdictions while maintaining strict data sovereignty, regulatory compliance, and consumer privacy.
 
-The platform is developed by **Africa Credit Hub** in partnership with **Systems In Motion Limited (Bsystems)**.
+The platform is developed by **Universal Credit Hub** in partnership with **Systems In Motion Limited (Bsystems)**.
 
 ### Key Differentiators
 
@@ -220,7 +220,7 @@ The platform is designed for deployment on Replit with built-in PostgreSQL, TLS,
 1. Set `PRODUCTION_MODE=true` to disable demo data seeding
 2. Set `NODE_ENV=production` for optimised builds
 3. Configure all required environment variables
-4. The application supports custom domain binding (e.g., `africacredithub.com`)
+4. The application supports custom domain binding (e.g., `universalcredithub.com`)
 
 ---
 
@@ -255,4 +255,4 @@ See `docs/Systems_Documentation.md` for prior release history.
 
 ## License
 
-Proprietary. Copyright 2024-2026 Africa Credit Hub. All rights reserved.
+Proprietary. Copyright 2024-2026 Universal Credit Hub. All rights reserved.

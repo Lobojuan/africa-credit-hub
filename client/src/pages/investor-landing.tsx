@@ -1796,7 +1796,7 @@ export default function InvestorLandingPage() {
                 </CardContent>
               </Card>
 
-              {/* ACH column */}
+              {/* UCH column */}
               <Card className="border-green-200 dark:border-green-900/40 bg-green-500/5">
                 <CardContent className="pt-5 pb-5">
                   <div className="flex items-center gap-2 mb-4">

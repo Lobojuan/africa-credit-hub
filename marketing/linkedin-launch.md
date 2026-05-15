@@ -1,4 +1,4 @@
-# LinkedIn Launch — Africa Credit Hub
+# LinkedIn Launch — Universal Credit Hub
 
 > Six posts: one launch + five follow-ups, designed to drip across two weeks. Post the launch on a Tuesday or Wednesday morning, 9–10 AM in your target timezone (West Africa Time / GMT+1 works well for both Africa and Europe).
 
@@ -14,7 +14,7 @@
 >
 > Not because they're not creditworthy. Because they're invisible.
 >
-> Today we're launching **Africa Credit Hub** — the consent-first credit infrastructure for Africa.
+> Today we're launching **Universal Credit Hub** — the consent-first credit infrastructure for Africa.
 >
 > Three systems, one platform:
 >
@@ -26,7 +26,7 @@
 >
 > Built for banks, MFIs, fintechs, regulators — and most importantly, the merchant who rings up sales on a POS in Abidjan and now has a credit history she owns.
 >
-> 👉 https://africacredithub.replit.app
+> 👉 https://universalcredithub.replit.app
 >
 > #FinTech #Africa #FinancialInclusion #CreditBureau #OpenBanking
 
@@ -103,7 +103,7 @@
 >
 > That sentence has been in my head ever since.
 >
-> Africa Credit Hub is what we built to close that gap. Not just for her, for every loan officer on the continent who knows the truth on the ground but can't prove it on a screen.
+> Universal Credit Hub is what we built to close that gap. Not just for her, for every loan officer on the continent who knows the truth on the ground but can't prove it on a screen.
 >
 > If you're a lender, regulator, or founder working on this problem — I want to talk to you.
 >
@@ -115,7 +115,7 @@
 
 **Best as:** plain-text + clear CTA.
 
-> Two weeks since we launched Africa Credit Hub. Quick update + an ask.
+> Two weeks since we launched Universal Credit Hub. Quick update + an ask.
 >
 > ✅ X partner conversations opened
 > ✅ Y central-bank briefings booked
@@ -123,13 +123,13 @@
 >
 > What's next:
 >
-> → If you run a **bank, MFI, or fintech** in Africa: we're onboarding the next 10 pilot lenders this quarter. https://africacredithub.replit.app/for-lenders
+> → If you run a **bank, MFI, or fintech** in Africa: we're onboarding the next 10 pilot lenders this quarter. https://universalcredithub.replit.app/for-lenders
 >
-> → If you work in **regulation or policy**: we'll set up a sandbox for you in 5 days, no commitment. https://africacredithub.replit.app/for-regulators
+> → If you work in **regulation or policy**: we'll set up a sandbox for you in 5 days, no commitment. https://universalcredithub.replit.app/for-regulators
 >
 > → If you're an **investor** in fintech infrastructure: DM me — happy to send the deck and book a 30-min walkthrough.
 >
-> → If you cover **African fintech as a journalist or analyst**: press kit is here. https://africacredithub.replit.app/press
+> → If you cover **African fintech as a journalist or analyst**: press kit is here. https://universalcredithub.replit.app/press
 >
 > Forward this to one person who should see it. That's how this gets built.
 

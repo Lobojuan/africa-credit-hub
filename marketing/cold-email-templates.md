@@ -1,4 +1,4 @@
-# Cold-Outreach Email Templates — Africa Credit Hub
+# Cold-Outreach Email Templates — Universal Credit Hub
 
 > Six templates. Keep them short. Personalize the first sentence — never send untouched.
 
@@ -12,7 +12,7 @@ Hi [Name],
 
 Saw [bank] is expanding [SME / consumer] lending into [country]. We built something that should be useful.
 
-**Africa Credit Hub** is a consent-first credit-bureau platform that combines three things in one API call:
+**Universal Credit Hub** is a consent-first credit-bureau platform that combines three things in one API call:
 - Standard pan-African credit report
 - Collateral interests filed against the borrower
 - VAT Activity Score from verified fiscal receipts (where the merchant opts in)
@@ -22,7 +22,7 @@ The fiscal-receipt piece is the unlock — it lets you safely lend to thin-file 
 30-day free pilot, sandbox + production keys, no setup fee. Can I send you a 90-second demo video and your sandbox login?
 
 [Your name]
-https://africacredithub.replit.app/for-lenders
+https://universalcredithub.replit.app/for-lenders
 
 ---
 
@@ -32,7 +32,7 @@ https://africacredithub.replit.app/for-lenders
 
 Dear [Title] [Surname],
 
-I lead Africa Credit Hub, a consent-first credit-infrastructure platform with regulator-ready exports already templated for [BoG / CBN / BCEAO / BEAC / CBK / BSL].
+I lead Universal Credit Hub, a consent-first credit-infrastructure platform with regulator-ready exports already templated for [BoG / CBN / BCEAO / BEAC / CBK / BSL].
 
 What's different from existing bureaus: every cross-product data access is logged with a consent ID, declared purpose, and anchored to a public blockchain. You'd have a real-time supervisory feed instead of monthly returns.
 
@@ -42,7 +42,7 @@ May I send a one-page brief and a 20-minute walkthrough slot?
 
 [Your name]
 [Title]
-https://africacredithub.replit.app/for-regulators
+https://universalcredithub.replit.app/for-regulators
 
 ---
 
@@ -63,7 +63,7 @@ Live, deployed, six regulator export templates already shipped (BoG, CBN, BCEAO,
 Open to a 20-min intro?
 
 [Your name]
-https://africacredithub.replit.app — full walkthrough on request
+https://universalcredithub.replit.app — full walkthrough on request
 
 ---
 
@@ -77,12 +77,12 @@ Loved your piece on [specific recent article].
 
 Story you might find interesting: Africa has 300M adults with no formal credit history but increasingly extensive digital paper trails (mobile money, POS receipts, fiscal records). The bureaus we have are Western architectures retrofitted onto African data. They weren't designed consent-first, and they don't bridge the data sources that would actually make thin-file customers visible.
 
-We've built one that does — Africa Credit Hub — and we're publicly launching this month. Three systems on one platform: credit bureau, collateral registry, and Loto Fiscal (fiscal-receipt scoring). Consent-first, blockchain-anchored audit.
+We've built one that does — Universal Credit Hub — and we're publicly launching this month. Three systems on one platform: credit bureau, collateral registry, and Loto Fiscal (fiscal-receipt scoring). Consent-first, blockchain-anchored audit.
 
 Happy to give you exclusive access to the platform, founder time, and figures before the broader announcement. Interested?
 
 [Your name]
-Press kit: https://africacredithub.replit.app/press
+Press kit: https://universalcredithub.replit.app/press
 
 ---
 
@@ -92,7 +92,7 @@ Press kit: https://africacredithub.replit.app/press
 
 Hi [Name],
 
-Africa Credit Hub launched this month — consent-first credit infrastructure that lets merchants with verified VAT receipts unlock real credit for the first time.
+Universal Credit Hub launched this month — consent-first credit infrastructure that lets merchants with verified VAT receipts unlock real credit for the first time.
 
 Two ways we'd love to work together:
 1. Free sandbox + 1,000 reports for any of your portfolio companies in lending, fintech, or SME services
@@ -101,7 +101,7 @@ Two ways we'd love to work together:
 Worth a 15-min call?
 
 [Your name]
-https://africacredithub.replit.app
+https://universalcredithub.replit.app
 
 ---
 
@@ -111,11 +111,11 @@ https://africacredithub.replit.app
 
 Hey [Name],
 
-Been heads-down for [X] months building Africa Credit Hub. Just shipped publicly. It's a pan-African credit bureau + collateral registry + fiscal-receipt scoring on one platform, consent-first.
+Been heads-down for [X] months building Universal Credit Hub. Just shipped publicly. It's a pan-African credit bureau + collateral registry + fiscal-receipt scoring on one platform, consent-first.
 
 You've thought hard about [their domain]. Would mean a lot to get your honest read on the demo. 10 minutes max?
 
-Demo: https://africacredithub.replit.app — `johndoe` / `SecuredCreditor2026!`
+Demo: https://universalcredithub.replit.app — `johndoe` / `SecuredCreditor2026!`
 
 [Your name]
 

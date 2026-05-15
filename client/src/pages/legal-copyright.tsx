@@ -109,7 +109,7 @@ export default function LegalCopyrightPage() {
                     <Key className="w-3 h-3 mr-1" /> {t("legal.proprietary")}
                   </Badge>
                   <Badge variant="secondary" data-testid="badge-ref">
-                    <FileText className="w-3 h-3 mr-1" /> CDH-IP-2026-001
+                    <FileText className="w-3 h-3 mr-1" /> UCH-IP-2026-001
                   </Badge>
                 </div>
               </div>

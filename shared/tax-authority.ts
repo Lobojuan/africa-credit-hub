@@ -1,5 +1,5 @@
 /**
- * Africa Credit Hub — Tax-authority registry.
+ * Universal Credit Hub — Tax-authority registry.
  *
  * Single source of truth for, per African country:
  *   - the local tax authority that runs e-invoicing / VAT-receipt verification,

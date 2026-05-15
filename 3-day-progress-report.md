@@ -1,4 +1,4 @@
-# CDH Credit Registry — 3-Day Progress Report
+# UCH Credit Registry — 3-Day Progress Report
 **Period:** March 14–16, 2026
 **Platform:** Pan-African Credit Registry System v2.1
 **Prepared for:** Management Review
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Over the past 3 days, the CDH platform has undergone significant enhancements across five key areas: platform infrastructure, security hardening, investor-facing materials, monetization tooling, and new product capabilities. The platform has been elevated from a v2.0 demonstration to a v2.1 production-grade SaaS system, directly supporting the $1.5M exit valuation target.
+Over the past 3 days, the UCH platform has undergone significant enhancements across five key areas: platform infrastructure, security hardening, investor-facing materials, monetization tooling, and new product capabilities. The platform has been elevated from a v2.0 demonstration to a v2.1 production-grade SaaS system, directly supporting the $1.5M exit valuation target.
 
 ---
 

@@ -1023,7 +1023,7 @@ const HARDCODED_MODULES: TrainingModule[] = [
         id: "pdr-6",
         question: "Agricultural income seasonality is a risk factor unique to the Universal Credit Hub ML model and not used by any global bureau.",
         correct: true,
-        explanation: "Correct. African economies have a significantly higher proportion of agricultural borrowers with seasonal income patterns. The ACH ML model explicitly weights seasonal income volatility as a risk factor — a factor global bureaus do not model for African markets.",
+        explanation: "Correct. African economies have a significantly higher proportion of agricultural borrowers with seasonal income patterns. The UCH ML model explicitly weights seasonal income volatility as a risk factor — a factor global bureaus do not model for African markets.",
       },
       {
         id: "pdr-7",

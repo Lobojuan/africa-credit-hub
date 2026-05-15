@@ -1,4 +1,4 @@
-# Launch Day Checklist — Africa Credit Hub
+# Launch Day Checklist — Universal Credit Hub
 
 > Run through this the morning of your public launch. Aim to publish between **9–10 AM West Africa Time** so you catch both Africa and Europe in their morning windows.
 
@@ -20,7 +20,7 @@
 - [ ] Schedule it for 9 AM launch day (or post live)
 - [ ] Draft Posts 2–6 in your scheduler so you don't have to think launch-week
 - [ ] Email the 6 cold-outreach templates from `cold-email-templates.md` to a personalized list of 30 contacts (5 per template)
-- [ ] Update LinkedIn, Twitter/X, and personal website bios to mention Africa Credit Hub
+- [ ] Update LinkedIn, Twitter/X, and personal website bios to mention Universal Credit Hub
 - [ ] Add Open Graph image to homepage so link previews look professional
 
 ## T-1 day

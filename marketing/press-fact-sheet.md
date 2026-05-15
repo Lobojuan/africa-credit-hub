@@ -1,4 +1,4 @@
-# Africa Credit Hub — Press Fact Sheet
+# Universal Credit Hub — Press Fact Sheet
 
 _Last updated: April 2026_
 
@@ -6,11 +6,11 @@ _Last updated: April 2026_
 
 ## One-line description
 
-**Africa Credit Hub** is the consent-first credit infrastructure for Africa — a single platform combining a pan-African credit bureau, a movable-asset collateral registry, and a verified VAT-receipt system (Loto Fiscal) — wired together by a consent-bounded data bridge so previously invisible merchants can unlock real credit.
+**Universal Credit Hub** is the consent-first credit infrastructure for Africa — a single platform combining a pan-African credit bureau, a movable-asset collateral registry, and a verified VAT-receipt system (Loto Fiscal) — wired together by a consent-bounded data bridge so previously invisible merchants can unlock real credit.
 
 ## Three-line description
 
-Africa Credit Hub combines three systems that have never been on one platform: a pan-African credit bureau (54 countries), a movable-asset collateral registry (OHADA, UCC-9, Common, Civil), and Loto Fiscal — a fiscal-receipt platform whose verified VAT data doubles as alternative-data credit scoring for thin-file merchants.
+Universal Credit Hub combines three systems that have never been on one platform: a pan-African credit bureau (54 countries), a movable-asset collateral registry (OHADA, UCC-9, Common, Civil), and Loto Fiscal — a fiscal-receipt platform whose verified VAT data doubles as alternative-data credit scoring for thin-file merchants.
 
 Every cross-product data flow runs through one auditable consent bridge: explicit purpose, expiry, instant revocation, and a blockchain-anchored audit chain that regulators can watch in real time.
 
@@ -33,7 +33,7 @@ The result: lenders see deeper applicant pictures, regulators get a modern super
 
 ## Quotable lines
 
-> "Africa Credit Hub is what TransUnion would build if they started today, for Africa, with consent baked in and fiscal data as the unlock for the unbanked."
+> "Universal Credit Hub is what TransUnion would build if they started today, for Africa, with consent baked in and fiscal data as the unlock for the unbanked."
 
 > "Most credit bureaus log who pulled what. We log which consent ID authorised it, what purpose was declared, and we anchor the hash to a public blockchain every six hours."
 
@@ -76,17 +76,17 @@ Verified VAT-receipt platform. Each receipt is signed by the tax authority. Merc
 
 ## Media contact
 
-- **Press inquiries:** press@africacredithub.com
-- **Regulator inquiries:** regulators@africacredithub.com
-- **Partnership inquiries:** partners@africacredithub.com
+- **Press inquiries:** press@universalcredithub.com
+- **Regulator inquiries:** regulators@universalcredithub.com
+- **Partnership inquiries:** partners@universalcredithub.com
 - **Demo & briefings:** Available within 48 hours; live demo URL on request
 
 ## Demo access (for journalists)
 
-- **URL:** https://africacredithub.replit.app
+- **URL:** https://universalcredithub.replit.app
 - **Credentials:** `johndoe` / `SecuredCreditor2026!`
 - **What to try:** Open the dashboard hero animation, then `/loto-workspace` for the merchant flow, then `/financial-inclusion` for the live impact dashboard, then `/audit` for the cross-product audit trail.
 
 ## Boilerplate
 
-> Africa Credit Hub is the consent-first credit infrastructure for Africa. The platform combines a pan-African credit bureau, a movable-asset collateral registry, and a verified VAT-receipt system (Loto Fiscal) — wired together by a consent-bounded gateway with a blockchain-anchored audit trail. Africa Credit Hub serves banks, MFIs, fintechs, lessors, central banks, and the African merchants who, for the first time, can own a portable credit history. Available in 7 languages across 54 countries and 4 legal regimes.
+> Universal Credit Hub is the consent-first credit infrastructure for Africa. The platform combines a pan-African credit bureau, a movable-asset collateral registry, and a verified VAT-receipt system (Loto Fiscal) — wired together by a consent-bounded gateway with a blockchain-anchored audit trail. Universal Credit Hub serves banks, MFIs, fintechs, lessors, central banks, and the African merchants who, for the first time, can own a portable credit history. Available in 7 languages across 54 countries and 4 legal regimes.

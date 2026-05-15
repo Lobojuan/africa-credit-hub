@@ -1,4 +1,4 @@
-# Africa Credit Hub — Investor One-Pager
+# Universal Credit Hub — Investor One-Pager
 
 _For institutional and angel investors. Print to PDF as needed._
 
@@ -89,7 +89,7 @@ A pan-African infrastructure play priced at a fraction of any of these is asymme
 ## Contact
 
 - **Founder:** [Your name]
-- **Email:** [founder@africacredithub.com]
-- **Demo:** https://africacredithub.replit.app — `johndoe` / `SecuredCreditor2026!`
-- **Investor walkthrough:** https://africacredithub.replit.app — book a 30-min live demo
-- **Press kit:** https://africacredithub.replit.app/press
+- **Email:** [founder@universalcredithub.com]
+- **Demo:** https://universalcredithub.replit.app — `johndoe` / `SecuredCreditor2026!`
+- **Investor walkthrough:** https://universalcredithub.replit.app — book a 30-min live demo
+- **Press kit:** https://universalcredithub.replit.app/press

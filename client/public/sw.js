@@ -1,4 +1,4 @@
-const CACHE_NAME = "cdh-v2.6.0";
+const CACHE_NAME = "uch-v2.8.0";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",
@@ -42,7 +42,7 @@ self.addEventListener("fetch", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Africa Credit Hub", body: "You have a new credit alert.", icon: "/pwa-icon-192.png" };
+  let data = { title: "Universal Credit Hub", body: "You have a new credit alert.", icon: "/pwa-icon-192.png" };
   try {
     if (event.data) {
       const parsed = event.data.json();

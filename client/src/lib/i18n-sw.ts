@@ -2013,7 +2013,7 @@ const sw: Record<string, any> = {
     aiTrendDesc: "Makadirio ya miezi 3 hadi 6 kuhusu mwelekeo wa ucheleweshaji na kushindwa kulipa katika kwingineko yako yote. Panga akiba, usijibu mshangao.",
     aiCollectionTitle: "Vipaumbele vya Ukusanyaji",
     aiCollectionDesc: "AI inapanga akaunti zilizochelewa kwa uwezekano wa kurejesha na kupendekeza hatua maalum — piga simu, rekebisha muundo, au pandisha kiwango — ili timu yako izingatie mahali panapohusika.",
-    aiMlBadge: "ACH v1.0",
+    aiMlBadge: "UCH v1.0",
     aiMlTitle: "Alama ya Mikopo ya ML",
     aiMlDesc: "Mfano wa alama za mkopo unawapa wakopaji alama 300-850 na vipindi vya kujiamini. Unazidi historia ya malipo kuzingatia kasi, mwelekeo wa matumizi, na shughuli za kuvuka mipaka.",
     aiFraudBadge: "Wakati Halisi",

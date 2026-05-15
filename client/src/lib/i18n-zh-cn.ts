@@ -2187,7 +2187,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "aiTrendDesc": "对整个投资组合的逾期和违约趋势进行 3-6 个月的预测。提前规划拨备，而不是对意外作出反应。",
     "aiCollectionTitle": "催收优先级",
     "aiCollectionDesc": "AI 按催收可能性对逾期账户进行排名，并推荐具体行动——电话、重组或升级——让您的团队专注于最重要的地方。",
-    "aiMlBadge": "ACH v1.0",
+    "aiMlBadge": "UCH v1.0",
     "aiMlTitle": "机器学习信用评分",
     "aiMlDesc": "专有评分模型以 300-850 的区间对借款人进行评级，带置信区间。超越还款历史，纳入速度、利用率趋势和跨境活动。",
     "aiFraudBadge": "实时",

@@ -2144,7 +2144,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       aiTrendDesc: "Proyecciones de 3 a 6 meses sobre las tendencias de morosidad e incumplimiento de toda su cartera. Planifique las provisiones en lugar de reaccionar a las sorpresas.",
       aiCollectionTitle: "Prioridades de Cobro",
       aiCollectionDesc: "La IA clasifica las cuentas en mora por probabilidad de cobro y recomienda acciones específicas — llamar, reestructurar o escalar — para que su equipo se centre donde más importa.",
-      aiMlBadge: "ACH v1.0",
+      aiMlBadge: "UCH v1.0",
       aiMlTitle: "Puntuación de Crédito ML",
       aiMlDesc: "El modelo de puntuación propietario califica a los prestatarios de 300 a 850 con intervalos de confianza. Va más allá del historial de pagos para incorporar velocidad, tendencias de utilización y actividad transfronteriza.",
       aiFraudBadge: "Tiempo Real",

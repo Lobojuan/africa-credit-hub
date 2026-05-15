@@ -1,8 +1,8 @@
-# Africa Credit Hub — 90-Second Demo Script
+# Universal Credit Hub — 90-Second Demo Script
 
 > Use this script for: investor calls, sales demos, regulator briefings, conference lightning talks, and the LinkedIn launch video. Adjust pacing to your audience.
 
-**Demo URL:** https://africacredithub.replit.app
+**Demo URL:** https://universalcredithub.replit.app
 **Demo credentials:** `johndoe` / `SecuredCreditor2026!`
 **Recommended browser zoom:** 110%
 
@@ -12,13 +12,13 @@
 
 > "300 million African adults have no formal credit history. Lenders can't see them, so they don't get loans. We fixed that."
 
-**Screen:** Africa Credit Hub homepage at `/`. Hover over the three product cards.
+**Screen:** Universal Credit Hub homepage at `/`. Hover over the three product cards.
 
 ---
 
 ## 0:10 — 0:25 | The platform (15s)
 
-> "Africa Credit Hub is three systems in one platform — a pan-African credit bureau, a movable-asset collateral registry, and Loto Fiscal, which turns verified VAT receipts into a credit profile. They're wired together by a consent-bounded data bridge."
+> "Universal Credit Hub is three systems in one platform — a pan-African credit bureau, a movable-asset collateral registry, and Loto Fiscal, which turns verified VAT receipts into a credit profile. They're wired together by a consent-bounded data bridge."
 
 **Screen:** Click the dashboard tile. Land on the animated investor hero showing 14.7M+ borrowers ticking up, six regulator badges (BoG, CBN, BCEAO, BEAC, CBK, BSL).
 
@@ -50,9 +50,9 @@
 
 ## 1:15 — 1:30 | The close (15s)
 
-> "54 countries. Seven languages. Four legal regimes. One platform. We're not trying to out-data TransUnion in the U.S. — we're building what they would build if they started today, for Africa, with consent baked in. Africa Credit Hub. Let's get every African a credit history they own."
+> "54 countries. Seven languages. Four legal regimes. One platform. We're not trying to out-data TransUnion in the U.S. — we're building what they would build if they started today, for Africa, with consent baked in. Universal Credit Hub. Let's get every African a credit history they own."
 
-**Screen:** Cut to the master landing page hero. End on the Africa Credit Hub logo.
+**Screen:** Cut to the master landing page hero. End on the Universal Credit Hub logo.
 
 ---
 

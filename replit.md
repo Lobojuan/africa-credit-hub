@@ -40,7 +40,7 @@ Users have a per-user `allowedProducts` field (`text[]` in the `users` table). W
 ## Role Hierarchy
 
 ```
-platform_owner  → full access across CDH, Telco, Loto; sees all users including super_admin
+platform_owner  → full access across UCH, Telco, Loto; sees all users including super_admin
 super_admin     → full access; sees all users except platform_owner; can be deleted by platform_owner
 admin           → org-scoped; can create/edit non-privileged users
 regulator / lender / viewer / dgi_officer / tax_authority_admin  → domain-scoped leaf roles
