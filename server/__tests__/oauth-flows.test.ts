@@ -996,7 +996,7 @@ describe("Production URL generation — universalcredithub.com", () => {
     }
   });
 
-  it("Google initiate handler includes the production callback URL in the authorization redirect", async () => {
+  it("Google initiate handler includes client_id, redirect_uri, and state in the authorization redirect", async () => {
     const { app, prevEnv } = await makeApp(undefined, {
       CANONICAL_URL: PROD_BASE,
       GOOGLE_CLIENT_ID: "gid-prod",
@@ -1007,18 +1007,28 @@ describe("Production URL generation — universalcredithub.com", () => {
       expect(res.status).toBe(302);
       const location = res.headers.location as string;
       expect(location).toMatch(/^https:\/\/accounts\.google\.com/);
-      // The redirect_uri in the authorization URL must match what is registered
-      // at Google Cloud Console — this is the URL that must be added as an
-      // Authorized Redirect URI in the OAuth 2.0 client settings.
+
+      // client_id must match the configured credential
+      expect(location).toContain("client_id=gid-prod");
+
+      // redirect_uri must point to the production callback URL —
+      // this exact URL must be registered in Google Cloud Console →
+      // APIs & Services → Credentials → OAuth 2.0 Client IDs.
       expect(location).toContain(
         `redirect_uri=${encodeURIComponent(GOOGLE_PROD_CALLBACK)}`
       );
+
+      // state must be present (CSRF protection — random hex token set in session)
+      const parsed = new URL(location);
+      const state = parsed.searchParams.get("state");
+      expect(state).toBeTruthy();
+      expect(state).toMatch(/^[0-9a-f]{32}$/);
     } finally {
       await restoreEnv(prevEnv);
     }
   });
 
-  it("Microsoft initiate handler includes the production callback URL in the authorization redirect", async () => {
+  it("Microsoft initiate handler includes client_id, redirect_uri, and state in the authorization redirect", async () => {
     const { app, prevEnv } = await makeApp(undefined, {
       CANONICAL_URL: PROD_BASE,
       MICROSOFT_CLIENT_ID: "msid-prod",
@@ -1030,11 +1040,21 @@ describe("Production URL generation — universalcredithub.com", () => {
       expect(res.status).toBe(302);
       const location = res.headers.location as string;
       expect(location).toMatch(/login\.microsoftonline\.com/);
-      // The redirect_uri must match what is registered at Microsoft Entra →
+
+      // client_id must match the configured credential
+      expect(location).toContain("client_id=msid-prod");
+
+      // redirect_uri must match what is registered at Microsoft Entra →
       // App registrations → Authentication → Redirect URIs.
       expect(location).toContain(
         `redirect_uri=${encodeURIComponent(MICROSOFT_PROD_CALLBACK)}`
       );
+
+      // state must be present (CSRF protection — random hex token set in session)
+      const parsed = new URL(location);
+      const state = parsed.searchParams.get("state");
+      expect(state).toBeTruthy();
+      expect(state).toMatch(/^[0-9a-f]{32}$/);
     } finally {
       await restoreEnv(prevEnv);
     }

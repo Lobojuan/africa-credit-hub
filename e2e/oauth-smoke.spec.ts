@@ -2,15 +2,27 @@
  * OAuth Login Smoke Tests — End-to-End
  *
  * These tests exercise the complete OAuth initiation and callback paths for
- * both Google and Microsoft SSO without hitting real external providers.
+ * Google, Microsoft SSO, and SAML without hitting real external providers.
+ *
+ * The Playwright test server (port 5001) is always started fresh by
+ * playwright.config.ts with a fixed set of env vars:
+ *   CANONICAL_URL        = https://universalcredithub.com
+ *   SAML_IDP_ENTRY_POINT = https://mock-idp.example.com/sso/saml
+ *   GOOGLE_CLIENT_ID     = mock-google-ci-client-id
+ *   MICROSOFT_CLIENT_ID  = mock-ms-ci-client-id
+ *   ENABLE_E2E_TEST_AUTH = true
+ *
+ * Because the server is always configured in "production mode" (CANONICAL_URL
+ * set), all assertions are unconditional: redirect_uri / ACS URL must always
+ * match the exact universalcredithub.com production URLs.
  *
  * Strategy
  * ─────────
  * 1. Initiation tests: call the initiation endpoint with maxRedirects:0 so we
  *    can inspect the 302 Location header directly.  This "intercepts the
  *    provider redirect" at the HTTP layer and lets us assert every OAuth param
- *    (client_id, response_type, scope, state) before the browser would ever
- *    navigate to accounts.google.com or login.microsoftonline.com.
+ *    (client_id, redirect_uri, response_type, scope, state) before the browser
+ *    would ever navigate to accounts.google.com or login.microsoftonline.com.
  *
  * 2. Happy-path tests: the initiation call sets the CSRF state in the session.
  *    We extract the state from the Location header, then call the callback
@@ -24,14 +36,6 @@
  *
  * All requests use page.request (which shares cookies with the browser page),
  * so session cookies are automatically propagated across calls.
- *
- * Mock credentials used in CI (set in playwright.config.ts webServer env and
- * in .github/workflows/oauth-smoke.yml):
- *   GOOGLE_CLIENT_ID    = mock-google-ci-client-id
- *   MICROSOFT_CLIENT_ID = mock-ms-ci-client-id
- *
- * The server accepts code="e2e-google-code" / code="e2e-ms-code" only when
- * ENABLE_E2E_TEST_AUTH=true (see server/routes/oauth.ts).
  */
 
 import { test, expect } from "@playwright/test";
@@ -39,12 +43,24 @@ import { test, expect } from "@playwright/test";
 const E2E_GOOGLE_CODE = "e2e-google-code";
 const E2E_MS_CODE = "e2e-ms-code";
 
+// Production callback URLs that must be registered at provider consoles.
+// These are derived from CANONICAL_URL=https://universalcredithub.com (set in
+// playwright.config.ts) and must never regress to localhost or a Replit domain.
+const PROD_BASE = "https://universalcredithub.com";
+const GOOGLE_PROD_CALLBACK = `${PROD_BASE}/api/consumer/auth/google/callback`;
+const MICROSOFT_PROD_CALLBACK = `${PROD_BASE}/api/auth/microsoft/callback`;
+const SAML_PROD_ACS = `${PROD_BASE}/api/auth/saml/callback`;
+
+// Mock client IDs configured in playwright.config.ts webServer env.
+const MOCK_GOOGLE_CLIENT_ID = "mock-google-ci-client-id";
+const MOCK_MS_CLIENT_ID = "mock-ms-ci-client-id";
+const MOCK_IDP_URL = "https://mock-idp.example.com/sso/saml";
+
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 test.describe("Google OAuth — smoke tests", () => {
   test("initiates OAuth redirect to accounts.google.com with correct params", async ({ page }) => {
     // Call the initiation endpoint and stop at the 302 without following it.
-    // This is the "intercept the provider redirect" step.
     const resp = await page.request.get(
       "/api/consumer/auth/google?from=/my-credit",
       { maxRedirects: 0 },
@@ -62,12 +78,19 @@ test.describe("Google OAuth — smoke tests", () => {
     expect(redirectUrl.searchParams.get("scope")).toContain("email");
     expect(redirectUrl.searchParams.get("scope")).toContain("profile");
 
+    // client_id must match the configured credential exactly
+    expect(redirectUrl.searchParams.get("client_id")).toBe(MOCK_GOOGLE_CLIENT_ID);
+
+    // state must be present: 32-char hex CSRF token stored in the session
     const state = redirectUrl.searchParams.get("state");
     expect(state, "A CSRF state token must be included").toBeTruthy();
     expect(state!.length).toBeGreaterThan(8);
 
-    const clientId = redirectUrl.searchParams.get("client_id");
-    expect(clientId, "client_id must be present in the authorization URL").toBeTruthy();
+    // redirect_uri must be the exact production callback URL.
+    // CANONICAL_URL=https://universalcredithub.com is always set by
+    // playwright.config.ts, so a regression to localhost or a Replit domain
+    // will cause this assertion to fail immediately.
+    expect(redirectUrl.searchParams.get("redirect_uri")).toBe(GOOGLE_PROD_CALLBACK);
   });
 
   test("happy path: callback with mock code creates a consumer session and redirects correctly", async ({ page }) => {
@@ -99,8 +122,6 @@ test.describe("Google OAuth — smoke tests", () => {
     expect(location).not.toContain("error=");
 
     // Step 4: verify a valid authenticated session was created.
-    // The new session cookie set by the callback is automatically stored by
-    // page.request; this call confirms the session carries a consumerId.
     const sessionResp = await page.request.get("/api/test/get-session");
     expect(sessionResp.ok()).toBeTruthy();
     const session = await sessionResp.json() as Record<string, unknown>;
@@ -134,22 +155,7 @@ test.describe("Google OAuth — smoke tests", () => {
 // ─── Microsoft SSO ────────────────────────────────────────────────────────────
 
 test.describe("Microsoft SSO — smoke tests", () => {
-  /**
-   * Skip gracefully when the server is running without MICROSOFT_CLIENT_ID
-   * (e.g. a local dev server without MS credentials).  In CI the oauth-smoke
-   * workflow always sets MICROSOFT_CLIENT_ID=mock-ms-ci-client-id so the skip
-   * never fires there.
-   */
-  async function requireMicrosoftConfigured(page: import("@playwright/test").Page) {
-    const probe = await page.request.get("/api/auth/microsoft", { maxRedirects: 0 });
-    if (probe.status() === 503) {
-      test.skip(true, "MICROSOFT_CLIENT_ID not set — skipping MS SSO smoke tests");
-    }
-  }
-
   test("initiates OAuth redirect to login.microsoftonline.com with correct params", async ({ page }) => {
-    await requireMicrosoftConfigured(page);
-
     const resp = await page.request.get(
       "/api/auth/microsoft?from=/dashboard",
       { maxRedirects: 0 },
@@ -166,17 +172,21 @@ test.describe("Microsoft SSO — smoke tests", () => {
     expect(redirectUrl.searchParams.get("scope")).toContain("openid");
     expect(redirectUrl.searchParams.get("scope")).toContain("email");
 
+    // client_id must match the configured credential exactly
+    expect(redirectUrl.searchParams.get("client_id")).toBe(MOCK_MS_CLIENT_ID);
+
+    // state must be present: 32-char hex CSRF token stored in the session
     const state = redirectUrl.searchParams.get("state");
     expect(state, "A CSRF state token must be included").toBeTruthy();
     expect(state!.length).toBeGreaterThan(8);
 
-    const clientId = redirectUrl.searchParams.get("client_id");
-    expect(clientId, "client_id must be present in the authorization URL").toBeTruthy();
+    // redirect_uri must be the exact production callback URL.
+    // CANONICAL_URL=https://universalcredithub.com is always set by
+    // playwright.config.ts, so a regression to localhost will fail immediately.
+    expect(redirectUrl.searchParams.get("redirect_uri")).toBe(MICROSOFT_PROD_CALLBACK);
   });
 
   test("happy path: callback with mock code creates an admin session and redirects to /dashboard", async ({ page }) => {
-    await requireMicrosoftConfigured(page);
-
     // Step 1: initiate — store the CSRF state in the session.
     const initResp = await page.request.get(
       "/api/auth/microsoft?from=/dashboard",
@@ -210,8 +220,6 @@ test.describe("Microsoft SSO — smoke tests", () => {
   });
 
   test("state mismatch: callback redirects with invalid_state error", async ({ page }) => {
-    await requireMicrosoftConfigured(page);
-
     // Pre-seed a known OAuth state.
     const seedResp = await page.request.post("/api/test/set-session", {
       data: {
@@ -231,5 +239,109 @@ test.describe("Microsoft SSO — smoke tests", () => {
     const location = resp.headers()["location"];
     expect(location).toContain("error=invalid_state");
     expect(location).not.toBe("/dashboard");
+  });
+});
+
+// ─── SAML SSO ─────────────────────────────────────────────────────────────────
+//
+// These tests hit the real /api/auth/saml/login handler in server/routes.ts.
+// The playwright.config.ts webServer env always sets:
+//   SAML_IDP_ENTRY_POINT = https://mock-idp.example.com/sso/saml
+//   CANONICAL_URL        = https://universalcredithub.com
+// so the handler always issues a redirect and the SAMLRequest always embeds
+// the production ACS URL.  All assertions are unconditional.
+
+test.describe("SAML SSO — smoke tests", () => {
+  test("initiates redirect to IdP with a base64-encoded SAMLRequest param", async ({ page }) => {
+    const resp = await page.request.get(
+      "/api/auth/saml/login",
+      { maxRedirects: 0 },
+    );
+
+    expect(resp.status()).toBe(302);
+
+    const location = resp.headers()["location"];
+    expect(location, "Location header must be present").toBeTruthy();
+
+    // Must redirect to the configured mock IdP entry point
+    expect(location).toContain(MOCK_IDP_URL);
+
+    // SAMLRequest query param must be present
+    const url = new URL(location);
+    const samlRequest = url.searchParams.get("SAMLRequest");
+    expect(samlRequest, "SAMLRequest must be present in the redirect URL").toBeTruthy();
+
+    // Value must be valid base64 that decodes to non-empty XML
+    const decoded = Buffer.from(samlRequest!, "base64").toString("utf-8");
+    expect(decoded.length).toBeGreaterThan(0);
+    expect(decoded).toContain("AuthnRequest");
+  });
+
+  test("SAMLRequest AssertionConsumerServiceURL matches the production ACS URL", async ({ page }) => {
+    const resp = await page.request.get(
+      "/api/auth/saml/login",
+      { maxRedirects: 0 },
+    );
+
+    expect(resp.status()).toBe(302);
+
+    const location = resp.headers()["location"];
+    const samlRequest = new URL(location).searchParams.get("SAMLRequest")!;
+    const xml = Buffer.from(samlRequest, "base64").toString("utf-8");
+
+    // The ACS URL embedded in the SAMLRequest must be the exact production URL.
+    // CANONICAL_URL=https://universalcredithub.com is always set by
+    // playwright.config.ts, so a regression to localhost or a Replit domain
+    // will cause this assertion to fail immediately.
+    expect(xml).toContain(`AssertionConsumerServiceURL="${SAML_PROD_ACS}"`);
+
+    // Confirm the production URL is clean — no localhost or internal addresses
+    expect(xml).not.toContain("localhost");
+    expect(xml).not.toContain("127.0.0.1");
+  });
+
+  test("SAMLRequest XML contains required SAML 2.0 AuthnRequest attributes", async ({ page }) => {
+    const resp = await page.request.get(
+      "/api/auth/saml/login",
+      { maxRedirects: 0 },
+    );
+
+    expect(resp.status()).toBe(302);
+
+    const xml = Buffer.from(
+      new URL(resp.headers()["location"]).searchParams.get("SAMLRequest")!,
+      "base64",
+    ).toString("utf-8");
+
+    expect(xml).toContain("urn:oasis:names:tc:SAML:2.0:protocol");
+    expect(xml).toContain('Version="2.0"');
+    // ID attribute must be present (non-empty _<32hex> format)
+    expect(xml).toMatch(/\bID="_[0-9a-f]{32}"/);
+    // Issuer element must be present
+    expect(xml).toContain("<saml:Issuer>");
+  });
+
+  test("samlRequestId stored in session matches ID attribute in SAMLRequest XML", async ({ page }) => {
+    const resp = await page.request.get(
+      "/api/auth/saml/login",
+      { maxRedirects: 0 },
+    );
+    expect(resp.status()).toBe(302);
+
+    // The session cookie from the initiation call is automatically held by
+    // page.request; verify the server stored the request ID in the session.
+    const sessionResp = await page.request.get("/api/test/get-session");
+    expect(sessionResp.ok()).toBeTruthy();
+    const session = await sessionResp.json() as Record<string, unknown>;
+    expect(session.samlRequestId, "samlRequestId must be in the session").toBeTruthy();
+    expect(session.samlRequestId as string).toMatch(/^_[0-9a-f]{32}$/);
+
+    // The ID stored in the session must match the ID attribute in the SAMLRequest
+    // XML so the callback handler can validate InResponseTo.
+    const xml = Buffer.from(
+      new URL(resp.headers()["location"]).searchParams.get("SAMLRequest")!,
+      "base64",
+    ).toString("utf-8");
+    expect(xml).toContain(`ID="${session.samlRequestId}"`);
   });
 });

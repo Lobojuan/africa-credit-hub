@@ -529,8 +529,8 @@ export async function registerRoutes(
       if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
         return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
       }
-      const { userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity } = req.session as Record<string, unknown>;
-      res.json({ userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity });
+      const { userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity, samlRequestId } = req.session as Record<string, unknown>;
+      res.json({ userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity, samlRequestId });
     });
   }
 
@@ -2409,7 +2409,11 @@ export async function registerRoutes(
     (req.session as any).samlRequestTime = Date.now();
 
     const separator = SAML_IDP_ENTRY_POINT.includes("?") ? "&" : "?";
-    res.redirect(`${SAML_IDP_ENTRY_POINT}${separator}SAMLRequest=${encodeURIComponent(encodedRequest)}`);
+    const idpRedirect = `${SAML_IDP_ENTRY_POINT}${separator}SAMLRequest=${encodeURIComponent(encodedRequest)}`;
+    req.session.save((err) => {
+      if (err) console.error("[SAML] Session save error before redirect:", err);
+      res.redirect(idpRedirect);
+    });
   });
 
   app.post("/api/auth/saml/callback", express.urlencoded({ extended: false }), async (req, res) => {
