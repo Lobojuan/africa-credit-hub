@@ -352,7 +352,7 @@ function CreateOrgDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs font-medium">Contact Email</Label>
-                  <Input data-testid="input-org-email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} placeholder="admin@org.com" className="mt-1" />
+                  <Input data-testid="input-org-email" type="email" autoComplete="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} placeholder="admin@org.com" className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs font-medium">Contact Phone</Label>
@@ -1275,7 +1275,7 @@ function EditOrgDialog({ org, open, onOpenChange }: { org: any; open: boolean; o
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-medium">Contact Email</Label>
-              <Input value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} className="mt-1" />
+              <Input type="email" autoComplete="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} className="mt-1" />
             </div>
             <div>
               <Label className="text-xs font-medium">Website</Label>

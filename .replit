@@ -75,7 +75,6 @@ UGANDA_URSB_API_KEY = "sbx-uganda-ursb-2025"
 ETHIOPIA_MVAA_API_KEY = "sbx-ethiopia-mvaa-2025"
 
 [userenv.production]
-CANONICAL_URL = "https://africacredithub.com"
 PRODUCTION_MODE = "true"
 RUN_SEED = "false"
 
