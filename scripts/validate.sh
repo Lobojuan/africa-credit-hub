@@ -2,7 +2,7 @@
 set -euo pipefail
 
 echo "============================================"
-echo "  Africa Credit Hub — Pre-Deploy Validation"
+echo "  Universal Credit Hub — Pre-Deploy Validation"
 echo "============================================"
 echo ""
 

@@ -6,7 +6,7 @@ DURATION="${2:-30}"
 CONCURRENCY="${3:-50}"
 
 echo "============================================"
-echo "  Africa Credit Hub — Load Test"
+echo "  Universal Credit Hub — Load Test"
 echo "  Target: $BASE_URL"
 echo "  Duration: ${DURATION}s | Concurrency: $CONCURRENCY"
 echo "============================================"
@@ -31,7 +31,7 @@ npx autocannon -d "$DURATION" -c 10 -p 2 \
   --renderStatusCodes \
   -m POST \
   -H "Content-Type: application/json" \
-  -b '{"message":"What is Africa Credit Hub?","history":[]}' \
+  -b '{"message":"What is Universal Credit Hub?","history":[]}' \
   "$BASE_URL/api/public/chat" 2>/dev/null || true
 
 echo ""
