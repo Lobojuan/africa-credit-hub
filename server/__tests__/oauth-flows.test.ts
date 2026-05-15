@@ -31,6 +31,9 @@
  *   GET /api/auth/oauth-status — 401 when unauthenticated
  *   GET /api/auth/oauth-status — 403 when not super_admin
  *   GET /api/auth/oauth-status — full response shape for super_admin
+ *   E2E bypass guard — bypass is inert when ENABLE_E2E_TEST_AUTH is absent/false
+ *   E2E bypass guard — bypass is inert when NODE_ENV=production
+ *   E2E bypass guard — bypass is inert when PRODUCTION_MODE=true
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -1096,6 +1099,249 @@ describe("Production URL generation — universalcredithub.com", () => {
 
       const microsoft = (res.body.providers as Record<string, Record<string, unknown>>).microsoft;
       expect(microsoft.registerAt as string).toContain("portal.azure.com");
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+});
+
+// ─── E2E bypass guard — inert without the right env flags ────────────────────
+//
+// These tests prove that the test-mode bypass blocks in oauth.ts can NEVER fire
+// in a production context.  Each case sends the magic e2e code but without the
+// required env-var combination; the server must fall through to the real token-
+// exchange path, which (with a mock fetch returning no access_token) yields a
+// token_failed redirect — NOT a successful mock session.
+//
+// Strategy: build the app and set up the session with normal env vars (so the
+// session cookie is returned correctly), then patch the env vars only for the
+// callback request itself — the handler reads process.env at request time.
+
+describe("E2E bypass guard — Google (e2e-google-code)", () => {
+  const GOOGLE_ENV = { GOOGLE_CLIENT_ID: "gid", GOOGLE_CLIENT_SECRET: "gsec" };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("falls through to token_failed when ENABLE_E2E_TEST_AUTH is absent", async () => {
+    // Build app with normal env; the session cookie will be set correctly
+    const { app, prevEnv } = await makeApp(undefined, GOOGLE_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ googleToken: { error: "invalid_grant" } }));
+      const state = "guard-google-unset";
+      const cookie = await setSession(app, { googleOAuthState: state, googleOAuthReturnTo: "/my-credit" });
+
+      // Patch env for the request: ENABLE_E2E_TEST_AUTH absent → bypass must not fire
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      delete process.env.ENABLE_E2E_TEST_AUTH;
+      try {
+        const res = await request(app)
+          .get(`/api/consumer/auth/google/callback?code=e2e-google-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        // Must hit the real exchange path, NOT the mock bypass
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+
+  it("falls through to token_failed when ENABLE_E2E_TEST_AUTH=false", async () => {
+    const { app, prevEnv } = await makeApp(undefined, GOOGLE_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ googleToken: { error: "invalid_grant" } }));
+      const state = "guard-google-false";
+      const cookie = await setSession(app, { googleOAuthState: state, googleOAuthReturnTo: "/my-credit" });
+
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      process.env.ENABLE_E2E_TEST_AUTH = "false";
+      try {
+        const res = await request(app)
+          .get(`/api/consumer/auth/google/callback?code=e2e-google-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+
+  it("falls through to token_failed when NODE_ENV=production (even if ENABLE_E2E_TEST_AUTH=true)", async () => {
+    const { app, prevEnv } = await makeApp(undefined, GOOGLE_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ googleToken: { error: "invalid_grant" } }));
+      const state = "guard-google-node-prod";
+      const cookie = await setSession(app, { googleOAuthState: state, googleOAuthReturnTo: "/my-credit" });
+
+      // Simulate production: set both the bypass flag AND the production guard
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      const savedNodeEnv = process.env.NODE_ENV;
+      process.env.ENABLE_E2E_TEST_AUTH = "true";
+      process.env.NODE_ENV = "production";
+      try {
+        const res = await request(app)
+          .get(`/api/consumer/auth/google/callback?code=e2e-google-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        // NODE_ENV=production blocks the bypass; must fall through to token_failed
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+        if (savedNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = savedNodeEnv;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+
+  it("falls through to token_failed when PRODUCTION_MODE=true (even if ENABLE_E2E_TEST_AUTH=true)", async () => {
+    const { app, prevEnv } = await makeApp(undefined, GOOGLE_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ googleToken: { error: "invalid_grant" } }));
+      const state = "guard-google-prod-mode";
+      const cookie = await setSession(app, { googleOAuthState: state, googleOAuthReturnTo: "/my-credit" });
+
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      const savedProdMode = process.env.PRODUCTION_MODE;
+      process.env.ENABLE_E2E_TEST_AUTH = "true";
+      process.env.PRODUCTION_MODE = "true";
+      try {
+        const res = await request(app)
+          .get(`/api/consumer/auth/google/callback?code=e2e-google-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        // PRODUCTION_MODE=true blocks the bypass; must fall through to token_failed
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+        if (savedProdMode === undefined) delete process.env.PRODUCTION_MODE;
+        else process.env.PRODUCTION_MODE = savedProdMode;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+});
+
+describe("E2E bypass guard — Microsoft (e2e-ms-code)", () => {
+  const MS_ENV = {
+    MICROSOFT_CLIENT_ID: "msid",
+    MICROSOFT_CLIENT_SECRET: "mssec",
+    MICROSOFT_TENANT_ID: "common",
+  };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  it("falls through to token_failed when ENABLE_E2E_TEST_AUTH is absent", async () => {
+    const { app, prevEnv } = await makeApp(undefined, MS_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ msToken: { error: "invalid_grant" } }));
+      const state = "guard-ms-unset";
+      const cookie = await setSession(app, { microsoftOAuthState: state, microsoftOAuthReturnTo: "/dashboard" });
+
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      delete process.env.ENABLE_E2E_TEST_AUTH;
+      try {
+        const res = await request(app)
+          .get(`/api/auth/microsoft/callback?code=e2e-ms-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        // Must NOT have created a mock admin session — must hit the real exchange path
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+
+  it("falls through to token_failed when ENABLE_E2E_TEST_AUTH=false", async () => {
+    const { app, prevEnv } = await makeApp(undefined, MS_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ msToken: { error: "invalid_grant" } }));
+      const state = "guard-ms-false";
+      const cookie = await setSession(app, { microsoftOAuthState: state, microsoftOAuthReturnTo: "/dashboard" });
+
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      process.env.ENABLE_E2E_TEST_AUTH = "false";
+      try {
+        const res = await request(app)
+          .get(`/api/auth/microsoft/callback?code=e2e-ms-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+
+  it("falls through to token_failed when NODE_ENV=production (even if ENABLE_E2E_TEST_AUTH=true)", async () => {
+    const { app, prevEnv } = await makeApp(undefined, MS_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ msToken: { error: "invalid_grant" } }));
+      const state = "guard-ms-node-prod";
+      const cookie = await setSession(app, { microsoftOAuthState: state, microsoftOAuthReturnTo: "/dashboard" });
+
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      const savedNodeEnv = process.env.NODE_ENV;
+      process.env.ENABLE_E2E_TEST_AUTH = "true";
+      process.env.NODE_ENV = "production";
+      try {
+        const res = await request(app)
+          .get(`/api/auth/microsoft/callback?code=e2e-ms-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+        if (savedNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = savedNodeEnv;
+      }
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+
+  it("falls through to token_failed when PRODUCTION_MODE=true (even if ENABLE_E2E_TEST_AUTH=true)", async () => {
+    const { app, prevEnv } = await makeApp(undefined, MS_ENV);
+    try {
+      vi.stubGlobal("fetch", mockFetch({ msToken: { error: "invalid_grant" } }));
+      const state = "guard-ms-prod-mode";
+      const cookie = await setSession(app, { microsoftOAuthState: state, microsoftOAuthReturnTo: "/dashboard" });
+
+      const savedE2E = process.env.ENABLE_E2E_TEST_AUTH;
+      const savedProdMode = process.env.PRODUCTION_MODE;
+      process.env.ENABLE_E2E_TEST_AUTH = "true";
+      process.env.PRODUCTION_MODE = "true";
+      try {
+        const res = await request(app)
+          .get(`/api/auth/microsoft/callback?code=e2e-ms-code&state=${state}`)
+          .set("Cookie", cookie);
+        expect(res.status).toBe(302);
+        expect(res.headers.location).toContain("error=token_failed");
+      } finally {
+        if (savedE2E === undefined) delete process.env.ENABLE_E2E_TEST_AUTH;
+        else process.env.ENABLE_E2E_TEST_AUTH = savedE2E;
+        if (savedProdMode === undefined) delete process.env.PRODUCTION_MODE;
+        else process.env.PRODUCTION_MODE = savedProdMode;
+      }
     } finally {
       await restoreEnv(prevEnv);
     }
