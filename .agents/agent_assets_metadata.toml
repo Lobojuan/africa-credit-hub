@@ -6,6 +6,30 @@ uri = "file://public/og-image.png"
 type = "image"
 title = "generated_image"
 
+[[generated]]
+id = "p8vm21tDDsfdox5yKguST"
+uri = "file://client/public/favicon.png"
+type = "image"
+title = "UCH favicon icon"
+
+[[generated]]
+id = "cQK4-saGb_M31YwOoSEGA"
+uri = "file://client/public/pwa-icon-192.png"
+type = "image"
+title = "UCH PWA icon 192"
+
+[[generated]]
+id = "RFNG61t6Fw-v7dty93qA-"
+uri = "file://client/public/pwa-icon-512.png"
+type = "image"
+title = "UCH PWA icon 512"
+
+[[generated]]
+id = "F8DrG34vCxtrhHPJuJrTU"
+uri = "file://client/public/og-image.png"
+type = "image"
+title = "UCH OG social banner"
+
 [[outputs]]
 id = "xoXQs3ugyzuH72KKpQ3Z0"
 uri = "file://3-day-progress-report.md"
