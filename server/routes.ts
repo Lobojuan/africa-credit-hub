@@ -1489,7 +1489,13 @@ export async function registerRoutes(
         return res.json(result);
       }
       const recentDays = parseInt(req.query.recentDays as string) || 0;
-      const result = await storage.getAllCreditAccounts(orgId, country, 100, 0, recentDays > 0 ? recentDays : undefined);
+      const lenderFilter = req.query.lender as string | undefined;
+      const typeFilter = req.query.type as string | undefined;
+      const pageParam = Math.max(1, parseInt(req.query.page as string) || 1);
+      const limitParam = Math.min(500, Math.max(1, parseInt(req.query.limit as string) || 100));
+      let result = await storage.getAllCreditAccounts(orgId, country, limitParam, (pageParam - 1) * limitParam, recentDays > 0 ? recentDays : undefined);
+      if (lenderFilter) result = result.filter((a: any) => a.lenderInstitution === lenderFilter);
+      if (typeFilter) result = result.filter((a: any) => a.accountType === typeFilter);
       res.json(result);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });

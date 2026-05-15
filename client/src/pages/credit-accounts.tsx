@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { Plus, CreditCard, Clock } from "lucide-react";
+import { Plus, CreditCard, Clock, X, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,17 +32,36 @@ function getStatusVariant(status: string) {
 
 export default function CreditAccountsPage() {
   const { t, i18n } = useTranslation();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [recentDays, setRecentDays] = useState(0);
   const { toast } = useToast();
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const [lenderFilter, setLenderFilter] = useState(urlParams.get("lender") || "");
+  const [typeFilter, setTypeFilter] = useState(urlParams.get("type") || "");
+
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search);
+    setLenderFilter(p.get("lender") || "");
+    setTypeFilter(p.get("type") || "");
+  }, [location]);
+
+  const clearFilters = () => {
+    setLenderFilter("");
+    setTypeFilter("");
+    navigate("/credit-accounts");
+  };
+
   const { data: accounts, isLoading } = useQuery<CreditAccount[]>({
-    queryKey: ["/api/credit-accounts", recentDays],
+    queryKey: ["/api/credit-accounts", recentDays, lenderFilter, typeFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (recentDays > 0) params.set("recentDays", String(recentDays));
-      const res = await fetch(`/api/credit-accounts${params.toString() ? `?${params}` : ""}`, { credentials: "include" });
+      if (lenderFilter) params.set("lender", lenderFilter);
+      if (typeFilter) params.set("type", typeFilter);
+      params.set("limit", "500");
+      const res = await fetch(`/api/credit-accounts?${params}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch credit accounts");
       return res.json();
     },
@@ -315,6 +334,18 @@ export default function CreditAccountsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {(lenderFilter || typeFilter) && (
+        <div className="flex items-center gap-2 px-1 py-2 bg-primary/5 border border-primary/20 rounded-lg">
+          <Filter className="w-4 h-4 text-primary shrink-0 ml-2" />
+          <span className="text-sm text-primary font-medium">
+            Filtered by: {lenderFilter ? <strong>{lenderFilter}</strong> : null}{lenderFilter && typeFilter ? " · " : null}{typeFilter ? <strong>{typeFilter}</strong> : null}
+          </span>
+          <button onClick={clearFilters} className="ml-auto mr-2 p-1 rounded hover:bg-primary/10 text-primary" data-testid="button-clear-filter">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <Card>
         <CardContent className="p-0">

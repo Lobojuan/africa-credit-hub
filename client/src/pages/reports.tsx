@@ -520,9 +520,14 @@ export default function ReportsPage() {
             ) : Object.keys(lenderBreakdown).length > 0 ? (
               <div className="divide-y">
                 {Object.entries(lenderBreakdown).sort((a, b) => b[1].total - a[1].total).map(([name, data]) => (
-                  <div key={name} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div
+                    key={name}
+                    className="flex items-center justify-between gap-3 px-5 py-3 cursor-pointer hover:bg-muted/50 transition-colors group"
+                    onClick={() => navigate(`/credit-accounts?lender=${encodeURIComponent(name)}`)}
+                    data-testid={`row-lender-${name}`}
+                  >
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{name}</p>
+                      <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{name}</p>
                       <p className="text-xs text-muted-foreground">{data.count} {t('reports.accountsCount')}</p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
@@ -532,6 +537,7 @@ export default function ReportsPage() {
                           <p className="text-[10px] text-destructive">{data.delinquent} {t('reports.nonPerformingCount')}</p>
                         )}
                       </div>
+                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </div>
                   </div>
                 ))}
@@ -553,13 +559,19 @@ export default function ReportsPage() {
             ) : Object.keys(typeBreakdown).length > 0 ? (
               <div className="divide-y">
                 {Object.entries(typeBreakdown).sort((a, b) => b[1].total - a[1].total).map(([type, data]) => (
-                  <div key={type} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div
+                    key={type}
+                    className="flex items-center justify-between gap-3 px-5 py-3 cursor-pointer hover:bg-muted/50 transition-colors group"
+                    onClick={() => navigate(`/credit-accounts?type=${encodeURIComponent(type)}`)}
+                    data-testid={`row-type-${type}`}
+                  >
                     <div>
-                      <p className="text-sm font-medium">{type}</p>
+                      <p className="text-sm font-medium group-hover:text-primary transition-colors">{type}</p>
                       <p className="text-xs text-muted-foreground">{data.count} {t('reports.accountsCount')}</p>
                     </div>
-                    <div className="shrink-0">
+                    <div className="flex items-center gap-3 shrink-0">
                       {renderCurrencyBreakdown(data.currencies)}
+                      <ArrowRight className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   </div>
                 ))}
