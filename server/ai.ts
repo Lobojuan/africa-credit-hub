@@ -384,7 +384,7 @@ Total portfolio default rate: ${data.totalAccounts > 0 ? ((data.stats.defaultAcc
 Total portfolio delinquency rate: ${data.totalAccounts > 0 ? ((data.stats.delinquentAccounts / data.totalAccounts) * 100).toFixed(1) : 0}%
 `.trim();
 
-  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (CDH v2.8) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. Respond ONLY with valid JSON (no markdown, no code blocks, no extra text). Use this exact structure:
+  const systemPrompt = `You are a senior credit risk analyst for the Pan-African Credit Registry (UCH v2.8) operating in Ghana. Currency is ${defaultCurrency} (Ghana Cedis). Analyze the portfolio data and generate a comprehensive intelligence report. Respond ONLY with valid JSON (no markdown, no code blocks, no extra text). Use this exact structure:
 {
   "overallRiskRating": "low" | "moderate" | "elevated" | "high" | "critical",
   "portfolioHealthScore": <number 0-100, 100 is healthiest>,
@@ -785,14 +785,14 @@ export async function chatWithAI(messages: { role: string; content: string }[], 
 
   const systemMessage = {
     role: "system" as const,
-    content: `You are the AI Assistant for the Pan-African Credit Registry (CDH v2.8). You have full knowledge of the platform and access to live system data.
+    content: `You are the AI Assistant for the Pan-African Credit Registry (UCH v2.8). You have full knowledge of the platform and access to live system data.
 
 === COMPANY ===
-${process.env.PLATFORM_COMPANY_NAME || 'Africa Credit Hub'} is a Pan-African credit registry platform built for financial institutions, central banks, and fintechs across all 54 African countries. Headquartered in Accra, Ghana.
-- Contact: ${process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com"} | ${process.env.PLATFORM_CONTACT_PHONE || ""}
+${process.env.PLATFORM_COMPANY_NAME || 'Universal Credit Hub'} is a Pan-African credit registry platform built for financial institutions, central banks, and fintechs across all 54 African countries. Headquartered in Accra, Ghana.
+- Contact: ${process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com"} | ${process.env.PLATFORM_CONTACT_PHONE || ""}
 
 === PLATFORM OVERVIEW ===
-The CDH v2.8 is a multi-tenant SaaS credit registry platform currently operating in Ghana mode, regulated by the Bank of Ghana (BoG). Default currency: ${defaultCurrency} (Ghana Cedis). The platform serves banks, microfinance institutions, savings & loans companies, and rural banks across Ghana.
+The UCH v2.8 is a multi-tenant SaaS credit registry platform currently operating in Ghana mode, regulated by the Bank of Ghana (BoG). Default currency: ${defaultCurrency} (Ghana Cedis). The platform serves banks, microfinance institutions, savings & loans companies, and rural banks across Ghana.
 
 === PLATFORM FEATURES ===
 1. DASHBOARD: Real-time analytics with 8 KPI cards (borrowers, accounts, outstanding portfolio, delinquent/default accounts, inquiries, pending approvals, open disputes). Interactive charts showing portfolio growth trends, account status distribution, and loan type breakdown. Africa map visualization. Currency conversion with live exchange rates.
@@ -805,7 +805,7 @@ The CDH v2.8 is a multi-tenant SaaS credit registry platform currently operating
 
 5. CREDIT SCORING ENGINE:
    a) Rule-Based Scoring: Algorithmic scoring on a 300-850 scale. Five factors: Payment History (35%), Credit Utilization (30%), Credit History Length (15%), Credit Mix (10%), New Credit (10%). Score bands: Excellent (750-850), Good (700-749), Fair (650-699), Poor (550-649), Very Poor (300-549). Model validation metrics: Gini coefficient, KS statistic, Rank Ordering, Stress Testing, Probability of Default (PD).
-   b) ML Credit Scoring: ACH Scorecard v1.0 — a proprietary logistic scoring model producing Probability of Default with confidence intervals. Features: payment velocity, account health ratio, utilization trends, age diversity, cross-border exposure. Provides feature importance analysis.
+   b) ML Credit Scoring: UCH Scorecard v1.0 — a proprietary logistic scoring model producing Probability of Default with confidence intervals. Features: payment velocity, account health ratio, utilization trends, age diversity, cross-border exposure. Provides feature importance analysis.
    c) AI Credit Risk Analysis: Dual-AI routing (GPT-4o + Claude 3.5 Opus) for qualitative assessments — risk levels from Low to Critical with structured recommendations.
 
 6. BANK OF GHANA CRB v1.1 COMPLIANCE:
@@ -958,7 +958,7 @@ ${liveContext}
 - Do not make up data. If something is not in the live data above, say you don't have that specific information.
 - For technical API questions, reference the API Integration Guide available at /documentation.
 - You can answer questions about: individual borrowers, corporate borrowers, their credit accounts, payment history, credit scores, ML probability of default, telco MoMo profiles and AI risk scores, fraud detection alerts, borrower early warnings, dispute statuses and SLA compliance, court judgments, consent records, billing and subscriptions, audit trail entries (with blockchain anchoring), pending approval workflows, credit inquiry history, exchange rates, data retention policies, platform KPI/ROI metrics, cross-border exposure analysis, portfolio intelligence, system status, webhook configurations, and regulatory compliance.
-- The platform is built by ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}.`
+- The platform is built by ${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"}.`
   };
 
   const chatMessages = messages.map(m => ({
@@ -971,7 +971,7 @@ ${liveContext}
     throw new Error("No user message provided for chat");
   }
 
-  const brainPrompt = `You are the data engine for the Africa Credit Hub AI Assistant. A user with role "${userRole || "user"}" asked:
+  const brainPrompt = `You are the data engine for the Universal Credit Hub AI Assistant. A user with role "${userRole || "user"}" asked:
 "${lastUserMsg}"
 
 System context:
@@ -997,7 +997,7 @@ Extract the core facts, perform any requested calculations, and output a raw bul
     rawFacts = lastUserMsg;
   }
 
-  const voiceSystemPrompt = `You are the Africa Credit Hub AI Assistant — the Voice. A user asked: "${lastUserMsg}"
+  const voiceSystemPrompt = `You are the Universal Credit Hub AI Assistant — the Voice. A user asked: "${lastUserMsg}"
 
 Here are the raw facts retrieved by our data engine:
 ${rawFacts}

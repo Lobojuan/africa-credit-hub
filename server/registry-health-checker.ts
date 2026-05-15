@@ -113,7 +113,7 @@ async function sendSlackAlert(provider: string, error: string, isRecovery = fals
             color,
             title,
             text,
-            footer: "Africa Credit Hub · Registry Health Monitor",
+            footer: "Universal Credit Hub · Registry Health Monitor",
             ts: Math.floor(Date.now() / 1000),
           },
         ],

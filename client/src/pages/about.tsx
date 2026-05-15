@@ -107,7 +107,7 @@ export default function AboutPage() {
             Est. 2024
           </Badge>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-[1.15]">
-            Africa Credit Hub
+            Universal Credit Hub
           </h1>
           <p className="text-white/50 mt-3 text-sm max-w-lg mx-auto leading-relaxed">
             Building Africa's definitive credit information infrastructure — one country, one institution, one borrower at a time.
@@ -143,7 +143,7 @@ export default function AboutPage() {
                 <Lightbulb className="w-6 h-6 mb-3" style={{ color: brandColors.secondary }} />
                 <h3 className="font-semibold mb-2">Our Answer</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Africa Credit Hub v2.8 is the first SRS-compliant credit information sharing platform built for all 54 African countries. We unify credit data across borders, languages, and currencies — giving regulators oversight, lenders confidence, and borrowers fair access to capital.
+                  Universal Credit Hub v2.8 is the first SRS-compliant credit information sharing platform built for all 54 African countries. We unify credit data across borders, languages, and currencies — giving regulators oversight, lenders confidence, and borrowers fair access to capital.
                 </p>
               </CardContent>
             </Card>
@@ -169,7 +169,7 @@ export default function AboutPage() {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    Our strategic advisory division provides the investment framework and financial architecture that powers the Africa Credit Hub platform. With deep expertise in African capital markets and regulatory environments, we ensure the platform meets the fiduciary and compliance standards required by central banks and development finance institutions across the continent.
+                    Our strategic advisory division provides the investment framework and financial architecture that powers the Universal Credit Hub platform. With deep expertise in African capital markets and regulatory environments, we ensure the platform meets the fiduciary and compliance standards required by central banks and development finance institutions across the continent.
                   </p>
                 </div>
                 <div>
@@ -219,7 +219,7 @@ export default function AboutPage() {
           <Card className="border-border/50 overflow-hidden">
             <CardContent className="p-0">
               <div className="p-6 sm:p-8" style={{ background: brandColors.iconGradientSubtle }}>
-                <h3 className="font-bold mb-1">Africa Credit Hub v2.8</h3>
+                <h3 className="font-bold mb-1">Universal Credit Hub v2.8</h3>
                 <p className="text-xs text-muted-foreground">Credit Registry System | {PLATFORM_COMPANY_NAME}</p>
               </div>
               <div className="p-6 sm:p-8 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -253,13 +253,13 @@ export default function AboutPage() {
           </div>
           <Card className="border-border/50">
             <CardContent className="p-6 sm:p-8">
-              <TimelineItem year="2024" title="Foundation" description="Africa Credit Hub was founded with a mandate to build Africa's first cross-jurisdictional credit registry." />
+              <TimelineItem year="2024" title="Foundation" description="Universal Credit Hub was founded with a mandate to build Africa's first cross-jurisdictional credit registry." />
               <TimelineItem year="2025" title="Platform Architecture" description="Designed the multi-tenant SaaS architecture covering 54 African countries, 42+ currencies, and 8 languages. Built core RBAC, borrower management, and credit scoring engine." />
-              <TimelineItem year="2026 Q1" title="Africa Credit Hub v1.0 — v1.2" description="Launched the foundation platform with enterprise features: TOTP MFA, OAuth 2.1, AI chatbot, entity resolution, exchange rates, XBRL uploads, full internationalization, and mobile-responsive design." />
-              <TimelineItem year="2026 Q1" title="Africa Credit Hub v2.8 — Ghana Launch" description="Achieved full Bank of Ghana CRB v1.1 compliance. Deployed Ghana-specific mode with 85 borrowers, 181 credit accounts, 17 institutions, pipe-delimited export engine, and BoG code catalogs." />
-              <TimelineItem year="2026 Q1" title="Africa Credit Hub v2.8 — Intelligence Suite" description="Introduced AI-powered portfolio intelligence, blockchain audit anchoring, advanced credit scoring (ACH Scorecard v1.0), consumer self-service portal, cross-border entity resolution, and Stripe billing integration." />
-              <TimelineItem year="2026 Q1" title="Africa Credit Hub v2.8 — Security Release" description="Global Scandinavian visual style, score methodology transparency with good/bad odds tables, centralized brand theming across all pages, maintenance mode system, enhanced security hardening, and comprehensive version management." />
-              <TimelineItem year="2026 Q2" title="Africa Credit Hub v2.8 — Consumer Portal Release" description="SMS passwordless login, email OTP fallback, auto-loading credit score dashboard, clean no-record state, role-aware app guide fix, consumer rate limiting, E2E testing, and role-based training curriculum. Released April 2026." />
+              <TimelineItem year="2026 Q1" title="Universal Credit Hub v1.0 — v1.2" description="Launched the foundation platform with enterprise features: TOTP MFA, OAuth 2.1, AI chatbot, entity resolution, exchange rates, XBRL uploads, full internationalization, and mobile-responsive design." />
+              <TimelineItem year="2026 Q1" title="Universal Credit Hub v2.8 — Ghana Launch" description="Achieved full Bank of Ghana CRB v1.1 compliance. Deployed Ghana-specific mode with 85 borrowers, 181 credit accounts, 17 institutions, pipe-delimited export engine, and BoG code catalogs." />
+              <TimelineItem year="2026 Q1" title="Universal Credit Hub v2.8 — Intelligence Suite" description="Introduced AI-powered portfolio intelligence, blockchain audit anchoring, advanced credit scoring (UCH Scorecard v1.0), consumer self-service portal, cross-border entity resolution, and Stripe billing integration." />
+              <TimelineItem year="2026 Q1" title="Universal Credit Hub v2.8 — Security Release" description="Global Scandinavian visual style, score methodology transparency with good/bad odds tables, centralized brand theming across all pages, maintenance mode system, enhanced security hardening, and comprehensive version management." />
+              <TimelineItem year="2026 Q2" title="Universal Credit Hub v2.8 — Consumer Portal Release" description="SMS passwordless login, email OTP fallback, auto-loading credit score dashboard, clean no-record state, role-aware app guide fix, consumer rate limiting, E2E testing, and role-based training curriculum. Released April 2026." />
             </CardContent>
           </Card>
         </section>
@@ -305,7 +305,7 @@ export default function AboutPage() {
                   <ExternalLink className="w-4 h-4 text-primary mt-0.5 shrink-0" />
                   <div>
                     <p className="text-sm font-semibold">Platform</p>
-                    <p className="text-xs text-muted-foreground mt-1">Africa Credit Hub v2.8</p>
+                    <p className="text-xs text-muted-foreground mt-1">Universal Credit Hub v2.8</p>
                     <p className="text-xs text-muted-foreground">Ghana Mode Active</p>
                   </div>
                 </div>
@@ -317,8 +317,8 @@ export default function AboutPage() {
         <div className="border-t border-border/50 mt-6 pt-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-[11px] text-muted-foreground/80">
             <div className="space-y-1.5">
-              <p className="text-xs font-semibold text-foreground">Africa Credit Hub</p>
-              <p>Africa Credit Hub — Pan-African Credit Registry v2.8</p>
+              <p className="text-xs font-semibold text-foreground">Universal Credit Hub</p>
+              <p>Universal Credit Hub — Pan-African Credit Registry v2.8</p>
               <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3" /><span>Accra, Ghana</span></div>
             </div>
             <div className="space-y-1.5">

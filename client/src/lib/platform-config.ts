@@ -1,17 +1,17 @@
 export const PLATFORM_COMPANY_NAME =
-  (import.meta.env.VITE_PLATFORM_COMPANY_NAME as string) || "Africa Credit Hub";
+  (import.meta.env.VITE_PLATFORM_COMPANY_NAME as string) || "Universal Credit Hub";
 export const PLATFORM_SUPPORT_EMAIL =
-  (import.meta.env.VITE_PLATFORM_SUPPORT_EMAIL as string) || "support@africacredithub.com";
+  (import.meta.env.VITE_PLATFORM_SUPPORT_EMAIL as string) || "support@universalcredithub.com";
 export const PLATFORM_CONTACT_PHONE =
   (import.meta.env.VITE_PLATFORM_CONTACT_PHONE as string) || "";
 export const PLATFORM_CTO_NAME =
   (import.meta.env.VITE_PLATFORM_CTO_NAME as string) || "Platform CTO";
 export const PLATFORM_CTO_EMAIL =
-  (import.meta.env.VITE_PLATFORM_CTO_EMAIL as string) || "cto@africacredithub.com";
+  (import.meta.env.VITE_PLATFORM_CTO_EMAIL as string) || "cto@universalcredithub.com";
 export const PLATFORM_ADMIN_NAME =
   (import.meta.env.VITE_PLATFORM_ADMIN_NAME as string) || "Platform Administrator";
 export const PLATFORM_REGISTRY_REF =
-  (import.meta.env.VITE_PLATFORM_REGISTRY_REF as string) || "CDH-2026-001";
+  (import.meta.env.VITE_PLATFORM_REGISTRY_REF as string) || "UCH-2026-001";
 export const PLATFORM_COPYRIGHT_YEAR = new Date().getFullYear();
 
 export function supportEmailHref(subject?: string): string {

@@ -949,7 +949,7 @@ export default function ConsumerPortalPage() {
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed max-w-xs mx-auto">
             {view === "dashboard"
-              ? "Your verified credit score from Africa Credit Hub."
+              ? "Your verified credit score from Universal Credit Hub."
               : view === "register"
               ? "Register to securely access your credit information."
               : view === "verify"
@@ -1245,7 +1245,7 @@ export default function ConsumerPortalPage() {
                   data-testid="checkbox-consent"
                 />
                 <label htmlFor="consent-checkbox" className="text-xs text-muted-foreground leading-relaxed">
-                  I consent to Africa Credit Hub accessing and displaying my credit information. 
+                  I consent to Universal Credit Hub accessing and displaying my credit information. 
                   I understand I can revoke this consent at any time.
                 </label>
               </div>
@@ -1480,7 +1480,7 @@ export default function ConsumerPortalPage() {
                       </div>
                       <div className="bg-muted/40 rounded-xl p-4 text-left text-xs text-muted-foreground space-y-2">
                         <p className="font-semibold text-foreground text-sm">What you can do:</p>
-                        <p>• Ask your bank or microfinance institution to report your credit data to Africa Credit Hub.</p>
+                        <p>• Ask your bank or microfinance institution to report your credit data to Universal Credit Hub.</p>
                         <p>• Check back in a few weeks after your lender has submitted an update.</p>
                         <p>• File a dispute if you believe your data should already be on file.</p>
                       </div>
@@ -1913,7 +1913,7 @@ export default function ConsumerPortalPage() {
                             </div>
                           ))}
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-2">* Illustrative only. Africa Credit Hub does not endorse any specific product. Contact lenders directly to apply.</p>
+                        <p className="text-[10px] text-muted-foreground mt-2">* Illustrative only. Universal Credit Hub does not endorse any specific product. Contact lenders directly to apply.</p>
                       </CardContent>
                     </Card>
                   );

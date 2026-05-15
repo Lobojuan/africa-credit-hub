@@ -53,7 +53,7 @@ export function PWAInstallPrompt() {
           <Download className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-semibold mb-1">Install Africa Credit Hub</h4>
+          <h4 className="text-sm font-semibold mb-1">Install Universal Credit Hub</h4>
           <p className="text-xs text-muted-foreground mb-3">
             Install the app for faster access and offline capability.
           </p>

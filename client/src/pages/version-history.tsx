@@ -74,7 +74,7 @@ const versions: VersionEntry[] = [
     ],
   },
   {
-    version: "v2.5",
+    version: "v2.8",
     dateKey: "versionHistory.v25.date",
     tagKey: "versionHistory.v25.tag",
     descriptionKey: "versionHistory.v25.description",

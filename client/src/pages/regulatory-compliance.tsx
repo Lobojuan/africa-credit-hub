@@ -757,7 +757,7 @@ export default function RegulatoryCompliancePage() {
                   Countries Without Formal Credit Bureaus ({stats.totalCountries - stats.withBureau})
                 </h3>
                 <p className="text-sm text-muted-foreground mb-3">
-                  These countries lack formal credit bureau infrastructure. The Africa Credit Hub system serves as the primary credit information repository.
+                  These countries lack formal credit bureau infrastructure. The Universal Credit Hub system serves as the primary credit information repository.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {AFRICAN_REGULATORY_DATA.filter((c) => c.creditBureauFramework.includes("No formal")).map((c) => (

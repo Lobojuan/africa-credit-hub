@@ -22,7 +22,7 @@ function getVapidKeys(): { publicKey: string; privateKey: string } {
   }
 
   webpush.setVapidDetails(
-    "mailto:support@africacredithub.com",
+    "mailto:support@universalcredithub.com",
     vapidKeys.publicKey,
     vapidKeys.privateKey
   );

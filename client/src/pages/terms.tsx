@@ -19,7 +19,7 @@ export default function TermsOfServicePage() {
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
-            <span className="text-sm font-semibold text-foreground">Africa Credit Hub</span>
+            <span className="text-sm font-semibold text-foreground">Universal Credit Hub</span>
           </div>
         </nav>
       </header>
@@ -33,14 +33,14 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground leading-relaxed">
-              By accessing or using the Africa Credit Hub platform (&quot;Platform&quot;), operated by {PLATFORM_COMPANY_NAME}, you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you may not access or use the Platform. These Terms apply to all users, including financial institutions, regulators, credit bureaus, and individual consumers.
+              By accessing or using the Universal Credit Hub platform (&quot;Platform&quot;), operated by {PLATFORM_COMPANY_NAME}, you agree to be bound by these Terms of Service (&quot;Terms&quot;). If you do not agree to these Terms, you may not access or use the Platform. These Terms apply to all users, including financial institutions, regulators, credit bureaus, and individual consumers.
             </p>
           </section>
 
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">2. Description of Service</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Africa Credit Hub provides a Pan-African credit data infrastructure platform that enables credit reporting, risk assessment, regulatory compliance, and cross-border data sharing across African jurisdictions. The Platform includes AI-powered credit scoring, borrower management, regulatory reporting tools, and related financial data services.
+              Universal Credit Hub provides a Pan-African credit data infrastructure platform that enables credit reporting, risk assessment, regulatory compliance, and cross-border data sharing across African jurisdictions. The Platform includes AI-powered credit scoring, borrower management, regulatory reporting tools, and related financial data services.
             </p>
           </section>
 
@@ -103,7 +103,7 @@ export default function TermsOfServicePage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">11. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
-              For questions about these Terms, contact us at legal@africacredithub.com or through the Platform's support channels.
+              For questions about these Terms, contact us at legal@universalcredithub.com or through the Platform's support channels.
             </p>
           </section>
         </div>

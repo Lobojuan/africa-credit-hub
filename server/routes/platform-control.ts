@@ -354,7 +354,7 @@ export function registerPlatformControlRoutes(app: Express) {
       const envConfig = {
         NODE_ENV: env.NODE_ENV || "development",
         PRODUCTION_MODE: env.PRODUCTION_MODE || "false",
-        PLATFORM_COMPANY_NAME: env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
+        PLATFORM_COMPANY_NAME: env.PLATFORM_COMPANY_NAME || "Universal Credit Hub",
         COUNTRY_MODE: env.COUNTRY_MODE || "ghana",
         PORT: env.PORT || "5000",
         DATABASE_URL: env.DATABASE_URL ? "configured" : "missing",
@@ -379,7 +379,7 @@ export function registerPlatformControlRoutes(app: Express) {
         timestamp: new Date().toISOString(),
         responseTimeMs: Date.now() - startTime,
         server: {
-          version: "2.6.0",
+          version: "2.8.0",
           nodeVersion: process.version,
           uptime: uptimeFormatted,
           uptimeSeconds: Math.round(uptimeSec),
@@ -540,7 +540,7 @@ export function registerPlatformControlRoutes(app: Express) {
 
   app.get("/api/platform-control/current-instance", requireMasterAuth, async (_req: Request, res: Response) => {
     try {
-      const platformName = process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+      const platformName = process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub";
       const country = process.env.COUNTRY_MODE || "Ghana";
       const currency = process.env.DEFAULT_CURRENCY || "GHS";
       const deploymentUrl = process.env.REPLIT_DEV_DOMAIN

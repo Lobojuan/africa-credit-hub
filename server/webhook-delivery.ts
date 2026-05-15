@@ -59,11 +59,11 @@ async function attemptDelivery(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "X-CDH-Signature": `sha256=${signature}`,
+        "X-UCH-Signature": `sha256=${signature}`,
         "X-Webhook-Signature": `sha256=${signature}`,
         "X-Webhook-Event": event,
         "X-Webhook-Timestamp": new Date().toISOString(),
-        "User-Agent": "CDH-Registry/2.6.0",
+        "User-Agent": "UCH-Registry/2.8.0",
       },
       body: payload,
       signal: controller.signal,

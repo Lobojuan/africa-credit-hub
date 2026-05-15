@@ -394,6 +394,6 @@ export function calculateMLCreditScore(
     riskCategory,
     defaultProbability,
     featureImportance,
-    modelVersion: "ACH-Scorecard-v1.0",
+    modelVersion: "UCH-Scorecard-v1.0",
   };
 }

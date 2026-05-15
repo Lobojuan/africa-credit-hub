@@ -1737,11 +1737,11 @@ export default function SystemStatusPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-muted-foreground">Platform</span>
-              <p className="font-medium">{status?.platform || "Africa Credit Hub"}</p>
+              <p className="font-medium">{status?.platform || "Universal Credit Hub"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Version</span>
-              <p className="font-medium">v{status?.version || "2.6.0"}</p>
+              <p className="font-medium">v{status?.version || "2.8.0"}</p>
             </div>
             <div>
               <span className="text-muted-foreground">Node.js</span>

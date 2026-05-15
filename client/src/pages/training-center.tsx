@@ -668,7 +668,7 @@ function CertificateView({ userName, issuedDate, modules, roleLabel }: {
               <Award className="w-5 h-5 text-white" />
             </div>
             <div className="text-left">
-              <div className="font-bold text-base text-gray-900 leading-tight" style={{ fontFamily: "system-ui, sans-serif" }}>Africa Credit Hub</div>
+              <div className="font-bold text-base text-gray-900 leading-tight" style={{ fontFamily: "system-ui, sans-serif" }}>Universal Credit Hub</div>
               <div className="text-xs text-gray-500" style={{ fontFamily: "system-ui, sans-serif" }}>Pan-African Credit Registry System</div>
             </div>
           </div>
@@ -681,7 +681,7 @@ function CertificateView({ userName, issuedDate, modules, roleLabel }: {
           <p className="text-sm text-gray-500" style={{ fontFamily: "system-ui, sans-serif" }}>
             has successfully completed all required training modules for the <strong className="text-gray-700">{roleLabel}</strong> role and passed all assessments of the
           </p>
-          <p className="text-lg font-semibold text-gray-800 mt-1">Africa Credit Hub Operator Certification Programme</p>
+          <p className="text-lg font-semibold text-gray-800 mt-1">Universal Credit Hub Operator Certification Programme</p>
         </div>
         <div className="grid grid-cols-2 gap-2 mb-6 py-4 border-y border-gray-100">
           {modules.map((m) => (
@@ -698,7 +698,7 @@ function CertificateView({ userName, issuedDate, modules, roleLabel }: {
           <div className="text-center">
             <div className="w-20 h-px bg-gray-400 mb-1" />
             <div className="text-xs text-gray-400" style={{ fontFamily: "system-ui, sans-serif" }}>Authorised Signature</div>
-            <div className="text-xs text-gray-600 font-semibold" style={{ fontFamily: "system-ui, sans-serif" }}>Africa Credit Hub</div>
+            <div className="text-xs text-gray-600 font-semibold" style={{ fontFamily: "system-ui, sans-serif" }}>Universal Credit Hub</div>
           </div>
           <div className="text-right">
             <div className="text-xs text-gray-400 mb-1" style={{ fontFamily: "system-ui, sans-serif" }}>Certification Level</div>

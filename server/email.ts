@@ -21,7 +21,7 @@ let transporter: nodemailer.Transporter | null = null;
 let emailConfigured = false;
 let emailProvider: "smtp" | "sendgrid" | "stub" = "stub";
 
-const FROM_EMAIL = process.env.SMTP_FROM || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
+const FROM_EMAIL = process.env.SMTP_FROM || process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
 const FROM_NAME = isGhanaMode() ? "Ghana Credit Registry" : "Pan-African Credit Registry";
 
 async function sendViaSendGrid(to: string, subject: string, htmlBody: string): Promise<boolean> {
@@ -104,7 +104,7 @@ function createEmailHtml(title: string, bodyHtml: string): string {
     <div style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08);">
       <div style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);padding:28px 32px;">
         <h1 style="color:#fff;margin:0;font-size:20px;font-weight:600;">Pan-African Credit Registry</h1>
-        <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}</p>
+        <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:13px;">${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"}</p>
       </div>
       <div style="padding:32px;">
         <h2 style="color:#1a1a2e;margin:0 0 16px;font-size:18px;">${title}</h2>
@@ -337,7 +337,7 @@ export async function sendWelcomeEmail(orgName: string, adminEmail: string, tier
       <p style="margin:0;font-size:13px;color:#555;"><strong>Coverage:</strong> All 54 African countries</p>
     </div>
     <p style="color:#333;font-size:14px;">You can now start submitting credit data, running inquiries, and generating reports across all supported jurisdictions.</p>
-    <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
+    <a href="https://universalcredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
   `;
   return sendEmail(adminEmail, `Welcome to Pan-African Credit Registry — ${orgName}`, createEmailHtml("Welcome Aboard!", body));
 }
@@ -369,7 +369,7 @@ export async function sendDisputeNotification(orgName: string, email: string, di
       <p style="margin:0;font-size:13px;color:#555;"><strong>Type:</strong> ${esc(disputeType)}</p>
     </div>
     <p style="color:#333;font-size:14px;">Please review and respond to this dispute within 30 days as per regulatory requirements.</p>
-    <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Review Dispute</a>
+    <a href="https://universalcredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Review Dispute</a>
   `;
   return sendEmail(email, `New Dispute Filed — ${orgName} (#${disputeId})`, createEmailHtml("Dispute Alert", body));
 }
@@ -387,7 +387,7 @@ export async function sendSubscriptionChangeEmail(orgName: string, email: string
 }
 
 export async function sendNewRegistrationAlert(orgName: string, orgType: string, country: string, contactEmail: string, adminName: string): Promise<boolean> {
-  const NOTIFY_EMAIL = process.env.REGISTRATION_NOTIFY_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
+  const NOTIFY_EMAIL = process.env.REGISTRATION_NOTIFY_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
   const body = `
     <p style="color:#333;font-size:14px;line-height:1.6;">A new organization has registered on the Pan-African Credit Registry.</p>
     <div style="background:#f0f7ff;border-radius:8px;padding:16px 20px;margin:16px 0;border-left:4px solid #3b82f6;">
@@ -398,27 +398,27 @@ export async function sendNewRegistrationAlert(orgName: string, orgType: string,
       <p style="margin:0;font-size:13px;color:#555;"><strong>Admin Name:</strong> ${esc(adminName)}</p>
     </div>
     <p style="color:#333;font-size:14px;">Registered at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}</p>
-    <a href="${process.env.CANONICAL_URL || 'https://africacredithub.com'}/command-center" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Open Command Center</a>
+    <a href="${process.env.CANONICAL_URL || 'https://universalcredithub.com'}/command-center" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Open Command Center</a>
   `;
   return sendEmail(NOTIFY_EMAIL, `New Registration: ${orgName} (${country})`, createEmailHtml("New Trial Registration", body));
 }
 
 export async function sendConsumerOtpEmail(email: string, otp: string): Promise<boolean> {
   const body = `
-    <p style="color:#333;font-size:14px;line-height:1.6;">Your verification code for Africa Credit Hub is:</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">Your verification code for Universal Credit Hub is:</p>
     <div style="background:#f0f7ff;border-radius:12px;padding:24px;margin:20px 0;text-align:center;">
       <span style="font-size:36px;font-weight:700;letter-spacing:8px;color:#1a1a2e;font-family:monospace;">${otp}</span>
     </div>
     <p style="color:#333;font-size:14px;line-height:1.6;">This code expires in <strong>10 minutes</strong>. Do not share it with anyone.</p>
     <p style="color:#888;font-size:12px;margin-top:20px;">If you did not request this code, please ignore this email.</p>
   `;
-  return sendEmail(email, "Your Verification Code — Africa Credit Hub", createEmailHtml("Verify Your Account", body));
+  return sendEmail(email, "Your Verification Code — Universal Credit Hub", createEmailHtml("Verify Your Account", body));
 }
 
 export async function sendConsumerVerificationLink(email: string, token: string, baseUrl: string): Promise<boolean> {
   const verifyUrl = `${baseUrl}/api/consumer/verify-email?token=${encodeURIComponent(token)}`;
   const body = `
-    <p style="color:#333;font-size:14px;line-height:1.6;">Click the button below to verify your Africa Credit Hub account:</p>
+    <p style="color:#333;font-size:14px;line-height:1.6;">Click the button below to verify your Universal Credit Hub account:</p>
     <div style="text-align:center;margin:28px 0;">
       <a href="${verifyUrl}" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:14px 36px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">Verify My Account</a>
     </div>
@@ -426,11 +426,11 @@ export async function sendConsumerVerificationLink(email: string, token: string,
     <p style="color:#3b82f6;font-size:12px;word-break:break-all;">${verifyUrl}</p>
     <p style="color:#888;font-size:12px;margin-top:20px;">This link expires in <strong>24 hours</strong>. If you did not create this account, please ignore this email.</p>
   `;
-  return sendEmail(email, "Verify Your Account — Africa Credit Hub", createEmailHtml("Email Verification", body));
+  return sendEmail(email, "Verify Your Account — Universal Credit Hub", createEmailHtml("Email Verification", body));
 }
 
 export async function sendContactSalesEmail(data: { name: string; email: string; phone?: string; organization: string; title?: string; country?: string; tier?: string; message?: string }): Promise<boolean> {
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
   const tierLabel = data.tier === "commercial" ? "Commercial" : data.tier === "sovereign" ? "Sovereign" : data.tier || "Not specified";
   const body = `
     <h2 style="color:#0d9488;">New Enterprise Inquiry</h2>
@@ -444,9 +444,9 @@ export async function sendContactSalesEmail(data: { name: string; email: string;
       <tr><td style="padding:8px 12px;border-bottom:1px solid #eee;font-weight:600;">Interested In</td><td style="padding:8px 12px;border-bottom:1px solid #eee;">${esc(tierLabel)}</td></tr>
     </table>
     ${data.message ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f8f9fa;padding:16px;border-radius:8px;white-space:pre-wrap;">${esc(data.message)}</p>` : ""}
-    <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the Africa Credit Hub Contact Sales page.</p>
+    <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the Universal Credit Hub Contact Sales page.</p>
   `;
-  return sendEmail(adminEmail, `[Africa Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
+  return sendEmail(adminEmail, `[Universal Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
 }
 
 export async function sendConsentRequestEmail(
@@ -623,7 +623,7 @@ export async function sendRegistryAuthorityWelcomeEmail(
     </div>
     <p style="color:#dc2626;font-size:13px;font-weight:600;">You will be required to change your password on first login. Keep these credentials secure and do not share them.</p>
     <p style="color:#333;font-size:14px;line-height:1.6;">As a Registry Authority administrator, you can approve and reject lien registrations, manage collateral filings, and oversee registry operations for your country.</p>
-    <a href="https://africacredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
+    <a href="https://universalcredithub.com" style="display:inline-block;background:#1a1a2e;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-size:14px;margin-top:8px;">Access Your Dashboard</a>
   `;
   return sendEmail(
     contactEmail,

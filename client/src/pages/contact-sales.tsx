@@ -104,8 +104,8 @@ export default function ContactSalesPage() {
                 <Mail className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Email</p>
-                  <a href="mailto:sales@africacredithub.com" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-email">
-                    sales@africacredithub.com
+                  <a href="mailto:sales@universalcredithub.com" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-email">
+                    sales@universalcredithub.com
                   </a>
                 </div>
               </div>

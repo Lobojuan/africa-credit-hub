@@ -67,7 +67,7 @@ export default function InstitutionBrandingPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">White-Label Branding</h1>
-          <p className="text-muted-foreground">Customize the Africa Credit Hub portal for your institution</p>
+          <p className="text-muted-foreground">Customize the Universal Credit Hub portal for your institution</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()} data-testid="btn-refresh-branding"><RefreshCw className="w-4 h-4" /></Button>
@@ -148,7 +148,7 @@ export default function InstitutionBrandingPage() {
               {form.customDomain && (
                 <div className="flex items-center gap-2">
                   <Badge variant="outline" className="text-xs">Pending DNS setup</Badge>
-                  <span className="text-xs text-muted-foreground">— contact support@africacredithub.com to complete activation</span>
+                  <span className="text-xs text-muted-foreground">— contact support@universalcredithub.com to complete activation</span>
                 </div>
               )}
             </CardContent>

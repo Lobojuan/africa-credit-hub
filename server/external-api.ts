@@ -161,7 +161,7 @@ export function registerExternalApi(app: Express) {
   });
 
   app.get("/api/external/v1/health", (_req, res) => {
-    res.json({ status: "ok", version: "1.1", service: `${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} Credit Registry API` });
+    res.json({ status: "ok", version: "1.1", service: `${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"} Credit Registry API` });
   });
 
   app.post("/api/external/v1/borrowers", requireApiKey, requirePermission("submit"), async (req: Request, res: Response) => {

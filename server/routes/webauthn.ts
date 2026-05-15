@@ -19,7 +19,7 @@ router.post("/api/auth/webauthn/register-options", loginLimiter, async (req, res
     const existingCreds = await db.select().from(webauthnCredentials).where(eq(webauthnCredentials.userId, user.id));
 
     const { generateRegistrationOptions } = await import("@simplewebauthn/server");
-    const rpName = "Africa Credit Hub";
+    const rpName = "Universal Credit Hub";
     const rpID = ((req.headers["x-forwarded-host"] as string)?.split(",")[0].trim().split(":")[0]) || req.hostname || "localhost";
 
     const options = await generateRegistrationOptions({

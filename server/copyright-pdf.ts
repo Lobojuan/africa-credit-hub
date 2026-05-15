@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 
 function getCompanyName(): string {
-  return process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+  return process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub";
 }
 
 function getPrimaryAuthor(): string {
@@ -13,16 +13,16 @@ function getAuthorTitle(): string {
 }
 
 function getAuthorEmail(): string {
-  return process.env.PLATFORM_ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "admin@africacredithub.com";
+  return process.env.PLATFORM_ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "admin@universalcredithub.com";
 }
 
 const PLATFORM_BUILD_IDENTITY = {
   originalAuthor: process.env.PLATFORM_ADMIN_NAME || "Platform Administrator",
-  originalCompany: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
+  originalCompany: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub",
   country: process.env.PLATFORM_COUNTRY || "Republic of Ghana",
   creationYear: 2026,
-  platformName: `${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} (CDH)`,
-  registryRef: process.env.PLATFORM_REGISTRY_REF || "CDH-2026-001",
+  platformName: `${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"} (UCH)`,
+  registryRef: process.env.PLATFORM_REGISTRY_REF || "UCH-2026-001",
 };
 
 const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
@@ -30,7 +30,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     softwareCopyright: "SOFTWARE COPYRIGHT",
     intellectualProperty: "& INTELLECTUAL PROPERTY",
     protectionDocument: "PROTECTION DOCUMENT",
-    platformSubtitle: "Africa Credit Hub v2.8",
+    platformSubtitle: "Universal Credit Hub v2.8",
     docReference: "DOCUMENT REFERENCE",
     docId: "Document ID:",
     version: "Version:",
@@ -41,7 +41,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Jurisdiction:",
     jurisdictionValue: "Republic of Ghana & Pan-African Territories",
-    coverDisclaimer1: "This document and all its contents are the exclusive intellectual property of Africa Credit Hub.",
+    coverDisclaimer1: "This document and all its contents are the exclusive intellectual property of Universal Credit Hub.",
     coverDisclaimer2: "Unauthorized reproduction, distribution, or use of this document or the software described herein is strictly prohibited.",
     tableOfContents: "Table of Contents",
     s1: "Preamble & Copyright Declaration",
@@ -60,13 +60,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Notices & Contact Information",
     s15: "Schedules & Annexures",
     confidentialFooter: "CONFIDENTIAL",
-    footerCenter: "Africa Credit Hub v2.8 — Pan-African Credit Registry",
+    footerCenter: "Universal Credit Hub v2.8 — Pan-African Credit Registry",
   },
   fr: {
     softwareCopyright: "DROIT D'AUTEUR LOGICIEL",
     intellectualProperty: "& PROPRIÉTÉ INTELLECTUELLE",
     protectionDocument: "DOCUMENT DE PROTECTION",
-    platformSubtitle: "Africa Credit Hub v2.8",
+    platformSubtitle: "Universal Credit Hub v2.8",
     docReference: "RÉFÉRENCE DU DOCUMENT",
     docId: "ID du Document :",
     version: "Version :",
@@ -77,7 +77,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Juridiction :",
     jurisdictionValue: "République du Ghana et Territoires Panafricains",
-    coverDisclaimer1: "Ce document et tout son contenu sont la propriété intellectuelle exclusive de Africa Credit Hub.",
+    coverDisclaimer1: "Ce document et tout son contenu sont la propriété intellectuelle exclusive de Universal Credit Hub.",
     coverDisclaimer2: "La reproduction, distribution ou utilisation non autorisée de ce document ou du logiciel décrit est strictement interdite.",
     tableOfContents: "Table des Matières",
     s1: "Préambule et Déclaration de Droit d'Auteur",
@@ -96,13 +96,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Avis et Coordonnées",
     s15: "Annexes et Pièces Jointes",
     confidentialFooter: "CONFIDENTIEL",
-    footerCenter: "Africa Credit Hub v2.8 — Registre de Crédit Panafricain",
+    footerCenter: "Universal Credit Hub v2.8 — Registre de Crédit Panafricain",
   },
   pt: {
     softwareCopyright: "DIREITOS AUTORAIS DE SOFTWARE",
     intellectualProperty: "& PROPRIEDADE INTELECTUAL",
     protectionDocument: "DOCUMENTO DE PROTEÇÃO",
-    platformSubtitle: "Africa Credit Hub v2.8",
+    platformSubtitle: "Universal Credit Hub v2.8",
     docReference: "REFERÊNCIA DO DOCUMENTO",
     docId: "ID do Documento:",
     version: "Versão:",
@@ -113,7 +113,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Jurisdição:",
     jurisdictionValue: "República do Gana e Territórios Pan-Africanos",
-    coverDisclaimer1: "Este documento e todo o seu conteúdo são propriedade intelectual exclusiva da Africa Credit Hub.",
+    coverDisclaimer1: "Este documento e todo o seu conteúdo são propriedade intelectual exclusiva da Universal Credit Hub.",
     coverDisclaimer2: "A reprodução, distribuição ou utilização não autorizada deste documento ou do software aqui descrito é estritamente proibida.",
     tableOfContents: "Índice",
     s1: "Preâmbulo e Declaração de Direitos Autorais",
@@ -132,13 +132,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Avisos e Informações de Contacto",
     s15: "Anexos e Apêndices",
     confidentialFooter: "CONFIDENCIAL",
-    footerCenter: "Africa Credit Hub v2.8 — Registo de Crédito Pan-Africano",
+    footerCenter: "Universal Credit Hub v2.8 — Registo de Crédito Pan-Africano",
   },
   ar: {
     softwareCopyright: "حقوق نشر البرمجيات",
     intellectualProperty: "والملكية الفكرية",
     protectionDocument: "وثيقة الحماية",
-    platformSubtitle: "Africa Credit Hub الإصدار 2.6",
+    platformSubtitle: "Universal Credit Hub الإصدار 2.8",
     docReference: "مرجع الوثيقة",
     docId: "معرّف الوثيقة:",
     version: "الإصدار:",
@@ -149,7 +149,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "الاختصاص القضائي:",
     jurisdictionValue: "جمهورية غانا والأقاليم الأفريقية",
-    coverDisclaimer1: "هذه الوثيقة وجميع محتوياتها هي ملكية فكرية حصرية لشركة Africa Credit Hub.",
+    coverDisclaimer1: "هذه الوثيقة وجميع محتوياتها هي ملكية فكرية حصرية لشركة Universal Credit Hub.",
     coverDisclaimer2: "يُحظر تمامًا أي نسخ أو توزيع أو استخدام غير مصرح به لهذه الوثيقة أو البرنامج الموصوف فيها.",
     tableOfContents: "جدول المحتويات",
     s1: "المقدمة وإعلان حقوق النشر",
@@ -168,13 +168,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "الإشعارات ومعلومات الاتصال",
     s15: "الملاحق والمرفقات",
     confidentialFooter: "سري",
-    footerCenter: "Africa Credit Hub v2.8 — سجل الائتمان الأفريقي",
+    footerCenter: "Universal Credit Hub v2.8 — سجل الائتمان الأفريقي",
   },
   sw: {
     softwareCopyright: "HAKIMILIKI YA PROGRAMU",
     intellectualProperty: "NA MALI YA AKILI",
     protectionDocument: "HATI YA ULINZI",
-    platformSubtitle: "Africa Credit Hub v2.8",
+    platformSubtitle: "Universal Credit Hub v2.8",
     docReference: "REJEA YA HATI",
     docId: "Kitambulisho cha Hati:",
     version: "Toleo:",
@@ -185,7 +185,7 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     copyrightHolderValue: getCompanyName(),
     jurisdiction: "Mamlaka:",
     jurisdictionValue: "Jamhuri ya Ghana na Maeneo ya Afrika",
-    coverDisclaimer1: "Hati hii na yaliyomo yote ni mali ya akili ya kipekee ya Africa Credit Hub.",
+    coverDisclaimer1: "Hati hii na yaliyomo yote ni mali ya akili ya kipekee ya Universal Credit Hub.",
     coverDisclaimer2: "Kurudufia, kusambaza au kutumia bila idhini hati hii au programu iliyoelezwa humu ni marufuku kabisa.",
     tableOfContents: "Yaliyomo",
     s1: "Utangulizi na Tamko la Hakimiliki",
@@ -204,13 +204,13 @@ const COPYRIGHT_PDF_LABELS: Record<string, Record<string, string>> = {
     s14: "Taarifa na Maelezo ya Mawasiliano",
     s15: "Ratiba na Viambatisho",
     confidentialFooter: "SIRI",
-    footerCenter: "Africa Credit Hub v2.8 — Sajili ya Mikopo ya Afrika",
+    footerCenter: "Universal Credit Hub v2.8 — Sajili ya Mikopo ya Afrika",
   },
 };
 
 function getCopyrightLabel(lang: string, key: string): string {
   const val = COPYRIGHT_PDF_LABELS[lang]?.[key] || COPYRIGHT_PDF_LABELS.en[key] || key;
-  return val.replace(/Africa Credit Hub/g, getCompanyName());
+  return val.replace(/Universal Credit Hub/g, getCompanyName());
 }
 
 const NORDIC_BLUE = "#0466C8";
@@ -268,7 +268,7 @@ function addHeader(doc: PDFKit.PDFDocument) {
   doc.y += 15;
 }
 
-function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "Africa Credit Hub v2.8 — Pan-African Credit Registry") {
+function addFooter(doc: PDFKit.PDFDocument, pageNum: number, totalPages: number, confidentialLabel: string = "CONFIDENTIAL", footerCenterLabel: string = "Universal Credit Hub v2.8 — Pan-African Credit Registry") {
   const pw = doc.page.width;
   const ml = doc.page.margins.left;
   const mr = doc.page.margins.right;
@@ -375,8 +375,8 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
         Title: "Pan-African Credit Data Hub — Software Copyright & Intellectual Property Protection",
         Author: getCompanyName(),
         Subject: "Copyright and IP Protection Document",
-        Keywords: "copyright, intellectual property, software, credit registry, pan-african, Africa Credit Hub",
-        Creator: "Africa Credit Hub v2.8 Platform",
+        Keywords: "copyright, intellectual property, software, credit registry, pan-african, Universal Credit Hub",
+        Creator: "Universal Credit Hub v2.8 Platform",
       },
     });
 
@@ -448,8 +448,8 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     doc.moveDown(0.5);
 
     const infoItems = [
-      [CL("docId"), "CDH-IP-2026-001"],
-      [CL("version"), "2.5"],
+      [CL("docId"), "UCH-IP-2026-001"],
+      [CL("version: "2.8",
       [CL("classification"), CL("classificationValue")],
       [CL("dateOfIssue"), new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
       [CL("copyrightHolder"), CL("copyrightHolderValue")],
@@ -514,7 +514,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
 
     sectionTitle(doc, "1", CL("s1"));
 
-    bodyText(doc, `This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub ("CDH" or "the Platform"), version 2.5, a comprehensive software system developed by ${getCompanyName()} ("the Company", "the Owner", or "the Copyright Holder").`);
+    bodyText(doc, `This document constitutes a formal declaration and assertion of copyright and intellectual property rights over the Pan-African Credit Data Hub ("UCH" or "the Platform"), version 2.5, a comprehensive software system developed by ${getCompanyName()} ("the Company", "the Owner", or "the Copyright Holder").`);
 
     bodyText(doc, "The Platform is a sophisticated, multi-jurisdiction credit registry and risk assessment system designed and built to serve financial institutions, regulatory bodies, telecommunications companies, and government agencies across the African continent. It represents a significant investment of creative, technical, and financial resources.");
 
@@ -543,7 +543,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
     bodyText(doc, "For the purposes of this document, the following terms shall have the meanings ascribed below:");
     doc.moveDown(0.2);
 
-    definitionItem(doc, "The Platform", "The Pan-African Credit Data Hub (CDH) v2.8, including all software components, modules, APIs, user interfaces, databases, algorithms, documentation, and related materials.");
+    definitionItem(doc, "The Platform", "The Pan-African Credit Data Hub (UCH) v2.8, including all software components, modules, APIs, user interfaces, databases, algorithms, documentation, and related materials.");
     definitionItem(doc, "Source Code", "The human-readable programming instructions, written in TypeScript, JavaScript, SQL, HTML, CSS, and any other programming languages, that constitute the Platform.");
     definitionItem(doc, "Object Code", "The compiled or interpreted form of the Source Code, including bundled assets, minified scripts, and deployable artifacts.");
     definitionItem(doc, "Algorithms", "The proprietary computational methods, including but not limited to credit scoring models, telco data analysis engines, risk assessment formulas, entity matching algorithms, and machine learning models embedded within the Platform.");

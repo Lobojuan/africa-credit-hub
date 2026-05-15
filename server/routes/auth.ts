@@ -230,7 +230,7 @@ router.post("/api/auth/mfa/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid MFA session" });
     }
     const totp = new OTPAuth.TOTP({
-      issuer: "Africa Credit Hub",
+      issuer: "Universal Credit Hub",
       label: user.username,
       algorithm: "SHA1",
       digits: 6,
@@ -297,7 +297,7 @@ router.post("/api/auth/mfa/setup", async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
     const secret = new OTPAuth.Secret({ size: 20 });
     const totp = new OTPAuth.TOTP({
-      issuer: "Africa Credit Hub",
+      issuer: "Universal Credit Hub",
       label: user.username,
       algorithm: "SHA1",
       digits: 6,
@@ -319,7 +319,7 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
     const user = await storage.getUser(req.session.userId);
     if (!user || !user.mfaSecret) return res.status(400).json({ message: "MFA not set up" });
     const totp = new OTPAuth.TOTP({
-      issuer: "Africa Credit Hub",
+      issuer: "Universal Credit Hub",
       label: user.username,
       algorithm: "SHA1",
       digits: 6,

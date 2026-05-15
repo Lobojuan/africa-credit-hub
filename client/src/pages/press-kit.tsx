@@ -26,7 +26,7 @@ const FACTS: { label: string; value: string }[] = [
 const QUOTES: { quote: string; who: string }[] = [
   {
     quote:
-      "Africa Credit Hub is what TransUnion would build if they started today, for Africa, with consent baked in and fiscal data as the unlock for the unbanked.",
+      "Universal Credit Hub is what TransUnion would build if they started today, for Africa, with consent baked in and fiscal data as the unlock for the unbanked.",
     who: "Founder narrative",
   },
   {
@@ -81,7 +81,7 @@ export default function PressKitPage() {
     >
       <Seo
         title={`${brand} — Press Kit & Media Resources`}
-        description="Official press kit for Africa Credit Hub: fact sheet, founder quotes, product blurbs, regional coverage, and media contact for the consent-first credit infrastructure for Africa."
+        description="Official press kit for Universal Credit Hub: fact sheet, founder quotes, product blurbs, regional coverage, and media contact for the consent-first credit infrastructure for Africa."
         canonical="/press"
       />
       <header className="border-b border-slate-200/60 dark:border-slate-800 backdrop-blur-sm bg-white/70 dark:bg-slate-950/70 sticky top-0 z-30">
@@ -118,9 +118,9 @@ export default function PressKitPage() {
           <Button size="lg" onClick={handleDownloadFacts} className="gap-2" data-testid="button-download-fact-sheet">
             <Download className="w-4 h-4" /> Download fact sheet
           </Button>
-          <a href="mailto:press@africacredithub.com">
+          <a href="mailto:press@universalcredithub.com">
             <Button size="lg" variant="outline" className="gap-2" data-testid="button-email-press">
-              <Mail className="w-4 h-4" /> press@africacredithub.com
+              <Mail className="w-4 h-4" /> press@universalcredithub.com
             </Button>
           </a>
         </div>

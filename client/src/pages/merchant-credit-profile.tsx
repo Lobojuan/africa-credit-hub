@@ -40,7 +40,7 @@ export default function MerchantCreditProfilePage() {
   const merchantId = params?.merchantId;
 
   useEffect(() => {
-    document.title = t("merchantCredit.docTitle", "Merchant Credit Profile — Africa Credit Hub");
+    document.title = t("merchantCredit.docTitle", "Merchant Credit Profile — Universal Credit Hub");
   }, [t]);
 
   const { data, isLoading, error } = useQuery<MerchantCreditProfileResponse>({

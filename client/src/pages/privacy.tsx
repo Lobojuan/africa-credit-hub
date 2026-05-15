@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
-            <span className="text-sm font-semibold text-foreground">Africa Credit Hub</span>
+            <span className="text-sm font-semibold text-foreground">Universal Credit Hub</span>
           </div>
         </nav>
       </header>
@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">1. Information We Collect</h2>
             <p className="text-muted-foreground leading-relaxed">
-              Africa Credit Hub collects information you provide directly when you create an account, submit credit data, or contact us. This includes: (a) <strong>Account Information</strong> — name, email, phone number, organization details, and role; (b) <strong>Credit Data</strong> — borrower information, loan records, repayment histories, and credit inquiries submitted by participating institutions; (c) <strong>Usage Data</strong> — IP addresses, browser type, access times, pages viewed, and interactions with the Platform; (d) <strong>Device Information</strong> — device type, operating system, and unique identifiers.
+              Universal Credit Hub collects information you provide directly when you create an account, submit credit data, or contact us. This includes: (a) <strong>Account Information</strong> — name, email, phone number, organization details, and role; (b) <strong>Credit Data</strong> — borrower information, loan records, repayment histories, and credit inquiries submitted by participating institutions; (c) <strong>Usage Data</strong> — IP addresses, browser type, access times, pages viewed, and interactions with the Platform; (d) <strong>Device Information</strong> — device type, operating system, and unique identifiers.
             </p>
           </section>
 
@@ -103,7 +103,7 @@ export default function PrivacyPolicyPage() {
           <section>
             <h2 className="text-xl font-semibold text-foreground mb-3">11. Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
-              For privacy-related inquiries, contact our Data Protection Officer at privacy@africacredithub.com or through the Platform's support channels. {PLATFORM_COMPANY_NAME}, Accra, Ghana.
+              For privacy-related inquiries, contact our Data Protection Officer at privacy@universalcredithub.com or through the Platform's support channels. {PLATFORM_COMPANY_NAME}, Accra, Ghana.
             </p>
           </section>
         </div>

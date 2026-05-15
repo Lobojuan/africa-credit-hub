@@ -108,7 +108,7 @@ app.get("/health", async (_req, res) => {
   const uptime = process.uptime();
   res.status(dbOk ? 200 : 503).json({
     status,
-    version: "2.6.0",
+    version: "2.8.0",
     uptime: Math.floor(uptime),
     uptimeHuman: `${Math.floor(uptime / 3600)}h ${Math.floor((uptime % 3600) / 60)}m`,
     timestamp: new Date().toISOString(),
@@ -302,9 +302,9 @@ export const maintenanceState = {
 
 app.get("/api/health", (_req, res) => {
   if (maintenanceState.enabled) {
-    return res.status(503).json({ status: "maintenance", version: "2.6.0", message: maintenanceState.message });
+    return res.status(503).json({ status: "maintenance", version: "2.8.0", message: maintenanceState.message });
   }
-  res.json({ status: "ok", version: "2.6.0", uptime: Math.round(process.uptime()) });
+  res.json({ status: "ok", version: "2.8.0", uptime: Math.round(process.uptime()) });
 });
 
 app.get("/api/maintenance/status", (req, res) => {
@@ -669,7 +669,7 @@ process.stderr.write = function (...args: any[]) {
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.send(
-      "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\nDisallow: /master-control/\n\nSitemap: https://africacredithub.com/sitemap.xml\n"
+      "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\nDisallow: /master-control/\n\nSitemap: https://universalcredithub.com/sitemap.xml\n"
     );
   });
 
@@ -679,10 +679,10 @@ process.stderr.write = function (...args: any[]) {
     res.send(
       `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://africacredithub.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://africacredithub.com/login</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://africacredithub.com/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://africacredithub.com/consumer-portal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://universalcredithub.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://universalcredithub.com/login</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://universalcredithub.com/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://universalcredithub.com/consumer-portal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>`
     );
   });
@@ -789,7 +789,7 @@ process.stderr.write = function (...args: any[]) {
     console.log("║     Pan-African Credit Registry — Status         ║");
     console.log("╠══════════════════════════════════════════════════╣");
     console.log(`║  Mode:          ${isProduction ? "PRODUCTION" : "DEVELOPMENT"}${isProduction ? "              " : "             "}║`);
-    console.log(`║  Platform:       ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"} — CDH v2.8         ║`);
+    console.log(`║  Platform:       ${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"} — UCH v2.8         ║`);
     console.log(`║  Email:         ${isEmailConfigured() ? "✓ Configured" : "✗ Not configured"}${isEmailConfigured() ? "              " : "          "}║`);
     console.log(`║  SMS:           ${isSmsConfigured() ? "✓ Configured" : "✗ Not configured"}${isSmsConfigured() ? "              " : "          "}║`);
     console.log(`║  Database:      ${process.env.DATABASE_URL ? "✓ Connected" : "✗ Not connected"}${process.env.DATABASE_URL ? "               " : "           "}║`);

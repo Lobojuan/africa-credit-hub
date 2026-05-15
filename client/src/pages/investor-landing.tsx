@@ -487,8 +487,8 @@ export default function InvestorLandingPage() {
 
   useEffect(() => {
     document.title = isGhanaMode() 
-      ? `Ghana Credit Registry System | Africa Credit Hub v2.8 — ${PLATFORM_COMPANY_NAME}`
-      : "Pan-African Credit Registry | Africa Credit Hub v2.8 — Modernize Your Credit Infrastructure";
+      ? `Ghana Credit Registry System | Universal Credit Hub v2.8 — ${PLATFORM_COMPANY_NAME}`
+      : "Pan-African Credit Registry | Universal Credit Hub v2.8 — Modernize Your Credit Infrastructure";
     const meta = document.querySelector('meta[name="description"]');
     const content = "The only SRS-compliant credit registry platform covering all 54 African countries. Built for central banks, commercial banks, MFIs, and fintechs to manage credit risk, ensure compliance, and expand financial inclusion.";
     if (meta) {
@@ -535,7 +535,7 @@ export default function InvestorLandingPage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
+              <span className="font-bold text-sm tracking-tight">Universal Credit Hub</span>
               <span className="text-[10px] text-muted-foreground ml-1.5">v2.8</span>
             </div>
           </div>
@@ -694,7 +694,7 @@ export default function InvestorLandingPage() {
             <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">African Country Coverage — Side by Side</p>
             <div className="grid grid-cols-4 gap-2 sm:gap-3">
               {[
-                { name: "Africa Credit Hub", count: "54 / 54", bar: 100, color: "bg-green-500", textColor: "text-green-600 dark:text-green-400", badge: "✓ Full Continent", highlight: true },
+                { name: "Universal Credit Hub", count: "54 / 54", bar: 100, color: "bg-green-500", textColor: "text-green-600 dark:text-green-400", badge: "✓ Full Continent", highlight: true },
                 { name: "Experian", count: "~12 / 54", bar: 22, color: "bg-red-400", textColor: "text-red-500", badge: "22% Coverage" },
                 { name: "TransUnion", count: "8 / 54", bar: 15, color: "bg-amber-400", textColor: "text-amber-500", badge: "15% Coverage" },
                 { name: "Equifax", count: "0 / 54", bar: 0, color: "bg-muted", textColor: "text-muted-foreground", badge: "Not in Africa" },
@@ -805,7 +805,7 @@ export default function InvestorLandingPage() {
               <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
                 <img
                   src={dashboardImage}
-                  alt="Africa Credit Hub v2.8 dashboard showing borrowers, credit accounts, and portfolio analytics"
+                  alt="Universal Credit Hub v2.8 dashboard showing borrowers, credit accounts, and portfolio analytics"
                   className="w-full h-auto"
                   loading="lazy"
                 />
@@ -981,7 +981,7 @@ export default function InvestorLandingPage() {
           <div className="mt-10 text-center">
             <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-primary/30 bg-primary/5">
               <Target className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Africa Credit Hub v2.8 addresses all four challenges in a single, unified platform — backed by real data.</span>
+              <span className="text-sm font-medium">Universal Credit Hub v2.8 addresses all four challenges in a single, unified platform — backed by real data.</span>
             </div>
           </div>
         </div>
@@ -1069,7 +1069,7 @@ export default function InvestorLandingPage() {
                 Connected Across the Entire Continent
               </h2>
               <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">
-                Africa Credit Hub v2.8 is the only credit registry platform engineered for all 54 African nations —
+                Universal Credit Hub v2.8 is the only credit registry platform engineered for all 54 African nations —
                 bridging Anglophone, Francophone, Lusophone, and Arabophone regions with
                 unified data standards and real-time cross-border intelligence.
               </p>
@@ -1395,7 +1395,7 @@ export default function InvestorLandingPage() {
               </span>
             </h2>
             <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-base">
-              The global credit bureau giants built empires in North America and Europe — then stopped. Experian has direct operations in roughly 12 African countries. TransUnion operates in 8. Equifax has no African operations. Africa Credit Hub was designed from the ground up to serve every African nation.
+              The global credit bureau giants built empires in North America and Europe — then stopped. Experian has direct operations in roughly 12 African countries. TransUnion operates in 8. Equifax has no African operations. Universal Credit Hub was designed from the ground up to serve every African nation.
             </p>
           </div>
 
@@ -1420,7 +1420,7 @@ export default function InvestorLandingPage() {
 
           {/* Head-to-Head Comparison Table */}
           <div className="mb-14">
-            <h3 className="font-bold text-center text-base mb-6">Feature-by-Feature: Africa Credit Hub vs. The World's Largest Bureaus</h3>
+            <h3 className="font-bold text-center text-base mb-6">Feature-by-Feature: Universal Credit Hub vs. The World's Largest Bureaus</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-collapse">
                 <thead>
@@ -1429,7 +1429,7 @@ export default function InvestorLandingPage() {
                     <th className="py-3 px-3 text-center font-bold w-[22%]">
                       <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs" style={{ background: brandColors.headerGradient, color: "white" }}>
                         <Trophy className="w-3 h-3" />
-                        Africa Credit Hub
+                        Universal Credit Hub
                       </div>
                     </th>
                     <th className="py-3 px-3 text-center text-muted-foreground font-semibold w-[17%]">Experian</th>
@@ -1631,7 +1631,7 @@ export default function InvestorLandingPage() {
                 icon: Globe,
                 title: "54 vs. 8 Countries",
                 sub: "Widest Pan-African Footprint",
-                desc: "TransUnion — the most Africa-focused global bureau — operates in 8 countries. Africa Credit Hub's platform and regulatory frameworks are configured for all 54 African nations, from one system with one API and zero per-country licensing overhead.",
+                desc: "TransUnion — the most Africa-focused global bureau — operates in 8 countries. Universal Credit Hub's platform and regulatory frameworks are configured for all 54 African nations, from one system with one API and zero per-country licensing overhead.",
                 accent: "from-blue-500/10 to-blue-600/5",
                 iconColor: "text-blue-500",
               },
@@ -1655,7 +1655,7 @@ export default function InvestorLandingPage() {
                 icon: Zap,
                 title: "Hours. Not 24 Months.",
                 sub: "Deployment Speed Advantage",
-                desc: "Legacy bureau deployments typically take 18–24 months per new country. Africa Credit Hub's regulatory frameworks and platform are pre-configured for all 54 jurisdictions — institutions can begin filing data within hours of onboarding.",
+                desc: "Legacy bureau deployments typically take 18–24 months per new country. Universal Credit Hub's regulatory frameworks and platform are pre-configured for all 54 jurisdictions — institutions can begin filing data within hours of onboarding.",
                 accent: "from-amber-500/10 to-amber-600/5",
                 iconColor: "text-amber-500",
               },
@@ -1758,7 +1758,7 @@ export default function InvestorLandingPage() {
           <div className="mb-10">
             <div className="text-center mb-6">
               <h3 className="font-bold text-lg mb-1">More for Your Money — Every Time</h3>
-              <p className="text-sm text-muted-foreground max-w-xl mx-auto">Legacy bureaus sell you a fraction of what you need, then charge more for everything else. One Africa Credit Hub subscription includes the full platform.</p>
+              <p className="text-sm text-muted-foreground max-w-xl mx-auto">Legacy bureaus sell you a fraction of what you need, then charge more for everything else. One Universal Credit Hub subscription includes the full platform.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Legacy column */}
@@ -1804,7 +1804,7 @@ export default function InvestorLandingPage() {
                       <Trophy className="w-4 h-4 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <p className="font-bold text-sm">Africa Credit Hub — One Subscription</p>
+                      <p className="font-bold text-sm">Universal Credit Hub — One Subscription</p>
                       <p className="text-[10px] text-muted-foreground">Everything included. No hidden extras.</p>
                     </div>
                   </div>
@@ -1847,7 +1847,7 @@ export default function InvestorLandingPage() {
                     <p className="text-xs font-bold uppercase tracking-wide text-primary">The Opportunity</p>
                   </div>
                   <h3 className="font-bold text-lg mb-2">The Global Credit Bureau Market Reaches $191B by 2029</h3>
-                  <p className="text-sm text-muted-foreground mb-3">Africa is the fastest-growing region — and the least served. With a CAGR of 13% and 350M+ unscored adults, this is the largest untapped credit data market on earth. The AI credit scoring market alone is growing at 25.9% CAGR. Africa Credit Hub is the only platform built to capture it.</p>
+                  <p className="text-sm text-muted-foreground mb-3">Africa is the fastest-growing region — and the least served. With a CAGR of 13% and 350M+ unscored adults, this is the largest untapped credit data market on earth. The AI credit scoring market alone is growing at 25.9% CAGR. Universal Credit Hub is the only platform built to capture it.</p>
                   <div className="flex flex-wrap gap-4">
                     {[
                       { val: "$191B", desc: "Global bureau market by 2029 (13% CAGR)" },
@@ -1939,13 +1939,13 @@ export default function InvestorLandingPage() {
           <div className="mb-10">
             <h3 className="font-bold text-sm mb-5 text-center flex items-center justify-center gap-2">
               <AlertTriangle className="w-4 h-4 text-primary" />
-              How Africa Credit Hub Compares to Alternatives
+              How Universal Credit Hub Compares to Alternatives
             </h3>
             <div className="space-y-3">
               {[
-                { name: "Experian Africa (~12 countries)", gap: "Direct operations primarily in South Africa, with ~11 additional countries via the 2019 Compuscan acquisition. No presence across West, Central, or North Africa. Legacy architecture with no AI Command Center, no Islamic finance module, and no PAPSS integration.", solve: "Africa Credit Hub's platform and regulatory frameworks are configured for all 54 countries. AI-native from day one, 8 languages, 42+ currencies, PAPSS integration, Islamic finance support — built for the full continent, not retrofitted." },
+                { name: "Experian Africa (~12 countries)", gap: "Direct operations primarily in South Africa, with ~11 additional countries via the 2019 Compuscan acquisition. No presence across West, Central, or North Africa. Legacy architecture with no AI Command Center, no Islamic finance module, and no PAPSS integration.", solve: "Universal Credit Hub's platform and regulatory frameworks are configured for all 54 countries. AI-native from day one, 8 languages, 42+ currencies, PAPSS integration, Islamic finance support — built for the full continent, not retrofitted." },
                 { name: "TransUnion Africa (8 countries)", gap: "Operates in 8 of 54 African countries: Botswana, Kenya, Namibia, Rwanda, South Africa, eSwatini, Zambia, Malawi. No presence in Nigeria, Ethiopia, Egypt, Tanzania, Ghana, or DRC. No AI Command Center, no portfolio-level intelligence, and no PAPSS or Islamic finance support.", solve: "One platform, 54 countries, instant cross-border entity resolution. Portfolio Intelligence covers your entire book — not one country at a time. No separate contracts per jurisdiction." },
-                { name: "Equifax (0 African Countries)", gap: "Zero African operations. Entirely absent from all 54 African nations. Builds for Americas and Europe only. Also suffered a 2017 breach of 147M records, exposing systemic security debt in legacy mainframe architecture.", solve: "Not a viable option for African institutions — but included here to illustrate the gap. Africa Credit Hub provides what the world's No.2 bureau cannot: a purpose-built, cloud-native, fully-compliant pan-African credit registry." },
+                { name: "Equifax (0 African Countries)", gap: "Zero African operations. Entirely absent from all 54 African nations. Builds for Americas and Europe only. Also suffered a 2017 breach of 147M records, exposing systemic security debt in legacy mainframe architecture.", solve: "Not a viable option for African institutions — but included here to illustrate the gap. Universal Credit Hub provides what the world's No.2 bureau cannot: a purpose-built, cloud-native, fully-compliant pan-African credit registry." },
                 { name: "Country-Specific Bureaus (e.g. CRB Kenya, CreditInfo)", gap: "Single-country systems with no cross-border capability. Each jurisdiction requires a separate contract, separate integration, separate data model, and separate staff training. Fails for any cross-border lender.", solve: "One platform across all jurisdictions with unified data models. Your team learns one system, one API, and one workflow — regardless of how many African countries you operate in." },
                 { name: "Building In-House", gap: "18–24 months of development per country. No data sharing across institutions. Regulatory compliance automation must be custom-built and updated constantly. Estimated cost: $10M–$50M+ per country.", solve: "Production-ready today with 16 integrated modules, full regulatory compliance engine, automated SLA monitoring, and pre-built BoG/BSL/CBN export formats. Go live within hours." },
               ].map((comp) => (
@@ -1985,7 +1985,7 @@ export default function InvestorLandingPage() {
               <CardContent className="pt-6">
                 <h3 className="font-bold text-sm mb-4 flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
-                  What You Get With Africa Credit Hub
+                  What You Get With Universal Credit Hub
                 </h3>
                 <div className="space-y-3">
                   {[
@@ -2069,14 +2069,14 @@ export default function InvestorLandingPage() {
               </span>
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto text-sm">
-              From central banks to microfinance institutions — institutions across 54 countries rely on Africa Credit Hub where Experian and TransUnion never reached.
+              From central banks to microfinance institutions — institutions across 54 countries rely on Universal Credit Hub where Experian and TransUnion never reached.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-12">
             {[
               {
-                quote: "We evaluated Experian and TransUnion. Neither could give us a single credit view across all our operating countries without separate contracts, separate integrations, and 18-month deployment timelines. Africa Credit Hub gave us all 54 countries, one API, and we were live within a week.",
+                quote: "We evaluated Experian and TransUnion. Neither could give us a single credit view across all our operating countries without separate contracts, separate integrations, and 18-month deployment timelines. Universal Credit Hub gave us all 54 countries, one API, and we were live within a week.",
                 name: "Director of Credit Risk",
                 org: "Pan-African Commercial Bank",
                 country: "Ghana · Nigeria · Kenya operations",
@@ -2084,7 +2084,7 @@ export default function InvestorLandingPage() {
                 stat: "54 countries, 1 integration",
               },
               {
-                quote: "Our regulator requires full maker-checker audit trails and automated data submissions in BoG format. The global bureaus wanted 9 months and a custom development project just for the export module. With Africa Credit Hub it was already built in.",
+                quote: "Our regulator requires full maker-checker audit trails and automated data submissions in BoG format. The global bureaus wanted 9 months and a custom development project just for the export module. With Universal Credit Hub it was already built in.",
                 name: "Chief Compliance Officer",
                 org: "Tier 1 Microfinance Institution",
                 country: "Accra, Ghana",
@@ -2092,7 +2092,7 @@ export default function InvestorLandingPage() {
                 stat: "BoG export automated",
               },
               {
-                quote: "We score borrowers who have never walked into a bank. Airtime top-ups, M-Pesa history, utility payments — Africa Credit Hub's alternative data module extended our lending book to 3× the addressable market we had before. No global bureau offered this.",
+                quote: "We score borrowers who have never walked into a bank. Airtime top-ups, M-Pesa history, utility payments — Universal Credit Hub's alternative data module extended our lending book to 3× the addressable market we had before. No global bureau offered this.",
                 name: "Head of Credit Analytics",
                 org: "Mobile-First Fintech Lender",
                 country: "Nairobi, Kenya",
@@ -2235,8 +2235,8 @@ export default function InvestorLandingPage() {
                   <Shield className="w-4 h-4 text-white" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground leading-tight">Africa Credit Hub</p>
-                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — Africa Credit Hub v2.8</p>
+                  <p className="text-sm font-semibold text-foreground leading-tight">Universal Credit Hub</p>
+                  <p className="text-[10px] text-muted-foreground leading-tight">Pan-African Credit Registry — Universal Credit Hub v2.8</p>
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground/80 leading-relaxed">
@@ -2261,7 +2261,7 @@ export default function InvestorLandingPage() {
         <div className="border-t border-border/30 py-4">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-[10px] text-muted-foreground/60">
             <p>&copy; {new Date().getFullYear()} {PLATFORM_COMPANY_NAME}. All rights reserved.</p>
-            <p>africacredithub.com</p>
+            <p>universalcredithub.com</p>
           </div>
         </div>
       </footer>

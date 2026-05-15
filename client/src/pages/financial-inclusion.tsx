@@ -82,7 +82,7 @@ export default function FinancialInclusionPage() {
   const { t } = useTranslation();
 
   useEffect(() => {
-    document.title = t("financialInclusion.docTitle", "Financial Inclusion Impact — Africa Credit Hub");
+    document.title = t("financialInclusion.docTitle", "Financial Inclusion Impact — Universal Credit Hub");
     const meta = document.querySelector('meta[name="description"]') ?? (() => {
       const m = document.createElement("meta"); m.setAttribute("name", "description"); document.head.appendChild(m); return m;
     })();
@@ -108,7 +108,7 @@ export default function FinancialInclusionPage() {
           {t("financialInclusion.heroTitle", "Every receipt is a step toward credit.")}
         </h1>
         <p className="text-base md:text-xl text-muted-foreground max-w-3xl mx-auto mb-6" data-testid="text-hero-subtitle">
-          {t("financialInclusion.heroSubtitle", "Africa Credit Hub turns verified VAT receipts — Loto Fiscal in Côte d'Ivoire and Francophone markets, Verified Receipts everywhere else — into a credit profile that unlocks loans for previously invisible merchants in all 54 African countries, entirely on the merchant's terms.")}
+          {t("financialInclusion.heroSubtitle", "Universal Credit Hub turns verified VAT receipts — Loto Fiscal in Côte d'Ivoire and Francophone markets, Verified Receipts everywhere else — into a credit profile that unlocks loans for previously invisible merchants in all 54 African countries, entirely on the merchant's terms.")}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Link href="/loto-fiscal">
@@ -317,7 +317,7 @@ export default function FinancialInclusionPage() {
       </section>
 
       <footer className="px-4 md:px-8 py-8 text-center text-xs text-muted-foreground" data-testid="text-footer">
-        {t("financialInclusion.footer", "© Africa Credit Hub. Universal credit infrastructure for emerging markets.")}
+        {t("financialInclusion.footer", "© Universal Credit Hub. Universal credit infrastructure for emerging markets.")}
       </footer>
     </div>
   );

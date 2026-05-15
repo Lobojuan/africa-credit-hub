@@ -100,7 +100,7 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
 
               const agentEmail = await getUserEmail(assignment.assignedTo);
               if (agentEmail) {
-                const baseUrl = process.env.CANONICAL_URL || "https://africacredithub.com";
+                const baseUrl = process.env.CANONICAL_URL || "https://universalcredithub.com";
                 const caseUrl = `${baseUrl}/collections?assignment=${assignment.id}`;
                 sendCollectionSlaBreachEmail(
                   agentEmail,

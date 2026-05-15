@@ -124,7 +124,7 @@ export default function DataSharingPage() {
           </h1>
         </div>
         <p className="text-sm md:text-base text-muted-foreground max-w-2xl">
-          {t("dataSharing.subtitle", "Every cross-product data flow on Africa Credit Hub requires your consent. Review what is shared, with whom, for what purpose — and stop it instantly.")}
+          {t("dataSharing.subtitle", "Every cross-product data flow on Universal Credit Hub requires your consent. Review what is shared, with whom, for what purpose — and stop it instantly.")}
         </p>
       </div>
 

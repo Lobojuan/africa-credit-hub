@@ -56,7 +56,7 @@ export default function PortalPage() {
 
       <div className="text-center pb-6">
         <p className="text-[11px] text-white/30">
-          Africa Credit Hub &middot; Pan-African Credit Registry
+          Universal Credit Hub &middot; Pan-African Credit Registry
         </p>
       </div>
     </div>

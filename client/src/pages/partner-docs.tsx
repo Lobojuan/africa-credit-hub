@@ -158,7 +158,7 @@ export default function PartnerDocsPage() {
           <Section id="overview" title={t("partnerDocs.sectionPlatformOverview")} icon={Globe} defaultOpen={true}>
             <div className="mt-4 space-y-3 text-sm text-muted-foreground">
               <p>
-                <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (Africa Credit Hub v2.8) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
+                <strong className="text-foreground">{PLATFORM_COMPANY_NAME}</strong> is a centralized credit data hub (Universal Credit Hub v2.8) that serves the entire financial ecosystem — from individual consumers managing their own credit profiles, to small fintechs building credit products, to tier-1 commercial banks, to central banks overseeing national credit infrastructure.
               </p>
               <p>
                 The platform operates on a flexible multi-tier model that adapts to the size and needs of each participant:
@@ -1033,7 +1033,7 @@ export default function PartnerDocsPage() {
 
                 <div className="border-t border-teal-500/20 pt-4 text-center text-xs">
                   <p className="text-foreground font-semibold">To request a formal Partnership Agreement for execution:</p>
-                  <p className="mt-1">Contact <span className="text-teal-500">partnerships@africacredithub.com</span> with your organization name, BoG CRB license number, and preferred deployment model (white-label or co-branded).</p>
+                  <p className="mt-1">Contact <span className="text-teal-500">partnerships@universalcredithub.com</span> with your organization name, BoG CRB license number, and preferred deployment model (white-label or co-branded).</p>
                   <p className="mt-2 text-[10px] text-muted-foreground">This MOU outline is provided for informational purposes. The binding agreement will be customized to your specific requirements and reviewed by both parties' legal counsel.</p>
                 </div>
               </div>
@@ -1106,7 +1106,7 @@ export default function PartnerDocsPage() {
                 <div className="rounded-lg border border-border bg-muted/30 p-4 text-center">
                   <Mail className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
                   <p className="font-semibold text-foreground text-sm mb-1">Email</p>
-                  <p className="text-xs">partnerships@africacredithub.com</p>
+                  <p className="text-xs">partnerships@universalcredithub.com</p>
                 </div>
                 <div className="rounded-lg border border-border bg-muted/30 p-4 text-center">
                   <PhoneCall className="w-5 h-5 text-muted-foreground mx-auto mb-2" />

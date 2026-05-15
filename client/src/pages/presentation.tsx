@@ -86,7 +86,7 @@ function SlideContent({ type }: { type: string }) {
               <Globe className="w-3.5 h-3.5" /> Confidential & Proprietary
             </div>
             <h1 className="text-4xl md:text-6xl font-bold leading-tight tracking-tight">
-              Africa Credit Hub
+              Universal Credit Hub
             </h1>
             <p className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
               Comprehensive credit reporting for consumers & corporations — powering smarter lending decisions across Ghana's financial sector
@@ -94,7 +94,7 @@ function SlideContent({ type }: { type: string }) {
             <div className="flex flex-wrap items-center justify-center gap-6 mt-8 text-sm text-white/40">
               <span>Credit reference and risk intelligence services</span>
               <span className="hidden md:inline">|</span>
-              <span>dashboard.africacredithub.com/ghana</span>
+              <span>dashboard.universalcredithub.com/ghana</span>
             </div>
             <p className="text-xs text-white/30 mt-8">Presented by {PLATFORM_COMPANY_NAME} · 2026</p>
           </div>
@@ -137,7 +137,7 @@ function SlideContent({ type }: { type: string }) {
               </div>
               <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
                 <div className="text-2xl font-bold text-white/80">35%</div>
-                <div className="text-xs text-white/60 mt-1">NPL Reduction with Africa Credit Hub</div>
+                <div className="text-xs text-white/60 mt-1">NPL Reduction with Universal Credit Hub</div>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-xl p-5 text-center">
                 <div className="text-2xl font-bold text-emerald-400">$2.4M</div>
@@ -168,7 +168,7 @@ function SlideContent({ type }: { type: string }) {
                 </div>
               </div>
               <div className="bg-white/5 border border-white/10 rounded-xl p-6 space-y-4">
-                <h3 className="text-lg font-semibold text-emerald-400">Africa Credit Hub Solution</h3>
+                <h3 className="text-lg font-semibold text-emerald-400">Universal Credit Hub Solution</h3>
                 <p className="text-sm text-white/60">A unified credit data platform delivering comprehensive consumer and corporate credit reports — built for Ghana's regulatory framework under Act 726 & L.I. 2394.</p>
                 <div className="space-y-2 text-sm text-white/50">
                   <div className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-emerald-400" /> Full ecosystem</div>
@@ -400,7 +400,7 @@ function SlideContent({ type }: { type: string }) {
               <StatCard value="99.9%" label="Uptime SLA" />
             </div>
             <div className="bg-white/5 border border-white/10 rounded-xl p-6">
-              <p className="text-sm text-white/60 text-center">Banks using Africa Credit Hub analytics have reduced NPL ratios by up to 35% through proactive portfolio management</p>
+              <p className="text-sm text-white/60 text-center">Banks using Universal Credit Hub analytics have reduced NPL ratios by up to 35% through proactive portfolio management</p>
             </div>
           </div>
         </SlideWrapper>
@@ -499,11 +499,11 @@ function SlideContent({ type }: { type: string }) {
       return (
         <SlideWrapper bg="accent">
           <div className="max-w-4xl w-full space-y-8">
-            <h2 className="text-3xl md:text-4xl font-bold text-center">Why Choose Africa Credit Hub Over Existing Bureaus?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-center">Why Choose Universal Credit Hub Over Existing Bureaus?</h2>
             <div className="bg-white/5 border border-white/10 rounded-xl p-6 overflow-x-auto">
               <div className="grid grid-cols-3 gap-4 pb-3 border-b border-white/10 text-sm font-semibold">
                 <div>Feature</div>
-                <div className="text-emerald-400">Africa Credit Hub</div>
+                <div className="text-emerald-400">Universal Credit Hub</div>
                 <div className="text-white/50">Existing Bureaus</div>
               </div>
               <CompareRow feature="Consumer Reports" cdh="Both unified" others="Single institution" othersIcon="x" />
@@ -640,7 +640,7 @@ function SlideContent({ type }: { type: string }) {
             <div className="space-y-3 mt-8">
               <p className="text-sm text-white/50">{PLATFORM_SUPPORT_EMAIL}</p>
               <p className="text-sm text-white/50">{PLATFORM_COMPANY_NAME}</p>
-              <p className="text-xs text-white/30 mt-4">africacredithub.com</p>
+              <p className="text-xs text-white/30 mt-4">universalcredithub.com</p>
             </div>
             <p className="text-xs text-white/20 mt-8">© 2026 {PLATFORM_COMPANY_NAME}. Confidential & Proprietary.</p>
           </div>

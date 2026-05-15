@@ -29,8 +29,8 @@ export async function seedDatabase() {
   })();
 
   const [admin] = await db.insert(users).values([
-    { username: "admin", password: hash(seedPassword), fullName: process.env.PLATFORM_ADMIN_NAME || "Platform Admin", email: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
-    { username: "platform_admin", password: hash(seedPassword), fullName: process.env.PLATFORM_CTO_NAME || "Platform CTO", email: process.env.PLATFORM_CTO_EMAIL || "cto@africacredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub" },
+    { username: "admin", password: hash(seedPassword), fullName: process.env.PLATFORM_ADMIN_NAME || "Platform Admin", email: process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub" },
+    { username: "platform_admin", password: hash(seedPassword), fullName: process.env.PLATFORM_CTO_NAME || "Platform CTO", email: process.env.PLATFORM_CTO_EMAIL || "cto@universalcredithub.com", role: "super_admin", status: "active", institution: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub" },
   ]).returning();
 
   const coreBorrowers = ghanaMode ? [
@@ -210,7 +210,7 @@ export async function seedDatabase() {
   await db.insert(creditInquiries).values([
     { borrowerId: createdBorrowers[0].id, inquiredBy: admin.id, purpose: "new_credit", institution: coreInstitution, consentProvided: true },
     { borrowerId: createdBorrowers[1].id, inquiredBy: admin.id, purpose: "review", institution: coreInstitution2, consentProvided: true },
-    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub", consentProvided: true },
+    { borrowerId: createdBorrowers[2].id, inquiredBy: admin.id, purpose: "regulatory", institution: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub", consentProvided: true },
     { borrowerId: createdBorrowers[3].id, inquiredBy: admin.id, purpose: "portfolio_monitoring", institution: coreInstitution3, consentProvided: true },
   ]);
 
@@ -307,7 +307,7 @@ export async function ensureDemoUsers() {
         type: "bank",
         status: "active",
         country: "Ghana",
-        contactEmail: "demo@africacredithub.com",
+        contactEmail: "demo@universalcredithub.com",
         subscriptionTier: "standard",
         maxUsers: 50,
       }).returning();
@@ -323,7 +323,7 @@ export async function ensureDemoUsers() {
         type: "regulator",
         status: "active",
         country: "Ghana",
-        contactEmail: "demo-authority@africacredithub.com",
+        contactEmail: "demo-authority@universalcredithub.com",
         subscriptionTier: "enterprise",
         maxUsers: 25,
       }).returning();
@@ -334,17 +334,17 @@ export async function ensureDemoUsers() {
     let [platformOrg] = await db.select().from(organizations).where(eq(organizations.slug, "demo-platform")).limit(1);
     if (!platformOrg) {
       const inserted = await db.insert(organizations).values({
-        name: "Africa Credit Hub (Demo)",
+        name: "Universal Credit Hub (Demo)",
         slug: "demo-platform",
         type: "other",
         status: "active",
         country: "Ghana",
-        contactEmail: "demo-platform@africacredithub.com",
+        contactEmail: "demo-platform@universalcredithub.com",
         subscriptionTier: "enterprise",
         maxUsers: 100,
       }).returning();
       platformOrg = inserted[0];
-      console.log("[Demo Seed] Created Africa Credit Hub (Demo) organization");
+      console.log("[Demo Seed] Created Universal Credit Hub (Demo) organization");
     }
 
     // --- Core demo users (created once, never re-created if they exist) ---
@@ -381,10 +381,10 @@ export async function ensureDemoUsers() {
         username: "demo_admin",
         password: "TestPass2026!",
         fullName: "Demo Platform Owner",
-        email: "demo-admin@africacredithub.test",
+        email: "demo-admin@universalcredithub.test",
         role: "platform_owner",
         status: "active",
-        institution: "Africa Credit Hub (Demo)",
+        institution: "Universal Credit Hub (Demo)",
         organizationId: platformOrg.id,
       },
       // ── Dedicated single-workspace admin accounts ──────────────────────────
@@ -491,10 +491,10 @@ export async function ensureDemoUsers() {
           username: "owner",
           password: hash(ownerPassword),
           fullName: "Platform Owner",
-          email: process.env.PLATFORM_SUPPORT_EMAIL || "owner@africacredithub.com",
+          email: process.env.PLATFORM_SUPPORT_EMAIL || "owner@universalcredithub.com",
           role: "super_admin",
           status: "active",
-          institution: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
+          institution: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub",
         } as any);
         console.log("[Demo Seed] Created owner super-admin with full product access");
       }

@@ -117,7 +117,7 @@ export function PublicChatbot() {
                 <Bot className="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <p className="text-white text-sm font-semibold">Africa Credit Hub AI</p>
+                <p className="text-white text-sm font-semibold">Universal Credit Hub AI</p>
                 <p className="text-white/70 text-[10px]">Ask anything about our platform</p>
               </div>
             </div>
@@ -139,7 +139,7 @@ export function PublicChatbot() {
                   </div>
                   <div className="bg-muted/50 rounded-2xl rounded-tl-sm px-3.5 py-2.5 max-w-[85%]">
                     <p className="text-sm leading-relaxed">
-                      Welcome! I'm the Africa Credit Hub AI assistant. I can answer questions about our platform, features, and how we can help your institution. What would you like to know?
+                      Welcome! I'm the Universal Credit Hub AI assistant. I can answer questions about our platform, features, and how we can help your institution. What would you like to know?
                     </p>
                   </div>
                 </div>

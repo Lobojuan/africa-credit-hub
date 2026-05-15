@@ -618,7 +618,7 @@ def verify_webhook(payload, signature, secret):
 
 function sdkPython(baseUrl: string): string {
   return `"""
-Africa Credit Hub — Python SDK Client
+Universal Credit Hub — Python SDK Client
 Auto-generated from API v1 specification
 """
 import requests
@@ -635,7 +635,7 @@ class CreditHubError(Exception):
 
 
 class CreditHubClient:
-    """Official Python client for Africa Credit Hub API v1."""
+    """Official Python client for Universal Credit Hub API v1."""
 
     def __init__(self, api_key: str, base_url: str = "${baseUrl}/api/external/v1"):
         self.api_key = api_key
@@ -734,7 +734,7 @@ class CreditHubClient:
 
 function sdkJavaScript(baseUrl: string): string {
   return `/**
- * Africa Credit Hub — JavaScript / Node.js SDK Client
+ * Universal Credit Hub — JavaScript / Node.js SDK Client
  * Auto-generated from API v1 specification
  */
 
@@ -821,11 +821,11 @@ if (typeof module !== "undefined") module.exports = { CreditHubClient, CreditHub
 
 function sdkJava(baseUrl: string): string {
   return `/**
- * Africa Credit Hub — Java SDK Client
+ * Universal Credit Hub — Java SDK Client
  * Auto-generated from API v1 specification
  * Requires: Java 11+, com.google.code.gson:gson:2.10+
  */
-package com.africacredithub.sdk;
+package com.universalcredithub.sdk;
 
 import java.io.*;
 import java.net.*;
@@ -924,7 +924,7 @@ public class CreditHubClient {
 }
 
 function sdkGo(baseUrl: string): string {
-  return `// Africa Credit Hub — Go SDK Client
+  return `// Universal Credit Hub — Go SDK Client
 // Auto-generated from API v1 specification
 package credithub
 
@@ -1038,7 +1038,7 @@ func (c *Client) RecordConsent(data map[string]interface{}) (map[string]interfac
 function sdkPhp(baseUrl: string): string {
   return `<?php
 /**
- * Africa Credit Hub — PHP SDK Client
+ * Universal Credit Hub — PHP SDK Client
  * Auto-generated from API v1 specification
  * Requires: PHP 7.4+, ext-curl, ext-json
  */
@@ -1188,7 +1188,7 @@ function SdkSection() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Official client libraries for the Africa Credit Hub API. Each SDK wraps all v1 endpoints with typed methods, error handling, and idempotency support. Click any language to view the source, copy to clipboard, or download the file.
+          Official client libraries for the Universal Credit Hub API. Each SDK wraps all v1 endpoints with typed methods, error handling, and idempotency support. Click any language to view the source, copy to clipboard, or download the file.
         </p>
 
         <div className="space-y-2">

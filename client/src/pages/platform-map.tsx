@@ -191,7 +191,7 @@ export default function PlatformMapPage() {
           Three systems. One consent gateway.
         </h1>
         <p className="text-muted-foreground max-w-3xl text-base">
-          Africa Credit Hub now spans the Credit Bureau, the Collateral Registry, and verified VAT receipts (called
+          Universal Credit Hub now spans the Credit Bureau, the Collateral Registry, and verified VAT receipts (called
           <em> Loto Fiscal </em>in Côte d'Ivoire and Francophone markets, <em>Verified Receipts</em> elsewhere — backed by
           each country's own tax authority across all 54 African markets) — wired together through a single
           consent-controlled bridge that audits every cross-system data access.

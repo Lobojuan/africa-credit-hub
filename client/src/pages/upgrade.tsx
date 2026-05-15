@@ -124,7 +124,7 @@ const BANK_DETAILS = {
   branchCode: "020100",
   swiftCode: "SBICGHAC",
   currency: "USD / GHS",
-  reference: "CDH-SUB-{ORG_ID}",
+  reference: "UCH-SUB-{ORG_ID}",
 };
 
 export default function UpgradePage() {
@@ -224,7 +224,7 @@ export default function UpgradePage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">Africa Credit Hub</span>
+              <span className="font-bold text-sm tracking-tight">Universal Credit Hub</span>
             </div>
           </div>
           <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate("/")} data-testid="link-back-dashboard">

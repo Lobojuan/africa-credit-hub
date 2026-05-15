@@ -200,7 +200,7 @@ export default function ForRegulatorsPage() {
               </ul>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Link href="/contact-sales"><Button size="lg" variant="secondary" className="gap-2 text-blue-800" data-testid="button-cta-pilot">{t("forRegulators.pilotCta")} <ArrowRight className="w-4 h-4" /></Button></Link>
-                <a href="mailto:regulators@africacredithub.com"><Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10" data-testid="button-cta-email">regulators@africacredithub.com</Button></a>
+                <a href="mailto:regulators@universalcredithub.com"><Button size="lg" variant="outline" className="border-white/40 text-white hover:bg-white/10" data-testid="button-cta-email">regulators@universalcredithub.com</Button></a>
               </div>
             </div>
             <div className="space-y-3">

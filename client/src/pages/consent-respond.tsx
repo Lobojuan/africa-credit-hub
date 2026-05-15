@@ -288,7 +288,7 @@ export default function ConsentRespondPage() {
         </Card>
 
         <p className="text-center text-xs text-slate-400">
-          This page is secured by Africa Credit Hub. Your response is logged and protected under Act 843.
+          This page is secured by Universal Credit Hub. Your response is logged and protected under Act 843.
         </p>
       </div>
     </div>

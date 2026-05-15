@@ -174,7 +174,7 @@ export async function sendSms(to: string, message: string): Promise<boolean> {
 }
 
 export async function sendOtpSms(phone: string, otp: string): Promise<boolean> {
-  const message = `Your Africa Credit Hub verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.\n\n- Africa Credit Hub`;
+  const message = `Your Universal Credit Hub verification code is: ${otp}\n\nThis code expires in 10 minutes. Do not share it with anyone.\n\n- Universal Credit Hub`;
   return sendSms(phone, message);
 }
 

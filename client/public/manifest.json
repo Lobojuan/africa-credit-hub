@@ -1,7 +1,7 @@
 {
-  "name": "CDH Credit Registry System v2.5",
-  "short_name": "CDH Registry",
-  "description": "Pan-African Credit Registry System — covering all 54 African countries",
+  "name": "UCH Credit Registry System v2.8",
+  "short_name": "UCH Registry",
+  "description": "Universal Credit Registry System — covering all 54 African countries",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0a0f1a",

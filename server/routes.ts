@@ -585,7 +585,7 @@ export async function registerRoutes(
     const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.6.0",
+      version: "2.8.0",
       uptime: {
         seconds: uptimeSec,
         formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
@@ -596,7 +596,7 @@ export async function registerRoutes(
   });
 
   app.get("/api/heartbeat", async (_req, res) => {
-    const platformName = process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+    const platformName = process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub";
     const country = process.env.COUNTRY_MODE || "Ghana";
     const currency = process.env.DEFAULT_CURRENCY || "GHS";
     let dbOk = false, dbLatency = 0, borrowers = 0, orgs = 0, users = 0;
@@ -616,7 +616,7 @@ export async function registerRoutes(
     res.json({
       status: dbOk ? "healthy" : "degraded",
       platformName, country, currency,
-      version: "2.6.0",
+      version: "2.8.0",
       uptime: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
       dbLatencyMs: dbLatency,
       counts: { borrowers, organizations: orgs, users },
@@ -642,7 +642,7 @@ export async function registerRoutes(
     const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
     res.json({
       status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.6.0",
+      version: "2.8.0",
       environment: process.env.NODE_ENV || "development",
       uptime: {
         seconds: uptimeSec,
@@ -679,8 +679,8 @@ export async function registerRoutes(
     const overallStatus = dbDegraded || apiStatus === "degraded" ? "degraded" : "operational";
 
     res.json({
-      platform: "Africa Credit Hub",
-      version: "2.6.0",
+      platform: "Universal Credit Hub",
+      version: "2.8.0",
       status: overallStatus,
       uptime: {
         seconds: uptimeSec,
@@ -728,8 +728,8 @@ export async function registerRoutes(
     const overallStatus = dbDegraded || apiStatus === "degraded" ? "degraded" : "operational";
 
     res.json({
-      platform: "Africa Credit Hub",
-      version: "2.6.0",
+      platform: "Universal Credit Hub",
+      version: "2.8.0",
       status: overallStatus,
       uptime: {
         seconds: uptimeSec,
@@ -2355,7 +2355,7 @@ export async function registerRoutes(
       const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
       return `${protocol}://${host}/api/consumer/auth/google/callback`;
     }
-    return `https://africacredithub.com/api/consumer/auth/google/callback`;
+    return `https://universalcredithub.com/api/consumer/auth/google/callback`;
   }
 
   const ALLOWED_RETURN_PATHS = ["/my-credit", "/start-trial", "/dashboard", "/solutions", "/pricing", "/ai-demo"];
@@ -2534,7 +2534,7 @@ export async function registerRoutes(
       const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
       return `${protocol}://${host}/api/auth/microsoft/callback`;
     }
-    return `https://africacredithub.com/api/auth/microsoft/callback`;
+    return `https://universalcredithub.com/api/auth/microsoft/callback`;
   }
 
   app.get("/api/auth/microsoft", (req, res) => {
@@ -2666,7 +2666,7 @@ export async function registerRoutes(
       const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
       return `${protocol}://${host}/api/auth/saml/callback`;
     }
-    return `https://africacredithub.com/api/auth/saml/callback`;
+    return `https://universalcredithub.com/api/auth/saml/callback`;
   }
 
   app.get("/api/auth/saml/metadata", (req, res) => {
@@ -3208,7 +3208,7 @@ export async function registerRoutes(
         failedAttempts: 0,
       }).where(eq(consumerAccounts.id, account.id));
 
-      res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account Verified</title></head><body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><div style="width:60px;height:60px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div><h1 style="color:#1a1a2e;font-size:22px;margin:0 0 8px;">Account Verified!</h1><p style="color:#555;font-size:14px;line-height:1.5;margin:0 0 24px;">Your Africa Credit Hub account has been successfully verified. You can now sign in.</p><a href="/my-credit" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Sign In Now</a></div></body></html>`);
+      res.send(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Account Verified</title></head><body style="margin:0;padding:0;background:#f4f5f7;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><div style="width:60px;height:60px;border-radius:50%;background:#ecfdf5;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div><h1 style="color:#1a1a2e;font-size:22px;margin:0 0 8px;">Account Verified!</h1><p style="color:#555;font-size:14px;line-height:1.5;margin:0 0 24px;">Your Universal Credit Hub account has been successfully verified. You can now sign in.</p><a href="/my-credit" style="display:inline-block;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;">Sign In Now</a></div></body></html>`);
     } catch (e: any) {
       routeLogger.error("[Consumer] Email verification error:", { detail: e.message });
       res.status(500).send("Verification failed. Please try again.");
@@ -3351,7 +3351,7 @@ export async function registerRoutes(
       const C_GRAY = "#555555";
       const C_LIGHT = "#888888";
       const W = doc.page.width - 80;
-      const platform = process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub";
+      const platform = process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub";
       const reportDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
       const reportSerial = `CR-${Date.now().toString(36).toUpperCase()}`;
 
@@ -6097,7 +6097,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const getBaseUrl = (r: Request) => {
         if (process.env.CANONICAL_URL) return process.env.CANONICAL_URL;
         const protocol = r.headers["x-forwarded-proto"] || r.protocol || "https";
-        const host = r.headers["x-forwarded-host"] || r.headers.host || "africacredithub.replit.app";
+        const host = r.headers["x-forwarded-host"] || r.headers.host || "universalcredithub.replit.app";
         return `${protocol}://${host}`;
       };
       const baseUrl = getBaseUrl(req);
@@ -6420,7 +6420,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         recipientEmail = org?.contactEmail ?? undefined;
       }
       if (!recipientEmail) {
-        recipientEmail = process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
+        recipientEmail = process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
       }
       const sent = await sendBillingNotification(
         record.institutionName,
@@ -6458,7 +6458,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           recipientEmail = org?.contactEmail ?? undefined;
         }
         if (!recipientEmail) {
-          recipientEmail = process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com";
+          recipientEmail = process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
         }
         const sent = await sendBillingNotification(
           record.institutionName,
@@ -6770,7 +6770,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   const PDF_LABELS: Record<string, Record<string, string>> = {
     en: {
       headerTitle: "Comprehensive Credit Information Report",
-      headerSub: "Cross-Jurisdictional Central Data Hub v2.8 | Africa Credit Hub",
+      headerSub: "Cross-Jurisdictional Central Data Hub v2.8 | Universal Credit Hub",
       orderNumber: "ORDER NUMBER",
       cirNumber: "CIR NUMBER",
       reportOrderDate: "Report Order Date",
@@ -6839,12 +6839,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       contact: "Contact",
       account: "Account",
       endOfReport: "End of Credit Information Report",
-      disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Africa Credit Hub endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
-      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8 | Africa Credit Hub | Confidential & Proprietary",
+      disclaimer: "The information in this report has been compiled from data submitted by participating financial institutions. While Universal Credit Hub endeavor to ensure accuracy, we do not accept responsibility for any loss or damage resulting from this report.",
+      footerLine: "Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8 | Universal Credit Hub | Confidential & Proprietary",
     },
     fr: {
       headerTitle: "Rapport Complet d'Information de Crédit",
-      headerSub: "Hub Central de Données Inter-Juridictionnel v2.8 | Africa Credit Hub",
+      headerSub: "Hub Central de Données Inter-Juridictionnel v2.8 | Universal Credit Hub",
       orderNumber: "NUMÉRO DE COMMANDE",
       cirNumber: "NUMÉRO CIR",
       reportOrderDate: "Date de Commande du Rapport",
@@ -6913,12 +6913,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       contact: "Contact",
       account: "Compte",
       endOfReport: "Fin du Rapport d'Information de Crédit",
-      disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Africa Credit Hub s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
-      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.8 | Africa Credit Hub | Confidentiel & Propriétaire",
+      disclaimer: "Les informations de ce rapport proviennent des données soumises par les institutions financières participantes. Bien que Universal Credit Hub s'efforce d'assurer l'exactitude, nous déclinons toute responsabilité pour toute perte ou dommage résultant de ce rapport.",
+      footerLine: "Hub Central de Données Inter-Juridictionnel & Système de Registre de Crédit v2.8 | Universal Credit Hub | Confidentiel & Propriétaire",
     },
     pt: {
       headerTitle: "Relatório Abrangente de Informação de Crédito",
-      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.8 | Africa Credit Hub",
+      headerSub: "Hub Central de Dados Inter-Jurisdicional v2.8 | Universal Credit Hub",
       orderNumber: "NÚMERO DO PEDIDO",
       cirNumber: "NÚMERO CIR",
       reportOrderDate: "Data do Pedido do Relatório",
@@ -6987,12 +6987,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       contact: "Contacto",
       account: "Conta",
       endOfReport: "Fim do Relatório de Informação de Crédito",
-      disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Africa Credit Hub se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
-      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.8 | Africa Credit Hub | Confidencial & Proprietário",
+      disclaimer: "As informações neste relatório foram compiladas a partir de dados submetidos por instituições financeiras participantes. Embora a Universal Credit Hub se esforce por garantir a precisão, não aceitamos responsabilidade por qualquer perda ou dano resultante deste relatório.",
+      footerLine: "Hub Central de Dados Inter-Jurisdicional & Sistema de Registo de Crédito v2.8 | Universal Credit Hub | Confidencial & Proprietário",
     },
     ar: {
       headerTitle: "تقرير معلومات الائتمان الشامل",
-      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.6 | Africa Credit Hub",
+      headerSub: "مركز البيانات المركزي العابر للولايات القضائية الإصدار 2.6 | Universal Credit Hub",
       orderNumber: "رقم الطلب",
       cirNumber: "رقم CIR",
       reportOrderDate: "تاريخ طلب التقرير",
@@ -7061,12 +7061,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       contact: "التواصل",
       account: "الحساب",
       endOfReport: "نهاية تقرير معلومات الائتمان",
-      disclaimer: "تم تجميع المعلومات في هذا التقرير من البيانات المقدمة من المؤسسات المالية المشاركة. بينما تسعى Africa Credit Hub لضمان الدقة، فإننا لا نتحمل المسؤولية عن أي خسارة أو ضرر ناتج عن هذا التقرير.",
-      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.6 | Africa Credit Hub | سري وملكية خاصة",
+      disclaimer: "تم تجميع المعلومات في هذا التقرير من البيانات المقدمة من المؤسسات المالية المشاركة. بينما تسعى Universal Credit Hub لضمان الدقة، فإننا لا نتحمل المسؤولية عن أي خسارة أو ضرر ناتج عن هذا التقرير.",
+      footerLine: "مركز البيانات المركزي العابر للولايات القضائية ونظام سجل الائتمان الإصدار 2.6 | Universal Credit Hub | سري وملكية خاصة",
     },
     sw: {
       headerTitle: "Ripoti Kamili ya Taarifa za Mikopo",
-      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.8 | Africa Credit Hub",
+      headerSub: "Kituo cha Data Kuu cha Mamlaka Mbalimbali v2.8 | Universal Credit Hub",
       orderNumber: "NAMBARI YA AGIZO",
       cirNumber: "NAMBARI YA CIR",
       reportOrderDate: "Tarehe ya Agizo la Ripoti",
@@ -7135,14 +7135,14 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       contact: "Mawasiliano",
       account: "Akaunti",
       endOfReport: "Mwisho wa Ripoti ya Taarifa za Mikopo",
-      disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Africa Credit Hub inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
-      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.8 | Africa Credit Hub | Siri na Mali",
+      disclaimer: "Taarifa katika ripoti hii zimekusanywa kutoka kwa data zilizotolewa na taasisi za kifedha zinazoshiriki. Ingawa Universal Credit Hub inajitahidi kuhakikisha usahihi, hatukubali wajibu kwa hasara au uharibifu wowote unaotokana na ripoti hii.",
+      footerLine: "Kituo cha Data Kuu cha Mamlaka Mbalimbali na Mfumo wa Sajili ya Mikopo v2.8 | Universal Credit Hub | Siri na Mali",
     },
   };
 
   function getPdfLabel(lang: string, key: string): string {
     const val = PDF_LABELS[lang]?.[key] || PDF_LABELS.en[key] || key;
-    return val.replace(/Africa Credit Hub/g, process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub");
+    return val.replace(/Universal Credit Hub/g, process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub");
   }
 
   app.post("/api/credit-reports/download-pdf", creditReportLimiter, requireAuth, async (req, res) => {
@@ -8276,7 +8276,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           const mlY = doc.y;
           doc.rect(40, mlY - 2, W, 18).fill(AI_LIGHT_BG);
           doc.fill(AI_PURPLE).fontSize(9).font("Helvetica-Bold")
-            .text(`ML CREDIT SCORE — ${ai.mlScore.modelVersion || "ACH-Scorecard-v1.0"}`, 46, mlY + 2);
+            .text(`ML CREDIT SCORE — ${ai.mlScore.modelVersion || "UCH-Scorecard-v1.0"}`, 46, mlY + 2);
           doc.y = mlY + 20;
           doc.moveTo(40, doc.y).lineTo(40 + W, doc.y).strokeColor(AI_BORDER).lineWidth(0.5).stroke();
           doc.moveDown(0.5);
@@ -9974,7 +9974,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!isSmsConfigured()) {
         return res.status(400).json({ message: "SMS is not configured. Add TWILIO or Africa's Talking credentials." });
       }
-      const text = message || `Test SMS from Africa Credit Hub.\n\nSent at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}\n\n— Pan-African Credit Registry`;
+      const text = message || `Test SMS from Universal Credit Hub.\n\nSent at: ${new Date().toLocaleString("en-US", { timeZone: "Africa/Accra", dateStyle: "full", timeStyle: "short" })}\n\n— Pan-African Credit Registry`;
       const ok = await sendSms(phone, text);
       if (ok) {
         await storage.createAuditLog({
@@ -10826,7 +10826,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           totalInstitutions: allOrgs.length,
           activeCountries,
           supportedCountries: supportedCountries.length,
-          systemVersion: "Africa Credit Hub v2.8",
+          systemVersion: "Universal Credit Hub v2.8",
           systemStatus: "operational",
         },
         countries: countriesWithData,
@@ -11871,7 +11871,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       doc.fill("#ffffff").fontSize(20).font("Helvetica-Bold")
         .text("INVOICE", 65, 65, { width: W - 30 });
       doc.fontSize(9).font("Helvetica").fill("#cccccc")
-        .text("Africa Credit Hub Platform", 65, 90, { width: W - 30 });
+        .text("Universal Credit Hub Platform", 65, 90, { width: W - 30 });
       doc.fontSize(9).font("Helvetica-Bold").fill("#ffffff")
         .text(billing.invoiceNumber, W - 100, 70, { width: 120, align: "right" });
       doc.fontSize(8).font("Helvetica").fill("#cccccc")
@@ -11882,11 +11882,11 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       doc.rect(50, doc.y, W / 2 - 10, 100).fill(LIGHT_BG);
       doc.fill(NORDIC_BLUE).fontSize(9).font("Helvetica-Bold").text("FROM", 65, doc.y - 100 + 12);
-      doc.fill(DARK).fontSize(10).font("Helvetica-Bold").text(process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub", 65, doc.y - 100 + 28);
+      doc.fill(DARK).fontSize(10).font("Helvetica-Bold").text(process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub", 65, doc.y - 100 + 28);
       doc.fill(GRAY).fontSize(8).font("Helvetica")
-        .text("Africa Credit Hub Platform", 65, doc.y - 100 + 42)
+        .text("Universal Credit Hub Platform", 65, doc.y - 100 + 42)
         .text("Accra, Ghana", 65, doc.y - 100 + 54)
-        .text(process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com", 65, doc.y - 100 + 66);
+        .text(process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com", 65, doc.y - 100 + 66);
 
       const rightX = 50 + W / 2 + 10;
       doc.rect(rightX, doc.y - 100, W / 2 - 10, 100).fill(LIGHT_BG);
@@ -11957,8 +11957,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       doc.moveTo(50, doc.y).lineTo(50 + W, doc.y).lineWidth(0.5).stroke("#dddddd");
       doc.y += 12;
       doc.fill(GRAY).fontSize(7).font("Helvetica")
-        .text(`This invoice was generated by Africa Credit Hub Platform, operated by ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}.`, 50, doc.y, { width: W, align: "center" })
-        .text(`For questions regarding this invoice, please contact ${process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com"}`, 50, doc.y + 12, { width: W, align: "center" });
+        .text(`This invoice was generated by Universal Credit Hub Platform, operated by ${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"}.`, 50, doc.y, { width: W, align: "center" })
+        .text(`For questions regarding this invoice, please contact ${process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com"}`, 50, doc.y + 12, { width: W, align: "center" });
 
       doc.end();
 
@@ -11995,7 +11995,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const { getUncachableStripeClient } = await import("./stripeClient");
       const stripe = await getUncachableStripeClient();
 
-      const tierMap: Record<string, string> = { standard: "Africa Credit Hub Standard", professional: "Africa Credit Hub Professional", enterprise: "Africa Credit Hub Enterprise" };
+      const tierMap: Record<string, string> = { standard: "Universal Credit Hub Standard", professional: "Universal Credit Hub Professional", enterprise: "Universal Credit Hub Enterprise" };
       const productName = tierMap[tier] || tierMap.standard;
 
       const products = await stripe.products.search({ query: `name:'${productName}'` });
@@ -12063,7 +12063,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         ipAddress: req.ip || null,
       });
 
-      const invoiceNum = `CDH-${orgId.substring(0, 6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+      const invoiceNum = `UCH-${orgId.substring(0, 6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
       const now = new Date().toISOString().split("T")[0];
       const endDate = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
 
@@ -12089,16 +12089,16 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (method === "flutterwave") {
         const baseUrl = getBaseUrl();
         const flutterwavePayload = {
-          tx_ref: `CDH-${orgId}-${Date.now()}`,
+          tx_ref: `UCH-${orgId}-${Date.now()}`,
           amount: priceMap[plan],
           currency: "USD",
           redirect_url: `${baseUrl}/upgrade?payment=success`,
           customer: {
-            email: org.contactEmail || process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com",
+            email: org.contactEmail || process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com",
             name: org.name,
           },
           customizations: {
-            title: "Africa Credit Hub",
+            title: "Universal Credit Hub",
             description: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Subscription`,
           },
           meta: { orgId, plan, method },
@@ -12174,7 +12174,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           const { getUncachableStripeClient } = await import("./stripeClient");
           const stripe = await getUncachableStripeClient();
 
-          const tierMap: Record<string, string> = { standard: "Africa Credit Hub Standard", professional: "Africa Credit Hub Professional", enterprise: "Africa Credit Hub Enterprise" };
+          const tierMap: Record<string, string> = { standard: "Universal Credit Hub Standard", professional: "Universal Credit Hub Professional", enterprise: "Universal Credit Hub Enterprise" };
           const productName = tierMap[plan] || tierMap.standard;
 
           const products = await stripe.products.search({ query: `name:'${productName}'` });
@@ -12396,14 +12396,14 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!message || typeof message !== "string") {
         return res.status(400).json({ message: "message required" });
       }
-      const systemPrompt = `You are the AI assistant for Africa Credit Hub (africacredithub.com) — the Pan-African Credit Registry System (CDH v2.8). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
+      const systemPrompt = `You are the AI assistant for Universal Credit Hub (universalcredithub.com) — the Pan-African Credit Registry System (UCH v2.8). You are an expert on every aspect of this platform. Answer any question confidently and accurately using the knowledge below.
 
 ===== COMPANY =====
-- Built by ${process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub"}
+- Built by ${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"}
 - Headquarters: Accra, Ghana
-- Contact: ${process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com"} | ${process.env.PLATFORM_CONTACT_PHONE || ""}
+- Contact: ${process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com"} | ${process.env.PLATFORM_CONTACT_PHONE || ""}
 - When asked about who built this, the founders, the team, or the technology — respond with:
-  "Africa Credit Hub was built by a team of experienced professionals with deep expertise in African capital markets, regulatory environments, and enterprise software. The founding team brings decades of combined experience across fintech, banking infrastructure, and pan-African business operations. For more information about the team, please contact us at ${process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com"}."
+  "Universal Credit Hub was built by a team of experienced professionals with deep expertise in African capital markets, regulatory environments, and enterprise software. The founding team brings decades of combined experience across fintech, banking infrastructure, and pan-African business operations. For more information about the team, please contact us at ${process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com"}."
 
 ===== PLATFORM OVERVIEW =====
 - Pan-African Credit Registry covering ALL 54 African countries
@@ -12430,7 +12430,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 16. Notification System — Real-time WebSocket notifications for approvals, alerts, disputes, and system events
 
 ===== AI-POWERED FEATURES (6 modules) =====
-All AI features can be tested live at africacredithub.com/ai-demo with sample data — no login required.
+All AI features can be tested live at universalcredithub.com/ai-demo with sample data — no login required.
 
 1. AI Credit Narratives — Generates loan committee-ready narrative reports from raw credit data. Natural language summaries of borrower creditworthiness with risk factors and recommendations
 2. Smart Anomaly Detection — ML-powered portfolio monitoring that flags unusual patterns: sudden balance spikes, unusual payment patterns, concentration risk, vintage deterioration
@@ -12619,19 +12619,19 @@ THE CREDIT GAP:
 
 WHY CREDIT DATA INFRASTRUCTURE IS THE SOLUTION:
 - Banks perceive SMEs as high-risk because there is no unified credit data — they can't assess borrowers properly
-- Africa Credit Hub solves this by creating a "Trust Layer" that connects informal economic activity to formal credit markets
+- Universal Credit Hub solves this by creating a "Trust Layer" that connects informal economic activity to formal credit markets
 - Better credit data = lower perceived risk = lower interest rates = more lending = economic growth
 
 THE AI ADVANTAGE:
 - Global AI investment exceeded $100 BILLION in 2024, but Africa's share was less than $100 million
-- Africa Credit Hub capitalizes on this AI investment gap with smarter credit scoring and risk models that outperform generic conservative models used by commercial banks
+- Universal Credit Hub capitalizes on this AI investment gap with smarter credit scoring and risk models that outperform generic conservative models used by commercial banks
 - Alternative data scoring can capture high-frequency, low-value transactions that traditional banks cannot process profitably
 
 THE GENDER FINANCE OPPORTUNITY:
 - Women-owned SME credit gap: $1.4-1.7 TRILLION globally, with highest needs in Sub-Saharan Africa
 - Women entrepreneurs are LESS likely to default on loans than men
 - Women reinvest more in family and community — higher developmental return on capital
-- By using alternative data that captures informal economic participation, Africa Credit Hub can serve this high-loyalty, low-risk demographic that traditional banks ignore
+- By using alternative data that captures informal economic participation, Universal Credit Hub can serve this high-loyalty, low-risk demographic that traditional banks ignore
 
 DIGITAL FINANCIAL SERVICES LANDSCAPE:
 - Africa pioneered mobile money and transactional inclusion
@@ -12641,15 +12641,15 @@ DIGITAL FINANCIAL SERVICES LANDSCAPE:
 
 REGULATORY TAILWINDS:
 - In the 2025 regulatory climate, demonstrating a clear audit trail and robust data governance is the fastest way to win trust from regulators and enterprise partners
-- Africa Credit Hub is "Audit-Ready" from day one with SHA-256 hash chain and blockchain anchoring
+- Universal Credit Hub is "Audit-Ready" from day one with SHA-256 hash chain and blockchain anchoring
 - Ghana has a superior regulatory environment — ideal first market for B2B infrastructure
 - Nigeria offers B2C/B2B scale opportunities
 
 STRATEGIC POSITIONING:
-- Africa Credit Hub is positioned as the "Trust Layer" connecting informal economic activity to formal credit markets
+- Universal Credit Hub is positioned as the "Trust Layer" connecting informal economic activity to formal credit markets
 - The next decade of African finance will be won by those who move beyond transactional access to true financial empowerment
 - The potential is not just in moving money, but in MOVING MARKETS
-- Partnership opportunity: mid-tier banks (like I&M Bank in Kenya) have the license and capital but lack digital agility — Africa Credit Hub provides that agility
+- Partnership opportunity: mid-tier banks (like I&M Bank in Kenya) have the license and capital but lack digital agility — Universal Credit Hub provides that agility
 
 ===== WORLD BANK & IMF DATA (cite these authoritatively) =====
 
@@ -12728,7 +12728,7 @@ When citing these statistics, connect them to why credit registry infrastructure
 - Credit growth of 45-61% in major markets means MORE data is being generated that needs to be captured
 - $1.1 trillion in mobile money creates transaction data that can power alternative credit scoring
 - Only 7% borrow via mobile money despite 40% having accounts = the lending infrastructure hasn't caught up with payments
-- 1,263 fintechs need credit data APIs to underwrite — Africa Credit Hub provides that infrastructure
+- 1,263 fintechs need credit data APIs to underwrite — Universal Credit Hub provides that infrastructure
 - $230B financial services market growing 10%/year needs the credit data backbone to scale responsibly
 
 ===== COUNTRY-BY-COUNTRY INTELLIGENCE (all 54 African countries) =====
@@ -12803,7 +12803,7 @@ LIBERIA (Active CRB Market — High Opportunity):
   - Must add "Credit Bureau" to company name
   - CBL controls approval of all credit report pricing
   - On-site verification required before Final Operating License
-- Key opportunity: Greenfield market transitioning from manual to digital credit reporting — PRCB needs technology infrastructure (data collection, report generation, compliance systems) that Africa Credit Hub provides
+- Key opportunity: Greenfield market transitioning from manual to digital credit reporting — PRCB needs technology infrastructure (data collection, report generation, compliance systems) that Universal Credit Hub provides
 
 GAMBIA:
 - GDP: $2B | Population: 2.5M | Currency: Dalasi (GMD) | English-speaking
@@ -13028,23 +13028,23 @@ Kenya 90% | Mauritius 89% | South Africa 81% | Ghana 81% | Senegal 77% | Uganda 
 Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
 ===== PAGES & NAVIGATION =====
-- Homepage: africacredithub.com or africacredithub.com/solutions
-- AI Demo (no login): africacredithub.com/ai-demo
-- Pricing: africacredithub.com/pricing
-- Start Free Trial: africacredithub.com/start-trial
-- Consumer Credit Check: africacredithub.com/my-credit
-- Login (existing users): africacredithub.com/auth
+- Homepage: universalcredithub.com or universalcredithub.com/solutions
+- AI Demo (no login): universalcredithub.com/ai-demo
+- Pricing: universalcredithub.com/pricing
+- Start Free Trial: universalcredithub.com/start-trial
+- Consumer Credit Check: universalcredithub.com/my-credit
+- Login (existing users): universalcredithub.com/auth
 
 ===== HOW TO RESPOND =====
-- Be professional, knowledgeable, and helpful — you represent Africa Credit Hub
+- Be professional, knowledgeable, and helpful — you represent Universal Credit Hub
 - Answer with confidence using the facts above. Never say "I don't have information about that" if the answer is in this knowledge base
 - When discussing compliance, ALWAYS lead with African laws and frameworks (POPIA, NDPA, Ghana DPA, Malabo Convention, ECOWAS Act) — mention GDPR only when the user specifically asks about EU/international compliance or has EU exposure
 - When asked about a specific country's regulations, cite the exact law name, year, and regulator from the knowledge base above
 - You are an expert on African data protection, credit reporting regulations, central bank requirements, and financial inclusion frameworks across all 54 countries
-- When relevant, guide users toward starting a free trial (africacredithub.com/start-trial) or trying the AI demo (africacredithub.com/ai-demo)
-- For questions about custom deployments, on-premise, or enterprise partnerships, suggest contacting the team at ${process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com"}
+- When relevant, guide users toward starting a free trial (universalcredithub.com/start-trial) or trying the AI demo (universalcredithub.com/ai-demo)
+- For questions about custom deployments, on-premise, or enterprise partnerships, suggest contacting the team at ${process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com"}
 - Keep responses concise but thorough. Use bullet points for complex answers
-- You can discuss competitors in general terms but focus on Africa Credit Hub's strengths
+- You can discuss competitors in general terms but focus on Universal Credit Hub's strengths
 - If asked about something truly outside your knowledge, say you'd be happy to connect them with the team rather than guessing`;
 
       const chatHistory = Array.isArray(history)
@@ -14009,7 +14009,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       await deliverWebhook("borrower.created", {
         test: true,
-        message: "This is a test webhook delivery from Africa Credit Hub",
+        message: "This is a test webhook delivery from Universal Credit Hub",
         timestamp: new Date().toISOString(),
       }, sub.organizationId);
 
@@ -15268,7 +15268,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         courtJudgments: judgments as any[],
         requestedBy: userId,
         requestReason: reason,
-        organizationName: org?.name || "Africa Credit Hub",
+        organizationName: org?.name || "Universal Credit Hub",
       });
       await logTraceAudit(req, "TRACE_SKIP_TRACE_PDF", id, `reason="${reason}" events=${events.length} links=${enrichedLinks.length} assets=${assets.length}`);
       res.setHeader("Content-Type", "application/pdf");
@@ -15360,7 +15360,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           } else if (body.channel === "email") {
             const { sendDisputeNotification } = await import("./email");
             // Use a generic dispute-notification email template as a stop-gap
-            await sendDisputeNotification("Africa Credit Hub", body.contactValue, 0, "Collection reminder", "collection_reminder");
+            await sendDisputeNotification("Universal Credit Hub", body.contactValue, 0, "Collection reminder", "collection_reminder");
           }
         } catch (e: any) {
           routeLogger.error("[collections] notify failed:", { detail: e.message });
@@ -16955,7 +16955,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         }
         maskedRecipient = `${phone.slice(0, Math.min(4, phone.length - 3))}***${phone.slice(-3)}`;
         const personalNote = message ? `\n\nMessage from ${lenderName}: ${message}` : "";
-        const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}${personalNote}\n\nVerify at: ${verificationUrl}\n\n- Africa Credit Hub`;
+        const smsText = `${lenderName} shared a collateral verification link with you.\n\nBorrower: ${borrowerName}\nCollateral: ${description.substring(0, 60)}${personalNote}\n\nVerify at: ${verificationUrl}\n\n- Universal Credit Hub`;
         sent = await sendSms(phone, smsText);
         if (!sent) {
           routeLogger.info(`[Collateral Share][SMS Stub] Would send to ${phone}: ${verificationUrl}`);
@@ -19387,12 +19387,12 @@ async function seedOrganizations() {
   const ghanaMode = isGhanaMode();
 
   const simOrg = await storage.createOrganization({
-    name: process.env.PLATFORM_COMPANY_NAME || "Africa Credit Hub",
+    name: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub",
     slug: "sim",
     type: "other",
     status: "active",
     country: ghanaMode ? "Ghana" : "Ethiopia",
-    contactEmail: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com",
+    contactEmail: process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com",
     subscriptionTier: "enterprise",
     maxUsers: 100,
   });
@@ -19465,7 +19465,7 @@ async function seedOrganizations() {
       username: "platform_admin",
       password: hashedPassword,
       fullName: "Platform Administrator",
-      email: process.env.PLATFORM_SUPPORT_EMAIL || "support@africacredithub.com",
+      email: process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com",
       role: "super_admin",
       status: "active",
       organizationId: simOrg.id,
