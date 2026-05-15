@@ -236,13 +236,8 @@ export default function SignUpPage() {
       }}>
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-2.5 mb-3">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{
-              background: brandColors.headerGradientSubtle,
-            }}>
-              <svg viewBox="0 0 24 24" className="w-4.5 h-4.5" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
+            <div className="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+              <img src="/pwa-icon-192.png" alt="UCH" className="w-8 h-8 object-cover" />
             </div>
             <span className="text-white/90 font-semibold text-lg tracking-tight">Universal Credit Hub</span>
           </div>

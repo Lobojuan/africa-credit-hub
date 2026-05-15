@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, AlertTriangle, ArrowRight, Globe, ArrowLeft, User, Lock, KeyRound, Building2, UserCircle, CreditCard, Eye, EyeOff, FileText, BarChart3, ScrollText, Search, MessageSquare, Star, Fingerprint } from "lucide-react";
+import { Shield, AlertTriangle, ArrowRight, ArrowLeft, User, Lock, KeyRound, Building2, UserCircle, CreditCard, Eye, EyeOff, FileText, BarChart3, ScrollText, Search, MessageSquare, Star, Fingerprint } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -255,9 +255,8 @@ export default function LoginPage() {
         transition: "opacity 0.5s ease-out",
       }}>
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, hsl(215 50% 48%), hsl(215 45% 38%))" }}>
-            <Globe className="w-4.5 h-4.5 text-white" />
+          <div className="w-9 h-9 rounded-xl overflow-hidden shrink-0">
+            <img src="/pwa-icon-192.png" alt="UCH" className="w-9 h-9 object-cover" />
           </div>
           <span className="font-semibold text-base tracking-tight" style={{ color: "hsl(215 30% 22%)" }}>
             {registryName}

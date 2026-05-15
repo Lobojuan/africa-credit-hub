@@ -441,14 +441,8 @@ export function AppSidebar() {
       <SidebarHeader className="p-4 pb-5">
         <Link href="/">
           <div className="flex items-center gap-3.5 cursor-pointer group">
-            <div
-              className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 ${isScandinavian ? "bg-primary" : ""}`}
-              style={isScandinavian ? undefined : {
-                background: `linear-gradient(135deg, ${dynamicTheme?.logoGradientFrom || "hsl(42 85% 55%)"} 0%, ${dynamicTheme?.logoGradientTo || "hsl(32 78% 46%)"} 100%)`,
-                boxShadow: `0 4px 16px -2px ${dynamicTheme?.logoGlow || "hsl(42 85% 53% / 0.4)"}, 0 0 0 1px ${dynamicTheme?.logoGlow || "hsl(42 85% 53% / 0.15)"}`
-              }}
-            >
-              <Globe className="w-5 h-5 text-white drop-shadow-sm" />
+            <div className="flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 overflow-hidden shrink-0">
+              <img src="/pwa-icon-192.png" alt="UCH" className="w-10 h-10 object-cover rounded-xl" />
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-extrabold tracking-tight text-sidebar-foreground">{dynamicBrandTitle}</span>

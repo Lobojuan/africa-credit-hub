@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import type { PassThrough } from "stream";
+import path from "path";
 
 const NORDIC_BLUE = "#0466C8";
 const NORDIC_ACCENT = "#3B82F6";
@@ -108,24 +109,21 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
 
   const pageWidth = doc.page.width - doc.page.margins.left - doc.page.margins.right;
 
-  doc.save();
-  const gradientSteps = 30;
-  const barHeight = 5;
-  const barWidth = 80;
-  for (let i = 0; i < gradientSteps; i++) {
-    const ratio = i / gradientSteps;
-    const r = Math.round(4 + (59 - 4) * ratio);
-    const g = Math.round(102 + (130 - 102) * ratio);
-    const b = Math.round(200 + (246 - 200) * ratio);
-    const segWidth = barWidth / gradientSteps;
-    doc.rect(doc.page.margins.left + i * segWidth, doc.y, segWidth, barHeight)
-      .fill(`rgb(${r},${g},${b})`);
+  const logoPath = path.join(process.cwd(), "client/public/pwa-icon-192.png");
+  const logoSize = 48;
+  const logoX = doc.page.margins.left;
+  const logoY = doc.y;
+  try {
+    doc.image(logoPath, logoX, logoY, { width: logoSize, height: logoSize });
+  } catch {
+    doc.save().rect(logoX, logoY, logoSize, logoSize).fill(NORDIC_BLUE).restore();
   }
-  doc.restore();
-  doc.y += barHeight + 12;
 
-  doc.font("Helvetica-Bold").fontSize(20).fillColor(NORDIC_BLUE).text(title);
-  doc.moveDown(0.3);
+  const textX = logoX + logoSize + 12;
+  const textWidth = pageWidth - logoSize - 12;
+  doc.font("Helvetica-Bold").fontSize(20).fillColor(NORDIC_BLUE).text(title, textX, logoY + 4, { width: textWidth });
+  const afterTextY = doc.y;
+  doc.y = Math.max(afterTextY, logoY + logoSize + 6);
   doc.font("Helvetica").fontSize(9).fillColor(LIGHT_GRAY)
     .text(`${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8`);
   doc.moveDown(0.2);
