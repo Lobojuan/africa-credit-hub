@@ -449,7 +449,7 @@ export function generateCopyrightPdf(lang: string = "en"): Promise<Buffer> {
 
     const infoItems = [
       [CL("docId"), "UCH-IP-2026-001"],
-      [CL("version: "2.8",
+      [CL("version"), "UCH v2.8"],
       [CL("classification"), CL("classificationValue")],
       [CL("dateOfIssue"), new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })],
       [CL("copyrightHolder"), CL("copyrightHolderValue")],
