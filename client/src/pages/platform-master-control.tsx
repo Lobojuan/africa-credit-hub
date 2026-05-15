@@ -52,6 +52,13 @@ interface SystemHealthData {
     pool: { totalCount: number; idleCount: number; waitingCount: number };
   };
   integrations: Record<string, IntegrationItem>;
+  oauthCallbacks: {
+    canonicalUrl: string;
+    canonicalConfigured: boolean;
+    google: string;
+    microsoft: string;
+    saml: string;
+  };
   envConfig: Record<string, string>;
   security: Record<string, boolean>;
 }
@@ -468,12 +475,31 @@ function SystemHealthPanel() {
   );
 }
 
+function OAuthCallbackUrlRow({ label, url, copiedKey, onCopy }: { label: string; url: string; copiedKey: string; onCopy: (key: string, url: string) => void }) {
+  return (
+    <div className="flex items-center gap-2 py-1.5 border-b border-border last:border-0" data-testid={`oauth-callback-row-${label.toLowerCase().replace(/\s+/g, "-")}`}>
+      <span className="text-xs text-muted-foreground w-24 shrink-0">{label}</span>
+      <code className="text-[11px] flex-1 truncate font-mono text-foreground">{url}</code>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={() => onCopy(label, url)}
+        data-testid={`button-copy-callback-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        {copiedKey === label ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+      </Button>
+    </div>
+  );
+}
+
 function IntegrationsPanel() {
   const { data } = useQuery<SystemHealthData>({
     queryKey: ["/api/platform-control/system-health"],
     queryFn: async () => { const r = await pcFetch("/api/platform-control/system-health"); return r.json(); },
     staleTime: 15000,
   });
+  const [copiedKey, setCopiedKey] = useState("");
 
   if (!data) return <div className="text-sm text-muted-foreground">Loading...</div>;
 
@@ -488,6 +514,19 @@ function IntegrationsPanel() {
 
   const totalConnected = Object.values(data.integrations).filter((i) => i.connected).length;
   const totalIntegrations = Object.values(data.integrations).length;
+
+  const cb = data.oauthCallbacks;
+  const callbackRows = cb ? [
+    { label: "Google", url: cb.google },
+    { label: "Microsoft", url: cb.microsoft },
+    { label: "SAML ACS", url: cb.saml },
+  ] : [];
+
+  function handleCopy(key: string, url: string) {
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(""), 2000);
+  }
 
   return (
     <div className="space-y-4">
@@ -512,6 +551,24 @@ function IntegrationsPanel() {
           </div>
         ))}
       </div>
+
+      {cb && (
+        <div className={`rounded-lg border p-3 space-y-1 ${cb.canonicalConfigured ? "border-emerald-500/30 bg-emerald-500/5" : "border-amber-500/30 bg-amber-500/5"}`} data-testid="oauth-callback-urls-panel">
+          <div className="flex items-center gap-2 mb-2">
+            <Link2 className={`w-3.5 h-3.5 ${cb.canonicalConfigured ? "text-emerald-500" : "text-amber-500"}`} />
+            <p className="text-xs font-semibold uppercase tracking-wider">OAuth Callback URLs</p>
+            <Badge variant="outline" className={`text-[10px] h-4 ${cb.canonicalConfigured ? "border-emerald-500/40 text-emerald-600" : "border-amber-500/40 text-amber-600"}`}>
+              {cb.canonicalConfigured ? "CANONICAL_URL set" : "fallback domain"}
+            </Badge>
+          </div>
+          <p className="text-[11px] text-muted-foreground mb-2">
+            Register these exact URLs at Google Cloud Console, Microsoft Entra, and your SAML IdP.
+          </p>
+          {callbackRows.map(row => (
+            <OAuthCallbackUrlRow key={row.label} label={row.label} url={row.url} copiedKey={copiedKey} onCopy={handleCopy} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

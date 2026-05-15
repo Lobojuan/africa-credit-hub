@@ -13,6 +13,7 @@ import crypto from "crypto";
 import { z } from "zod";
 import os from "os";
 import { ReplitConnectors } from "@replit/connectors-sdk";
+import { getOAuthCallbackBase } from "../base-url";
 
 const logger = createLogger("platform-control");
 
@@ -344,11 +345,20 @@ export function registerPlatformControlRoutes(app: Express) {
         twilio: { connected: !!(env.TWILIO_ACCOUNT_SID && env.TWILIO_AUTH_TOKEN), label: "Twilio SMS" },
         africasTalking: { connected: !!(env.AT_USERNAME && env.AT_API_KEY), label: "Africa's Talking SMS" },
         googleOAuth: { connected: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET), label: "Google OAuth" },
-        microsoftSSO: { connected: !!(env.AZURE_CLIENT_ID && env.AZURE_CLIENT_SECRET), label: "Microsoft Azure SSO" },
-        saml: { connected: !!(env.SAML_ENTRY_POINT && env.SAML_ISSUER), label: "SAML 2.0 SSO" },
+        microsoftSSO: { connected: !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET), label: "Microsoft Azure SSO" },
+        saml: { connected: !!(env.SAML_IDP_ENTRY_POINT && env.SAML_ISSUER), label: "SAML 2.0 SSO" },
         piiEncryption: { connected: !!(env.PII_ENCRYPTION_KEY && env.PII_ENCRYPTION_SALT), label: "PII Encryption (AES-256)" },
         openai: { connected: !!(env.OPENAI_API_KEY || env.AI_INTEGRATIONS_OPENAI_API_KEY), label: "OpenAI AI" },
         anthropic: { connected: !!(env.ANTHROPIC_API_KEY || env.AI_INTEGRATIONS_ANTHROPIC_API_KEY), label: "Anthropic AI" },
+      };
+
+      const canonicalBase = getOAuthCallbackBase();
+      const oauthCallbacks = {
+        canonicalUrl: canonicalBase,
+        canonicalConfigured: !!env.CANONICAL_URL,
+        google: `${canonicalBase}/api/consumer/auth/google/callback`,
+        microsoft: `${canonicalBase}/api/auth/microsoft/callback`,
+        saml: `${canonicalBase}/api/auth/saml/callback`,
       };
 
       const envConfig = {
@@ -395,6 +405,7 @@ export function registerPlatformControlRoutes(app: Express) {
           pool: poolStats,
         },
         integrations,
+        oauthCallbacks,
         envConfig,
         security,
       });
