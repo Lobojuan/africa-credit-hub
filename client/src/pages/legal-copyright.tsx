@@ -47,7 +47,7 @@ export default function LegalCopyrightPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `CDH_Copyright_IP_Protection_${new Date().toISOString().split("T")[0]}.pdf`;
+      a.download = `UCH_Copyright_IP_Protection_${new Date().toISOString().split("T")[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
