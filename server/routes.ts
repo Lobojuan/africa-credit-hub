@@ -10401,6 +10401,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!(await validateOrgCountry(req.params.id as string, req))) return res.status(403).json({ message: "Organization not accessible in current country mode" });
       const updateSchema = insertOrganizationSchema.partial();
       const parsed = updateSchema.parse(req.body);
+      if (parsed.contactEmail) {
+        const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+        if (!emailRe.test(parsed.contactEmail.trim())) {
+          return res.status(400).json({ message: "contactEmail must be a valid email address" });
+        }
+      }
       const org = await storage.updateOrganization(req.params.id as string, parsed);
       if (!org) return res.status(404).json({ message: "Organization not found" });
       await storage.createAuditLog({

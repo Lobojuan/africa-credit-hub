@@ -26,6 +26,8 @@ import {
   PieChart, Pie, Cell, Legend, LineChart, Line,
 } from "recharts";
 
+const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+
 const ORG_TYPES = [
   { value: "bank", label: "Bank", icon: Building2, color: "text-blue-500" },
   { value: "microfinance", label: "Microfinance", icon: Wallet, color: "text-green-500" },
@@ -827,19 +829,31 @@ function OrgDetailPanel({ orgId, onBack }: { orgId: string; onBack: () => void }
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
             {[
-              { label: "Contact", value: org.contactEmail || "—", icon: Mail },
-              { label: "Phone", value: org.contactPhone || "—", icon: Phone },
-              { label: "Website", value: org.website ? (() => { try { return new URL(org.website.startsWith("http") ? org.website : `https://${org.website}`).hostname; } catch { return org.website; } })() : "—", icon: ExternalLink },
-              { label: "Slug", value: org.slug, icon: Globe },
-            ].map(item => (
-              <div key={item.label} className="rounded-lg bg-background/60 border p-3">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                  <item.icon className="w-3 h-3" />
-                  {item.label}
+              { label: "Contact", value: org.contactEmail || "—", icon: Mail, isEmail: true },
+              { label: "Phone", value: org.contactPhone || "—", icon: Phone, isEmail: false },
+              { label: "Website", value: org.website ? (() => { try { return new URL(org.website.startsWith("http") ? org.website : `https://${org.website}`).hostname; } catch { return org.website; } })() : "—", icon: ExternalLink, isEmail: false },
+              { label: "Slug", value: org.slug, icon: Globe, isEmail: false },
+            ].map(item => {
+              const hasInvalidEmail = item.isEmail && org.contactEmail && !isValidEmail(org.contactEmail);
+              return (
+                <div key={item.label} className={`rounded-lg bg-background/60 border p-3 ${hasInvalidEmail ? "border-amber-400 dark:border-amber-600" : ""}`}>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
+                    <item.icon className="w-3 h-3" />
+                    {item.label}
+                    {hasInvalidEmail && (
+                      <span data-testid="badge-invalid-email" className="ml-auto flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-medium">
+                        <AlertTriangle className="w-3 h-3" />
+                        Invalid
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-sm font-medium truncate ${hasInvalidEmail ? "text-amber-600 dark:text-amber-400" : ""}`}>{item.value}</p>
+                  {hasInvalidEmail && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">Fix via Edit</p>
+                  )}
                 </div>
-                <p className="text-sm font-medium truncate">{item.value}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -1275,14 +1289,31 @@ function EditOrgDialog({ org, open, onOpenChange }: { org: any; open: boolean; o
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-medium">Contact Email</Label>
-              <Input type="email" autoComplete="email" value={form.contactEmail} onChange={(e) => setForm({ ...form, contactEmail: e.target.value })} className="mt-1" />
+              <Input
+                data-testid="input-contact-email"
+                type="email"
+                autoComplete="email"
+                value={form.contactEmail}
+                onChange={(e) => setForm({ ...form, contactEmail: e.target.value })}
+                className={`mt-1 ${form.contactEmail && !isValidEmail(form.contactEmail) ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+              />
+              {form.contactEmail && !isValidEmail(form.contactEmail) && (
+                <p data-testid="error-contact-email" className="text-xs text-red-500 mt-1 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  Enter a valid email address
+                </p>
+              )}
             </div>
             <div>
               <Label className="text-xs font-medium">Website</Label>
               <Input value={form.website} onChange={(e) => setForm({ ...form, website: e.target.value })} className="mt-1" />
             </div>
           </div>
-          <Button data-testid="button-update-org" onClick={() => updateMutation.mutate(form)} disabled={updateMutation.isPending}>
+          <Button
+            data-testid="button-update-org"
+            onClick={() => updateMutation.mutate(form)}
+            disabled={updateMutation.isPending || !!(form.contactEmail && !isValidEmail(form.contactEmail))}
+          >
             {updateMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             Update Organization
           </Button>
