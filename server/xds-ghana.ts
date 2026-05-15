@@ -137,7 +137,7 @@ async function callXdsLive(
       headers: {
         "Content-Type": "application/json",
         "X-Api-Key": key,
-        "User-Agent": "AfricaCreditHub/2.5",
+        "User-Agent": "UCH-Registry/2.8.0",
         "X-Request-Ref": req.requestRef,
       },
       body: JSON.stringify(req),

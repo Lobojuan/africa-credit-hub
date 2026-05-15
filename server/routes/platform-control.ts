@@ -984,7 +984,7 @@ export function registerPlatformControlRoutes(app: Express) {
       try {
         const resp = await fetch(`${apiUrl.replace(/\/$/, "")}/lookup`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-Api-Key": apiKey, "User-Agent": "AfricaCreditHub/2.5" },
+          headers: { "Content-Type": "application/json", "X-Api-Key": apiKey, "User-Agent": "UCH-Registry/2.8.0" },
           body: JSON.stringify({ reference: testRef, provider }),
           signal: controller.signal,
         });

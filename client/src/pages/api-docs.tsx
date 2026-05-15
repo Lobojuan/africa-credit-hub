@@ -1043,7 +1043,7 @@ function sdkPhp(baseUrl: string): string {
  * Requires: PHP 7.4+, ext-curl, ext-json
  */
 
-namespace AfricaCreditHub;
+namespace UniversalCreditHub;
 
 class CreditHubException extends \\Exception {
     public int $statusCode;
@@ -1129,7 +1129,7 @@ class CreditHubClient {
 }
 
 // --- Quick Start ---
-// $client = new \\AfricaCreditHub\\CreditHubClient('sim_xxxxxxxx_xxx...');
+// $client = new \\UniversalCreditHub\\CreditHubClient('sim_xxxxxxxx_xxx...');
 // $report = $client->getCreditReport('borrower-uuid');
 // $result = $client->scoreAndDecide(['msisdn' => '+233241234567', 'amount' => 500]);
 `;

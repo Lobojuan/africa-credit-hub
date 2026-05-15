@@ -376,7 +376,7 @@ async function callLiveRegistry(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "AfricaCreditHub/2.5",
+        "User-Agent": "UCH-Registry/2.8.0",
         ...authHeader,
       },
       body: JSON.stringify({ reference, provider }),
