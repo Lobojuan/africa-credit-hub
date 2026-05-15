@@ -1,0 +1,147 @@
+name: OAuth Login Smoke Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  oauth-smoke:
+    name: OAuth smoke tests (Google + Microsoft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      SESSION_SECRET: ci-session-secret-change-me-in-prod
+      PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
+      PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
+      EXTERNAL_API_JWT_SECRET: ci-jwt-secret
+      SEED_ADMIN_PASSWORD: admin0987
+      RUN_SEED: "true"
+      NODE_ENV: development
+      PORT: 5000
+      ENABLE_E2E_TEST_AUTH: "true"
+      # Mock OAuth credentials — no real provider calls are made in this suite.
+      # The server's E2E test-mode bypass (gated by ENABLE_E2E_TEST_AUTH=true)
+      # short-circuits token exchange when code=e2e-google-code / e2e-ms-code.
+      GOOGLE_CLIENT_ID: mock-google-ci-client-id
+      GOOGLE_CLIENT_SECRET: mock-google-ci-secret
+      MICROSOFT_CLIENT_ID: mock-ms-ci-client-id
+      MICROSOFT_CLIENT_SECRET: mock-ms-ci-secret
+      MICROSOFT_TENANT_ID: common
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Push database schema
+        run: npm run db:push
+
+      - name: Run OAuth smoke tests
+        run: npx playwright test --project=oauth-smoke
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-oauth-smoke
+          path: |
+            e2e/report/
+            e2e/test-results-artifacts/
+          retention-days: 14
+
+  notify-failure:
+    name: Notify on failure
+    runs-on: ubuntu-latest
+    needs: [oauth-smoke]
+    if: failure()
+
+    steps:
+      - name: Send Slack alert
+        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": ":x: *CI failure — OAuth Login Smoke Tests*",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": ":x: *CI failure — OAuth Login Smoke Tests*\n*Repository:* ${{ github.repository }}\n*Branch:* `${{ github.ref_name }}`\n*Triggered by:* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run on GitHub>"
+                  }
+                }
+              ]
+            }
+
+      - name: Send email alert (Slack not configured)
+        if: ${{ secrets.SLACK_WEBHOOK_URL == '' && secrets.ALERT_EMAIL_TO != '' && secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' }}
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT || 587 }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "CI failure — OAuth Login Smoke Tests (${{ github.repository }})"
+          to: ${{ secrets.ALERT_EMAIL_TO }}
+          from: "GitHub Actions <${{ secrets.SMTP_USERNAME }}>"
+          body: |
+            CI failure — OAuth Login Smoke Tests
+
+            Repository: ${{ github.repository }}
+            Branch:     ${{ github.ref_name }}
+            Triggered by: ${{ github.actor }}
+
+            View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

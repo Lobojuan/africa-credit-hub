@@ -523,6 +523,15 @@ export async function registerRoutes(
       Object.assign(req.session, req.body);
       res.json({ ok: true });
     });
+
+    app.get("/api/test/get-session", (req, res) => {
+      const ip = req.ip ?? "";
+      if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
+        return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
+      }
+      const { userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity } = req.session as Record<string, unknown>;
+      res.json({ userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity });
+    });
   }
 
 

@@ -252,6 +252,33 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       }
       delete (req.session as Record<string, unknown>).googleOAuthState;
 
+      // ── E2E test-mode bypass: skip real provider calls ───────────────────────
+      // Active only when all three conditions hold:
+      //   1. ENABLE_E2E_TEST_AUTH=true  (set by playwright.config.ts webServer env)
+      //   2. NODE_ENV is not "production"
+      //   3. PRODUCTION_MODE is not "true"
+      // This triple-guard ensures the bypass is inert in any production context
+      // even if ENABLE_E2E_TEST_AUTH is accidentally set.
+      if (
+        process.env.ENABLE_E2E_TEST_AUTH === "true" &&
+        process.env.NODE_ENV !== "production" &&
+        process.env.PRODUCTION_MODE !== "true" &&
+        code === "e2e-google-code"
+      ) {
+        return req.session.regenerate((regenerateErr) => {
+          if (regenerateErr) return res.redirect(`${returnTo}?error=session_error`);
+          (req.session as Record<string, unknown>).consumerId = "e2e-google-consumer-test";
+          (req.session as Record<string, unknown>).consumerNationalId = "GOOGLE-E2E-TEST-001";
+          req.session.lastActivity = Date.now();
+          req.session.save((saveErr) => {
+            if (saveErr) return res.redirect(`${returnTo}?error=session_error`);
+            logger.info("[E2E][Google] Mock consumer session created → " + returnTo);
+            res.redirect(returnTo);
+          });
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
       const redirectUri = getGoogleRedirectUri(req);
       const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
         method: "POST",
@@ -399,6 +426,31 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
         return res.redirect(`${returnTo}?error=invalid_state`);
       }
       delete (req.session as Record<string, unknown>).microsoftOAuthState;
+
+      // ── E2E test-mode bypass: skip real provider calls ───────────────────────
+      // Active only when all three conditions hold:
+      //   1. ENABLE_E2E_TEST_AUTH=true  (set by playwright.config.ts webServer env)
+      //   2. NODE_ENV is not "production"
+      //   3. PRODUCTION_MODE is not "true"
+      if (
+        process.env.ENABLE_E2E_TEST_AUTH === "true" &&
+        process.env.NODE_ENV !== "production" &&
+        process.env.PRODUCTION_MODE !== "true" &&
+        code === "e2e-ms-code"
+      ) {
+        return req.session.regenerate((regenerateErr) => {
+          if (regenerateErr) return res.redirect("/login?error=session_error");
+          req.session.userId = "e2e-ms-admin-test-user";
+          req.session.userRole = "admin";
+          req.session.lastActivity = Date.now();
+          req.session.save((saveErr) => {
+            if (saveErr) return res.redirect("/login?error=session_error");
+            logger.info("[E2E][Microsoft] Mock admin session created → /dashboard");
+            res.redirect("/dashboard");
+          });
+        });
+      }
+      // ────────────────────────────────────────────────────────────────────────
 
       const redirectUri = getMicrosoftRedirectUri(req);
       const tokenResp = await fetch(
