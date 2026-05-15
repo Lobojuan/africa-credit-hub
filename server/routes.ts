@@ -13129,7 +13129,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const orgScope = getOrgScope(req);
       const country = getCountryFilter(req);
       const orgFilter = orgScope ? sql`AND organization_id = ${orgScope}` : sql``;
-      const countryOrgFilter = country ? sql`AND organization_id IN (SELECT id FROM organizations WHERE country = ${country})` : sql``;
+      const effectiveCountry = country && country !== GLOBAL_SCOPE ? country : null;
+      const countryOrgFilter = effectiveCountry ? sql`AND organization_id IN (SELECT id FROM organizations WHERE country = ${effectiveCountry})` : sql``;
 
       const statusRows = await db.execute(sql`
         SELECT status, COUNT(*)::int AS cnt, COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
@@ -13156,7 +13157,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           COUNT(national_id)::int AS with_id,
           COUNT(CASE WHEN phone IS NOT NULL OR mobile_money_number IS NOT NULL THEN 1 END)::int AS with_phone,
           COUNT(email)::int AS with_email
-        FROM borrowers WHERE 1=1 ${orgFilter} ${country ? sql`AND country = ${country}` : sql``}
+        FROM borrowers WHERE 1=1 ${orgFilter} ${effectiveCountry ? sql`AND country = ${effectiveCountry}` : sql``}
       `);
       const dq = (dqRows.rows as any[])[0] || { total: 0, with_id: 0, with_phone: 0, with_email: 0 };
       const totalBorrowers = dq.total;

@@ -64,34 +64,14 @@ const FALLBACK_TREND: MonthlyTrend[] = (() => {
   const data: MonthlyTrend[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthLabel = months[d.getMonth()];
-    const base = 800 + (11 - i) * 120 + Math.floor(Math.random() * 80);
-    data.push({
-      month: monthLabel,
-      borrowers: base,
-      accounts: Math.floor(base * 1.8),
-      outstanding: Math.floor(base * 45000),
-    });
+    data.push({ month: months[d.getMonth()], borrowers: 0, accounts: 0, outstanding: 0 });
   }
   return data;
 })();
 
-const FALLBACK_STATUS: StatusBreakdown[] = [
-  { status: "current", count: 1240 },
-  { status: "delinquent", count: 185 },
-  { status: "default", count: 62 },
-  { status: "closed", count: 340 },
-  { status: "restructured", count: 45 },
-];
+const FALLBACK_STATUS: StatusBreakdown[] = [];
 
-const FALLBACK_TYPES: TypeBreakdown[] = [
-  { type: "Personal Loan", count: 520 },
-  { type: "Mortgage", count: 310 },
-  { type: "Business Loan", count: 280 },
-  { type: "Auto Loan", count: 195 },
-  { type: "Credit Card", count: 165 },
-  { type: "Microfinance", count: 142 },
-];
+const FALLBACK_TYPES: TypeBreakdown[] = [];
 
 function formatCompact(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;

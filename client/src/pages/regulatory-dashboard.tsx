@@ -91,6 +91,7 @@ const PIE_COLORS = [
 
 function formatCurrency(val: string | number): string {
   const num = typeof val === "string" ? parseFloat(val) : val;
+  if (isNaN(num) || num === null || num === undefined) return "GHS 0";
   if (num >= 1_000_000_000) return `GHS ${(num / 1_000_000_000).toFixed(1)}B`;
   if (num >= 1_000_000) return `GHS ${(num / 1_000_000).toFixed(1)}M`;
   if (num >= 1_000) return `GHS ${(num / 1_000).toFixed(1)}K`;
@@ -113,7 +114,9 @@ function getNplBadgeVariant(ratio: string): "default" | "secondary" | "destructi
 
 function getComplianceStatus(lastSubmission: string | null): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
   if (!lastSubmission) return { label: "No Data", variant: "outline" };
-  const daysSince = (Date.now() - new Date(lastSubmission).getTime()) / (1000 * 60 * 60 * 24);
+  const ts = new Date(lastSubmission).getTime();
+  if (isNaN(ts)) return { label: "No Data", variant: "outline" };
+  const daysSince = (Date.now() - ts) / (1000 * 60 * 60 * 24);
   if (daysSince <= 30) return { label: "On Time", variant: "secondary" };
   if (daysSince <= 60) return { label: "Overdue", variant: "outline" };
   return { label: "Critical", variant: "destructive" };
