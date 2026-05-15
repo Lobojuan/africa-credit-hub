@@ -221,10 +221,122 @@ jobs:
             kill $(cat /tmp/server.pid) || true
           fi
 
+  oauth-smoke:
+    name: OAuth smoke tests (Google + Microsoft)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      SESSION_SECRET: ci-session-secret-change-me-in-prod
+      PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
+      PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
+      EXTERNAL_API_JWT_SECRET: ci-jwt-secret
+      SEED_ADMIN_PASSWORD: admin0987
+      RUN_SEED: "true"
+      NODE_ENV: development
+      PORT: 5000
+      ENABLE_E2E_TEST_AUTH: "true"
+      GOOGLE_CLIENT_ID: mock-google-ci-client-id
+      GOOGLE_CLIENT_SECRET: mock-google-ci-secret
+      MICROSOFT_CLIENT_ID: mock-ms-ci-client-id
+      MICROSOFT_CLIENT_SECRET: mock-ms-ci-secret
+      MICROSOFT_TENANT_ID: common
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('./package.json').devDependencies['@playwright/test']")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+
+      - name: Push database schema
+        run: npm run db:push
+
+      - name: Start application server
+        run: |
+          npm run dev &
+          echo $! > /tmp/server.pid
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server on port 5000..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/api/health > /dev/null 2>&1 || \
+               curl -sf http://localhost:5000 > /dev/null 2>&1; then
+              echo "Server is ready after ${i} attempts"
+              break
+            fi
+            echo "Attempt ${i}/30 — server not yet ready, waiting 3s..."
+            sleep 3
+          done
+
+      - name: Run OAuth smoke tests
+        run: npx playwright test --project=oauth-smoke
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-oauth-smoke
+          path: |
+            e2e/report/
+            e2e/test-results-artifacts/
+          retention-days: 14
+
+      - name: Stop application server
+        if: always()
+        run: |
+          if [ -f /tmp/server.pid ]; then
+            kill $(cat /tmp/server.pid) || true
+          fi
+
   notify-failure:
     name: Notify on failure
     runs-on: ubuntu-latest
-    needs: [playwright-unauthenticated, playwright-authenticated]
+    needs: [playwright-unauthenticated, playwright-authenticated, oauth-smoke]
     if: failure()
 
     steps:
@@ -242,7 +354,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": ":x: *CI failure — Playwright Full Test Suite*\n*Repository:* ${{ github.repository }}\n*Branch:* `${{ github.ref_name }}`\n*Triggered by:* ${{ github.actor }}\n*Failed jobs:* unauthenticated=${{ needs.playwright-unauthenticated.result }}, authenticated=${{ needs.playwright-authenticated.result }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run on GitHub>"
+                    "text": ":x: *CI failure — Playwright Full Test Suite*\n*Repository:* ${{ github.repository }}\n*Branch:* `${{ github.ref_name }}`\n*Triggered by:* ${{ github.actor }}\n*Failed jobs:* unauthenticated=${{ needs.playwright-unauthenticated.result }}, authenticated=${{ needs.playwright-authenticated.result }}, oauth-smoke=${{ needs.oauth-smoke.result }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run on GitHub>"
                   }
                 }
               ]
@@ -268,5 +380,6 @@ jobs:
             Failed jobs:
               - unauthenticated: ${{ needs.playwright-unauthenticated.result }}
               - authenticated:   ${{ needs.playwright-authenticated.result }}
+              - oauth-smoke:     ${{ needs.oauth-smoke.result }}
 
             View run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
