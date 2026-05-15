@@ -2,7 +2,8 @@
  * OAuth Login Smoke Tests — End-to-End
  *
  * These tests exercise the complete OAuth initiation and callback paths for
- * Google, Microsoft SSO, and SAML without hitting real external providers.
+ * Google, Microsoft SSO, SAML, and Apple Sign-In without hitting real external
+ * providers.
  *
  * The Playwright test server (port 5001) is always started fresh by
  * playwright.config.ts with a fixed set of env vars:
@@ -36,12 +37,20 @@
  *
  * All requests use page.request (which shares cookies with the browser page),
  * so session cookies are automatically propagated across calls.
+ *
+ * Apple Sign-In is currently a 503 stub — no APPLE_CLIENT_ID is wired up yet.
+ * When Apple credentials are configured, add APPLE_CLIENT_ID to the CI workflow
+ * and the conditional happy-path / state-mismatch tests below will activate.
+ *
+ * The server accepts code="e2e-google-code" / code="e2e-ms-code" only when
+ * ENABLE_E2E_TEST_AUTH=true (see server/routes/oauth.ts).
  */
 
 import { test, expect } from "@playwright/test";
 
 const E2E_GOOGLE_CODE = "e2e-google-code";
 const E2E_MS_CODE = "e2e-ms-code";
+const E2E_APPLE_CODE = "e2e-apple-code";
 
 // Production callback URLs that must be registered at provider consoles.
 // These are derived from CANONICAL_URL=https://universalcredithub.com (set in
@@ -343,5 +352,141 @@ test.describe("SAML SSO — smoke tests", () => {
       "base64",
     ).toString("utf-8");
     expect(xml).toContain(`ID="${session.samlRequestId}"`);
+  });
+});
+
+// ─── Apple Sign-In ────────────────────────────────────────────────────────────
+
+test.describe("Apple Sign-In — smoke tests", () => {
+  /**
+   * Helper: returns true when the server has Apple credentials configured
+   * (i.e. APPLE_CLIENT_ID is set and the initiation endpoint returns 302
+   * rather than the 503 stub).  When credentials are absent every test in
+   * this block still runs — it just asserts the stub behaviour instead of
+   * the full OAuth flow.
+   */
+  async function appleIsConfigured(page: import("@playwright/test").Page): Promise<boolean> {
+    const probe = await page.request.get("/api/consumer/auth/apple", { maxRedirects: 0 });
+    return probe.status() === 302;
+  }
+
+  test("returns 503 with descriptive message when Apple credentials are absent", async ({ page }) => {
+    const configured = await appleIsConfigured(page);
+    if (configured) {
+      test.skip(true, "APPLE_CLIENT_ID is set — stub 503 test not applicable in this environment");
+    }
+
+    const resp = await page.request.get("/api/consumer/auth/apple");
+    expect(resp.status()).toBe(503);
+
+    const body = await resp.text();
+    expect(body).toContain("Apple Sign-In");
+    expect(body).toContain("Apple Developer");
+  });
+
+  test("returns 302 to appleid.apple.com when Apple credentials are configured", async ({ page }) => {
+    const configured = await appleIsConfigured(page);
+    if (!configured) {
+      test.skip(true, "APPLE_CLIENT_ID not set — skipping Apple configured-initiation check");
+    }
+
+    const resp = await page.request.get("/api/consumer/auth/apple", { maxRedirects: 0 });
+    expect(resp.status()).toBe(302);
+    const location = resp.headers()["location"];
+    expect(location, "Location header must be present when Apple is configured").toBeTruthy();
+    expect(new URL(location).hostname).toContain("apple.com");
+  });
+
+  test("initiation: redirects to appleid.apple.com with correct OAuth params when configured", async ({ page }) => {
+    const configured = await appleIsConfigured(page);
+    if (!configured) {
+      test.skip(true, "APPLE_CLIENT_ID not set — skipping Apple Sign-In initiation test");
+    }
+
+    const resp = await page.request.get(
+      "/api/consumer/auth/apple?from=/my-credit",
+      { maxRedirects: 0 },
+    );
+
+    expect(resp.status()).toBe(302);
+
+    const location = resp.headers()["location"];
+    expect(location, "Location header must be present").toBeTruthy();
+
+    const redirectUrl = new URL(location);
+    expect(redirectUrl.hostname).toContain("apple.com");
+    expect(redirectUrl.searchParams.get("response_type")).toContain("code");
+    expect(redirectUrl.searchParams.get("scope")).toContain("email");
+
+    const state = redirectUrl.searchParams.get("state");
+    expect(state, "A CSRF state token must be included").toBeTruthy();
+    expect(state!.length).toBeGreaterThan(8);
+
+    const clientId = redirectUrl.searchParams.get("client_id");
+    expect(clientId, "client_id must be present in the authorization URL").toBeTruthy();
+  });
+
+  test("happy path: callback with mock code creates a consumer session and redirects correctly", async ({ page }) => {
+    const configured = await appleIsConfigured(page);
+    if (!configured) {
+      test.skip(true, "APPLE_CLIENT_ID not set — skipping Apple Sign-In happy-path test");
+    }
+
+    // Step 1: initiate — gets the CSRF state stored in the session cookie.
+    const initResp = await page.request.get(
+      "/api/consumer/auth/apple?from=/my-credit",
+      { maxRedirects: 0 },
+    );
+    expect(initResp.status()).toBe(302);
+
+    // Step 2: extract the state from the Apple auth URL in the Location header.
+    const appleAuthUrl = new URL(initResp.headers()["location"]);
+    const oauthState = appleAuthUrl.searchParams.get("state");
+    expect(oauthState, "OAuth state must be present in the authorization URL").not.toBeNull();
+
+    // Step 3: call the callback with the E2E mock code + captured state.
+    const callbackResp = await page.request.get(
+      `/api/consumer/auth/apple/callback?code=${E2E_APPLE_CODE}&state=${oauthState}`,
+      { maxRedirects: 0 },
+    );
+
+    expect(callbackResp.status()).toBe(302);
+    const location = callbackResp.headers()["location"];
+    expect(location).toBe("/my-credit");
+    expect(location).not.toContain("error=");
+
+    // Step 4: verify a valid authenticated session was created.
+    const sessionResp = await page.request.get("/api/test/get-session");
+    expect(sessionResp.ok()).toBeTruthy();
+    const session = await sessionResp.json() as Record<string, unknown>;
+    expect(session.consumerId, "Session must contain a consumerId after Apple Sign-In").toBeTruthy();
+    expect(session.consumerId).toBe("e2e-apple-consumer-test");
+  });
+
+  test("state mismatch: callback redirects with invalid_state error when configured", async ({ page }) => {
+    const configured = await appleIsConfigured(page);
+    if (!configured) {
+      test.skip(true, "APPLE_CLIENT_ID not set — skipping Apple Sign-In state-mismatch test");
+    }
+
+    // Pre-seed a known OAuth state in the session via the test helper.
+    const seedResp = await page.request.post("/api/test/set-session", {
+      data: {
+        appleOAuthState: "correct-apple-state-e2e",
+        appleOAuthReturnTo: "/my-credit",
+      },
+    });
+    expect(seedResp.ok()).toBeTruthy();
+
+    // Call the callback with a deliberately WRONG state value.
+    const resp = await page.request.get(
+      "/api/consumer/auth/apple/callback?code=any-code&state=tampered-apple-wrong-state",
+      { maxRedirects: 0 },
+    );
+
+    expect(resp.status()).toBe(302);
+    const location = resp.headers()["location"];
+    expect(location).toContain("error=invalid_state");
+    expect(location).not.toBe("/my-credit");
   });
 });

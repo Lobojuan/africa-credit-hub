@@ -10,7 +10,7 @@ on:
 
 jobs:
   oauth-smoke:
-    name: OAuth smoke tests (Google + Microsoft)
+    name: OAuth smoke tests (Google + Microsoft + Apple stub)
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -48,6 +48,13 @@ jobs:
       MICROSOFT_CLIENT_ID: mock-ms-ci-client-id
       MICROSOFT_CLIENT_SECRET: mock-ms-ci-secret
       MICROSOFT_TENANT_ID: common
+      # Apple Sign-In credentials — uncomment and populate once Apple Developer
+      # account is configured.  The server's E2E test-mode bypass will then
+      # short-circuit token exchange when code=e2e-apple-code.
+      # APPLE_CLIENT_ID: mock-apple-ci-client-id
+      # APPLE_TEAM_ID: mock-apple-ci-team-id
+      # APPLE_KEY_ID: mock-apple-ci-key-id
+      # APPLE_PRIVATE_KEY: mock-apple-ci-private-key
 
     steps:
       - name: Checkout repository
