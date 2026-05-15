@@ -73,6 +73,7 @@ const ar: Record<string, any> = {
     myCredit: "ائتماني",
     legal: "القانونية وحقوق النشر",
     backupRecovery: "النسخ الاحتياطي والاستعادة",
+    platformMap: "خريطة المنصة",
     complianceQueue: "قائمة الامتثال",
     loanOrigination: "إنشاء القروض",
     collateralRegistry: "سجل الضمانات",

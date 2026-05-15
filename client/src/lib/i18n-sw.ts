@@ -73,6 +73,7 @@ const sw: Record<string, any> = {
     myCredit: "Mkopo Wangu",
     legal: "Kisheria na Hakimiliki",
     backupRecovery: "Hifadhi na Urejeshaji",
+    platformMap: "Ramani ya Jukwaa",
     complianceQueue: "Foleni ya Utiifu",
     loanOrigination: "Uanzishaji wa Mkopo",
     collateralRegistry: "Daftari la Dhamana",

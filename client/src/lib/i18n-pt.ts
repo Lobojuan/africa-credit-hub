@@ -75,6 +75,7 @@ const pt = {
     myCredit: "Meu Crédito",
     legal: "Jurídico & Direitos Autorais",
     backupRecovery: "Backup & Recuperação",
+    platformMap: "Mapa da Plataforma",
     complianceQueue: "Fila de Conformidade",
     loanOrigination: "Originação de Empréstimos",
     collateralRegistry: "Registo de Garantias",

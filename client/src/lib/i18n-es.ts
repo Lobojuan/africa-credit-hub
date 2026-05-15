@@ -75,6 +75,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       myCredit: "Mi Crédito",
       legal: "Legal y Derechos de Autor",
       backupRecovery: "Copia de Seguridad y Recuperación",
+      platformMap: "Mapa de la Plataforma",
       complianceQueue: "Cola de Cumplimiento",
       loanOrigination: "Originación de Préstamos",
       collateralRegistry: "Registro de Garantías",

@@ -92,6 +92,7 @@ const en = {
     myCredit: "My Credit",
     legal: "Legal & Copyright",
     backupRecovery: "Backup & Recovery",
+    platformMap: "Platform Map",
     brandTitle: "Credit Registry",
     brandSubtitle: `${CO}™`,
     version: "v2.8 — Credit Registry",

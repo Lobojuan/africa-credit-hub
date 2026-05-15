@@ -75,6 +75,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     "myCredit": "我的信用",
     "legal": "法律与版权",
     "backupRecovery": "备份与恢复",
+    "platformMap": "平台地图",
     "complianceQueue": "合规队列",
     "loanOrigination": "贷款发起",
     "collateralRegistry": "担保品登记",

@@ -75,6 +75,7 @@ const zhTW = {
     myCredit: "我的信用",
     legal: "法律與版權",
     backupRecovery: "備份與恢復",
+    platformMap: "平台地圖",
     complianceQueue: "合規隊列",
     loanOrigination: "貸款發放",
     collateralRegistry: "抵押品登記",
