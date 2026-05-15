@@ -738,6 +738,214 @@ function IntegrationsPanel() {
   );
 }
 
+interface OAuthProviderInfo {
+  label: string;
+  credentialsPresent: boolean;
+  callbackUrl: string;
+  metadataUrl?: string;
+  registerAt: string;
+  ready: boolean;
+}
+interface OAuthStatusData {
+  canonicalUrl: {
+    value: string;
+    source: string;
+    configured: boolean;
+    warning: string | null;
+  };
+  providers: {
+    google: OAuthProviderInfo;
+    microsoft: OAuthProviderInfo;
+    saml: OAuthProviderInfo;
+  };
+  smokeTestChecklist: Array<{ step: number; description: string; done?: boolean; requiredFor?: string }>;
+}
+
+function OAuthSSOPanel() {
+  const { data, isLoading, isError, refetch, isFetching } = useQuery<OAuthStatusData>({
+    queryKey: ["/api/platform-control/oauth-status"],
+    queryFn: async () => {
+      const r = await pcFetch("/api/platform-control/oauth-status");
+      if (!r.ok) throw new Error(`OAuth status fetch failed: ${r.status} ${r.statusText}`);
+      return r.json() as Promise<OAuthStatusData>;
+    },
+    staleTime: 30000,
+  });
+  const [copiedKey, setCopiedKey] = useState("");
+
+  function handleCopy(key: string, url: string) {
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(""), 2000);
+  }
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground p-2">Loading OAuth status…</div>;
+  }
+  if (isError || !data) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-red-500 p-2" data-testid="oauth-sso-panel-error">
+        <XCircle className="w-4 h-4 shrink-0" />
+        Failed to load OAuth status. Ensure you are authenticated with the platform control session.
+      </div>
+    );
+  }
+
+  const canonicalUrl = data.canonicalUrl ?? {};
+  const providers = data.providers ?? {};
+  const smokeTestChecklist = data.smokeTestChecklist ?? [];
+  const emptyProvider: OAuthProviderInfo = { label: "", credentialsPresent: false, callbackUrl: "", registerAt: "", ready: false };
+  const providerList: Array<{ key: string; info: OAuthProviderInfo; consoleUrl: string; icon: LucideIcon }> = [
+    { key: "google", info: providers.google ?? emptyProvider, consoleUrl: "https://console.cloud.google.com/apis/credentials", icon: Key },
+    { key: "microsoft", info: providers.microsoft ?? emptyProvider, consoleUrl: "https://portal.azure.com/#blade/Microsoft_AAD_IAM/ActiveDirectoryMenuBlade/RegisteredApps", icon: Building2 },
+    { key: "saml", info: providers.saml ?? emptyProvider, consoleUrl: "https://docs.oasis-open.org/security/saml/Post2.0/sstc-saml-tech-overview-2.0.html", icon: Shield },
+  ];
+
+  const configuredCount = providerList.filter(p => p.info.ready).length;
+
+  return (
+    <div className="space-y-4" data-testid="oauth-sso-panel">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className={configuredCount > 0 ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" : "bg-zinc-500/10 text-zinc-500 border-zinc-500/30"}>
+            {configuredCount}/3 providers ready
+          </Badge>
+          <Badge
+            variant="outline"
+            className={canonicalUrl.configured
+              ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+              : "bg-amber-500/10 text-amber-600 border-amber-500/30"}
+            data-testid="badge-canonical-url-status"
+          >
+            {canonicalUrl.configured ? "CANONICAL_URL set" : "No CANONICAL_URL"}
+          </Badge>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => refetch()} disabled={isFetching} data-testid="button-refresh-oauth-status">
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} />
+        </Button>
+      </div>
+
+      {!canonicalUrl.configured && canonicalUrl.warning && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3" data-testid="alert-canonical-url-warning">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">CANONICAL_URL not configured</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">{canonicalUrl.warning}</p>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Current base: <code className="font-mono text-foreground">{canonicalUrl.value}</code>
+              {" "}— <span className="italic">{canonicalUrl.source}</span>
+            </p>
+          </div>
+        </div>
+      )}
+
+      {canonicalUrl.configured && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2" data-testid="alert-canonical-url-ok">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+          <div className="text-xs">
+            <span className="font-medium text-emerald-700 dark:text-emerald-400">CANONICAL_URL is set</span>
+            <span className="text-muted-foreground ml-1">→ <code className="font-mono text-foreground">{canonicalUrl.value}</code></span>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {providerList.map(({ key, info, consoleUrl, icon: Icon }) => (
+          <div
+            key={key}
+            className={`rounded-lg border p-3 space-y-2 ${info.ready ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-muted/20"}`}
+            data-testid={`card-oauth-provider-${key}`}
+          >
+            <div className="flex items-center gap-2">
+              <Icon className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <span className="text-xs font-semibold flex-1 truncate">{info.label}</span>
+              <Badge
+                variant="outline"
+                className={`text-[10px] h-4 shrink-0 ${info.credentialsPresent ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600" : "border-red-500/40 bg-red-500/10 text-red-500"}`}
+                data-testid={`badge-credentials-${key}`}
+              >
+                {info.credentialsPresent ? "Configured" : "Missing"}
+              </Badge>
+            </div>
+
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Callback URL</p>
+              <div className="flex items-center gap-1">
+                <code className="text-[10px] font-mono text-foreground flex-1 truncate bg-muted/40 rounded px-1.5 py-0.5" data-testid={`code-callback-url-${key}`}>
+                  {info.callbackUrl}
+                </code>
+                <Button
+                  variant="ghost" size="icon" className="h-5 w-5 shrink-0"
+                  onClick={() => handleCopy(`cb-${key}`, info.callbackUrl)}
+                  data-testid={`button-copy-callback-${key}`}
+                >
+                  {copiedKey === `cb-${key}` ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                </Button>
+              </div>
+            </div>
+
+            {info.metadataUrl && (
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Metadata URL</p>
+                <div className="flex items-center gap-1">
+                  <code className="text-[10px] font-mono text-foreground flex-1 truncate bg-muted/40 rounded px-1.5 py-0.5">
+                    {info.metadataUrl}
+                  </code>
+                  <Button
+                    variant="ghost" size="icon" className="h-5 w-5 shrink-0"
+                    onClick={() => handleCopy(`meta-${key}`, info.metadataUrl!)}
+                    data-testid={`button-copy-metadata-${key}`}
+                  >
+                    {copiedKey === `meta-${key}` ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-[10px] text-muted-foreground leading-snug">{info.registerAt}</p>
+            </div>
+
+            {consoleUrl && (
+              <a
+                href={consoleUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                data-testid={`link-console-${key}`}
+              >
+                <ExternalLink className="w-2.5 h-2.5" />
+                {key === "saml" ? "SAML 2.0 overview" : "Open provider console"}
+              </a>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-lg border border-border p-3" data-testid="oauth-smoke-test-checklist">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Registration Checklist</p>
+        <div className="space-y-1.5">
+          {smokeTestChecklist.map(item => (
+            <div key={item.step} className="flex items-start gap-2" data-testid={`checklist-step-${item.step}`}>
+              {item.done !== undefined
+                ? (item.done
+                    ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                    : <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />)
+                : <div className="w-3.5 h-3.5 rounded-full border border-muted-foreground/40 shrink-0 mt-0.5" />}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-foreground leading-snug">{item.description}</p>
+                {item.requiredFor && (
+                  <span className="text-[10px] text-muted-foreground">Required for: {item.requiredFor}</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DatabaseStatsPanel() {
   const { data, isLoading, refetch } = useQuery<DatabaseStats>({
     queryKey: ["/api/platform-control/database-stats"],
@@ -2886,6 +3094,10 @@ function ControlDashboard() {
 
           <Panel title="Connected Integrations" icon={Wifi} color="text-blue-500">
             <IntegrationsPanel />
+          </Panel>
+
+          <Panel title="OAuth / SSO Configuration" icon={ShieldCheck} color="text-indigo-500" defaultOpen={false}>
+            <OAuthSSOPanel />
           </Panel>
 
           <Panel title="Database & Data Health" icon={Database} color="text-violet-500">

@@ -507,6 +507,59 @@ export function registerPlatformControlRoutes(app: Express) {
     }
   });
 
+  app.get("/api/platform-control/oauth-status", requireMasterAuth, (_req: Request, res: Response) => {
+    const env = process.env;
+    const base = getOAuthCallbackBase();
+    const canonicalConfigured = !!env.CANONICAL_URL;
+    res.json({
+      canonicalUrl: {
+        value: base,
+        source: canonicalConfigured
+          ? "CANONICAL_URL env var"
+          : env.REPLIT_DOMAINS
+            ? "REPLIT_DOMAINS env var (fallback)"
+            : "hardcoded production default (fallback)",
+        configured: canonicalConfigured,
+        warning: !canonicalConfigured
+          ? "Set CANONICAL_URL=https://universalcredithub.com in production secrets for stable OAuth callbacks."
+          : null,
+      },
+      providers: {
+        google: {
+          label: "Google OAuth",
+          credentialsPresent: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+          callbackUrl: `${base}/api/consumer/auth/google/callback`,
+          registerAt: "https://console.cloud.google.com → APIs & Services → Credentials → OAuth 2.0 Client → Authorized redirect URIs",
+          ready: !!(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+        },
+        microsoft: {
+          label: "Microsoft Azure / Entra ID SSO",
+          credentialsPresent: !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
+          callbackUrl: `${base}/api/auth/microsoft/callback`,
+          registerAt: "https://portal.azure.com → Azure Active Directory → App registrations → Authentication → Redirect URIs",
+          ready: !!(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
+        },
+        saml: {
+          label: "SAML 2.0 SSO",
+          credentialsPresent: !!(env.SAML_IDP_ENTRY_POINT && env.SAML_ISSUER),
+          callbackUrl: `${base}/api/auth/saml/callback`,
+          metadataUrl: `${base}/api/auth/saml/metadata`,
+          registerAt: "Your SAML IdP admin console → Service Provider ACS URL",
+          ready: !!(env.SAML_IDP_ENTRY_POINT && env.SAML_ISSUER),
+        },
+      },
+      smokeTestChecklist: [
+        { step: 1, description: "Confirm CANONICAL_URL is set to https://universalcredithub.com in production secrets", done: canonicalConfigured },
+        { step: 2, description: `Register ${base}/api/consumer/auth/google/callback as an authorized redirect URI in Google Cloud Console`, requiredFor: "Google OAuth" },
+        { step: 3, description: `Register ${base}/api/auth/microsoft/callback as a redirect URI in Microsoft Entra app registration`, requiredFor: "Microsoft SSO" },
+        { step: 4, description: `Set ACS URL to ${base}/api/auth/saml/callback in your SAML IdP (or import SP metadata from ${base}/api/auth/saml/metadata)`, requiredFor: "SAML 2.0" },
+        { step: 5, description: "On https://universalcredithub.com/login, click 'Sign in with Google' and complete the flow — verify redirect back and session creation", requiredFor: "Google OAuth" },
+        { step: 6, description: "On https://universalcredithub.com/login, click 'Sign in with Microsoft' and complete the flow — verify redirect back and session creation", requiredFor: "Microsoft SSO" },
+        { step: 7, description: "Navigate to https://universalcredithub.com/api/auth/saml/login and complete the IdP-initiated flow — verify redirect back and session creation", requiredFor: "SAML 2.0" },
+      ],
+    });
+  });
+
   app.get("/api/platform-control/revenue-overview", requireMasterAuth, async (_req: Request, res: Response) => {
     try {
       const deployments = await db.select().from(platformDeployments);
