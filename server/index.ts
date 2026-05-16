@@ -147,17 +147,13 @@ app.use((req, res, next) => {
       } catch { /* malformed CANONICAL_URL */ }
     }
     if (!allowed) {
-      // Outbound webhook callbacks and aggregator POSTs come in without a
-      // browser origin; they are caught by the missing-origin guard above.
-      // The stripe webhook and USSD endpoint have their own auth; we still
-      // block non-matching cross-origin preflight requests here.
-      if (req.method === "OPTIONS") {
-        return res.status(403).end();
-      }
-      // Non-OPTIONS with a mismatched origin: strip the CORS response headers
-      // but continue — server-side processing is not affected, and same-origin
-      // fetch calls (no Origin header) remain unaffected.
-      return next();
+      // All cross-origin requests with a mismatched Origin header are rejected
+      // in production. Stripe webhooks and USSD aggregator POSTs never send an
+      // Origin header (they are not browser-initiated), so they are handled by
+      // the missing-origin guard at the top of this middleware and reach the
+      // route handlers normally. Only browser-initiated cross-origin requests
+      // are blocked here.
+      return res.status(403).json({ message: "Cross-origin request not allowed" });
     }
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");

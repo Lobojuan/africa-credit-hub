@@ -197,6 +197,52 @@ async function processRetries() {
 
 setInterval(processRetries, 60_000);
 
+/**
+ * Verify an incoming webhook signature and reject replayed payloads.
+ *
+ * @param payload      Raw request body string
+ * @param signature    Value of the X-UCH-Signature / X-Webhook-Signature header (sha256=<hex>)
+ * @param secret       Subscription secret used to compute the expected HMAC
+ * @param timestamp    ISO-8601 timestamp from X-Webhook-Timestamp header
+ * @param maxAgeMs     Maximum allowed age in milliseconds (default 5 minutes)
+ * @returns { valid: true } on success or { valid: false, reason: string } on failure
+ */
+export function verifyWebhookSignature(
+  payload: string,
+  signature: string,
+  secret: string,
+  timestamp: string,
+  maxAgeMs = 5 * 60 * 1000,
+): { valid: true } | { valid: false; reason: string } {
+  // 1. Timestamp window — reject stale or far-future payloads
+  const ts = Date.parse(timestamp);
+  if (isNaN(ts)) {
+    return { valid: false, reason: "Missing or unparseable X-Webhook-Timestamp" };
+  }
+  const ageDelta = Date.now() - ts;
+  if (ageDelta > maxAgeMs) {
+    return { valid: false, reason: `Webhook timestamp expired (${Math.floor(ageDelta / 1000)}s old, max ${maxAgeMs / 1000}s)` };
+  }
+  if (ageDelta < -60_000) {
+    return { valid: false, reason: "Webhook timestamp is too far in the future" };
+  }
+
+  // 2. HMAC-SHA256 signature check using timing-safe comparison
+  const expected = `sha256=${crypto.createHmac("sha256", secret).update(payload).digest("hex")}`;
+  const provided = signature || "";
+  if (provided.length !== expected.length) {
+    return { valid: false, reason: "Signature length mismatch" };
+  }
+  try {
+    const match = crypto.timingSafeEqual(Buffer.from(provided, "utf8"), Buffer.from(expected, "utf8"));
+    if (!match) return { valid: false, reason: "Signature mismatch" };
+  } catch {
+    return { valid: false, reason: "Signature comparison failed" };
+  }
+
+  return { valid: true };
+}
+
 export async function getWebhookSubscriptions(organizationId: string) {
   return db.select().from(webhookSubscriptions)
     .where(eq(webhookSubscriptions.organizationId, organizationId));

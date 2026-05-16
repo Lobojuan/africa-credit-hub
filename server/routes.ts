@@ -17307,7 +17307,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/consumer/monitoring-prefs", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const prefs = await storage.getConsumerMonitoringPrefs(consumerAccountId);
       res.json(prefs ?? null);
@@ -17316,7 +17316,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.put("/api/consumer/monitoring-prefs", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const parsed = insertConsumerMonitoringPrefsSchema.safeParse({ ...req.body, consumerAccountId });
       if (!parsed.success) return res.status(400).json({ message: "Validation error", errors: parsed.error.errors });
@@ -17327,7 +17327,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/consumer/monitoring-alerts", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const limit = parseInt(String(req.query.limit || "50"));
       const alerts = await storage.getConsumerMonitoringAlerts(consumerAccountId, limit);
@@ -17337,7 +17337,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/consumer/monitoring-alerts/:id/read", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const ok = await storage.markConsumerMonitoringAlertRead(req.params.id as string, consumerAccountId);
       res.json({ success: ok });
@@ -17346,7 +17346,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/consumer/monitoring-alerts/mark-all-read", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const count = await storage.markAllConsumerMonitoringAlertsRead(consumerAccountId);
       res.json({ marked: count });
