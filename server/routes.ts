@@ -1116,7 +1116,7 @@ export async function registerRoutes(
     fs.createReadStream(filePath).pipe(res);
   });
 
-  app.use("/api", smartApiLimiter, (req, res, next) => {
+  app.use("/api", (req, res, next) => {
     if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control") || req.path.startsWith("/registry-sandbox") || req.path.startsWith("/consent/respond")) return next();
     // Loto Fiscal public draw transparency endpoints — anyone can audit a closed draw.
     // Admin Loto routes (/loto/admin/...) still require auth via per-route requireAuth.
@@ -9339,7 +9339,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const generator = BOG_EXPORT_GENERATORS[fileType];
       const { content: rawBogContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
       const bogExporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
-      const content = rawBogContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${req.session.username ?? "unknown"} | Institution: ${bogExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
+      const bogExporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
+      const bogExporterName = bogExporterUser?.displayName || bogExporterUser?.username || "unknown";
+      const content = rawBogContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${bogExporterName} | Institution: ${bogExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const bogHash = generateExportHash(content);
       const bogSizeBytes = Buffer.byteLength(content, "utf8");
@@ -9404,7 +9406,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const generator = BSL_EXPORT_GENERATORS[fileType];
       const { content: rawBslContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
       const bslExporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
-      const content = rawBslContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${req.session.username ?? "unknown"} | Institution: ${bslExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
+      const bslExporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
+      const bslExporterName = bslExporterUser?.displayName || bslExporterUser?.username || "unknown";
+      const content = rawBslContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${bslExporterName} | Institution: ${bslExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const bslHash = generateExportHash(content);
       const bslSizeBytes = Buffer.byteLength(content, "utf8");

@@ -26,7 +26,7 @@ export default function TermsOfServicePage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12" data-testid="terms-page">
         <h1 className="text-3xl font-bold text-foreground mb-2">{t("legal.termsTitle")}</h1>
-        <p className="text-sm text-muted-foreground mb-2">{t("legal.lastUpdated", { date: "May 15, 2026" })}</p>
+        <p className="text-sm text-muted-foreground mb-1">Last updated: 2026 &middot; Jurisdiction: Ghana</p>
         <p className="text-xs text-muted-foreground/70 italic mb-8">{t("legalPages.englishOnly")}</p>
 
         <div className="prose prose-sm dark:prose-invert max-w-none space-y-8">
@@ -99,6 +99,24 @@ export default function TermsOfServicePage() {
             </p>
             <p className="text-muted-foreground leading-relaxed mt-2">
               To report suspected infringement or to request a licensing arrangement, contact: <strong>uffe.carlson@gmail.com</strong> | +233 552 395548 | +1 646 980 5659.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-semibold text-foreground mb-3">8A. DMCA / Copyright Takedown Procedure</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Universal Credit Hub Ltd respects valid intellectual property rights and complies with the Digital Millennium Copyright Act (DMCA) and equivalent legislation in applicable jurisdictions. If you believe that material on this Platform infringes your copyright, please send a written notice to our designated agent at <strong>uffe.carlson@gmail.com</strong> including the following:
+            </p>
+            <ol className="list-decimal pl-6 mt-2 space-y-1 text-muted-foreground">
+              <li>A physical or electronic signature of the copyright owner or a person authorised to act on their behalf.</li>
+              <li>Identification of the copyrighted work claimed to be infringed.</li>
+              <li>Identification of the material alleged to be infringing and information reasonably sufficient for us to locate it on the Platform.</li>
+              <li>Your contact information (name, address, telephone number, and email address).</li>
+              <li>A statement that you have a good-faith belief that use of the material is not authorised by the copyright owner, its agent, or the law.</li>
+              <li>A statement, under penalty of perjury, that the information in the notice is accurate and that you are authorised to act on behalf of the copyright owner.</li>
+            </ol>
+            <p className="text-muted-foreground leading-relaxed mt-2">
+              Counter-notices and repeat-infringer policy: We will respond to valid takedown notices within 5 business days. Users who repeatedly infringe third-party copyright will have their accounts terminated. Our DMCA designated agent is: <strong>Uffe Jon Carlson</strong>, Universal Credit Hub Ltd, Ghana — <strong>uffe.carlson@gmail.com</strong>.
             </p>
           </section>
 
