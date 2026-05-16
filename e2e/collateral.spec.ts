@@ -363,8 +363,10 @@ test.describe("Collateral Registry — lien search priority ranking", () => {
     expect([200, 404]).toContain(resp.status());
     expect(resp.status()).not.toBe(500);
     if (resp.status() === 200) {
-      const body = await resp.json();
-      const results = Array.isArray(body) ? body : (body as any).results ?? [];
+      type LienResult = { priorityRank?: number | string; priority?: number | string; rankOrder?: number | string };
+      type LienBody = LienResult[] | { results?: LienResult[] };
+      const body = await resp.json() as LienBody;
+      const results = Array.isArray(body) ? body : (body as { results?: LienResult[] }).results ?? [];
       if (results.length > 0) {
         const first = results[0];
         // Priority rank field must be present and numeric

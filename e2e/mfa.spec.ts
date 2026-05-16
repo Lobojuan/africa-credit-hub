@@ -22,7 +22,7 @@
  */
 
 import { test, expect } from "@playwright/test";
-import OTPAuth from "otpauth";
+import * as OTPAuth from "otpauth";
 
 const ADMIN_PW = process.env.SEED_ADMIN_PASSWORD ?? "admin0987";
 

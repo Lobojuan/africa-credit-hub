@@ -528,9 +528,9 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     const resp = await page.request.get(`/api/borrowers?search=${encodeURIComponent(e2eSearchNationalId)}`);
     expect(resp.status()).toBe(200);
     const body = await resp.json() as { data?: Array<{ nationalId?: string }> } | Array<{ nationalId?: string }>;
-    const list = Array.isArray(body) ? body : (body as any).data ?? [];
+    const list = Array.isArray(body) ? body : ((body as { data?: Array<{ nationalId?: string; firstName?: string }> }).data ?? []);
     expect(Array.isArray(list)).toBe(true);
-    const match = list.some((b: any) => b.nationalId === e2eSearchNationalId || b.firstName === e2eSearchFirstName);
+    const match = list.some(b => b.nationalId === e2eSearchNationalId || (b as { firstName?: string }).firstName === e2eSearchFirstName);
     expect(match).toBe(true);
   });
 
