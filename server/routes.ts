@@ -9066,17 +9066,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         metadata: JSON.stringify({ format, type, recordCount: type === "portfolio" ? accounts.length : borrowersList.length }),
       });
 
-      const exporterName = (() => {
-        try {
-          const u = req.session as any;
-          return u?.displayName || u?.username || "unknown";
-        } catch { return "unknown"; }
-      })();
-      const exporterOrgId = (() => { try { return (req.session as any)?.organizationId || ""; } catch { return ""; } })();
-      const exporterOrgName = await (async () => {
-        if (!exporterOrgId) return "—";
-        try { const o = await storage.getOrganization(exporterOrgId); return o?.name || exporterOrgId; } catch { return exporterOrgId; }
-      })();
+      const exporterUser = req.session?.userId ? await storage.getUser(req.session.userId) : null;
+      const exporterName = exporterUser?.displayName || exporterUser?.username || "unknown";
+      const exporterOrgId = req.session?.organizationId ?? "";
+      const exporterOrgName = exporterOrgId
+        ? ((await storage.getOrganization(exporterOrgId))?.name ?? exporterOrgId)
+        : "—";
       const exporterIp = req.ip || "unknown";
       const exportTimestamp = new Date().toISOString();
       const UCH_EXPORT_WATERMARK = `© 2026 Universal Credit Hub Ltd. Confidential. Unauthorised use prohibited. uffe.carlson@gmail.com | Exported by: ${exporterName} | Institution: ${exporterOrgName} | IP: ${exporterIp} | Time: ${exportTimestamp}`;
@@ -9103,8 +9098,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           sheet.getRow(1).font = headerStyle.font;
           sheet.getRow(1).fill = headerStyle.fill;
           accounts.forEach(a => sheet.addRow(a));
-          sheet.addRow([]);
-          sheet.addRow([UCH_EXPORT_WATERMARK]);
+          sheet.headerFooter.oddFooter = `&L${UCH_EXPORT_WATERMARK}`;
         } else if (type === "borrowers") {
           const sheet = workbook.addWorksheet("Borrowers");
           sheet.columns = [
@@ -9123,8 +9117,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
             const name = b.type === "individual" ? `${b.firstName} ${b.lastName}` : b.companyName;
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
-          sheet.addRow([]);
-          sheet.addRow([UCH_EXPORT_WATERMARK]);
+          sheet.headerFooter.oddFooter = `&L${UCH_EXPORT_WATERMARK}`;
         } else if (type === "audit") {
           const auditLogsList = await storage.getAuditLogs(orgId, country, 5000);
           const sheet = workbook.addWorksheet("Audit Trail");
@@ -9145,8 +9138,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
               createdAt: log.createdAt ? new Date(log.createdAt).toISOString() : "",
             });
           });
-          sheet.addRow([]);
-          sheet.addRow([UCH_EXPORT_WATERMARK]);
+          sheet.headerFooter.oddFooter = `&L${UCH_EXPORT_WATERMARK}`;
         }
 
         const xlsxBuf = Buffer.from(await workbook.xlsx.writeBuffer() as ArrayBuffer);
@@ -9201,7 +9193,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
             csv += `"${csvSafe(ts)}","${csvSafe(log.action)}","${csvSafe(log.entity)}","${csvSafe(log.entityId || '')}","${csvSafe((log.details || '').replace(/"/g, '""'))}","${csvSafe(log.userId || '')}","${csvSafe(log.ipAddress || '')}"\n`;
           }
         }
-        csv += `\n"${csvSafe(UCH_EXPORT_WATERMARK)}"\n`;
+        csv = `"${csvSafe(UCH_EXPORT_WATERMARK)}"\n` + csv;
 
         const csvHash = generateExportHash(csv);
         const csvSizeBytes = Buffer.byteLength(csv, "utf8");
@@ -14010,7 +14002,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       lines.push(`EOF|${lines.length - 1}|${today}`);
       if (!isPreview) {
-        lines.push(`# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${(req.session as any)?.username || "unknown"} | ${new Date().toISOString()}`);
+        const regExporterUser = req.session?.userId ? await storage.getUser(req.session.userId) : null;
+        const regExporterName = regExporterUser?.username || "unknown";
+        lines.unshift(`# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${regExporterName} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`);
       }
 
       const csv = lines.join("\n");
@@ -16904,12 +16898,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const log = await storage.getCollateralShareLog(req.params.id as string);
 
       const csvQ = (val: unknown) => csvSafe(val).replace(/"/g, '""');
-      let csv = "Timestamp,Channel,Masked Recipient,Sender Name\n";
+      const shareLogExporterUser = req.session?.userId ? await storage.getUser(req.session.userId) : null;
+      const shareLogExporterName = shareLogExporterUser?.username || "unknown";
+      let csv = `"# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${csvQ(shareLogExporterName)} | IP: ${csvQ(req.ip ?? "unknown")} | Time: ${new Date().toISOString()}"\n`;
+      csv += "Timestamp,Channel,Masked Recipient,Sender Name\n";
       for (const entry of log) {
         const ts = entry.sentAt ? new Date(entry.sentAt).toISOString() : "";
         csv += `"${csvQ(ts)}","${csvQ(entry.channel)}","${csvQ(entry.maskedRecipient)}","${csvQ(entry.senderName ?? "")}"\n`;
       }
-      csv += `"# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${csvQ((req.session as any)?.username || "unknown")} | ${new Date().toISOString()}"\n`;
 
       const filename = `share-history-${req.params.id as string}-${Date.now()}.csv`;
       res.setHeader("Content-Type", "text/csv");

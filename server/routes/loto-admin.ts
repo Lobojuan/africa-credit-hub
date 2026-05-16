@@ -515,6 +515,7 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
       const flagByMerchant = new Map<string, number>();
       for (const f of flags) if (f.merchantId) flagByMerchant.set(f.merchantId, (flagByMerchant.get(f.merchantId) ?? 0) + 1);
 
+      res.write(csvLine([csvWatermark]) + "\n");
       res.write(csvLine(["merchant_id", "shop_name", "city", "district", "category", "score", "receipts_30d", "turnover_30d", "open_flags", "last_receipt_at"]) + "\n");
       for (const m of merchants) {
         const own = recentReceipts.filter((r) => r.merchantId === m.id);
@@ -533,7 +534,6 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
         });
         res.write(csvLine([m.id, m.shopName, m.city ?? "", cityToDistrict(m.city), m.category ?? "", score, last30.length, cur30Total.toFixed(2), flagByMerchant.get(m.id) ?? 0, lastReceiptAt ? new Date(lastReceiptAt).toISOString() : ""]) + "\n");
       }
-      res.write(csvLine([csvWatermark]) + "\n");
       return res.end();
     }
 
@@ -544,11 +544,11 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
         .where(eq(lotoFraudFlags.countryCode, country))
         .orderBy(desc(lotoFraudFlags.detectedAt))
         .limit(2000);
+      res.write(csvLine([csvWatermark]) + "\n");
       res.write(csvLine(["id", "rule_code", "severity", "status", "merchant_id", "summary", "detected_at", "triaged_at", "triaged_by"]) + "\n");
       for (const f of flags) {
         res.write(csvLine([f.id, f.ruleCode, f.severity, f.status, f.merchantId ?? "", f.summary, f.detectedAt.toISOString(), f.triagedAt?.toISOString() ?? "", f.triagedBy ?? ""]) + "\n");
       }
-      res.write(csvLine([csvWatermark]) + "\n");
       return res.end();
     }
 
@@ -574,11 +574,11 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
           buckets[d].r++; buckets[d].t += parseFloat(String(r.amount ?? "0")); buckets[d].v += parseFloat(String(r.vat ?? "0"));
         }
       }
+      res.write(csvLine([csvWatermark]) + "\n");
       res.write(csvLine(["district", "merchants", "receipts_30d", "turnover_30d", "vat_30d"]) + "\n");
       for (const [d, v] of Object.entries(buckets)) {
         res.write(csvLine([d, v.m.size, v.r, v.t.toFixed(2), v.v.toFixed(2)]) + "\n");
       }
-      res.write(csvLine([csvWatermark]) + "\n");
       return res.end();
     }
 
@@ -589,9 +589,9 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
       .from(lotoReceipts)
       .innerJoin(lotoMerchants, eq(lotoReceipts.merchantId, lotoMerchants.id))
       .where(and(eq(lotoMerchants.countryCode, country), gte(lotoReceipts.issuedAt, since30d)));
+    res.write(csvLine([csvWatermark]) + "\n");
     res.write(csvLine(["country_code", "vat_30d", "turnover_30d", "receipts_30d"]) + "\n");
     res.write(csvLine([country, parseFloat(vatRow?.totalVat ?? "0").toFixed(2), parseFloat(vatRow?.totalAmount ?? "0").toFixed(2), vatRow?.c ?? 0]) + "\n");
-    res.write(csvLine([csvWatermark]) + "\n");
     res.end();
   } catch (err) {
     console.error("[loto-admin] csv export failed", err);
