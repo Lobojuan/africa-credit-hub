@@ -10,9 +10,7 @@ const chromiumOptions = chromiumExec
   ? { executablePath: chromiumExec, args: ["--no-sandbox", "--disable-dev-shm-usage"] }
   : { args: ["--no-sandbox", "--disable-dev-shm-usage"] };
 
-const firefoxOptions = firefoxExec
-  ? { executablePath: firefoxExec }
-  : {};
+const firefoxOptions = firefoxExec ? { executablePath: firefoxExec } : {};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,18 +23,76 @@ export default defineConfig({
     headless: true,
     ignoreHTTPSErrors: true,
   },
+
   projects: [
-    // ── Legacy / existing specs ────────────────────────────────────────────
-    // "chromium" only matches loto-admin-dashboard — it does NOT include
-    // oauth-smoke so the CI loto-admin job doesn't need oauth env vars.
+    // ── 1. Global auth setup — runs before any authenticated project ──────────
+    // Saves reusable session state to playwright/.auth/ so authenticated spec
+    // projects can load the cookie/storage state directly without repeating the
+    // login handshake on every test file.
     {
-      name: "chromium",
+      name: "setup",
+      testMatch: /auth\.setup\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: chromiumOptions,
       },
-      testMatch: [/loto-admin-dashboard\.spec\.ts/],
     },
+
+    // ── 2. Unauthenticated / public pages ────────────────────────────────────
+    // No dependency on setup; no storageState. Tests public-facing pages and
+    // unauthenticated consumer portal landing.
+    {
+      name: "unauthenticated",
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: chromiumOptions,
+      },
+      testMatch: [/public-pages\.spec\.ts/],
+    },
+
+    // ── 3. Authenticated Chromium — main regression suite ────────────────────
+    // Depends on setup; starts each test with the saved super_admin cookie.
+    // Individual tests that need a different role still call set-session.
+    {
+      name: "authenticated-chromium",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: chromiumOptions,
+        storageState: "playwright/.auth/super_admin.json",
+      },
+      testMatch: [
+        /auth\.spec\.ts/,
+        /mfa\.spec\.ts/,
+        /credit\.spec\.ts/,
+        /loan-origination\.spec\.ts/,
+        /collateral\.spec\.ts/,
+        /loto\.spec\.ts/,
+        /reports-drilldown\.spec\.ts/,
+        /regulatory\.spec\.ts/,
+        /consumer-portal\.spec\.ts/,
+      ],
+    },
+
+    // ── 4. Authenticated Firefox — cross-browser regression subset ───────────
+    {
+      name: "authenticated-firefox",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Firefox"],
+        launchOptions: firefoxOptions,
+        storageState: "playwright/.auth/super_admin.json",
+      },
+      testMatch: [
+        /auth\.spec\.ts/,
+        /credit\.spec\.ts/,
+        /regulatory\.spec\.ts/,
+        /reports-drilldown\.spec\.ts/,
+      ],
+    },
+
+    // ── 5. OAuth smoke — isolated project with mocked OAuth env vars ─────────
+    // Intentionally separate so the loto-admin CI job does not need OAuth secrets.
     {
       name: "oauth-smoke",
       use: {
@@ -46,67 +102,19 @@ export default defineConfig({
       testMatch: [/oauth-smoke\.spec\.ts/],
     },
 
-    // ── Authenticated specs (role injection via set-session) ───────────────
+    // ── 6. Loto admin — chromium only, DGI dashboard role-gated ─────────────
     {
-      name: "authenticated-chromium",
+      name: "chromium",
+      dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: chromiumOptions,
+        storageState: "playwright/.auth/super_admin.json",
       },
-      testMatch: [
-        /auth\.spec\.ts/,
-        /mfa\.spec\.ts/,
-        /credit\.spec\.ts/,
-        /loan-origination\.spec\.ts/,
-        /collateral\.spec\.ts/,
-        /loto\.spec\.ts/,
-        /reports-drilldown\.spec\.ts/,
-        /regulatory\.spec\.ts/,
-      ],
-    },
-    {
-      name: "authenticated-firefox",
-      use: {
-        ...devices["Desktop Firefox"],
-        launchOptions: firefoxOptions,
-      },
-      testMatch: [
-        /auth\.spec\.ts/,
-        /credit\.spec\.ts/,
-        /regulatory\.spec\.ts/,
-        /reports-drilldown\.spec\.ts/,
-      ],
-    },
-
-    // ── Unauthenticated / public-page specs ────────────────────────────────
-    {
-      name: "unauthenticated",
-      use: {
-        ...devices["Desktop Chrome"],
-        launchOptions: chromiumOptions,
-      },
-      testMatch: [/consumer-portal\.spec\.ts/, /public-pages\.spec\.ts/],
-    },
-
-    // For convenience, map the old project names used in the existing CI YAML
-    {
-      name: "authenticated",
-      use: {
-        ...devices["Desktop Chrome"],
-        launchOptions: chromiumOptions,
-      },
-      testMatch: [
-        /auth\.spec\.ts/,
-        /mfa\.spec\.ts/,
-        /credit\.spec\.ts/,
-        /loan-origination\.spec\.ts/,
-        /collateral\.spec\.ts/,
-        /loto\.spec\.ts/,
-        /reports-drilldown\.spec\.ts/,
-        /regulatory\.spec\.ts/,
-      ],
+      testMatch: [/loto-admin-dashboard\.spec\.ts/],
     },
   ],
+
   webServer: {
     // CI: always starts its own isolated server on port 5001.
     // Local dev: reuses the existing dev server on port 5000 that is already

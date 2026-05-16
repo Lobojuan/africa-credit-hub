@@ -34,15 +34,21 @@ async function setAdminSession(page: import("@playwright/test").Page) {
   expect(res.ok()).toBeTruthy();
 }
 
+type BorrowerSummary = {
+  id: string;
+  nationalId?: string;
+  ghanaCardNumber?: string;
+  [key: string]: unknown;
+};
+
 async function findConsumerWithCreditFile(page: import("@playwright/test").Page) {
   await setAdminSession(page);
   const resp = await page.request.get("/api/borrowers?limit=5");
   if (resp.status() !== 200) return null;
-  const body = await resp.json();
-  const borrowers = body.data ?? body;
-  if (!Array.isArray(borrowers) || borrowers.length === 0) return null;
-  // Return first borrower that has a nationalId
-  return borrowers.find((b: any) => b.nationalId || b.ghanaCardNumber) ?? borrowers[0] ?? null;
+  const body = (await resp.json()) as { data?: BorrowerSummary[] } | BorrowerSummary[];
+  const borrowers: BorrowerSummary[] = Array.isArray(body) ? body : ((body as { data?: BorrowerSummary[] }).data ?? []);
+  if (borrowers.length === 0) return null;
+  return borrowers.find((b) => b.nationalId || b.ghanaCardNumber) ?? borrowers[0] ?? null;
 }
 
 // ─── Unauthenticated view ─────────────────────────────────────────────────────

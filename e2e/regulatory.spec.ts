@@ -227,20 +227,52 @@ test.describe("Regulatory Dashboard — NPL exposure summary", () => {
     expect(text).toMatch(/\d/);
   });
 
-  test("delinquent count is a non-negative number", async ({ page }) => {
+  test("delinquent count renders as a parseable integer string", async ({ page }) => {
     await gotoRegDashboard(page);
     const text = await page
       .locator('[data-testid="text-delinquent-count"]')
       .textContent();
-    expect(parseInt(text ?? "0", 10)).toBeGreaterThanOrEqual(0);
+    // Must be present and parseable as a whole number — not just blank or "—"
+    expect(text?.trim()).toMatch(/^\d+$/);
   });
 
-  test("default count is a non-negative number", async ({ page }) => {
+  test("default count renders as a parseable integer string", async ({ page }) => {
     await gotoRegDashboard(page);
     const text = await page
       .locator('[data-testid="text-default-count"]')
       .textContent();
-    expect(parseInt(text ?? "0", 10)).toBeGreaterThanOrEqual(0);
+    expect(text?.trim()).toMatch(/^\d+$/);
+  });
+
+  test("written-off count renders as a parseable integer string", async ({ page }) => {
+    await gotoRegDashboard(page);
+    const text = await page
+      .locator('[data-testid="text-written-off-count"]')
+      .textContent();
+    expect(text?.trim()).toMatch(/^\d+$/);
+  });
+
+  test("total exposure contains a formatted currency amount with digits", async ({ page }) => {
+    await gotoRegDashboard(page);
+    const text = await page
+      .locator('[data-testid="text-total-exposure"]')
+      .textContent();
+    // Must contain at least one digit — not a dash placeholder
+    expect(text).toMatch(/\d/);
+    expect(text?.trim()).not.toBe("—");
+  });
+
+  test("NPL summary panel shows real numeric data — not all placeholder dashes", async ({ page }) => {
+    await gotoRegDashboard(page);
+    await page.waitForSelector('[data-testid="panel-npl-summary"]', { timeout: 12000 });
+    // Collect all four key KPI texts
+    const delinquent = await page.locator('[data-testid="text-delinquent-count"]').textContent();
+    const defaulted = await page.locator('[data-testid="text-default-count"]').textContent();
+    const writtenOff = await page.locator('[data-testid="text-written-off-count"]').textContent();
+    // At minimum, all three must be numeric strings (not error state or blank)
+    for (const val of [delinquent, defaulted, writtenOff]) {
+      expect(val?.trim()).toMatch(/^\d+$/);
+    }
   });
 });
 
