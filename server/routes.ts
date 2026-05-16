@@ -91,6 +91,7 @@ import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
 import { CBN_EXPORT_GENERATORS } from "./cbn-export";
+import { buildExportPreviewResponse } from "./utils/export-preview";
 import type { CbnFileType } from "@shared/cbn-codes";
 import { CBK_EXPORT_GENERATORS } from "./cbk-export";
 import type { CbkFileType } from "@shared/cbk-codes";
@@ -9524,11 +9525,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         return res.status(400).json({ message: `Invalid file type` });
       }
       const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
-      const orgId = getOrgScope(req);
-      const generator = CBN_EXPORT_GENERATORS[fileType];
-      const { content, filename } = await generator(reportingDate, 1, "0", orgId);
-      const lines = content.split("\n");
-      res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4), regulator: "CBN", jurisdiction: "Nigeria" });
+      const { content, filename } = await CBN_EXPORT_GENERATORS[fileType](reportingDate, 1, "0", getOrgScope(req));
+      res.json(buildExportPreviewResponse(content, filename, "CBN", "Nigeria", fileType));
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
@@ -9592,11 +9590,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         return res.status(400).json({ message: `Invalid file type` });
       }
       const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
-      const orgId = getOrgScope(req);
-      const generator = CBK_EXPORT_GENERATORS[fileType];
-      const { content, filename } = await generator(reportingDate, 1, "0", orgId);
-      const lines = content.split("\n");
-      res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4), regulator: "CBK", jurisdiction: "Kenya" });
+      const { content, filename } = await CBK_EXPORT_GENERATORS[fileType](reportingDate, 1, "0", getOrgScope(req));
+      res.json(buildExportPreviewResponse(content, filename, "CBK", "Kenya", fileType));
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }

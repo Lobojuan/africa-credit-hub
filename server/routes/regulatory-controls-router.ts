@@ -22,6 +22,7 @@ import { CBK_EXPORT_GENERATORS } from "../cbk-export";
 import type { ConsentRecord } from "../../shared/schema";
 import type { CbnFileType } from "../../shared/cbn-codes";
 import type { CbkFileType } from "../../shared/cbk-codes";
+import { buildExportPreviewResponse } from "../utils/export-preview";
 
 const router = Router();
 
@@ -223,19 +224,8 @@ router.get("/export-preview/cbn/:fileType", requireAuth, requireRole("admin", "r
       return res.status(400).json({ message: `Invalid CBN file type: ${fileType}` });
     }
     const reportingDate = new Date().toISOString().split("T")[0]!.replace(/-/g, "");
-    const generator = CBN_EXPORT_GENERATORS[fileType];
-    const { content, filename } = await generator(reportingDate, 1, "0", req.session?.organizationId);
-    const lines = content.split("\n");
-    res.json({
-      regulator: "CBN",
-      jurisdiction: "Nigeria",
-      fileType,
-      filename,
-      headerRow: lines[0],
-      sampleRows: lines.slice(1, 4),
-      totalDataRows: lines.filter(l => l.trim() && l !== lines[0]).length,
-      pipeDelimited: (lines[0] ?? "").includes("|"),
-    });
+    const { content, filename } = await CBN_EXPORT_GENERATORS[fileType](reportingDate, 1, "0", req.session?.organizationId);
+    res.json(buildExportPreviewResponse(content, filename, "CBN", "Nigeria", fileType));
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
@@ -248,19 +238,8 @@ router.get("/export-preview/cbk/:fileType", requireAuth, requireRole("admin", "r
       return res.status(400).json({ message: `Invalid CBK file type: ${fileType}` });
     }
     const reportingDate = new Date().toISOString().split("T")[0]!.replace(/-/g, "");
-    const generator = CBK_EXPORT_GENERATORS[fileType];
-    const { content, filename } = await generator(reportingDate, 1, "0", req.session?.organizationId);
-    const lines = content.split("\n");
-    res.json({
-      regulator: "CBK",
-      jurisdiction: "Kenya",
-      fileType,
-      filename,
-      headerRow: lines[0],
-      sampleRows: lines.slice(1, 4),
-      totalDataRows: lines.filter(l => l.trim() && l !== lines[0]).length,
-      pipeDelimited: (lines[0] ?? "").includes("|"),
-    });
+    const { content, filename } = await CBK_EXPORT_GENERATORS[fileType](reportingDate, 1, "0", req.session?.organizationId);
+    res.json(buildExportPreviewResponse(content, filename, "CBK", "Kenya", fileType));
   } catch (e: any) {
     res.status(500).json({ message: e.message });
   }
