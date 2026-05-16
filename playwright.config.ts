@@ -1,35 +1,71 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// Use system Chromium in the Replit/NixOS environment when the standard
+// Playwright browser cache is absent.
+const NIX_CHROMIUM =
+  "/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium";
+const CHROMIUM_EXEC = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ?? NIX_CHROMIUM;
+
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 30000,
+  timeout: 40000,
   retries: 1,
   use: {
-    // Port 5001 — dedicated to the Playwright test server so it never conflicts
-    // with the dev workflow running on port 5000.
-    baseURL: "http://localhost:5001",
+    // CI uses port 5001 (isolated); local dev reuses the existing server on 5000
+    // (which is already started with ENABLE_E2E_TEST_AUTH=true by dev-server.sh).
+    baseURL: process.env.CI ? "http://localhost:5001" : "http://localhost:5000",
     headless: true,
     ignoreHTTPSErrors: true,
   },
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+      },
+      testMatch: [/oauth-smoke\.spec\.ts/, /loto-admin-dashboard\.spec\.ts/],
     },
     {
       name: "oauth-smoke",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+      },
       testMatch: /oauth-smoke\.spec\.ts/,
+    },
+    {
+      name: "authenticated",
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+      },
+      testMatch: [
+        /auth\.spec\.ts/,
+        /credit\.spec\.ts/,
+        /collateral\.spec\.ts/,
+        /loto\.spec\.ts/,
+        /reports-drilldown\.spec\.ts/,
+        /regulatory\.spec\.ts/,
+      ],
+    },
+    {
+      name: "unauthenticated",
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+      },
+      testMatch: [/consumer-portal\.spec\.ts/, /public-pages\.spec\.ts/],
     },
   ],
   webServer: {
-    // Playwright always starts its own isolated server on port 5001 so the
-    // env vars below (CANONICAL_URL, SAML_IDP_ENTRY_POINT, mock credentials)
-    // are always present and assertions can be unconditional.
+    // CI: always starts its own isolated server on port 5001.
+    // Local dev: reuses the existing dev server on port 5000 that is already
+    // running with ENABLE_E2E_TEST_AUTH=true via dev-server.sh.
     command: "ENABLE_E2E_TEST_AUTH=true PORT=5001 npx tsx server/index.ts",
-    url: "http://localhost:5001/api/health",
-    reuseExistingServer: false,
-    timeout: 60000,
+    url: process.env.CI ? "http://localhost:5001/api/health" : "http://localhost:5000/api/health",
+    reuseExistingServer: !process.env.CI,
+    timeout: 90000,
     env: {
       ENABLE_E2E_TEST_AUTH: "true",
       PORT: "5001",
