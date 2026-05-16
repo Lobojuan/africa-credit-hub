@@ -1,13 +1,16 @@
 /**
  * Regulatory compliance control endpoints — testable Express router.
  *
- * Exposes four endpoints used both by production (mounted in routes.ts)
- * and by the behavioral test suite (mounted in a minimal test harness):
- *
  *   PATCH /approvals/:id      — maker-checker guard + full approval persistence
- *   POST  /consent-gate-check — BoG consent gate (borrower-bound, IDOR-safe)
+ *   POST  /consent-gate-check — BoG consent gate (borrower-bound + institution-bound)
  *   GET   /export-preview/cbn/:fileType  — CBN pipe-delimited preview (JSON)
  *   GET   /export-preview/cbk/:fileType  — CBK pipe-delimited preview (JSON)
+ *
+ * Security invariants:
+ *   - Maker-checker: fails-closed for non-privileged users when org context is absent.
+ *   - Consent gate: validates borrower binding, institution binding, status, expiry,
+ *     and loan-origination exemption (Ghana Data Protection Act §12(3)).
+ *   - No `as any` casts in security-sensitive paths; ConsentRecord type covers all fields.
  */
 
 import { Router } from "express";
@@ -16,12 +19,13 @@ import { requireAuth, requireRole, isPlatformPrivileged } from "./middleware";
 import { storage } from "../storage";
 import { CBN_EXPORT_GENERATORS } from "../cbn-export";
 import { CBK_EXPORT_GENERATORS } from "../cbk-export";
+import type { ConsentRecord } from "../../shared/schema";
 import type { CbnFileType } from "../../shared/cbn-codes";
 import type { CbkFileType } from "../../shared/cbk-codes";
 
 const router = Router();
 
-// ─── Maker-checker guard + approval persistence (PATCH /approvals/:id) ────────
+// ─── Maker-checker guard + approval persistence ────────────────────────────────
 
 const approvalUpdateSchema = z.object({
   status: z.enum(["approved", "rejected"]),
@@ -42,18 +46,24 @@ router.patch("/approvals/:id", requireAuth, requireRole("admin", "regulator"), a
       return res.status(403).json({ message: "Maker cannot be the Checker.", code: "SELF_APPROVAL_FORBIDDEN" });
     }
 
-    // Org-scope: non-privileged reviewers may only act on their own org's approvals
-    const reviewerOrgId = req.session?.organizationId;
-    if (
-      !isPlatformPrivileged(req.session?.userRole) &&
-      reviewerOrgId &&
-      approval.organizationId &&
-      reviewerOrgId !== approval.organizationId
-    ) {
-      return res.status(403).json({
-        message: "You cannot review approvals from a different organization",
-        code: "ORG_SCOPE_VIOLATION",
-      });
+    // Org-scope: fail-closed for non-privileged users.
+    //   • Missing org context → deny (prevents bypass via absent session field).
+    //   • Org mismatch → deny.
+    //   • Privileged roles (super_admin / platform_owner) → unrestricted.
+    if (!isPlatformPrivileged(req.session?.userRole)) {
+      const reviewerOrgId = req.session?.organizationId;
+      if (!reviewerOrgId) {
+        return res.status(403).json({
+          message: "Organisation context is required to review approvals",
+          code: "ORG_CONTEXT_MISSING",
+        });
+      }
+      if (approval.organizationId && reviewerOrgId !== approval.organizationId) {
+        return res.status(403).json({
+          message: "You cannot review approvals from a different organization",
+          code: "ORG_SCOPE_VIOLATION",
+        });
+      }
     }
 
     // Guard against re-reviewing an already-actioned approval
@@ -75,11 +85,18 @@ router.patch("/approvals/:id", requireAuth, requireRole("admin", "regulator"), a
   }
 });
 
-// ─── BoG consent gate (POST /consent-gate-check) ─────────────────────────────
+// ─── BoG consent gate ─────────────────────────────────────────────────────────
 //
-// Security requirement: consent record must be bound to the *specific borrower*
-// being accessed (borrower-ID match). A valid consent for borrower A cannot
-// authorise access to borrower B (IDOR / consent-replay defence).
+// Enforces the Ghana Data Protection Act consent requirements before allowing
+// access to a borrower's credit report. Three allowed paths:
+//   1. Privileged role (super_admin / platform_owner) — full bypass.
+//   2. Loan-origination exemption — loanExemption=true, borrowerResponse='approved',
+//      active, not expired, borrower-bound, institution-bound.
+//   3. Standard borrower-approved consent — active, not expired, borrower-bound,
+//      institution-bound.
+//
+// Institution binding (consent-replay defence): a consent granted by institution A
+// cannot be presented by institution B to access the same borrower's data.
 
 const consentGateSchema = z.object({
   consentId: z.string().optional(),
@@ -91,7 +108,7 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
     const { consentId, borrowerId } = consentGateSchema.parse(req.body);
     const isSuperAdmin = isPlatformPrivileged(req.session?.userRole);
 
-    // Privileged actors bypass the gate (audit trail maintained by caller)
+    // Path 1: Privileged actors bypass the gate (audit trail maintained by caller)
     if (isSuperAdmin) {
       return res.json({ allowed: true, isSuperAdmin: true, borrowerId });
     }
@@ -105,14 +122,12 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
       });
     }
 
-    const consent = await storage.getConsentRecord(consentId);
+    const consent: ConsentRecord | undefined = await storage.getConsentRecord(consentId);
     if (!consent) {
       return res.status(404).json({ message: "Consent record not found", code: "CONSENT_NOT_FOUND" });
     }
 
-    // IDOR / consent-replay defence: the consent must be bound to the exact
-    // borrower being accessed. A consent granted for borrower A cannot be
-    // used to access borrower B's record.
+    // Borrower binding: consent for borrower A cannot authorise access to borrower B
     if (consent.borrowerId !== borrowerId) {
       return res.status(403).json({
         message: "Consent record does not match the requested borrower",
@@ -121,19 +136,25 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
       });
     }
 
-    // Expiry check applies equally to standard and loan-exemption consents
+    // Institution binding: consent issued to org A cannot be replayed by org B.
+    // Only enforced when both the consent and the session carry an organization ID.
+    const requesterOrgId = req.session?.organizationId;
+    if (consent.organizationId && requesterOrgId && consent.organizationId !== requesterOrgId) {
+      return res.status(403).json({
+        message: "Consent was not issued to your institution",
+        code: "CONSENT_INSTITUTION_MISMATCH",
+        blocked: true,
+      });
+    }
+
+    // Expiry applies equally to all consent types
     if (consent.expiresAt && new Date(consent.expiresAt) < new Date()) {
       return res.status(403).json({ message: "Consent has expired", code: "CONSENT_EXPIRED", blocked: true });
     }
 
-    // BoG loan-origination exemption path (Ghana Data Protection Act §12(3)):
-    // A consent record created under an active loan agreement is automatically
-    // approved (loan_exemption=true, borrower_response='approved'). Access is
-    // allowed without a separate borrower opt-in flow, but the record must still
-    // be active and borrower-bound (validated above).
-    const isLoanExemption = (consent as any).loanExemption === true;
-    const isExemptionApproved = isLoanExemption && (consent as any).borrowerResponse === "approved";
-    if (isExemptionApproved) {
+    // Path 2: Loan-origination exemption (Ghana Data Protection Act §12(3))
+    // Created automatically when an active loan account exists for the borrower.
+    if (consent.loanExemption && consent.borrowerResponse === "approved") {
       if (consent.status !== "active") {
         return res.status(403).json({
           message: "Loan-exemption consent is no longer active",
@@ -141,16 +162,10 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
           blocked: true,
         });
       }
-      return res.json({
-        allowed: true,
-        isSuperAdmin: false,
-        loanExemption: true,
-        borrowerId,
-        consentId,
-      });
+      return res.json({ allowed: true, isSuperAdmin: false, loanExemption: true, borrowerId, consentId });
     }
 
-    // Standard borrower-approved consent path
+    // Path 3: Standard borrower-approved consent
     if (consent.status !== "active") {
       return res.status(403).json({ message: "Consent is not active", code: "CONSENT_INACTIVE", blocked: true });
     }
