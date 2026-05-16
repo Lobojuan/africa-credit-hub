@@ -251,12 +251,13 @@ test.describe("Loan Origination — lender-submit / admin-approve maker-checker 
     expect(subResp.status()).toBe(201);
     const selfLoanId = (await subResp.json() as { id: string }).id;
 
-    // Attempt self-approval as the same lender
+    // Attempt self-approval as the same lender — separation of duties must prevent this
     const approveResp = await page.request.post(`/api/loans/${selfLoanId}/approve`, {
       data: { notes: "Lender self-approve attempt" },
     });
-    // Self-approval should be rejected (403) or permitted only for super roles (200)
-    // The key assertion: it must never be a 500 server error
-    expect(approveResp.status()).not.toBe(500);
+    // Separation of duties: lender must NOT approve their own submission.
+    // 403 = role-based rejection (correct), 401 = session issue, 404 = route not found for role.
+    // 200 = self-approval succeeded — this is a SECURITY VULNERABILITY and will fail the test.
+    expect([403, 401, 404]).toContain(approveResp.status());
   });
 });

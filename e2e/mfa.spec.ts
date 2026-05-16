@@ -151,12 +151,12 @@ test.describe("MFA — login challenge UI", () => {
     const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
     expect(loggedIn).toBe(true);
 
-    const setupResp = await page.request.post("/api/auth/setup-totp");
+    const setupResp = await page.request.post("/api/auth/mfa/setup");
     expect(setupResp.status()).toBe(200);
     const { secret } = await setupResp.json();
     const code = await generateTOTP(secret);
 
-    const verifyResp = await page.request.post("/api/auth/verify-totp", {
+    const verifyResp = await page.request.post("/api/auth/mfa/verify", {
       data: { code },
     });
     expect(verifyResp.status()).toBe(200);
@@ -190,8 +190,8 @@ test.describe("MFA — login challenge UI", () => {
       page.locator('[data-testid="text-current-user"]').first(),
     ).toBeVisible({ timeout: 12000 });
 
-    // Cleanup: disable MFA
-    await page.request.post("/api/auth/disable-mfa");
+    // Cleanup: disable MFA (requires password for the disable endpoint)
+    await page.request.post("/api/auth/mfa/disable", { data: { password: ADMIN_PW } });
   });
 });
 
@@ -200,7 +200,7 @@ test.describe("MFA — login challenge UI", () => {
 test.describe("MFA — wrong code rejection", () => {
   test("wrong 6-digit TOTP code returns 400 or 401 — never 500", async ({ page }) => {
     await injectSession(page, { userId: "e2e-mfa-wrong", userRole: "admin" });
-    const resp = await page.request.post("/api/auth/verify-totp", {
+    const resp = await page.request.post("/api/auth/mfa/verify", {
       data: { code: "000000" },
     });
     expect([400, 401, 403, 422]).toContain(resp.status());
@@ -212,12 +212,12 @@ test.describe("MFA — wrong code rejection", () => {
 
 test.describe("MFA — API endpoint access control", () => {
   test("setup-totp requires authentication", async ({ page }) => {
-    const resp = await page.request.post("/api/auth/setup-totp");
+    const resp = await page.request.post("/api/auth/mfa/setup");
     expect([401, 403]).toContain(resp.status());
   });
 
   test("disable-mfa requires authentication", async ({ page }) => {
-    const resp = await page.request.post("/api/auth/disable-mfa");
+    const resp = await page.request.post("/api/auth/mfa/disable");
     expect([401, 403, 404]).toContain(resp.status());
   });
 
@@ -233,7 +233,7 @@ test.describe("MFA — account recovery via disable endpoint", () => {
   test("disable-mfa with valid session returns 200 or 400 (no existing MFA)", async ({ page }) => {
     const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
     expect(loggedIn).toBe(true);
-    const resp = await page.request.post("/api/auth/disable-mfa");
+    const resp = await page.request.post("/api/auth/mfa/disable");
     // 200 = MFA was active and disabled (recovery success)
     // 400 = MFA was not active (nothing to disable, still correct behavior)
     // 401 = session expired — must not happen since we just logged in
@@ -242,8 +242,8 @@ test.describe("MFA — account recovery via disable endpoint", () => {
     expect([200, 400, 404]).toContain(resp.status());
   });
 
-  test("POST /api/auth/disable-mfa requires authentication", async ({ page }) => {
-    const resp = await page.request.post("/api/auth/disable-mfa");
+  test("POST /api/auth/mfa/disable requires authentication", async ({ page }) => {
+    const resp = await page.request.post("/api/auth/mfa/disable");
     expect([401, 403]).toContain(resp.status());
   });
 
@@ -252,21 +252,94 @@ test.describe("MFA — account recovery via disable endpoint", () => {
     expect(loggedIn).toBe(true);
 
     // Enroll
-    const setupResp = await page.request.post("/api/auth/setup-totp");
+    const setupResp = await page.request.post("/api/auth/mfa/setup");
     expect(setupResp.status()).toBe(200);
     const { secret } = await setupResp.json();
     const code = await generateTOTP(secret);
 
-    const verifyResp = await page.request.post("/api/auth/verify-totp", { data: { code } });
+    const verifyResp = await page.request.post("/api/auth/mfa/verify", { data: { code } });
     expect(verifyResp.status()).toBe(200);
 
     // Recovery: disable MFA — account is restored to passwordOnly state
-    const disableResp = await page.request.post("/api/auth/disable-mfa");
+    const disableResp = await page.request.post("/api/auth/mfa/disable");
     expect(disableResp.status()).toBe(200);
 
     // Confirm MFA is gone: setup endpoint should accept a fresh setup request
-    const re_setupResp = await page.request.post("/api/auth/setup-totp");
+    const re_setupResp = await page.request.post("/api/auth/mfa/setup");
     expect(re_setupResp.status()).toBe(200);
     // Cleanup: do NOT enroll so subsequent tests start clean
+  });
+});
+
+// ─── MFA backup codes — full recovery flow ────────────────────────────────────
+
+test.describe("MFA — backup code generation and recovery", () => {
+  test("backup code status requires auth (401 without session)", async ({ page }) => {
+    const resp = await page.request.get("/api/auth/mfa/backup-codes/status");
+    expect([401, 403]).toContain(resp.status());
+  });
+
+  test("backup code generate requires auth (401 without session)", async ({ page }) => {
+    const resp = await page.request.post("/api/auth/mfa/backup-codes/generate");
+    expect([401, 403]).toContain(resp.status());
+  });
+
+  test("backup code verify rejects missing code body (400)", async ({ page }) => {
+    const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
+    expect(loggedIn).toBe(true);
+    const resp = await page.request.post("/api/auth/mfa/backup-codes/verify", {
+      data: {},
+    });
+    expect(resp.status()).toBe(400);
+  });
+
+  test("full recovery cycle: enable MFA → generate codes → use code → reuse rejected", async ({ page }) => {
+    const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
+    expect(loggedIn).toBe(true);
+
+    // Step 1: Enable MFA
+    const setupResp = await page.request.post("/api/auth/mfa/setup");
+    expect(setupResp.status()).toBe(200);
+    const { secret } = await setupResp.json();
+    const code = await generateTOTP(secret);
+
+    const verifyResp = await page.request.post("/api/auth/mfa/verify", { data: { code } });
+    expect(verifyResp.status()).toBe(200);
+
+    // Step 2: Generate backup codes
+    const genResp = await page.request.post("/api/auth/mfa/backup-codes/generate");
+    expect(genResp.status()).toBe(200);
+    const { codes } = await genResp.json() as { codes: string[] };
+    expect(codes).toHaveLength(8);
+    expect(codes[0]).toMatch(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/);
+
+    // Step 3: Status shows 8 available codes
+    const statusResp = await page.request.get("/api/auth/mfa/backup-codes/status");
+    expect(statusResp.status()).toBe(200);
+    const status = await statusResp.json() as { available: number; total: number };
+    expect(status.total).toBe(8);
+    expect(status.available).toBe(8);
+
+    // Step 4: Use the first backup code for recovery
+    const recoverResp = await page.request.post("/api/auth/mfa/backup-codes/verify", {
+      data: { code: codes[0] },
+    });
+    expect(recoverResp.status()).toBe(200);
+    const recoverBody = await recoverResp.json() as { remainingCodes: number };
+    expect(recoverBody.remainingCodes).toBe(7);
+
+    // Step 5: Reuse the same code — must be rejected (already used)
+    const reuseResp = await page.request.post("/api/auth/mfa/backup-codes/verify", {
+      data: { code: codes[0] },
+    });
+    expect(reuseResp.status()).toBe(401);
+
+    // Step 6: Status now shows 7 remaining
+    const status2Resp = await page.request.get("/api/auth/mfa/backup-codes/status");
+    const status2 = await status2Resp.json() as { available: number };
+    expect(status2.available).toBe(7);
+
+    // Cleanup: disable MFA
+    await page.request.post("/api/auth/mfa/disable", { data: { password: ADMIN_PW } });
   });
 });

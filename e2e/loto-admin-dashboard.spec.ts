@@ -99,9 +99,9 @@ test.describe("DGI Dashboard — KPI strip", () => {
       // but the element must not be blank / missing entirely)
       expect(text?.trim().length ?? 0).toBeGreaterThan(0);
     }
-    // Verify total KPI count — all 7 KPI cards must be present in the DOM
+    // All 7 KPI cards must be present in the DOM
     const kpiCount = await page.locator('[data-testid^="kpi-"]').count();
-    expect(kpiCount).toBeGreaterThanOrEqual(3);
+    expect(kpiCount).toBeGreaterThanOrEqual(7);
   });
 
   test("country badge is visible and not empty", async ({ page }) => {

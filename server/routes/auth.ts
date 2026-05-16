@@ -1,6 +1,7 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import * as OTPAuth from "otpauth";
+import crypto from "crypto";
 import { storage } from "../storage";
 import { createLogger } from "../logger";
 import { loginLimiter, stripPassword, safeErrorMessage, isPlatformPrivileged } from "./middleware";
@@ -10,6 +11,21 @@ const authLogger = createLogger("auth");
 
 // TOTP replay prevention: track used codes to block reuse within the same 30s window
 const usedTotpTokens = new Map<string, number>(); // key: userId:code, value: expiry timestamp
+
+// MFA backup codes store: userId → array of { hash, usedAt }
+// In-memory for the server lifetime; survives restarts only if persisted externally.
+const backupCodeStore = new Map<string, Array<{ hash: string; usedAt: number | null }>>();
+
+function generateBackupCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let raw = "";
+  for (let i = 0; i < 8; i++) raw += chars[Math.floor(Math.random() * chars.length)];
+  return `${raw.slice(0, 4)}-${raw.slice(4)}`; // XXXX-XXXX format
+}
+
+function hashCode(code: string): string {
+  return crypto.createHash("sha256").update(code.replace(/-/g, "").toUpperCase()).digest("hex");
+}
 setInterval(() => {
   const now = Date.now();
   for (const [k, exp] of usedTotpTokens) {
@@ -375,6 +391,87 @@ router.post("/api/auth/mfa/disable", async (req, res) => {
   }
 });
 
+
+// ── MFA backup codes ──────────────────────────────────────────────────────────
+
+router.post("/api/auth/mfa/backup-codes/generate", async (req, res) => {
+  try {
+    if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const user = await storage.getUser(req.session.userId);
+    if (!user || !user.mfaEnabled) return res.status(400).json({ message: "MFA must be enabled before generating backup codes" });
+
+    const codes: string[] = [];
+    const stored: Array<{ hash: string; usedAt: number | null }> = [];
+    for (let i = 0; i < 8; i++) {
+      const code = generateBackupCode();
+      codes.push(code);
+      stored.push({ hash: hashCode(code), usedAt: null });
+    }
+    backupCodeStore.set(user.id, stored);
+
+    await storage.createAuditLog({
+      action: "MFA_BACKUP_CODES_GENERATED", entity: "user", entityId: user.id,
+      userId: user.id, details: "8 MFA backup codes generated",
+      ipAddress: req.ip || null,
+    });
+    res.json({ codes });
+  } catch (e: any) {
+    authLogger.error("Backup code generate error", e);
+    res.status(500).json({ message: safeErrorMessage(e) });
+  }
+});
+
+router.post("/api/auth/mfa/backup-codes/verify", async (req, res) => {
+  try {
+    const { code, userId: bodyUserId } = req.body;
+    if (!code) return res.status(400).json({ message: "Backup code required" });
+
+    // Accept userId from session (recovery mid-login) or body (explicit recovery path)
+    const userId = req.session?.userId || bodyUserId;
+    if (!userId) return res.status(401).json({ message: "No active session or userId" });
+
+    const stored = backupCodeStore.get(userId);
+    if (!stored || stored.length === 0) {
+      return res.status(400).json({ message: "No backup codes exist for this account" });
+    }
+
+    const incoming = hashCode(code);
+    const idx = stored.findIndex(c => c.hash === incoming && c.usedAt === null);
+    if (idx === -1) {
+      return res.status(401).json({ message: "Invalid or already-used backup code" });
+    }
+
+    stored[idx].usedAt = Date.now();
+
+    // Grant session access
+    req.session.userId = userId;
+    req.session.mfaChallengeComplete = true;
+
+    await storage.createAuditLog({
+      action: "MFA_BACKUP_CODE_USED", entity: "user", entityId: userId,
+      userId, details: "Account recovered using MFA backup code",
+      ipAddress: req.ip || null,
+    });
+
+    const remainingCount = stored.filter(c => c.usedAt === null).length;
+    res.json({ message: "Account recovered successfully", remainingCodes: remainingCount });
+  } catch (e: any) {
+    authLogger.error("Backup code verify error", e);
+    res.status(500).json({ message: safeErrorMessage(e) });
+  }
+});
+
+router.get("/api/auth/mfa/backup-codes/status", async (req, res) => {
+  try {
+    if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
+    const stored = backupCodeStore.get(req.session.userId) ?? [];
+    const available = stored.filter(c => c.usedAt === null).length;
+    const total = stored.length;
+    res.json({ generated: total > 0, available, total });
+  } catch (e: any) {
+    res.status(500).json({ message: safeErrorMessage(e) });
+  }
+});
 
 router.get("/api/auth/me", async (req, res) => {
   if (!req.session?.userId) {

@@ -464,3 +464,85 @@ test.describe("Credit Bureau — Regulatory Compliance", () => {
     await expect(page).not.toHaveURL(/\/login/, { timeout: 12000 });
   });
 });
+
+// ─── Borrower search by name and NIN ─────────────────────────────────────────
+
+let e2eSearchNationalId: string;
+let e2eSearchFirstName: string;
+
+test.describe("Credit Bureau — Borrower search by name and NIN", () => {
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+    const pg = await ctx.newPage();
+    e2eSearchNationalId = `NIN-SEARCH-E2E-${Date.now()}`;
+    e2eSearchFirstName = `SearchableE2E${Date.now()}`;
+
+    const r = await pg.request.post("/api/borrowers", {
+      data: {
+        firstName: e2eSearchFirstName,
+        lastName: "SearchSuiteUser",
+        nationalId: e2eSearchNationalId,
+        type: "individual",
+        country: "Ghana",
+        email: `search-e2e-${Date.now()}@test.invalid`,
+      },
+    });
+    expect(r.status()).toBe(201);
+    await ctx.close();
+  });
+
+  test("search by NIN returns the seeded borrower", async ({ page }) => {
+    await setSession(page, SUPER_ADMIN_SESSION);
+    await page.goto("/borrowers");
+    await page.waitForSelector('[data-testid="input-search-borrowers"]', { timeout: 15000 });
+    await page.fill('[data-testid="input-search-borrowers"]', e2eSearchNationalId);
+    await page.waitForTimeout(1200);
+
+    const rows = page.locator(`[data-testid^="row-borrower-"]`);
+    await expect(rows.first()).toBeVisible({ timeout: 12000 });
+    const rowCount = await rows.count();
+    expect(rowCount).toBeGreaterThanOrEqual(1);
+
+    // At least one row must show the NIN
+    const allText = await page.locator(`[data-testid^="row-borrower-"]`).allTextContents();
+    const found = allText.some(t => t.includes(e2eSearchNationalId) || t.includes(e2eSearchFirstName));
+    expect(found).toBe(true);
+  });
+
+  test("search by first name returns the seeded borrower", async ({ page }) => {
+    await setSession(page, SUPER_ADMIN_SESSION);
+    await page.goto("/borrowers");
+    await page.waitForSelector('[data-testid="input-search-borrowers"]', { timeout: 15000 });
+    await page.fill('[data-testid="input-search-borrowers"]', e2eSearchFirstName);
+    await page.waitForTimeout(1200);
+
+    const rows = page.locator(`[data-testid^="row-borrower-"]`);
+    await expect(rows.first()).toBeVisible({ timeout: 12000 });
+    const allText = await page.locator(`[data-testid^="row-borrower-"]`).allTextContents();
+    const found = allText.some(t => t.toLowerCase().includes(e2eSearchFirstName.toLowerCase()));
+    expect(found).toBe(true);
+  });
+
+  test("search API GET /api/borrowers?search= returns NIN-matched borrower", async ({ page }) => {
+    await setSession(page, SUPER_ADMIN_SESSION);
+    const resp = await page.request.get(`/api/borrowers?search=${encodeURIComponent(e2eSearchNationalId)}`);
+    expect(resp.status()).toBe(200);
+    const body = await resp.json() as { data?: Array<{ nationalId?: string }> } | Array<{ nationalId?: string }>;
+    const list = Array.isArray(body) ? body : (body as any).data ?? [];
+    expect(Array.isArray(list)).toBe(true);
+    const match = list.some((b: any) => b.nationalId === e2eSearchNationalId || b.firstName === e2eSearchFirstName);
+    expect(match).toBe(true);
+  });
+
+  test("search with empty string clears filter and returns full list", async ({ page }) => {
+    await setSession(page, SUPER_ADMIN_SESSION);
+    await page.goto("/borrowers");
+    await page.waitForSelector('[data-testid="input-search-borrowers"]', { timeout: 15000 });
+    await page.fill('[data-testid="input-search-borrowers"]', "ZZZNOMATCH999");
+    await page.waitForTimeout(800);
+    await page.fill('[data-testid="input-search-borrowers"]', "");
+    await page.waitForTimeout(800);
+    const rows = page.locator(`[data-testid^="row-borrower-"]`);
+    await expect(rows.first()).toBeVisible({ timeout: 10000 });
+  });
+});

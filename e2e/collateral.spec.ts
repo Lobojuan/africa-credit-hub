@@ -292,3 +292,94 @@ test.describe("Collateral Registry — API", () => {
     expect(resp.status()).not.toBe(500);
   });
 });
+
+// ─── Certificate download ─────────────────────────────────────────────────────
+
+test.describe("Collateral Registry — certificate PDF download", () => {
+  test("certificate download button triggers a PDF download event", async ({ page }) => {
+    await setSession(page, LENDER_SESSION);
+    await page.goto("/collateral-registry");
+    await page.waitForSelector('[data-testid="input-search-collateral"]', { timeout: 15000 });
+
+    // Find the E2E collateral row and trigger cert download via list-row button
+    const certBtn = page.locator(`[data-testid="btn-download-cert-${e2eColId}"]`);
+    const certBtnAlt = page.locator('[data-testid^="btn-download-cert-"]').first();
+    const btn = (await certBtn.count()) > 0 ? certBtn : certBtnAlt;
+
+    const btnVisible = await btn.isVisible({ timeout: 8000 }).catch(() => false);
+    if (!btnVisible) {
+      // Navigate to detail view to get the download button
+      const row = page.locator(`[data-testid="row-collateral-${e2eColId}"]`);
+      if (await row.isVisible({ timeout: 5000 }).catch(() => false)) {
+        await row.click();
+        await page.waitForTimeout(1000);
+      }
+    }
+
+    const downloadBtn = page.locator('[data-testid="detail-btn-download-cert"], [data-testid^="btn-download-cert-"]').first();
+    await downloadBtn.waitFor({ timeout: 10000 });
+
+    const [download] = await Promise.all([
+      page.waitForEvent("download", { timeout: 20000 }),
+      downloadBtn.click(),
+    ]);
+    expect(download.suggestedFilename().length).toBeGreaterThan(0);
+    expect(download.suggestedFilename()).toMatch(/\.(pdf|PDF)$/);
+  });
+});
+
+// ─── Lien search — priority ranking ─────────────────────────────────────────
+
+test.describe("Collateral Registry — lien search priority ranking", () => {
+  test("lien search for E2E asset returns results with priority field", async ({ page }) => {
+    await setSession(page, LENDER_SESSION);
+    await page.goto("/collateral-registry");
+    await page.waitForSelector('[data-testid="tab-lien-search"]', { timeout: 15000 });
+    await page.click('[data-testid="tab-lien-search"]');
+    await page.waitForSelector('[data-testid="input-lien-search-asset"]', { timeout: 10000 });
+    await page.fill('[data-testid="input-lien-search-asset"]', e2eAssetId);
+    await page.click('[data-testid="btn-lien-search"]');
+
+    // Lien result rows should appear for the E2E asset
+    await expect(
+      page.locator('[data-testid^="row-lien-result-"]').first().or(
+        page.locator('text=No liens found, text=0 registered lien').first()
+      ),
+    ).toBeVisible({ timeout: 15000 });
+
+    const results = await page.locator('[data-testid^="row-lien-result-"]').count();
+    if (results > 0) {
+      // Each result row must contain priority information
+      const firstRowText = await page.locator('[data-testid^="row-lien-result-"]').first().textContent();
+      expect(firstRowText?.length ?? 0).toBeGreaterThan(0);
+      // Priority ranking text must be present — "1st", "Priority", "#1", or a numeric rank
+      expect(firstRowText).toMatch(/priority|#?\d+|1st|2nd|3rd|rank/i);
+    }
+  });
+
+  test("lien search API returns results with priorityRank field", async ({ page }) => {
+    await setSession(page, LENDER_SESSION);
+    const resp = await page.request.get(`/api/collateral/lien-search?assetId=${encodeURIComponent(e2eAssetId)}`);
+    expect([200, 404]).toContain(resp.status());
+    expect(resp.status()).not.toBe(500);
+    if (resp.status() === 200) {
+      const body = await resp.json();
+      const results = Array.isArray(body) ? body : (body as any).results ?? [];
+      if (results.length > 0) {
+        const first = results[0];
+        // Priority rank field must be present and numeric
+        const rank = first.priorityRank ?? first.priority ?? first.rankOrder;
+        expect(typeof rank === "number" || typeof rank === "string").toBe(true);
+      }
+    }
+  });
+
+  test("lender role can run lien search — regulator also can", async ({ page }) => {
+    await setSession(page, REG_SESSION);
+    await page.goto("/collateral-registry");
+    await page.waitForSelector('[data-testid="tab-lien-search"]', { timeout: 15000 });
+    await page.click('[data-testid="tab-lien-search"]');
+    await expect(page.locator('[data-testid="input-lien-search-asset"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('[data-testid="btn-lien-search"]')).toBeVisible({ timeout: 8000 });
+  });
+});
