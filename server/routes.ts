@@ -12,7 +12,7 @@ import { isSafeWebhookUrl } from "./lib/url-safety";
 const routeLogger = createLogger("routes");
 import {
   loginLimiter, apiLimiter, writeLimiter, registrationLimiter, batchLimiter, smartApiLimiter,
-  aiLimiter, creditReportLimiter, rateLimitKeyGenerator,
+  aiLimiter, creditReportLimiter, ussdLimiter, rateLimitKeyGenerator,
   stripPassword, requireAuth, requireRole, requireSuperAdmin, requireConsumer,
   enforceDataSovereignty, idempotencyMiddleware,
   getOrgScope, getCountryFilter, logCrossCountryAccess,
@@ -5736,36 +5736,33 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     });
   });
 
-  app.get("/api/notifications", async (req, res) => {
+  app.get("/api/notifications", requireAuth, async (req, res) => {
     try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications");
       await logCrossCountryAccess(req, country, "/api/notifications");
-      const scope = country ?? (isPlatformPrivileged(req.session.userRole) ? GLOBAL_SCOPE : undefined);
-      const items = await storage.getNotifications(req.session.userId, scope);
+      const scope = country ?? (isPlatformPrivileged(req.session!.userRole) ? GLOBAL_SCOPE : undefined);
+      const items = await storage.getNotifications(req.session!.userId, scope);
       res.json(items);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
-  app.get("/api/notifications/unread-count", async (req, res) => {
+  app.get("/api/notifications/unread-count", requireAuth, async (req, res) => {
     try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications/unread-count");
-      const scope = country ?? (isPlatformPrivileged(req.session.userRole) ? GLOBAL_SCOPE : undefined);
-      const count = await storage.getUnreadNotificationCount(req.session.userId, scope);
+      const scope = country ?? (isPlatformPrivileged(req.session!.userRole) ? GLOBAL_SCOPE : undefined);
+      const count = await storage.getUnreadNotificationCount(req.session!.userId, scope);
       res.json({ count });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
 
-  app.patch("/api/notifications/:id/read", async (req, res) => {
+  app.patch("/api/notifications/:id/read", requireAuth, async (req, res) => {
     try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
       await storage.markNotificationRead(req.params.id as string);
       res.json({ message: "Marked as read" });
     } catch (e: any) {
@@ -5773,10 +5770,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     }
   });
 
-  app.post("/api/notifications/mark-all-read", async (req, res) => {
+  app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
     try {
-      if (!req.session?.userId) return res.status(401).json({ message: "Not authenticated" });
-      await storage.markAllNotificationsRead(req.session.userId);
+      await storage.markAllNotificationsRead(req.session!.userId);
       res.json({ message: "All marked as read" });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -14431,10 +14427,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     }
   });
 
-  app.post("/api/maintenance/toggle", async (req, res) => {
-    if (!req.session?.userId || req.session?.userRole !== "super_admin") {
-      return res.status(403).json({ message: "Super admin access required" });
-    }
+  app.post("/api/maintenance/toggle", requireAuth, requireSuperAdmin, async (req, res) => {
     const { maintenanceState } = await import("./index");
     maintenanceState.enabled = !maintenanceState.enabled;
     if (req.body?.message) {
@@ -17312,18 +17305,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // CONSUMER CREDIT MONITORING — consumer alert preferences + alert history
   // ===========================================================================
 
-  app.get("/api/consumer/monitoring-prefs", async (req, res) => {
+  app.get("/api/consumer/monitoring-prefs", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const prefs = await storage.getConsumerMonitoringPrefs(consumerAccountId);
       res.json(prefs ?? null);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.put("/api/consumer/monitoring-prefs", async (req, res) => {
+  app.put("/api/consumer/monitoring-prefs", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const parsed = insertConsumerMonitoringPrefsSchema.safeParse({ ...req.body, consumerAccountId });
       if (!parsed.success) return res.status(400).json({ message: "Validation error", errors: parsed.error.errors });
@@ -17332,9 +17325,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.get("/api/consumer/monitoring-alerts", async (req, res) => {
+  app.get("/api/consumer/monitoring-alerts", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const limit = parseInt(String(req.query.limit || "50"));
       const alerts = await storage.getConsumerMonitoringAlerts(consumerAccountId, limit);
@@ -17342,18 +17335,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.patch("/api/consumer/monitoring-alerts/:id/read", async (req, res) => {
+  app.patch("/api/consumer/monitoring-alerts/:id/read", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const ok = await storage.markConsumerMonitoringAlertRead(req.params.id as string, consumerAccountId);
       res.json({ success: ok });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.post("/api/consumer/monitoring-alerts/mark-all-read", async (req, res) => {
+  app.post("/api/consumer/monitoring-alerts/mark-all-read", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any)?.consumerAccountId;
+      const consumerAccountId = (req.session as any).consumerAccountId;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const count = await storage.markAllConsumerMonitoringAlertsRead(consumerAccountId);
       res.json({ marked: count });
@@ -18926,7 +18919,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Aggregator authenticates via shared bearer token (LOTO_USSD_TOKEN). If
   // no token is configured we accept the request — useful for sandbox / e2e
   // testing where there's no aggregator. Real production should set the env.
-  app.post("/api/loto/ussd/session", express.urlencoded({ extended: true }), async (req, res) => {
+  app.post("/api/loto/ussd/session", ussdLimiter, express.urlencoded({ extended: true }), async (req, res) => {
     try {
       const expected = process.env.LOTO_USSD_TOKEN;
       if (expected) {

@@ -129,6 +129,54 @@ app.get("/health", async (_req, res) => {
   });
 });
 
+// ── CORS lockdown ──────────────────────────────────────────────────────────
+// In production, only the configured CANONICAL_URL origin is allowed.
+// Stripe and USSD webhook endpoints skip this so external systems can post.
+// In development we allow any origin so the Vite proxy works.
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin) return next(); // same-origin requests have no Origin header
+
+  if (isProductionBoot) {
+    const canonical = process.env.CANONICAL_URL;
+    let allowed = false;
+    if (canonical) {
+      try {
+        const canonicalOrigin = new URL(canonical).origin;
+        allowed = origin === canonicalOrigin;
+      } catch { /* malformed CANONICAL_URL */ }
+    }
+    if (!allowed) {
+      // Outbound webhook callbacks and aggregator POSTs come in without a
+      // browser origin; they are caught by the missing-origin guard above.
+      // The stripe webhook and USSD endpoint have their own auth; we still
+      // block non-matching cross-origin preflight requests here.
+      if (req.method === "OPTIONS") {
+        return res.status(403).end();
+      }
+      // Non-OPTIONS with a mismatched origin: strip the CORS response headers
+      // but continue — server-side processing is not affected, and same-origin
+      // fetch calls (no Origin header) remain unaffected.
+      return next();
+    }
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-CSRF-Token,Authorization,Idempotency-Key");
+    res.setHeader("Vary", "Origin");
+  } else {
+    // Development: permissive CORS so the Vite dev-server proxy works.
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-CSRF-Token,Authorization,Idempotency-Key");
+    res.setHeader("Vary", "Origin");
+  }
+
+  if (req.method === "OPTIONS") return res.status(204).end();
+  next();
+});
+
 app.use((_req, res, next) => {
   const nonce = crypto.randomBytes(16).toString("base64");
   res.locals.cspNonce = nonce;

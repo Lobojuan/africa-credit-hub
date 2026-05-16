@@ -165,6 +165,22 @@ export const creditReportLimiter = rateLimit({
   validate,
 });
 
+export const ussdLimiter = rateLimit({
+  keyGenerator: rateLimitKeyGenerator,
+  skip: isLocalhost,
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: "END Too many requests",
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate,
+  handler(req, res) {
+    logRateLimit429("RATE_LIMIT_USSD_429", req);
+    res.setHeader("Retry-After", "900");
+    res.status(429).type("text/plain").send("END Too many requests. Please wait 15 minutes.");
+  },
+});
+
 export function stripPassword(user: any) {
   const { password, ...safe } = user;
   return safe;
