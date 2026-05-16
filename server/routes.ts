@@ -11,7 +11,7 @@ import { createLogger } from "./logger";
 import { isSafeWebhookUrl } from "./lib/url-safety";
 const routeLogger = createLogger("routes");
 import {
-  loginLimiter, apiLimiter, writeLimiter, registrationLimiter, batchLimiter,
+  loginLimiter, apiLimiter, writeLimiter, registrationLimiter, batchLimiter, smartApiLimiter,
   aiLimiter, creditReportLimiter, rateLimitKeyGenerator,
   stripPassword, requireAuth, requireRole, requireSuperAdmin, requireConsumer,
   enforceDataSovereignty, idempotencyMiddleware,
@@ -536,7 +536,7 @@ export async function registerRoutes(
   }
 
 
-  app.use("/api", apiLimiter, (req, res, next) => {
+  app.use("/api", smartApiLimiter, (req, res, next) => {
     const route = req.method + " " + req.path;
     trackApiUsage(route);
     const start = Date.now();
@@ -1116,7 +1116,7 @@ export async function registerRoutes(
     fs.createReadStream(filePath).pipe(res);
   });
 
-  app.use("/api", apiLimiter, (req, res, next) => {
+  app.use("/api", smartApiLimiter, (req, res, next) => {
     if (req.path.startsWith("/auth") || req.path.startsWith("/external") || req.path.startsWith("/docs") || req.path.startsWith("/consumer") || req.path.startsWith("/ai-demo") || req.path.startsWith("/public") || req.path.startsWith("/contact-sales") || req.path.startsWith("/platform-control") || req.path.startsWith("/registry-sandbox") || req.path.startsWith("/consent/respond")) return next();
     // Loto Fiscal public draw transparency endpoints — anyone can audit a closed draw.
     // Admin Loto routes (/loto/admin/...) still require auth via per-route requireAuth.
@@ -14005,6 +14005,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
 
       lines.push(`EOF|${lines.length - 1}|${today}`);
+      if (!isPreview) {
+        lines.push(`# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${(req.session as any)?.username || "unknown"} | ${new Date().toISOString()}`);
+      }
 
       const csv = lines.join("\n");
       if (!isPreview) {
@@ -16902,6 +16905,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const ts = entry.sentAt ? new Date(entry.sentAt).toISOString() : "";
         csv += `"${csvQ(ts)}","${csvQ(entry.channel)}","${csvQ(entry.maskedRecipient)}","${csvQ(entry.senderName ?? "")}"\n`;
       }
+      csv += `"# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${csvQ((req.session as any)?.username || "unknown")} | ${new Date().toISOString()}"\n`;
 
       const filename = `share-history-${req.params.id as string}-${Date.now()}.csv`;
       res.setHeader("Content-Type", "text/csv");

@@ -39,7 +39,7 @@ export function botDetectionMiddleware(req: Request, res: Response, next: NextFu
   const isScraper = ua.length > 0 && KNOWN_SCRAPERS.some(s => ua.includes(s));
 
   const missingBrowserHeaders =
-    ua.length > 0 && !accept && !acceptLang;
+    ua.length > 0 && (!accept || !acceptLang);
 
   const ip = req.ip || "";
   const now = Date.now();

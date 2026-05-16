@@ -173,7 +173,7 @@ app.use((req, res, next) => {
     res.setHeader("X-Robots-Tag", "index, follow");
   }
 
-  if (req.path.startsWith("/api") && req.session?.userId) {
+  if (req.path.startsWith("/api")) {
     res.setHeader("X-Robots-Tag", "noindex, noarchive, nosnippet");
   }
 

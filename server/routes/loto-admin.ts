@@ -526,6 +526,7 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
         });
         res.write(csvLine([m.id, m.shopName, m.city ?? "", cityToDistrict(m.city), m.category ?? "", score, last30.length, cur30Total.toFixed(2), flagByMerchant.get(m.id) ?? 0, lastReceiptAt ? new Date(lastReceiptAt).toISOString() : ""]) + "\n");
       }
+      res.write(csvLine([`# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${(req.session as any)?.username || "unknown"} | ${new Date().toISOString()}`]) + "\n");
       return res.end();
     }
 
@@ -540,6 +541,7 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
       for (const f of flags) {
         res.write(csvLine([f.id, f.ruleCode, f.severity, f.status, f.merchantId ?? "", f.summary, f.detectedAt.toISOString(), f.triagedAt?.toISOString() ?? "", f.triagedBy ?? ""]) + "\n");
       }
+      res.write(csvLine([`# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${(req.session as any)?.username || "unknown"} | ${new Date().toISOString()}`]) + "\n");
       return res.end();
     }
 
@@ -569,6 +571,7 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
       for (const [d, v] of Object.entries(buckets)) {
         res.write(csvLine([d, v.m.size, v.r, v.t.toFixed(2), v.v.toFixed(2)]) + "\n");
       }
+      res.write(csvLine([`# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${(req.session as any)?.username || "unknown"} | ${new Date().toISOString()}`]) + "\n");
       return res.end();
     }
 
@@ -581,6 +584,7 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
       .where(and(eq(lotoMerchants.countryCode, country), gte(lotoReceipts.issuedAt, since30d)));
     res.write(csvLine(["country_code", "vat_30d", "turnover_30d", "receipts_30d"]) + "\n");
     res.write(csvLine([country, parseFloat(vatRow?.totalVat ?? "0").toFixed(2), parseFloat(vatRow?.totalAmount ?? "0").toFixed(2), vatRow?.c ?? 0]) + "\n");
+    res.write(csvLine([`# © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${(req.session as any)?.username || "unknown"} | ${new Date().toISOString()}`]) + "\n");
     res.end();
   } catch (err) {
     console.error("[loto-admin] csv export failed", err);

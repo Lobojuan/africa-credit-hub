@@ -71,6 +71,49 @@ export const apiLimiter = rateLimit({
   },
 });
 
+export const publicApiLimiter = rateLimit({
+  keyGenerator: rateLimitKeyGenerator,
+  skip: isLocalhost,
+  windowMs: 60 * 1000,
+  max: 60,
+  message: { message: "Too many requests. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate,
+  handler(req, res) {
+    logRateLimit429("RATE_LIMIT_PUBLIC_429", req);
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ message: "Too many requests. Please slow down." });
+  },
+});
+
+export const sessionApiLimiter = rateLimit({
+  keyGenerator: (req) => {
+    const userId = req.session?.userId;
+    if (userId) return String(userId);
+    return rateLimitKeyGenerator(req);
+  },
+  skip: isLocalhost,
+  windowMs: 60 * 1000,
+  max: 200,
+  message: { message: "Too many requests for this session. Please slow down." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { keyGeneratorIpFallback: false },
+  handler(req, res) {
+    logRateLimit429("RATE_LIMIT_SESSION_429", req);
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ message: "Too many requests for this session. Please slow down." });
+  },
+});
+
+export function smartApiLimiter(req: Request, res: Response, next: NextFunction) {
+  if (req.session?.userId) {
+    return sessionApiLimiter(req, res, next);
+  }
+  return publicApiLimiter(req, res, next);
+}
+
 export const writeLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
   skip: isLocalhost,
