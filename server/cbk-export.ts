@@ -2,7 +2,11 @@
  * CBK (Central Bank of Kenya) Export Generator
  * Reference: CBK Credit Reference Bureau Regulations 2020 / Banking Act Cap 488
  *
- * Kenya-specific fields:
+ * Org + jurisdiction scoping:
+ *  - getBorrowerMap() filters by borrowers.organizationId AND borrowers.country = 'Kenya'
+ *  - Judgment/cheque generators use the same borrower map → full org+country isolation in all 6 types
+ *
+ * Kenya-specific identity fields:
  *  - National ID   (8-digit citizen ID) — maps to borrower.nationalId
  *  - KRA PIN       (Tax identification) — maps to borrower.tinNumber
  *  - Passport      (for non-citizens) — maps to borrower.passportNumber
@@ -29,6 +33,8 @@ import {
   type CbkFileType,
 } from "@shared/cbk-codes";
 
+const JURISDICTION_COUNTRY = "Kenya";
+
 function pipe(...fields: string[]): string {
   return fields.join("|");
 }
@@ -52,8 +58,27 @@ function getTodayCbkDate(): string {
   return `${yyyy}${mm}${dd}`;
 }
 
-// ─── CBK Consumer Credit (CONC) ─────────────────────────────────────────────
-const CONC_HEADERS = [
+/**
+ * Org + jurisdiction scoped borrower map.
+ * Filters by organizationId (when set) AND country = Kenya.
+ * All 6 generator types use this map for consistent isolation.
+ */
+async function getBorrowerMap(organizationId?: string): Promise<Map<string, Borrower>> {
+  let rows: Borrower[];
+  if (organizationId) {
+    rows = await db.select().from(borrowers).where(
+      and(eq(borrowers.organizationId, organizationId), eq(borrowers.country, JURISDICTION_COUNTRY))
+    );
+  } else {
+    rows = await db.select().from(borrowers).where(eq(borrowers.country, JURISDICTION_COUNTRY));
+  }
+  const map = new Map<string, Borrower>();
+  for (const b of rows) map.set(b.id, b);
+  return map;
+}
+
+// ─── CBK Consumer Credit (CONC) headers ────────────────────────────────────
+export const CBK_CONC_HEADERS = [
   "CorrectionIndicator", "SRN", "BranchCode", "AccountNumber", "FacilityTypeCode",
   "CurrencyCode", "DateAccountOpened", "TermOfFacility", "RepaymentFrequencyCode",
   "DisbursementAmount", "ScheduledInstallmentAmount", "CurrentBalance",
@@ -68,7 +93,7 @@ const CONC_HEADERS = [
   "NatureOfCharge", "SecurityValue", "CollateralRegRefNum", "SpecialCommentsCode",
   "NatureOfGuarantor", "JointOrSoleAccount", "NoParticipantsInAccount",
   "DefPaymentStartDate",
-  // Kenya-specific consumer identity fields
+  // Kenya-specific consumer identity fields (NationalID + KRA PIN)
   "NationalID", "KRAPIN", "Surname", "Forename1", "Forename2",
   "DateOfBirth", "Gender", "PassportNumber", "Title",
   "MaritalStatus", "OwnerOrTenant",
@@ -77,8 +102,8 @@ const CONC_HEADERS = [
   "EmployerName", "EmploymentTypeCode", "Nationality",
 ];
 
-// ─── CBK Business Credit (BUSC) ─────────────────────────────────────────────
-const BUSC_HEADERS = [
+// ─── CBK Business Credit (BUSC) headers ────────────────────────────────────
+export const CBK_BUSC_HEADERS = [
   "CorrectionIndicator", "SRN", "BranchCode", "AccountNumber", "FacilityTypeCode",
   "CurrencyCode", "DateAccountOpened", "TermOfFacility", "RepaymentFrequencyCode",
   "DisbursementAmount", "ScheduledInstallmentAmount", "CurrentBalance",
@@ -99,7 +124,6 @@ const BUSC_HEADERS = [
   "Telephone", "Email", "SectorCode",
 ];
 
-// ─── CBK Consumer Judgment (CONJ) ────────────────────────────────────────────
 const CONJ_HEADERS = [
   "CorrectionIndicator", "SRN", "CaseNumber", "Court", "CourtLocation",
   "CaseFilingDate", "JudgmentDate", "JudgmentType", "CaseType",
@@ -110,7 +134,6 @@ const CONJ_HEADERS = [
   "Telephone", "Email",
 ];
 
-// ─── CBK Business Judgment (BUSJ) ────────────────────────────────────────────
 const BUSJ_HEADERS = [
   "CorrectionIndicator", "SRN", "CaseNumber", "Court", "CourtLocation",
   "CaseFilingDate", "JudgmentDate", "JudgmentType", "CaseType",
@@ -120,7 +143,6 @@ const BUSJ_HEADERS = [
   "Telephone", "Email",
 ];
 
-// ─── CBK Consumer Dishonoured Cheque (COND) ──────────────────────────────────
 const COND_HEADERS = [
   "CorrectionIndicator", "SRN", "AccountNumber", "ChequeNumber",
   "DateAccountOpened", "DateIssued", "DateBounced", "ReasonReturnedCode",
@@ -131,7 +153,6 @@ const COND_HEADERS = [
   "Telephone", "Email",
 ];
 
-// ─── CBK Business Dishonoured Cheque (BUSD) ──────────────────────────────────
 const BUSD_HEADERS = [
   "CorrectionIndicator", "SRN", "AccountNumber", "ChequeNumber",
   "DateAccountOpened", "DateIssued", "DateBounced", "ReasonReturnedCode",
@@ -372,27 +393,20 @@ async function generateConcFile(
   correctionIndicator: string,
   organizationId?: string
 ): Promise<{ content: string; filename: string }> {
+  const borrowerMap = await getBorrowerMap(organizationId);
+  const accounts = await db.select().from(creditAccounts);
   const srn = await getOrgSrn(organizationId);
-  const today = getTodayCbkDate();
 
-  const whereClause = organizationId
-    ? and(eq(creditAccounts.organizationId, organizationId), eq(borrowers.type, "individual"))
-    : eq(borrowers.type, "individual");
-
-  const rows = await db
-    .select()
-    .from(creditAccounts)
-    .innerJoin(borrowers, eq(creditAccounts.borrowerId, borrowers.id))
-    .where(whereClause);
-
-  const lines = [
-    CONC_HEADERS.join("|"),
-    ...rows.map(r => buildCreditRow(correctionIndicator, srn, r.credit_accounts, r.borrowers, true)),
-  ];
+  const rows: string[] = [CBK_CONC_HEADERS.join("|")];
+  for (const account of accounts) {
+    const borrower = borrowerMap.get(account.borrowerId);
+    if (!borrower || borrower.type !== "individual") continue;
+    rows.push(buildCreditRow(correctionIndicator, srn, account, borrower, true));
+  }
 
   return {
-    content: lines.join("\n"),
-    filename: generateCbkFilename(srn, reportingDate, today, "CONC", sequenceNumber),
+    content: rows.join("\n"),
+    filename: generateCbkFilename(srn, reportingDate, getTodayCbkDate(), "CONC", sequenceNumber),
   };
 }
 
@@ -402,27 +416,20 @@ async function generateBuscFile(
   correctionIndicator: string,
   organizationId?: string
 ): Promise<{ content: string; filename: string }> {
+  const borrowerMap = await getBorrowerMap(organizationId);
+  const accounts = await db.select().from(creditAccounts);
   const srn = await getOrgSrn(organizationId);
-  const today = getTodayCbkDate();
 
-  const whereClause = organizationId
-    ? and(eq(creditAccounts.organizationId, organizationId), eq(borrowers.type, "corporate"))
-    : eq(borrowers.type, "corporate");
-
-  const rows = await db
-    .select()
-    .from(creditAccounts)
-    .innerJoin(borrowers, eq(creditAccounts.borrowerId, borrowers.id))
-    .where(whereClause);
-
-  const lines = [
-    BUSC_HEADERS.join("|"),
-    ...rows.map(r => buildCreditRow(correctionIndicator, srn, r.credit_accounts, r.borrowers, false)),
-  ];
+  const rows: string[] = [CBK_BUSC_HEADERS.join("|")];
+  for (const account of accounts) {
+    const borrower = borrowerMap.get(account.borrowerId);
+    if (!borrower || borrower.type !== "corporate") continue;
+    rows.push(buildCreditRow(correctionIndicator, srn, account, borrower, false));
+  }
 
   return {
-    content: lines.join("\n"),
-    filename: generateCbkFilename(srn, reportingDate, today, "BUSC", sequenceNumber),
+    content: rows.join("\n"),
+    filename: generateCbkFilename(srn, reportingDate, getTodayCbkDate(), "BUSC", sequenceNumber),
   };
 }
 
@@ -432,23 +439,20 @@ async function generateConjFile(
   correctionIndicator: string,
   organizationId?: string
 ): Promise<{ content: string; filename: string }> {
+  const borrowerMap = await getBorrowerMap(organizationId);
+  const judgments = await db.select().from(courtJudgments);
   const srn = await getOrgSrn(organizationId);
-  const today = getTodayCbkDate();
 
-  const rows = await db
-    .select()
-    .from(courtJudgments)
-    .innerJoin(borrowers, eq(courtJudgments.borrowerId, borrowers.id))
-    .where(eq(borrowers.type, "individual"));
-
-  const lines = [
-    CONJ_HEADERS.join("|"),
-    ...rows.map(r => buildJudgmentRow(correctionIndicator, srn, r.court_judgments, r.borrowers, true)),
-  ];
+  const rows: string[] = [CONJ_HEADERS.join("|")];
+  for (const judgment of judgments) {
+    const borrower = borrowerMap.get(judgment.borrowerId);
+    if (!borrower || borrower.type !== "individual") continue;
+    rows.push(buildJudgmentRow(correctionIndicator, srn, judgment, borrower, true));
+  }
 
   return {
-    content: lines.join("\n"),
-    filename: generateCbkFilename(srn, reportingDate, today, "CONJ", sequenceNumber),
+    content: rows.join("\n"),
+    filename: generateCbkFilename(srn, reportingDate, getTodayCbkDate(), "CONJ", sequenceNumber),
   };
 }
 
@@ -458,23 +462,20 @@ async function generateBusjFile(
   correctionIndicator: string,
   organizationId?: string
 ): Promise<{ content: string; filename: string }> {
+  const borrowerMap = await getBorrowerMap(organizationId);
+  const judgments = await db.select().from(courtJudgments);
   const srn = await getOrgSrn(organizationId);
-  const today = getTodayCbkDate();
 
-  const rows = await db
-    .select()
-    .from(courtJudgments)
-    .innerJoin(borrowers, eq(courtJudgments.borrowerId, borrowers.id))
-    .where(eq(borrowers.type, "corporate"));
-
-  const lines = [
-    BUSJ_HEADERS.join("|"),
-    ...rows.map(r => buildJudgmentRow(correctionIndicator, srn, r.court_judgments, r.borrowers, false)),
-  ];
+  const rows: string[] = [BUSJ_HEADERS.join("|")];
+  for (const judgment of judgments) {
+    const borrower = borrowerMap.get(judgment.borrowerId);
+    if (!borrower || borrower.type !== "corporate") continue;
+    rows.push(buildJudgmentRow(correctionIndicator, srn, judgment, borrower, false));
+  }
 
   return {
-    content: lines.join("\n"),
-    filename: generateCbkFilename(srn, reportingDate, today, "BUSJ", sequenceNumber),
+    content: rows.join("\n"),
+    filename: generateCbkFilename(srn, reportingDate, getTodayCbkDate(), "BUSJ", sequenceNumber),
   };
 }
 
@@ -484,23 +485,20 @@ async function generateCondFile(
   correctionIndicator: string,
   organizationId?: string
 ): Promise<{ content: string; filename: string }> {
+  const borrowerMap = await getBorrowerMap(organizationId);
+  const cheques = await db.select().from(dishonouredCheques);
   const srn = await getOrgSrn(organizationId);
-  const today = getTodayCbkDate();
 
-  const rows = await db
-    .select()
-    .from(dishonouredCheques)
-    .innerJoin(borrowers, eq(dishonouredCheques.borrowerId, borrowers.id))
-    .where(eq(borrowers.type, "individual"));
-
-  const lines = [
-    COND_HEADERS.join("|"),
-    ...rows.map(r => buildChequeRow(correctionIndicator, srn, r.dishonoured_cheques, r.borrowers, true)),
-  ];
+  const rows: string[] = [COND_HEADERS.join("|")];
+  for (const cheque of cheques) {
+    const borrower = borrowerMap.get(cheque.borrowerId);
+    if (!borrower || borrower.type !== "individual") continue;
+    rows.push(buildChequeRow(correctionIndicator, srn, cheque, borrower, true));
+  }
 
   return {
-    content: lines.join("\n"),
-    filename: generateCbkFilename(srn, reportingDate, today, "COND", sequenceNumber),
+    content: rows.join("\n"),
+    filename: generateCbkFilename(srn, reportingDate, getTodayCbkDate(), "COND", sequenceNumber),
   };
 }
 
@@ -510,23 +508,20 @@ async function generateBusdFile(
   correctionIndicator: string,
   organizationId?: string
 ): Promise<{ content: string; filename: string }> {
+  const borrowerMap = await getBorrowerMap(organizationId);
+  const cheques = await db.select().from(dishonouredCheques);
   const srn = await getOrgSrn(organizationId);
-  const today = getTodayCbkDate();
 
-  const rows = await db
-    .select()
-    .from(dishonouredCheques)
-    .innerJoin(borrowers, eq(dishonouredCheques.borrowerId, borrowers.id))
-    .where(eq(borrowers.type, "corporate"));
-
-  const lines = [
-    BUSD_HEADERS.join("|"),
-    ...rows.map(r => buildChequeRow(correctionIndicator, srn, r.dishonoured_cheques, r.borrowers, false)),
-  ];
+  const rows: string[] = [BUSD_HEADERS.join("|")];
+  for (const cheque of cheques) {
+    const borrower = borrowerMap.get(cheque.borrowerId);
+    if (!borrower || borrower.type !== "corporate") continue;
+    rows.push(buildChequeRow(correctionIndicator, srn, cheque, borrower, false));
+  }
 
   return {
-    content: lines.join("\n"),
-    filename: generateCbkFilename(srn, reportingDate, today, "BUSD", sequenceNumber),
+    content: rows.join("\n"),
+    filename: generateCbkFilename(srn, reportingDate, getTodayCbkDate(), "BUSD", sequenceNumber),
   };
 }
 
@@ -541,5 +536,3 @@ export const CBK_EXPORT_GENERATORS: Record<
   COND: generateCondFile,
   BUSD: generateBusdFile,
 };
-
-export { CONC_HEADERS as CBK_CONC_HEADERS, BUSC_HEADERS as CBK_BUSC_HEADERS };
