@@ -37,7 +37,6 @@ export function deviceFingerprintMiddleware(req: Request, res: Response, next: N
   const stored: string | undefined = req.session[SESSION_FP_KEY];
 
   res.locals["deviceFingerprint"] = fp;
-  res.setHeader("X-Fp-Active", fp.slice(0, 8));
 
   if (!stored) {
     req.session[SESSION_FP_KEY] = fp;
