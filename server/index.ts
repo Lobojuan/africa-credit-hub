@@ -252,7 +252,15 @@ app.use(
   }),
 );
 
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({
+  extended: false,
+  verify: (req: any, _res, buf) => {
+    // Capture raw body bytes for HMAC verification (e.g. USSD HMAC gate).
+    // The JSON verify callback above handles JSON bodies; this handles form-
+    // encoded bodies. rawBody is not overwritten if already set by JSON verify.
+    if (!req.rawBody) req.rawBody = buf;
+  },
+}));
 
 const PgStore = pgSession(session);
 app.use(

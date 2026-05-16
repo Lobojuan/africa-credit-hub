@@ -578,21 +578,34 @@ describe("G. USSD rate limiter — sessionId keying + HMAC gate", () => {
     expect(jsonSig).not.toBe(sig);
   });
 
-  it("USSD route body-parser appears BEFORE ussdLimiter in route chain (source check)", async () => {
+  it("global urlencoded parser has verify callback capturing rawBody (enables USSD HMAC)", async () => {
+    const fs = await import("fs");
+    const indexSource = fs.readFileSync("server/index.ts", "utf8");
+    // Both JSON and urlencoded global parsers must have verify callbacks
+    expect(indexSource).toContain("express.json(");
+    expect(indexSource).toContain("express.urlencoded(");
+    // Both must capture rawBody via verify
+    const urlencIdx = indexSource.indexOf("express.urlencoded(");
+    const urlencBlock = indexSource.slice(urlencIdx, urlencIdx + 400);
+    expect(urlencBlock).toContain("verify:");
+    expect(urlencBlock).toContain("rawBody");
+    // JSON parser also captures rawBody
+    const jsonIdx = indexSource.indexOf("express.json(");
+    const jsonBlock = indexSource.slice(jsonIdx, jsonIdx + 400);
+    expect(jsonBlock).toContain("verify:");
+    expect(jsonBlock).toContain("rawBody");
+  });
+
+  it("USSD route does not double-parse body (route-level parsers removed)", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync("server/routes.ts", "utf8");
-    // The route registration spans multiple lines; find the block that
-    // starts with /api/loto/ussd/session and extends through ussdLimiter.
-    const ussdStart = source.indexOf('"/api/loto/ussd/session"');
-    expect(ussdStart).toBeGreaterThan(0);
-    // Extract the ~200 char window around the USSD route definition
-    const block = source.slice(ussdStart, ussdStart + 600);
-    expect(block).toContain("urlencoded");
-    expect(block).toContain("ussdLimiter");
-    // urlencoded must appear before ussdLimiter in the block
-    expect(block.indexOf("urlencoded")).toBeLessThan(block.indexOf("ussdLimiter"));
-    // verify callback must be present (captures raw bytes for HMAC)
-    expect(block).toContain("verify:");
-    expect(block).toContain("rawBody");
+    const ussdRouteIdx = source.indexOf('"/api/loto/ussd/session"');
+    expect(ussdRouteIdx).toBeGreaterThan(0);
+    // Within the USSD route registration, urlencoded should not appear
+    // as a route-level middleware (only ussdLimiter)
+    const routeDeclaration = source.slice(ussdRouteIdx - 50, ussdRouteIdx + 200);
+    expect(routeDeclaration).toContain("ussdLimiter");
+    // No inline urlencoded parser in route (global one is used instead)
+    expect(routeDeclaration).not.toContain("urlencoded({");
   });
 });

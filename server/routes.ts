@@ -18919,20 +18919,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Aggregator authenticates via shared bearer token (LOTO_USSD_TOKEN). If
   // no token is configured we accept the request — useful for sandbox / e2e
   // testing where there's no aggregator. Real production should set the env.
-  // Body is parsed BEFORE the rate limiter so ussdLimiter can key on sessionId.
-  // The verify callback captures the exact request bytes for HMAC verification.
-  app.post(
-    "/api/loto/ussd/session",
-    express.urlencoded({
-      extended: true,
-      verify: (req: any, _res, buf) => { req.rawBody = buf; },
-    }),
-    express.json({
-      limit: "16kb",
-      verify: (req: any, _res, buf) => { if (!req.rawBody) req.rawBody = buf; },
-    }),
-    ussdLimiter,
-    async (req, res) => {
+  // Body is parsed by the global express.urlencoded / express.json parsers in
+  // index.ts (which both have verify callbacks that capture rawBody as a Buffer).
+  // ussdLimiter runs here to key on sessionId from the already-parsed req.body.
+  app.post("/api/loto/ussd/session", ussdLimiter, async (req, res) => {
     try {
       // ── Token auth (existing) ──────────────────────────────────────────────
       const expected = process.env.LOTO_USSD_TOKEN;
