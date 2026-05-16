@@ -16,6 +16,11 @@ const ALLOWLIST = new Set<string>([
   // do NOT bridge to credit/collateral, so the gateway is not required.
   "server/loto-fraud-rules.ts",
   "server/routes/loto-admin.ts",
+  // server/routes.ts implements the self-service cross-product consent toggle
+  // (POST /api/cross-product/consents/*) and the data-sharing gateway endpoints.
+  // It is a sanctioned collaborator — access is read-only via db.select on
+  // crossProductConsents for the ownership check in the consent grant endpoint.
+  "server/routes.ts",
 ]);
 
 const SCAN_ROOTS = ["server", "client/src", "shared"];

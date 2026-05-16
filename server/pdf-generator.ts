@@ -93,7 +93,7 @@ function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
 
 const UCH_COPYRIGHT = "© 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana. Confidential. legal: uffe.carlson@gmail.com";
 
-function addCopyrightFooterToAllPages(doc: PDFKit.PDFDocument) {
+export function addCopyrightFooterToAllPages(doc: PDFKit.PDFDocument) {
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i++) {
     doc.switchToPage(i);

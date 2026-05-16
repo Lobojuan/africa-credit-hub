@@ -1,5 +1,6 @@
 // @ts-ignore: pdfkit has no type declarations
 import PDFDocumentImport from "pdfkit";
+import { addCopyrightFooterToAllPages } from "./pdf-generator";
 import type { Borrower, ContactEvent, AssetTraceRecord, CourtJudgment } from "@shared/schema";
 
 // Minimal typed surface of pdfkit used by this module. pdfkit ships only a
@@ -319,6 +320,7 @@ export function generateSkipTracePdf(data: SkipTraceData): Promise<Buffer> {
       doc.switchToPage(range.start + i);
       footer(doc, i + 1, range.count);
     }
+    addCopyrightFooterToAllPages(doc as unknown as PDFKit.PDFDocument);
     doc.end();
   });
 }

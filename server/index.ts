@@ -146,12 +146,14 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "blob:", "https:"],
       connectSrc: ["'self'", "https:", "wss:"],
-      frameSrc: ["'self'"],
+      frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.repl.co"],
-      upgradeInsecureRequests: [],
+      frameAncestors: isProductionBoot
+        ? ["'none'"]
+        : ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.repl.co"],
+      ...(isProductionBoot ? { upgradeInsecureRequests: [] } : {}),
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -159,7 +161,7 @@ app.use(helmet({
   crossOriginOpenerPolicy: false,
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
-  frameguard: false,
+  frameguard: isProductionBoot ? { action: "deny" } : false,
   noSniff: true,
   xssFilter: true,
 }));
@@ -690,7 +692,10 @@ process.stderr.write = function (...args: any[]) {
       "# Unauthorised scraping, crawling, or data extraction is prohibited\n" +
       "# under the Ghana Copyright Act 2005 (Act 690) and international IP treaties.\n" +
       "# Legal: uffe.carlson@gmail.com | +233 552 395548\n\n" +
-      "User-agent: *\nDisallow: /\n"
+      "User-agent: *\n" +
+      "Disallow: /\n" +
+      "Allow: /.well-known/\n" +
+      "Allow: /sitemap.xml\n"
     );
   });
 
