@@ -15,6 +15,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
+import { addCopyrightFooterToAllPages } from "../pdf-generator";
 import { and, eq, sql, desc, gte, inArray } from "drizzle-orm";
 import { db } from "../db";
 import {
@@ -598,6 +599,7 @@ lotoAdminRouter.get("/export.pdf", ...gate, async (req, res) => {
     const doc = new PDFDocument({
       size: "A4",
       margin: 50,
+      bufferPages: true,
       info: {
         Title: `Loto Fiscal DGI Report — ${view.toUpperCase()} — ${country}`,
         Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital",
@@ -655,9 +657,7 @@ lotoAdminRouter.get("/export.pdf", ...gate, async (req, res) => {
       doc.text(`VAT collected:        ${parseFloat(vatRow?.vat ?? "0").toFixed(2)}`);
     }
 
-    doc.fontSize(6).fillColor("#aaaaaa")
-      .text("© 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana. Confidential. uffe.carlson@gmail.com",
-        50, doc.page.height - 25, { width: doc.page.width - 100, align: "center" });
+    addCopyrightFooterToAllPages(doc);
     doc.end();
   } catch (err) {
     console.error("[loto-admin] pdf export failed", err);

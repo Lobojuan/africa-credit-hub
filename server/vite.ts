@@ -48,7 +48,9 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+      const copyrightComment = `<!-- © 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana under the Companies Act 2019. Unauthorised reproduction or distribution of this software or its contents is strictly prohibited. Contact: uffe.carlson@gmail.com -->`;
+      const finalPage = page.replace("</head>", `${copyrightComment}\n</head>`);
+      res.status(200).set({ "Content-Type": "text/html" }).end(finalPage);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);
       next(e);

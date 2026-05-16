@@ -24,15 +24,35 @@ const isLocalhost = (req: Request): boolean => {
   return normalizedIp === "127.0.0.1" || normalizedIp === "::1";
 };
 
+function logRateLimit429(action: string, req: Request) {
+  try {
+    const ip = rateLimitKeyGenerator(req);
+    storage.createAuditLog({
+      userId: req.session?.userId ?? null,
+      action,
+      entity: "rate_limit",
+      entityId: null,
+      details: JSON.stringify({ path: req.path, ip, ua: (req.headers["user-agent"] || "").slice(0, 120) }),
+      ipAddress: ip,
+      organizationId: (req.session as any)?.organizationId ?? null,
+    }).catch(() => {});
+  } catch {}
+}
+
 export const loginLimiter = rateLimit({
   keyGenerator: rateLimitKeyGenerator,
   skip: isLocalhost,
-  windowMs: 15 * 60 * 1000,
+  windowMs: 60 * 1000,
   max: 5,
-  message: { message: "Too many login attempts. Please try again in 15 minutes." },
+  message: { message: "Too many login attempts from this IP. Please try again in 1 minute." },
   standardHeaders: true,
   legacyHeaders: false,
   validate,
+  handler(req, res) {
+    logRateLimit429("RATE_LIMIT_LOGIN_429", req);
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ message: "Too many login attempts from this IP. Please try again in 1 minute." });
+  },
 });
 
 export const apiLimiter = rateLimit({
@@ -44,6 +64,11 @@ export const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate,
+  handler(req, res) {
+    logRateLimit429("RATE_LIMIT_API_429", req);
+    res.setHeader("Retry-After", "60");
+    res.status(429).json({ message: "Too many requests. Please slow down." });
+  },
 });
 
 export const writeLimiter = rateLimit({

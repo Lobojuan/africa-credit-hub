@@ -9072,10 +9072,14 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           return u?.displayName || u?.username || "unknown";
         } catch { return "unknown"; }
       })();
-      const exporterOrg = (() => { try { return (req.session as any)?.organizationId || ""; } catch { return ""; } })();
+      const exporterOrgId = (() => { try { return (req.session as any)?.organizationId || ""; } catch { return ""; } })();
+      const exporterOrgName = await (async () => {
+        if (!exporterOrgId) return "—";
+        try { const o = await storage.getOrganization(exporterOrgId); return o?.name || exporterOrgId; } catch { return exporterOrgId; }
+      })();
       const exporterIp = req.ip || "unknown";
       const exportTimestamp = new Date().toISOString();
-      const UCH_EXPORT_WATERMARK = `© 2026 Universal Credit Hub Ltd. Confidential. Unauthorised use prohibited. uffe.carlson@gmail.com | Exported by: ${exporterName} | Org: ${exporterOrg} | IP: ${exporterIp} | Time: ${exportTimestamp}`;
+      const UCH_EXPORT_WATERMARK = `© 2026 Universal Credit Hub Ltd. Confidential. Unauthorised use prohibited. uffe.carlson@gmail.com | Exported by: ${exporterName} | Institution: ${exporterOrgName} | IP: ${exporterIp} | Time: ${exportTimestamp}`;
 
       if (format === "xlsx") {
         const ExcelJS = (await import("exceljs")).default;
@@ -15884,7 +15888,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (_) { /* skip QR if generation fails */ }
 
     const PDFDocument = (await import("pdfkit")).default;
-    const doc = new PDFDocument({ margin: 60, size: "A4", info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
+    const doc = new PDFDocument({ margin: 60, size: "A4", bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
@@ -15948,11 +15952,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         `This certificate was issued by the ${raName} under the Pan-African Collateral Registry framework. Generated: ${new Date().toISOString()}`,
         { align: "center" }
       );
-      doc.moveDown(0.5);
-      doc.fontSize(6).fillColor("#aaaaaa").text(
-        "© 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana. Confidential. uffe.carlson@gmail.com",
-        { align: "center" }
-      );
+      addCopyrightFooterToAllPages(doc);
       doc.end();
     });
     return Buffer.concat(chunks);
