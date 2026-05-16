@@ -210,6 +210,44 @@ test.describe("Consumer Portal — authenticated (real borrower session)", () =>
     const noFile = page.locator('[data-testid="card-no-credit-file"]');
     await expect(disputeCard.or(noFile).first()).toBeVisible({ timeout: 12000 });
   });
+
+  test("PDF credit report download button triggers a file download", async ({ page }) => {
+    await setConsumerSession(page, { consumerId: e2eConsumerId, consumerNationalId: e2eConsumerNationalId });
+    await page.goto("/consumer-portal");
+    await page.waitForTimeout(3000);
+
+    const downloadBtn = page.locator('[data-testid="button-download-credit-report"]');
+    const noFile = page.locator('[data-testid="card-no-credit-file"]');
+
+    await expect(downloadBtn.or(noFile).first()).toBeVisible({ timeout: 12000 });
+
+    if (await downloadBtn.isVisible()) {
+      const [download] = await Promise.all([
+        page.waitForEvent("download", { timeout: 20000 }),
+        downloadBtn.click(),
+      ]);
+      expect(download.suggestedFilename().length).toBeGreaterThan(0);
+      expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
+    }
+  });
+
+  test("credit score lookup API returns numeric score for seeded consumer", async ({ page }) => {
+    await setConsumerSession(page, { consumerId: e2eConsumerId, consumerNationalId: e2eConsumerNationalId });
+    const resp = await page.request.get(`/api/consumer/credit-score?borrowerId=${e2eConsumerId}`);
+    // 200 = score found; 404 = consumer not scored yet (credit accounts may not be scored immediately)
+    // Both are valid. What must not happen: 401 (auth failure) or 500 (crash).
+    expect(resp.status()).not.toBe(401);
+    expect(resp.status()).not.toBe(500);
+    if (resp.status() === 200) {
+      const body = await resp.json() as { score?: number; creditScore?: number };
+      const score = body.score ?? body.creditScore;
+      if (score !== undefined) {
+        expect(typeof score).toBe("number");
+        expect(score).toBeGreaterThanOrEqual(300);
+        expect(score).toBeLessThanOrEqual(850);
+      }
+    }
+  });
 });
 
 // ─── Consumer API protection ──────────────────────────────────────────────────

@@ -81,12 +81,8 @@ test.describe("MFA — otpauth TOTP generation", () => {
 
 test.describe("MFA — TOTP enrollment via setup dialog", () => {
   test("full enrollment: setup → get secret → generate TOTP → verify → disable", async ({ page }) => {
-    // Use real login to get a session with a DB-resident user
     const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
-    if (!loggedIn) {
-      test.skip(true, "admin login failed — check SEED_ADMIN_PASSWORD env var");
-      return;
-    }
+    expect(loggedIn).toBe(true);
 
     // Navigate to security settings page
     await page.goto("/security");
@@ -152,30 +148,18 @@ test.describe("MFA — TOTP enrollment via setup dialog", () => {
 
 test.describe("MFA — login challenge UI", () => {
   test("MFA-enabled user sees form-mfa-login on second login attempt", async ({ page }) => {
-    // Step 1: Login and enable MFA via API
     const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
-    if (!loggedIn) {
-      test.skip(true, "admin login failed");
-      return;
-    }
+    expect(loggedIn).toBe(true);
 
-    // Initialize TOTP setup via API
     const setupResp = await page.request.post("/api/auth/setup-totp");
-    if (setupResp.status() !== 200) {
-      test.skip(true, "TOTP setup not available");
-      return;
-    }
+    expect(setupResp.status()).toBe(200);
     const { secret } = await setupResp.json();
     const code = await generateTOTP(secret);
 
-    // Verify/enroll TOTP
     const verifyResp = await page.request.post("/api/auth/verify-totp", {
       data: { code },
     });
-    if (verifyResp.status() !== 200) {
-      test.skip(true, "TOTP verify failed");
-      return;
-    }
+    expect(verifyResp.status()).toBe(200);
 
     // Step 2: Logout
     await page.request.post("/api/auth/logout");
@@ -240,5 +224,49 @@ test.describe("MFA — API endpoint access control", () => {
   test("WebAuthn registration options requires authentication", async ({ page }) => {
     const resp = await page.request.post("/api/auth/webauthn/registration-options");
     expect([401, 403]).toContain(resp.status());
+  });
+});
+
+// ─── MFA account recovery (disable path) ────────────────────────────────────
+
+test.describe("MFA — account recovery via disable endpoint", () => {
+  test("disable-mfa with valid session returns 200 or 400 (no existing MFA)", async ({ page }) => {
+    const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
+    expect(loggedIn).toBe(true);
+    const resp = await page.request.post("/api/auth/disable-mfa");
+    // 200 = MFA was active and disabled (recovery success)
+    // 400 = MFA was not active (nothing to disable, still correct behavior)
+    // 401 = session expired — must not happen since we just logged in
+    expect(resp.status()).not.toBe(401);
+    expect(resp.status()).not.toBe(500);
+    expect([200, 400, 404]).toContain(resp.status());
+  });
+
+  test("POST /api/auth/disable-mfa requires authentication", async ({ page }) => {
+    const resp = await page.request.post("/api/auth/disable-mfa");
+    expect([401, 403]).toContain(resp.status());
+  });
+
+  test("full recovery cycle: enroll TOTP → verify → disable (reset)", async ({ page }) => {
+    const loggedIn = await apiLogin(page, "admin", ADMIN_PW);
+    expect(loggedIn).toBe(true);
+
+    // Enroll
+    const setupResp = await page.request.post("/api/auth/setup-totp");
+    expect(setupResp.status()).toBe(200);
+    const { secret } = await setupResp.json();
+    const code = await generateTOTP(secret);
+
+    const verifyResp = await page.request.post("/api/auth/verify-totp", { data: { code } });
+    expect(verifyResp.status()).toBe(200);
+
+    // Recovery: disable MFA — account is restored to passwordOnly state
+    const disableResp = await page.request.post("/api/auth/disable-mfa");
+    expect(disableResp.status()).toBe(200);
+
+    // Confirm MFA is gone: setup endpoint should accept a fresh setup request
+    const re_setupResp = await page.request.post("/api/auth/setup-totp");
+    expect(re_setupResp.status()).toBe(200);
+    // Cleanup: do NOT enroll so subsequent tests start clean
   });
 });

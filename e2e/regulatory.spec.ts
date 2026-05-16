@@ -50,6 +50,14 @@ test.describe("Regulatory Dashboard — KPI strip", () => {
     }
   });
 
+  test("stat-total-borrowers shows non-zero count — E2E borrowers are reflected in registry KPIs", async ({ page }) => {
+    await gotoRegDashboard(page);
+    const text = await page.locator('[data-testid="stat-total-borrowers"]').textContent();
+    // Extract the numeric value from the KPI card text (may include labels/units)
+    const num = parseInt((text ?? "0").replace(/[^0-9]/g, ""), 10);
+    expect(num).toBeGreaterThan(0);
+  });
+
   test("KPI exposure and NPL values contain formatted number or percentage", async ({
     page,
   }) => {
@@ -284,5 +292,58 @@ test.describe("Regulatory Dashboard — API", () => {
   }) => {
     const resp = await page.request.get("/api/regulatory/dashboard");
     expect([401, 403]).toContain(resp.status());
+  });
+});
+
+// ─── Ghana country-filtered KPI view ─────────────────────────────────────────
+
+test.describe("Regulatory Dashboard — Ghana country-filtered data", () => {
+  test("regulatory API with country=Ghana returns totalBorrowers greater than zero", async ({ page }) => {
+    await setSession(page, REGULATOR_SESSION);
+    const resp = await page.request.get("/api/regulatory/dashboard?country=Ghana");
+    expect(resp.status()).toBe(200);
+    const body = await resp.json() as { summary?: { totalBorrowers?: number } };
+    expect(body).toHaveProperty("summary");
+    const total = body.summary?.totalBorrowers ?? 0;
+    // E2E suite seeds borrowers in Ghana — this must be > 0 after suite runs
+    expect(total).toBeGreaterThan(0);
+  });
+
+  test("reports page country filter: Ghana option is selectable and page stays loaded", async ({ page }) => {
+    await setSession(page, REGULATOR_SESSION);
+    await page.goto("/reports");
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 12000 });
+
+    const countryFilter = page.locator('[data-testid="select-country-filter"]');
+    await countryFilter.waitFor({ timeout: 15000 });
+    await countryFilter.click();
+
+    // Ghana option in the dropdown
+    const ghanaOpt = page.locator('[role="option"]:has-text("Ghana"), [data-value="Ghana"], text=Ghana').first();
+    const optVisible = await ghanaOpt.isVisible({ timeout: 4000 }).catch(() => false);
+    if (optVisible) {
+      await ghanaOpt.click();
+      await page.waitForTimeout(1500);
+    }
+
+    // Page must remain on /reports — not bounce to login or crash
+    await expect(page).not.toHaveURL(/\/login/);
+    await expect(page.locator('[data-testid="select-country-filter"]')).toBeVisible({ timeout: 8000 });
+  });
+
+  test("regulatory API total-borrowers matches UI stat-total-borrowers value", async ({ page }) => {
+    await setSession(page, REGULATOR_SESSION);
+    const apiResp = await page.request.get("/api/regulatory/dashboard");
+    expect(apiResp.status()).toBe(200);
+    const apiBody = await apiResp.json() as { summary?: { totalBorrowers?: number } };
+    const apiTotal = apiBody.summary?.totalBorrowers ?? 0;
+
+    await gotoRegDashboard(page);
+    const uiText = await page.locator('[data-testid="stat-total-borrowers"]').textContent();
+    const uiNum = parseInt((uiText ?? "0").replace(/[^0-9]/g, ""), 10);
+
+    // UI KPI must match the API value (within ±5 for pagination/rounding)
+    expect(Math.abs(uiNum - apiTotal)).toBeLessThanOrEqual(5);
+    expect(uiNum).toBeGreaterThan(0);
   });
 });
