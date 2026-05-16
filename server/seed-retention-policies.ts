@@ -1,6 +1,9 @@
 /**
- * Idempotent 54-jurisdiction retention policy seeding.
- * Regulatory references per country:
+ * Idempotent + corrective 54-jurisdiction retention policy seeding.
+ * Runs on every startup: inserts missing entries AND updates rows where
+ * retention_years or description no longer match the authoritative values below.
+ *
+ * Regulatory references per zone:
  *   BCEAO Instruction 004-2022, Art. 18 → 5yr (8 WAEMU states)
  *   CEMAC Regulation 01/17/CEMAC → 5yr (6 CEMAC states)
  *   CBN Credit Reporting Regulation 2017, s.12 → 5yr (Nigeria)
@@ -14,6 +17,7 @@
  *   BoM Credit Reporting Act 2017 → 7yr (Mauritius)
  *   BSS CRB Act 2019 → 7yr (South Sudan)
  *   CBE Credit Information Centre → 5yr (Egypt)
+ *   BCM Regulation 2019 → 5yr (Mauritania)
  *   All others → 5yr (FSAP/IMF best-practice default)
  */
 
@@ -27,7 +31,7 @@ type JurisdictionEntry = [
   description: string,
 ];
 
-const JURISDICTION_DATA: JurisdictionEntry[] = [
+export const JURISDICTION_DATA: JurisdictionEntry[] = [
   // ─── West Africa ─────────────────────────────────────────────────────────
   ["Ghana",         7, 7, "BoG CRB v1.1 s.4.2 / Data Protection Directive — 7yr"],
   ["Nigeria",       5, 5, "CBN Credit Reporting Regulation 2017, s.12 — 5yr"],
@@ -74,13 +78,13 @@ const JURISDICTION_DATA: JurisdictionEntry[] = [
   ["Eswatini",     5, 5, "CBS Financial Institutions Act 2005 — 5yr (FSAP default)"],
   ["Madagascar",   5, 5, "BFM Instruction 003/2020 — 5yr"],
   // ─── Indian Ocean Islands ─────────────────────────────────────────────────
-  ["Comoros",            5, 5, "BCC Regulation 2020 — 5yr"],
-  ["Mauritius",          7, 7, "BoM Credit Reporting Act 2017 — 7yr"],
-  ["Seychelles",         5, 5, "CBS Credit Information Services Act 2018 — 5yr"],
+  ["Comoros",               5, 5, "BCC Regulation 2020 — 5yr"],
+  ["Mauritius",             7, 7, "BoM Credit Reporting Act 2017 — 7yr"],
+  ["Seychelles",            5, 5, "CBS Credit Information Services Act 2018 — 5yr"],
   ["São Tomé and Príncipe", 5, 5, "BCSTP Regulation 2019 — 5yr"],
   // ─── Central Africa ──────────────────────────────────────────────────────
   ["Democratic Republic of Congo", 5, 5, "BCC Instruction 12/2022 — 5yr"],
-  ["Angola",             5, 5, "BNA Instruction 01/2018 — 5yr"],
+  ["Angola",                5, 5, "BNA Instruction 01/2018 — 5yr"],
   // ─── North Africa ────────────────────────────────────────────────────────
   ["Egypt",       5, 5, "CBE Credit Information Centre Regulations — 5yr"],
   ["Morocco",     5, 5, "BAM Instruction 11/2020 — 5yr"],
@@ -92,50 +96,56 @@ const JURISDICTION_DATA: JurisdictionEntry[] = [
   ["Mauritania",  5, 5, "BCM Regulation on Credit Information Exchange 2019 — 5yr"],
 ];
 
+type EntitySpec = {
+  entityType: string;
+  retentionYears: (borrowerYears: number, accountYears: number) => number;
+  archiveYears: (retYears: number) => number;
+};
+
+const ENTITY_SPECS: EntitySpec[] = [
+  { entityType: "borrower",          retentionYears: (b) => b,                   archiveYears: (r) => r + 3 },
+  { entityType: "credit_account",    retentionYears: (_, a) => a,               archiveYears: (r) => r + 3 },
+  { entityType: "court_judgment",    retentionYears: (b) => Math.max(b + 3, 10), archiveYears: (r) => Math.max(r + 2, 15) },
+  { entityType: "consent_record",    retentionYears: (b) => b,                   archiveYears: (r) => r + 3 },
+  { entityType: "dishonoured_cheque",retentionYears: (_, a) => a,               archiveYears: (r) => r + 3 },
+];
+
 export async function seedAllCountryRetentionPolicies(): Promise<void> {
-  let inserted = 0;
+  let upserted = 0;
 
   for (const [country, borrowerYears, accountYears, description] of JURISDICTION_DATA) {
-    const archiveBorrower = borrowerYears + 3;
-    const archiveAccount = accountYears + 3;
+    for (const spec of ENTITY_SPECS) {
+      const retYears  = spec.retentionYears(borrowerYears, accountYears);
+      const archYears = spec.archiveYears(retYears);
+      const etype     = spec.entityType;
 
-    await db.execute(sql`
-      INSERT INTO retention_policies (country, entity_type, retention_years, archive_after_years, description, is_active)
-      SELECT ${country}, 'borrower', ${borrowerYears}, ${archiveBorrower}, ${description}, true
-      WHERE NOT EXISTS (
-        SELECT 1 FROM retention_policies WHERE country = ${country} AND entity_type = 'borrower'
-      )
-    `);
-    await db.execute(sql`
-      INSERT INTO retention_policies (country, entity_type, retention_years, archive_after_years, description, is_active)
-      SELECT ${country}, 'credit_account', ${accountYears}, ${archiveAccount}, ${description}, true
-      WHERE NOT EXISTS (
-        SELECT 1 FROM retention_policies WHERE country = ${country} AND entity_type = 'credit_account'
-      )
-    `);
-    await db.execute(sql`
-      INSERT INTO retention_policies (country, entity_type, retention_years, archive_after_years, description, is_active)
-      SELECT ${country}, 'court_judgment', ${Math.max(borrowerYears + 3, 10)}, ${Math.max(borrowerYears + 5, 15)}, ${description}, true
-      WHERE NOT EXISTS (
-        SELECT 1 FROM retention_policies WHERE country = ${country} AND entity_type = 'court_judgment'
-      )
-    `);
-    await db.execute(sql`
-      INSERT INTO retention_policies (country, entity_type, retention_years, archive_after_years, description, is_active)
-      SELECT ${country}, 'consent_record', ${borrowerYears}, ${archiveBorrower}, ${description}, true
-      WHERE NOT EXISTS (
-        SELECT 1 FROM retention_policies WHERE country = ${country} AND entity_type = 'consent_record'
-      )
-    `);
-    await db.execute(sql`
-      INSERT INTO retention_policies (country, entity_type, retention_years, archive_after_years, description, is_active)
-      SELECT ${country}, 'dishonoured_cheque', ${accountYears}, ${archiveAccount}, ${description}, true
-      WHERE NOT EXISTS (
-        SELECT 1 FROM retention_policies WHERE country = ${country} AND entity_type = 'dishonoured_cheque'
-      )
-    `);
-    inserted++;
+      await db.execute(sql`
+        INSERT INTO retention_policies
+          (country, entity_type, retention_years, archive_after_years, description, is_active)
+        SELECT ${country}, ${etype}, ${retYears}, ${archYears}, ${description}, true
+        WHERE NOT EXISTS (
+          SELECT 1 FROM retention_policies WHERE country = ${country} AND entity_type = ${etype}
+        )
+      `);
+
+      await db.execute(sql`
+        UPDATE retention_policies
+        SET retention_years     = ${retYears},
+            archive_after_years = ${archYears},
+            description         = ${description},
+            updated_at          = now()
+        WHERE country      = ${country}
+          AND entity_type  = ${etype}
+          AND (  retention_years     IS DISTINCT FROM ${retYears}
+              OR archive_after_years IS DISTINCT FROM ${archYears}
+              OR description         IS DISTINCT FROM ${description} )
+          AND description NOT LIKE '%Test%'
+          AND description NOT LIKE '%test%'
+          AND description NOT LIKE '%Auto-delete%'
+      `);
+    }
+    upserted++;
   }
 
-  console.log(`[retention-seed] Verified/inserted policies for ${inserted} jurisdictions (54 AU members).`);
+  console.log(`[retention-seed] Upserted/corrected policies for ${upserted} jurisdictions (${JURISDICTION_DATA.length} AU members).`);
 }
