@@ -94,6 +94,12 @@ test.describe("Login smoke — all demo accounts", () => {
     await assertAuthenticated(page);
   });
 
+  test("owner logs in (all workspaces — OWNER_ADMIN_PASSWORD env)", async ({ page }) => {
+    const pw = process.env.OWNER_ADMIN_PASSWORD ?? "owner0987";
+    await loginAs(page, "owner", pw);
+    await assertAuthenticated(page);
+  });
+
   test("wrong password shows login error and stays on login page", async ({ page }) => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });

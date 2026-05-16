@@ -146,36 +146,34 @@ test.describe("Consumer Portal — authenticated view", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("report download button visible for authenticated consumer", async ({
+  test("report download button or no-credit-file card renders for authenticated consumer", async ({
     page,
   }) => {
     await setConsumerSession(page, CONSUMER_SESSION);
     await page.goto("/consumer-portal");
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2500);
 
-    const hasDownload = await page
-      .locator('[data-testid="button-download-credit-report"]')
-      .count();
-    const hasPortalContent = await page
-      .locator('[data-testid="badge-consumer-portal"]')
-      .count();
-    // Either the report download button shows or the portal badge shows
-    expect(hasDownload + hasPortalContent).toBeGreaterThan(0);
+    // After auth, the portal renders one of:
+    //   - card-no-credit-file (consumer not found in DB)
+    //   - button-download-credit-report (consumer has a credit file)
+    const noFile = page.locator('[data-testid="card-no-credit-file"]');
+    const download = page.locator('[data-testid="button-download-credit-report"]');
+
+    await expect(noFile.or(download).first()).toBeVisible({ timeout: 10000 });
   });
 
-  test("file dispute button appears for authenticated consumer", async ({
+  test("dispute card renders for authenticated consumer (with or without credit file)", async ({
     page,
   }) => {
     await setConsumerSession(page, CONSUMER_SESSION);
     await page.goto("/consumer-portal");
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(2500);
 
-    // Dispute button may be in the page even if no accounts exist yet
-    const hasDispute = await page
-      .locator('[data-testid="button-file-dispute"]')
-      .count();
-    // Non-zero if the consumer has accounts; zero if no accounts exist
-    expect(hasDispute).toBeGreaterThanOrEqual(0);
+    // After auth, either the dispute card (has file) or no-credit-file card shows
+    const disputeCard = page.locator('[data-testid="card-file-dispute"]');
+    const noFile = page.locator('[data-testid="card-no-credit-file"]');
+
+    await expect(disputeCard.or(noFile).first()).toBeVisible({ timeout: 10000 });
   });
 });
 

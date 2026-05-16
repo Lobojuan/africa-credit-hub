@@ -27,13 +27,15 @@ export default defineConfig({
   },
   projects: [
     // ── Legacy / existing specs ────────────────────────────────────────────
+    // "chromium" only matches loto-admin-dashboard — it does NOT include
+    // oauth-smoke so the CI loto-admin job doesn't need oauth env vars.
     {
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
         launchOptions: chromiumOptions,
       },
-      testMatch: [/oauth-smoke\.spec\.ts/, /loto-admin-dashboard\.spec\.ts/],
+      testMatch: [/loto-admin-dashboard\.spec\.ts/],
     },
     {
       name: "oauth-smoke",
@@ -41,7 +43,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         launchOptions: chromiumOptions,
       },
-      testMatch: /oauth-smoke\.spec\.ts/,
+      testMatch: [/oauth-smoke\.spec\.ts/],
     },
 
     // ── Authenticated specs (role injection via set-session) ───────────────

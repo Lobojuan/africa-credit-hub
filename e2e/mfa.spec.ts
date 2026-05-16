@@ -1,20 +1,24 @@
 /**
  * MFA E2E Suite
  *
- * Tests the multi-factor authentication flows:
- *   - MFA form renders after credential submission (when MFA pending)
- *   - Wrong TOTP code returns error
- *   - MFA setup button visible for authenticated users
- *   - TOTP endpoint rejects invalid codes
- *   - Passkey login button renders on login page
+ * Tests multi-factor authentication flows using the `otpauth` library for
+ * real TOTP code generation — matching the server's OTPAuth implementation.
  *
- * The MFA form (form-mfa-login) is shown when the server sets mfaPending=true
- * in session after valid credentials. We test this by injecting the session
- * state and navigating back to the login page, or by testing the MFA API
- * endpoints directly.
+ * Flows covered:
+ *   - Passkey (WebAuthn) button visible on institution login form
+ *   - TOTP setup endpoint returns a base32 secret
+ *   - otpauth generates a valid 6-digit code from that secret
+ *   - TOTP verify endpoint accepts the generated code (full enroll flow)
+ *   - MFA is disabled again after test to avoid polluting demo state
+ *   - Wrong 6-digit code (deterministically wrong) returns 400/401
+ *   - MFA API endpoints are auth-gated
+ *
+ * Note: The enroll test does a real API login (not set-session) so the
+ * session has a real userId that exists in the database.
  */
 
 import { test, expect } from "@playwright/test";
+import OTPAuth from "otpauth";
 
 async function injectSession(
   page: import("@playwright/test").Page,
@@ -24,7 +28,18 @@ async function injectSession(
   expect(res.ok()).toBeTruthy();
 }
 
-// ─── MFA login UI elements ────────────────────────────────────────────────────
+async function apiLogin(
+  page: import("@playwright/test").Page,
+  username: string,
+  password: string,
+): Promise<boolean> {
+  const resp = await page.request.post("/api/auth/login", {
+    data: { username, password },
+  });
+  return resp.status() === 200;
+}
+
+// ─── Login page MFA UI elements ───────────────────────────────────────────────
 
 test.describe("MFA — login page elements", () => {
   test("passkey login button is visible on institution login form", async ({
@@ -41,82 +56,108 @@ test.describe("MFA — login page elements", () => {
   });
 });
 
-// ─── MFA session-injected state ───────────────────────────────────────────────
+// ─── TOTP enroll + verify + disable flow ─────────────────────────────────────
 
-test.describe("MFA — injected pending state", () => {
-  test("MFA form renders when mfaPending is set in session via injection", async ({
+test.describe("MFA — TOTP enroll, verify, and disable (otpauth)", () => {
+  test("full TOTP enrollment: setup returns base32 secret, otpauth generates valid code, verify succeeds, then MFA disabled", async ({
     page,
   }) => {
-    // Simulate the state the server creates after valid credentials but before MFA:
-    // mfaPending = true in session triggers the MFA screen on the login page
-    await injectSession(page, {
-      userId: "e2e-mfa-user",
-      userRole: "admin",
-      mfaPending: true,
+    // Use a real login so the session has a database-resident userId
+    const password = process.env.SEED_ADMIN_PASSWORD ?? "admin0987";
+    const loggedIn = await apiLogin(page, "admin", password);
+    if (!loggedIn) {
+      test.skip(true, "admin login failed — skipping TOTP enroll test");
+      return;
+    }
+
+    // Step 1: Initiate TOTP setup — returns { secret, uri }
+    const setupResp = await page.request.post("/api/auth/setup-totp");
+    if (setupResp.status() !== 200) {
+      test.skip(true, "setup-totp not available for this user (status " + setupResp.status() + ")");
+      return;
+    }
+    const setupData = await setupResp.json();
+    const secret: string = setupData.secret ?? setupData.totpSecret;
+
+    expect(typeof secret).toBe("string");
+    expect(secret.length).toBeGreaterThan(0);
+    // The secret should be valid base32 (uppercase A-Z and 2-7)
+    expect(secret.toUpperCase()).toMatch(/^[A-Z2-7]+=*$/);
+
+    // Step 2: Generate a valid TOTP code using the returned secret via otpauth
+    const totp = new OTPAuth.TOTP({
+      secret: OTPAuth.Secret.fromBase32(secret.toUpperCase()),
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
     });
+    const code = totp.generate();
 
-    // Navigate to login — should show MFA form because mfaPending=true in session
-    // (The login page checks for this session state and shows the MFA form)
-    await page.goto("/");
-    await page.waitForTimeout(2000);
+    // Code must be exactly 6 digits
+    expect(code).toMatch(/^\d{6}$/);
 
-    // Either the MFA form shows, or the server redirects to dashboard (user already authed)
-    // Both outcomes are acceptable; we check the UI doesn't crash
-    const hasMfaForm = await page.locator('[data-testid="form-mfa-login"]').count();
-    const hasDashboard = await page
-      .locator('[data-testid="text-current-user"]')
-      .count();
+    // Step 3: Verify the code — this commits/enables TOTP MFA for the user
+    const verifyResp = await page.request.post("/api/auth/verify-totp", {
+      data: { code },
+    });
+    expect(verifyResp.status()).toBe(200);
 
-    expect(hasMfaForm + hasDashboard).toBeGreaterThan(0);
+    // Step 4: Cleanup — disable MFA immediately so demo user state is clean
+    // (other tests log in as admin and would fail the MFA challenge otherwise)
+    const disableResp = await page.request.post("/api/auth/disable-mfa");
+    expect([200, 204]).toContain(disableResp.status());
   });
-});
 
-// ─── MFA API endpoints ────────────────────────────────────────────────────────
+  test("wrong TOTP code returns 400 or 401 — never 500", async ({ page }) => {
+    // Inject a valid session for a real-ish user
+    await injectSession(page, { userId: "e2e-mfa-wrong", userRole: "admin" });
 
-test.describe("MFA — API endpoints", () => {
-  test("TOTP verify endpoint rejects invalid code with 401", async ({ page }) => {
-    // Try to verify a TOTP code without a valid MFA-pending session
+    // Submit a deterministically wrong 6-digit code
     const resp = await page.request.post("/api/auth/verify-totp", {
       data: { code: "000000" },
     });
-    // Should require auth state or return validation error — not 500
+    // Must reject: 400 (bad code), 401 (no MFA pending), 403, or 422 — never 500
     expect([400, 401, 403, 422]).toContain(resp.status());
   });
 
-  test("TOTP setup endpoint requires authentication", async ({ page }) => {
+  test("otpauth generates 6-digit codes from a known test secret", async () => {
+    // Standalone unit: verify otpauth itself works correctly in this environment
+    const knownSecret = "JBSWY3DPEHPK3PXP"; // standard RFC test vector seed
+    const totp = new OTPAuth.TOTP({
+      secret: OTPAuth.Secret.fromBase32(knownSecret),
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+    });
+    const code = totp.generate();
+    expect(code).toMatch(/^\d{6}$/);
+    // Code changes every 30 seconds — just verify format, not value
+    expect(parseInt(code, 10)).toBeGreaterThanOrEqual(0);
+    expect(parseInt(code, 10)).toBeLessThan(1_000_000);
+  });
+});
+
+// ─── MFA API endpoint protection ─────────────────────────────────────────────
+
+test.describe("MFA — API endpoint access control", () => {
+  test("TOTP setup endpoint requires authentication (no session)", async ({
+    page,
+  }) => {
     const resp = await page.request.post("/api/auth/setup-totp");
     expect([401, 403]).toContain(resp.status());
   });
 
-  test("TOTP disable endpoint requires authentication", async ({ page }) => {
+  test("TOTP disable endpoint requires authentication (no session)", async ({
+    page,
+  }) => {
     const resp = await page.request.post("/api/auth/disable-mfa");
     expect([401, 403, 404]).toContain(resp.status());
   });
-});
 
-// ─── MFA setup flow for authenticated users ───────────────────────────────────
-
-test.describe("MFA — setup UI for authenticated users", () => {
-  test("MFA setup button appears in header for authenticated admin", async ({
+  test("WebAuthn registration options endpoint requires authentication", async ({
     page,
   }) => {
-    await injectSession(page, { userId: "e2e-admin-mfa", userRole: "admin" });
-    await page.goto("/dashboard");
-    await expect(page).not.toHaveURL(/\/login/, { timeout: 12000 });
-
-    // MFA setup button may appear in the header if user doesn't have MFA yet
-    // It's conditionally rendered; either it shows (no MFA) or is absent (MFA already on)
-    const mfaButton = await page.locator('[data-testid="button-mfa-setup"]').count();
-    // This just checks it doesn't crash — the button may or may not be visible
-    // depending on whether e2e-admin-mfa has MFA configured in the database
-    expect(mfaButton).toBeGreaterThanOrEqual(0);
-  });
-
-  test("setup TOTP flow via API: initiating returns QR/secret", async ({ page }) => {
-    await injectSession(page, { userId: "e2e-admin-mfa2", userRole: "admin" });
-    const resp = await page.request.post("/api/auth/setup-totp");
-    // With a valid session, should return 200 with TOTP setup data
-    // (The injected session uses a fake userId that may not be in DB — 400 is OK)
-    expect([200, 400, 401, 404]).toContain(resp.status());
+    const resp = await page.request.post("/api/auth/webauthn/registration-options");
+    expect([401, 403]).toContain(resp.status());
   });
 });

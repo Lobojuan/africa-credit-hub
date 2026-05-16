@@ -170,7 +170,7 @@ test.describe("Collateral Registry — lien search", () => {
     expect(isDisabled).toBe(false);
   });
 
-  test("lien search returns results or empty state (no crash)", async ({
+  test("lien search returns results or empty state — page stays on /collateral-registry", async ({
     page,
   }) => {
     await gotoCollateral(page, LENDER_SESSION);
@@ -178,18 +178,19 @@ test.describe("Collateral Registry — lien search", () => {
     await page.waitForSelector('[data-testid="input-lien-search-asset"]', {
       timeout: 10000,
     });
-    await page.fill('[data-testid="input-lien-search-asset"]', "VIN-UNKNOWN-9999");
+    const query = "VIN-UNKNOWN-9999";
+    await page.fill('[data-testid="input-lien-search-asset"]', query);
     await page.click('[data-testid="btn-lien-search"]');
 
-    // Should show results table or empty/not-found state — not a crash
+    // Page must not crash or redirect to login
     await page.waitForTimeout(2000);
-    const hasResults = await page
-      .locator('[data-testid^="row-lien-result-"]')
-      .count();
-    const hasEmptyState = await page
-      .locator('text=No results, text=not found, text=No liens, [data-testid*="empty"]')
-      .count();
-    expect(hasResults + hasEmptyState).toBeGreaterThanOrEqual(0); // no crash
+    await expect(page).toHaveURL(/\/collateral-registry/, { timeout: 5000 });
+
+    // Input retains the search value (component didn't unmount or crash)
+    const value = await page
+      .locator('[data-testid="input-lien-search-asset"]')
+      .inputValue();
+    expect(value).toBe(query);
   });
 });
 

@@ -194,27 +194,25 @@ test.describe("Loto Fiscal — messaging admin dashboard", () => {
     });
   });
 
-  test("messaging stats API returns structured response for super_admin", async ({
+  test("messaging stats API returns structured response for super_admin (200)", async ({
+    page,
+  }) => {
+    // super_admin is implicit in requireRole('dgi_officer','tax_authority_admin')
+    await setSession(page, SUPER_ADMIN_SESSION);
+    const resp = await page.request.get("/api/loto/admin/messaging/stats");
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(typeof body).toBe("object");
+  });
+
+  test("recent messages API returns array for super_admin (200)", async ({
     page,
   }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
-    const resp = await page.request.get("/api/loto/admin/messaging/stats");
-    // Either 200 (stats returned) or 403 (insufficient role) — not 500
-    expect([200, 403]).toContain(resp.status());
-    if (resp.status() === 200) {
-      const body = await resp.json();
-      expect(typeof body).toBe("object");
-    }
-  });
-
-  test("recent messages API returns array for super_admin", async ({ page }) => {
-    await setSession(page, SUPER_ADMIN_SESSION);
     const resp = await page.request.get("/api/loto/admin/messaging/recent");
-    expect([200, 403]).toContain(resp.status());
-    if (resp.status() === 200) {
-      const body = await resp.json();
-      expect(Array.isArray(body) || typeof body === "object").toBe(true);
-    }
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(Array.isArray(body) || typeof body === "object").toBe(true);
   });
 
   test("messaging stats API is blocked without auth (401)", async ({ page }) => {
