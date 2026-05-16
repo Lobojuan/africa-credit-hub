@@ -136,15 +136,26 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
       });
     }
 
-    // Institution binding: consent issued to org A cannot be replayed by org B.
-    // Only enforced when both the consent and the session carry an organization ID.
+    // Institution binding — fail-closed for institution-scoped consents.
+    // When consent.organizationId is set, the record is scoped to that institution.
+    // A non-privileged requester missing org context is denied rather than allowed
+    // through (prevents consent-replay via absent session field).
     const requesterOrgId = req.session?.organizationId;
-    if (consent.organizationId && requesterOrgId && consent.organizationId !== requesterOrgId) {
-      return res.status(403).json({
-        message: "Consent was not issued to your institution",
-        code: "CONSENT_INSTITUTION_MISMATCH",
-        blocked: true,
-      });
+    if (consent.organizationId) {
+      if (!requesterOrgId) {
+        return res.status(403).json({
+          message: "Organisation context is required to access this institution-bound consent",
+          code: "CONSENT_ORG_CONTEXT_MISSING",
+          blocked: true,
+        });
+      }
+      if (consent.organizationId !== requesterOrgId) {
+        return res.status(403).json({
+          message: "Consent was not issued to your institution",
+          code: "CONSENT_INSTITUTION_MISMATCH",
+          blocked: true,
+        });
+      }
     }
 
     // Expiry applies equally to all consent types
@@ -152,9 +163,13 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
       return res.status(403).json({ message: "Consent has expired", code: "CONSENT_EXPIRED", blocked: true });
     }
 
-    // Path 2: Loan-origination exemption (Ghana Data Protection Act §12(3))
-    // Created automatically when an active loan account exists for the borrower.
-    if (consent.loanExemption && consent.borrowerResponse === "approved") {
+    // Path 2: Loan-origination exemption (Ghana Data Protection Act §12(3)).
+    // Canonical form: consentType === 'loan_exemption' + loanExemption === true
+    // + borrowerResponse === 'approved'. Backward compat: also accept records
+    // written with loanExemption=true prior to the canonical consentType being set.
+    const isLoanExemptionType = consent.consentType === "loan_exemption";
+    const isLoanExemptionLegacy = consent.loanExemption && consent.borrowerResponse === "approved";
+    if (isLoanExemptionType || isLoanExemptionLegacy) {
       if (consent.status !== "active") {
         return res.status(403).json({
           message: "Loan-exemption consent is no longer active",

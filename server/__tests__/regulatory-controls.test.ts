@@ -278,8 +278,27 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
     }
   });
 
+  it("institution-bound consent + requester has no org context → 403 CONSENT_ORG_CONTEXT_MISSING (fail-closed)", async () => {
+    const ins = await db.execute(sql`
+      INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, organization_id)
+      VALUES (${testBorrowerId}, 'org-a-lender', 'credit_report', 'data_access', 'active', ${`GATE-NOORG-${Date.now()}`}, true, ${orgAId})
+      RETURNING id
+    `);
+    const consentId = (ins.rows[0] as { id: string }).id;
+    try {
+      const ag = agent();
+      // lender with NO organizationId in session — org context absent
+      await loginAs(ag, { userId: checkerUserId, userRole: "lender" });
+      const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("CONSENT_ORG_CONTEXT_MISSING");
+      expect(res.body.blocked).toBe(true);
+    } finally {
+      await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
+    }
+  });
+
   it("consent issued to org A cannot be replayed by org B → 403 CONSENT_INSTITUTION_MISMATCH", async () => {
-    // Insert consent scoped to orgAId
     const ins = await db.execute(sql`
       INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, organization_id)
       VALUES (${testBorrowerId}, 'org-a-lender', 'credit_report', 'data_access', 'active', ${`GATE-INST-${Date.now()}`}, true, ${orgAId})
@@ -288,13 +307,9 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
     const consentId = (ins.rows[0] as { id: string }).id;
     try {
       const ag = agent();
-      // Requester is org B presenting org A's consent
       await loginAs(ag, { userId: checkerUserId, userRole: "lender", organizationId: orgBId });
       const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
-      if (orgAId === orgBId) {
-        // If test DB only has one org, institution binding cannot trigger — skip assertion
-        return;
-      }
+      if (orgAId === orgBId) return; // skip if only one org in test DB
       expect(res.status).toBe(403);
       expect(res.body.code).toBe("CONSENT_INSTITUTION_MISMATCH");
       expect(res.body.blocked).toBe(true);
@@ -303,10 +318,10 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
     }
   });
 
-  it("loan-exemption consent (loan_exemption=true, borrowerResponse=approved) → allowed: true with loanExemption flag", async () => {
+  it("loan-exemption consent (canonical consentType=loan_exemption) → allowed: true with loanExemption flag", async () => {
     const ins = await db.execute(sql`
       INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response)
-      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'credit_report', 'active', ${`GATE-EXEMPTION-${Date.now()}`}, true, true, 'approved')
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'loan_exemption', 'active', ${`GATE-EXEMPTION-${Date.now()}`}, true, true, 'approved')
       RETURNING id
     `);
     const consentId = (ins.rows[0] as { id: string }).id;
@@ -326,7 +341,7 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
     const past = new Date(Date.now() - 60_000).toISOString();
     const ins = await db.execute(sql`
       INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response, expires_at)
-      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'credit_report', 'active', ${`GATE-EXPIRY-${Date.now()}`}, true, true, 'approved', ${past}::timestamp)
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'loan_exemption', 'active', ${`GATE-EXPIRY-${Date.now()}`}, true, true, 'approved', ${past}::timestamp)
       RETURNING id
     `);
     const consentId = (ins.rows[0] as { id: string }).id;
@@ -345,7 +360,7 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
   it("loan-exemption consent with revoked status → 403 CONSENT_INACTIVE", async () => {
     const ins = await db.execute(sql`
       INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response)
-      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'credit_report', 'revoked', ${`GATE-EX-REVOKED-${Date.now()}`}, true, true, 'approved')
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'loan_exemption', 'revoked', ${`GATE-EX-REVOKED-${Date.now()}`}, true, true, 'approved')
       RETURNING id
     `);
     const consentId = (ins.rows[0] as { id: string }).id;

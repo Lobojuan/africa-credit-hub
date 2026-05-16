@@ -5911,7 +5911,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           borrowerId: String(borrowerId),
           grantedTo: lenderName,
           purpose,
-          consentType: "credit_report",
+          consentType: "loan_exemption",
           receiptNumber,
           permissiblePurpose: purpose,
           organizationId: orgId || null,
