@@ -89,6 +89,7 @@ const JURISDICTION_DATA: JurisdictionEntry[] = [
   ["Algeria",     5, 5, "BA Regulation 2020-03 — 5yr"],
   ["Sudan",       5, 5, "CBS Credit Information Act 2015 — 5yr"],
   ["South Sudan", 7, 7, "BSS CRB Act 2019 — 7yr"],
+  ["Mauritania",  5, 5, "BCM Regulation on Credit Information Exchange 2019 — 5yr"],
 ];
 
 export async function seedAllCountryRetentionPolicies(): Promise<void> {

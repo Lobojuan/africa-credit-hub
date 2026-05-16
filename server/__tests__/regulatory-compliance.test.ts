@@ -125,13 +125,26 @@ describe("A. Retention periods per jurisdiction", () => {
   });
 
   it("All 54 African jurisdictions have borrower retention policies", async () => {
+    const AU54 = [
+      "Algeria","Angola","Benin","Botswana","Burkina Faso","Burundi","Cape Verde",
+      "Cameroon","Central African Republic","Chad","Comoros","Democratic Republic of Congo",
+      "Republic of Congo","Côte d'Ivoire","Djibouti","Egypt","Equatorial Guinea","Eritrea",
+      "Eswatini","Ethiopia","Gabon","Gambia","Ghana","Guinea","Guinea-Bissau","Kenya",
+      "Lesotho","Liberia","Libya","Madagascar","Malawi","Mali","Mauritania","Mauritius",
+      "Morocco","Mozambique","Namibia","Niger","Nigeria","Rwanda","São Tomé and Príncipe",
+      "Senegal","Seychelles","Sierra Leone","Somalia","South Africa","South Sudan","Sudan",
+      "Tanzania","Togo","Tunisia","Uganda","Zambia","Zimbabwe",
+    ];
+    expect(AU54.length).toBe(54);
+
     const result = await db.execute(sql`
-      SELECT COUNT(DISTINCT country)::int AS cnt FROM retention_policies
-      WHERE entity_type = 'borrower'
-        AND country NOT IN ('All', 'Ethiopia', 'Uganda', 'Liberia')
+      SELECT DISTINCT country FROM retention_policies
+      WHERE entity_type = 'borrower' AND country != 'All'
     `);
-    const rows = result.rows as Array<{ cnt: number }>;
-    expect(rows[0].cnt).toBeGreaterThanOrEqual(50);
+    const seeded = new Set((result.rows as Array<{ country: string }>).map(r => r.country));
+
+    const missing = AU54.filter(c => !seeded.has(c));
+    expect(missing, `Missing borrower retention policy for: ${missing.join(", ")}`).toHaveLength(0);
   });
 
   it("BCEAO zone countries (Benin, Mali, Senegal, Togo) have 5yr borrower retention", async () => {
