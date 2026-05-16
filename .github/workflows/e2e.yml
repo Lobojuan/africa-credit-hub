@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    # Nightly run at 03:00 UTC to catch regressions before the working day
+    - cron: "0 3 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -14,18 +17,58 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
+  # Shared DB/env defaults used by all jobs
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  DB_NAME: testdb
+  DB_HOST: localhost
+  DB_PORT: 5432
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Reusable app-server environment block (avoids copy/paste across jobs)
+# ─────────────────────────────────────────────────────────────────────────────
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  # ──────────────────────────────────────────────────────────────
-  # Shared setup: install deps + cache Playwright browsers
-  # ──────────────────────────────────────────────────────────────
-
-  setup:
-    name: Install & cache
+  # ──────────────────────────────────────────────────────────────────────────
+  # 1. Unauthenticated specs — public pages, redirect guards
+  # ──────────────────────────────────────────────────────────────────────────
+  e2e-unauthenticated:
+    name: "E2E / Unauthenticated (Chromium)"
     runs-on: ubuntu-latest
-    outputs:
-      playwright-version: ${{ steps.pw-ver.outputs.version }}
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      SESSION_SECRET: ci-session-secret-e2e
+      PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
+      PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
+      EXTERNAL_API_JWT_SECRET: ci-jwt-secret-e2e
+      SEED_ADMIN_PASSWORD: admin0987
+      OWNER_ADMIN_PASSWORD: owner0987
+      RUN_SEED: "true"
+      NODE_ENV: development
+      PORT: 5001
+      ENABLE_E2E_TEST_AUTH: "true"
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,60 +82,11 @@ jobs:
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-
-  # ──────────────────────────────────────────────────────────────
-  # Unauthenticated specs (public pages, redirect guards)
-  # ──────────────────────────────────────────────────────────────
-
-  e2e-unauthenticated:
-    name: Unauthenticated specs
-    runs-on: ubuntu-latest
-    needs: setup
-    timeout-minutes: 20
-
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
-      SESSION_SECRET: ci-session-secret-e2e
-      PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
-      PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
-      EXTERNAL_API_JWT_SECRET: ci-jwt-secret-e2e
-      SEED_ADMIN_PASSWORD: admin0987
-      OWNER_ADMIN_PASSWORD: owner0987
-      RUN_SEED: 'true'
-      NODE_ENV: development
-      PORT: 5001
-      ENABLE_E2E_TEST_AUTH: 'true'
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ needs.setup.outputs.playwright-version }}
-      - run: npx playwright install-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run db:push
       - run: npx playwright test --project=unauthenticated
       - if: failure()
@@ -104,23 +98,21 @@ jobs:
             e2e/test-results-artifacts/
           retention-days: 14
 
-  # ──────────────────────────────────────────────────────────────
-  # Authenticated specs (role injection via set-session)
-  # ──────────────────────────────────────────────────────────────
-
-  e2e-authenticated:
-    name: Authenticated specs
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2a. Authenticated specs — Chromium
+  # ──────────────────────────────────────────────────────────────────────────
+  e2e-authenticated-chromium:
+    name: "E2E / Authenticated (Chromium)"
     runs-on: ubuntu-latest
-    needs: setup
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
         ports:
           - 5432:5432
         options: >-
@@ -137,10 +129,10 @@ jobs:
       EXTERNAL_API_JWT_SECRET: ci-jwt-secret-e2e
       SEED_ADMIN_PASSWORD: admin0987
       OWNER_ADMIN_PASSWORD: owner0987
-      RUN_SEED: 'true'
+      RUN_SEED: "true"
       NODE_ENV: development
       PORT: 5001
-      ENABLE_E2E_TEST_AUTH: 'true'
+      ENABLE_E2E_TEST_AUTH: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -149,39 +141,43 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - id: pw-ver
+        run: echo "version=$(node -p \"require('./package.json').devDependencies['@playwright/test']\")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
+        id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ needs.setup.outputs.playwright-version }}
-      - run: npx playwright install-deps chromium
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run db:push
-      - run: npx playwright test --project=authenticated
+      - run: npx playwright test --project=authenticated-chromium
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-report-authenticated
+          name: e2e-report-authenticated-chromium
           path: |
             e2e/report/
             e2e/test-results-artifacts/
           retention-days: 14
 
-  # ──────────────────────────────────────────────────────────────
-  # OAuth smoke tests
-  # ──────────────────────────────────────────────────────────────
-
-  e2e-oauth-smoke:
-    name: OAuth smoke tests
+  # ──────────────────────────────────────────────────────────────────────────
+  # 2b. Authenticated specs — Firefox (cross-browser coverage)
+  # ──────────────────────────────────────────────────────────────────────────
+  e2e-authenticated-firefox:
+    name: "E2E / Authenticated (Firefox)"
     runs-on: ubuntu-latest
-    needs: setup
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
         ports:
           - 5432:5432
         options: >-
@@ -198,10 +194,75 @@ jobs:
       EXTERNAL_API_JWT_SECRET: ci-jwt-secret-e2e
       SEED_ADMIN_PASSWORD: admin0987
       OWNER_ADMIN_PASSWORD: owner0987
-      RUN_SEED: 'true'
+      RUN_SEED: "true"
       NODE_ENV: development
       PORT: 5001
-      ENABLE_E2E_TEST_AUTH: 'true'
+      ENABLE_E2E_TEST_AUTH: "true"
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - id: pw-ver
+        run: echo "version=$(node -p \"require('./package.json').devDependencies['@playwright/test']\")" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-firefox-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps firefox
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps firefox
+      - run: npm run db:push
+      - run: npx playwright test --project=authenticated-firefox
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report-authenticated-firefox
+          path: |
+            e2e/report/
+            e2e/test-results-artifacts/
+          retention-days: 14
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # 3. OAuth smoke tests (Google + Microsoft + SAML)
+  # ──────────────────────────────────────────────────────────────────────────
+  e2e-oauth-smoke:
+    name: "E2E / OAuth Smoke Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      SESSION_SECRET: ci-session-secret-e2e
+      PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
+      PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
+      EXTERNAL_API_JWT_SECRET: ci-jwt-secret-e2e
+      SEED_ADMIN_PASSWORD: admin0987
+      OWNER_ADMIN_PASSWORD: owner0987
+      RUN_SEED: "true"
+      NODE_ENV: development
+      PORT: 5001
+      ENABLE_E2E_TEST_AUTH: "true"
       GOOGLE_CLIENT_ID: mock-google-ci-client-id
       GOOGLE_CLIENT_SECRET: mock-google-ci-secret
       MICROSOFT_CLIENT_ID: mock-ms-ci-client-id
@@ -217,11 +278,17 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - id: pw-ver
+        run: echo "version=$(node -p \"require('./package.json').devDependencies['@playwright/test']\")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
+        id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ needs.setup.outputs.playwright-version }}
-      - run: npx playwright install-deps chromium
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run db:push
       - run: npx playwright test --project=oauth-smoke
       - if: failure()
@@ -233,23 +300,21 @@ jobs:
             e2e/test-results-artifacts/
           retention-days: 14
 
-  # ──────────────────────────────────────────────────────────────
-  # Loto admin dashboard specs (existing spec)
-  # ──────────────────────────────────────────────────────────────
-
+  # ──────────────────────────────────────────────────────────────────────────
+  # 4. Loto admin dashboard specs (existing spec)
+  # ──────────────────────────────────────────────────────────────────────────
   e2e-loto-admin:
-    name: Loto admin dashboard specs
+    name: "E2E / Loto Admin Dashboard"
     runs-on: ubuntu-latest
-    needs: setup
     timeout-minutes: 20
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DB_NAME }}
         ports:
           - 5432:5432
         options: >-
@@ -266,10 +331,10 @@ jobs:
       EXTERNAL_API_JWT_SECRET: ci-jwt-secret-e2e
       SEED_ADMIN_PASSWORD: admin0987
       OWNER_ADMIN_PASSWORD: owner0987
-      RUN_SEED: 'true'
+      RUN_SEED: "true"
       NODE_ENV: development
       PORT: 5001
-      ENABLE_E2E_TEST_AUTH: 'true'
+      ENABLE_E2E_TEST_AUTH: "true"
 
     steps:
       - uses: actions/checkout@v4
@@ -278,13 +343,19 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - id: pw-ver
+        run: echo "version=$(node -p \"require('./package.json').devDependencies['@playwright/test']\")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@v4
+        id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ needs.setup.outputs.playwright-version }}
-      - run: npx playwright install-deps chromium
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
       - run: npm run db:push
-      - run: npx playwright test --project=chromium --grep "loto-admin-dashboard"
+      - run: npx playwright test --project=chromium
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
@@ -294,35 +365,41 @@ jobs:
             e2e/test-results-artifacts/
           retention-days: 14
 
-  # ──────────────────────────────────────────────────────────────
-  # Summary gate — all jobs must pass
-  # ──────────────────────────────────────────────────────────────
-
+  # ──────────────────────────────────────────────────────────────────────────
+  # Summary gate — all jobs must pass to green the PR/push
+  # ──────────────────────────────────────────────────────────────────────────
   e2e-all-pass:
-    name: All E2E specs passed
+    name: "E2E / All Specs Passed"
     runs-on: ubuntu-latest
     needs:
       - e2e-unauthenticated
-      - e2e-authenticated
+      - e2e-authenticated-chromium
+      - e2e-authenticated-firefox
       - e2e-oauth-smoke
       - e2e-loto-admin
     if: always()
+
     steps:
-      - name: Check all jobs succeeded
+      - name: Check all E2E jobs passed
         run: |
-          echo "unauthenticated: ${{ needs.e2e-unauthenticated.result }}"
-          echo "authenticated:   ${{ needs.e2e-authenticated.result }}"
-          echo "oauth-smoke:     ${{ needs.e2e-oauth-smoke.result }}"
-          echo "loto-admin:      ${{ needs.e2e-loto-admin.result }}"
-          if [[ \
-            "${{ needs.e2e-unauthenticated.result }}" != "success" || \
-            "${{ needs.e2e-authenticated.result }}"   != "success" || \
-            "${{ needs.e2e-oauth-smoke.result }}"     != "success" || \
-            "${{ needs.e2e-loto-admin.result }}"      != "success" \
-          ]]; then
-            echo "One or more E2E jobs failed."
-            exit 1
-          fi
+          echo "unauthenticated:         ${{ needs.e2e-unauthenticated.result }}"
+          echo "authenticated-chromium:  ${{ needs.e2e-authenticated-chromium.result }}"
+          echo "authenticated-firefox:   ${{ needs.e2e-authenticated-firefox.result }}"
+          echo "oauth-smoke:             ${{ needs.e2e-oauth-smoke.result }}"
+          echo "loto-admin:              ${{ needs.e2e-loto-admin.result }}"
+          results=(
+            "${{ needs.e2e-unauthenticated.result }}"
+            "${{ needs.e2e-authenticated-chromium.result }}"
+            "${{ needs.e2e-authenticated-firefox.result }}"
+            "${{ needs.e2e-oauth-smoke.result }}"
+            "${{ needs.e2e-loto-admin.result }}"
+          )
+          for r in "${results[@]}"; do
+            if [[ "$r" != "success" ]]; then
+              echo "One or more E2E jobs failed or were skipped."
+              exit 1
+            fi
+          done
           echo "All E2E jobs passed."
 
       - name: Notify on failure (Slack)
@@ -338,7 +415,7 @@ jobs:
                 "type": "section",
                 "text": {
                   "type": "mrkdwn",
-                  "text": ":x: *E2E Regression Suite failed*\n*Repo:* ${{ github.repository }}\n*Branch:* `${{ github.ref_name }}`\n*Actor:* ${{ github.actor }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
+                  "text": ":x: *E2E Regression Suite failed*\n*Repo:* ${{ github.repository }}\n*Branch:* `${{ github.ref_name }}`\n*Actor:* ${{ github.actor }}\n*Failed jobs:* unauth=${{ needs.e2e-unauthenticated.result }}, chromium=${{ needs.e2e-authenticated-chromium.result }}, firefox=${{ needs.e2e-authenticated-firefox.result }}, oauth=${{ needs.e2e-oauth-smoke.result }}, loto=${{ needs.e2e-loto-admin.result }}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
                 }
               }]
             }

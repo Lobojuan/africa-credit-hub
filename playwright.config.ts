@@ -1,10 +1,18 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Use system Chromium in the Replit/NixOS environment when the standard
-// Playwright browser cache is absent.
-const NIX_CHROMIUM =
-  "/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium";
-const CHROMIUM_EXEC = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ?? NIX_CHROMIUM;
+// Optional executable overrides — set these env vars in the Replit dev
+// environment when Playwright's own browser binaries are unavailable.
+// In CI, Playwright installs its own browsers and these are not needed.
+const chromiumExec = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+const firefoxExec = process.env.PLAYWRIGHT_FIREFOX_EXECUTABLE_PATH;
+
+const chromiumOptions = chromiumExec
+  ? { executablePath: chromiumExec, args: ["--no-sandbox", "--disable-dev-shm-usage"] }
+  : { args: ["--no-sandbox", "--disable-dev-shm-usage"] };
+
+const firefoxOptions = firefoxExec
+  ? { executablePath: firefoxExec }
+  : {};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -18,11 +26,12 @@ export default defineConfig({
     ignoreHTTPSErrors: true,
   },
   projects: [
+    // ── Legacy / existing specs ────────────────────────────────────────────
     {
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+        launchOptions: chromiumOptions,
       },
       testMatch: [/oauth-smoke\.spec\.ts/, /loto-admin-dashboard\.spec\.ts/],
     },
@@ -30,19 +39,23 @@ export default defineConfig({
       name: "oauth-smoke",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+        launchOptions: chromiumOptions,
       },
       testMatch: /oauth-smoke\.spec\.ts/,
     },
+
+    // ── Authenticated specs (role injection via set-session) ───────────────
     {
-      name: "authenticated",
+      name: "authenticated-chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+        launchOptions: chromiumOptions,
       },
       testMatch: [
         /auth\.spec\.ts/,
+        /mfa\.spec\.ts/,
         /credit\.spec\.ts/,
+        /loan-origination\.spec\.ts/,
         /collateral\.spec\.ts/,
         /loto\.spec\.ts/,
         /reports-drilldown\.spec\.ts/,
@@ -50,12 +63,46 @@ export default defineConfig({
       ],
     },
     {
+      name: "authenticated-firefox",
+      use: {
+        ...devices["Desktop Firefox"],
+        launchOptions: firefoxOptions,
+      },
+      testMatch: [
+        /auth\.spec\.ts/,
+        /credit\.spec\.ts/,
+        /regulatory\.spec\.ts/,
+        /reports-drilldown\.spec\.ts/,
+      ],
+    },
+
+    // ── Unauthenticated / public-page specs ────────────────────────────────
+    {
       name: "unauthenticated",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: { executablePath: CHROMIUM_EXEC, args: ["--no-sandbox", "--disable-dev-shm-usage"] },
+        launchOptions: chromiumOptions,
       },
       testMatch: [/consumer-portal\.spec\.ts/, /public-pages\.spec\.ts/],
+    },
+
+    // For convenience, map the old project names used in the existing CI YAML
+    {
+      name: "authenticated",
+      use: {
+        ...devices["Desktop Chrome"],
+        launchOptions: chromiumOptions,
+      },
+      testMatch: [
+        /auth\.spec\.ts/,
+        /mfa\.spec\.ts/,
+        /credit\.spec\.ts/,
+        /loan-origination\.spec\.ts/,
+        /collateral\.spec\.ts/,
+        /loto\.spec\.ts/,
+        /reports-drilldown\.spec\.ts/,
+        /regulatory\.spec\.ts/,
+      ],
     },
   ],
   webServer: {
@@ -69,17 +116,12 @@ export default defineConfig({
     env: {
       ENABLE_E2E_TEST_AUTH: "true",
       PORT: "5001",
-      // Always use mock credentials so client_id assertions are unconditional.
-      // Real deployments do not use playwright.config.ts for server startup.
       GOOGLE_CLIENT_ID: "mock-google-ci-client-id",
       GOOGLE_CLIENT_SECRET: "mock-google-ci-secret",
       MICROSOFT_CLIENT_ID: "mock-ms-ci-client-id",
       MICROSOFT_CLIENT_SECRET: "mock-ms-ci-secret",
       MICROSOFT_TENANT_ID: "common",
-      // Production canonical URL — ensures redirect_uri and SAML ACS URLs always
-      // embed https://universalcredithub.com so assertions are unconditional.
       CANONICAL_URL: "https://universalcredithub.com",
-      // Fake SAML IdP so /api/auth/saml/login issues a redirect instead of 503.
       SAML_IDP_ENTRY_POINT: "https://mock-idp.example.com/sso/saml",
     },
   },
