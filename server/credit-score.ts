@@ -96,9 +96,10 @@ export function calculateCreditScore(
       let totalAltTxns = 0;
       let totalAltOnTime = 0;
       for (const d of activeAltData) {
-        totalAltTxns += (d.totalTransactions || d.data?.transactionCount || 0);
-        totalAltOnTime += (d.onTimePayments || Math.round((d.data?.onTimeRate || d.data?.regularityScore || 0.8) * (d.data?.transactionCount || d.totalTransactions || 0)));
+        totalAltTxns += (d.totalTransactions || 0);
+        totalAltOnTime += (d.onTimePayments || 0);
       }
+      // When no transaction counts are present, assume an 80% on-time rate as a conservative default
       const altOnTimeRatio = totalAltTxns > 0 ? totalAltOnTime / totalAltTxns : 0.8;
       // Thin-file alt-data boost: up to +80 pts for excellent mobile money / utility signals
       const altBonus = Math.round(altOnTimeRatio * 40 * Math.min(activeAltData.length, 2));

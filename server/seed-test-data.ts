@@ -901,8 +901,6 @@ export async function seedTestData() {
         address: `${randInt(1, 200)} ${pick(["Broad Street", "Marina", "Victoria Island", "Maitama", "Wuse II", "Ikoyi Road", "Eko Road"])}`,
         phone: `+2348${randInt(10000000, 99999999)}`,
         email: isCorp ? `info@${companyName?.toLowerCase().replace(/\s+/g, "").slice(0, 12)}.ng` : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.ng`,
-        creditScore: randInt(320, 820),
-        employmentStatus: isCorp ? null : pick(["employed", "self-employed", "business_owner"]),
         sector: pick(["Banking", "Oil & Gas", "Agriculture", "Manufacturing", "Trade", "Services"]),
       }).returning();
       ngNgBorrowers.push(b);
@@ -958,8 +956,6 @@ export async function seedTestData() {
         address: `${randInt(1, 100)} ${pick(["Kenyatta Avenue", "Moi Avenue", "Tom Mboya Street", "Haile Selassie Avenue", "Oginga Odinga Road"])}`,
         phone: `+2547${randInt(10000000, 99999999)}`,
         email: isCorp ? `contact@${companyName?.toLowerCase().replace(/\s+/g, "").slice(0, 12)}.co.ke` : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.co.ke`,
-        creditScore: randInt(350, 810),
-        employmentStatus: isCorp ? null : pick(["employed", "self-employed", "business_owner"]),
         sector: pick(["Banking", "Agriculture", "Tourism", "Technology", "Manufacturing", "Retail"]),
       }).returning();
       keBorrowersCreated.push(b);
@@ -1013,8 +1009,6 @@ export async function seedTestData() {
         address: `${randInt(1, 50)} ${pick(["Siaka Stevens Street", "Lumley Beach Road", "Wilkinson Road", "Aberdeen Road"])}`,
         phone: `+23276${randInt(100000, 999999)}`,
         email: `${firstName.toLowerCase() || "info"}.${lastName.toLowerCase() || "ftradingsl"}@email.sl`,
-        creditScore: randInt(300, 720),
-        employmentStatus: isCorp ? null : pick(["employed", "self-employed"]),
         sector: pick(["Mining", "Agriculture", "Trade", "Services", "Fisheries"]),
       }).returning();
       slBorrowersCreated.push(b);
@@ -1065,8 +1059,6 @@ export async function seedTestData() {
         address: `${randInt(1, 100)} ${pick(["Boulevard de la République", "Avenue Houphouët-Boigny", "Rue du Commerce", "Avenue Chardy"])}`,
         phone: `+2250${pick(["7","5","1"])}${randInt(1000000, 9999999)}`,
         email: isCorp ? `contact@${companyName?.toLowerCase().replace(/[\s']/g, "").slice(0, 12)}.ci` : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.ci`,
-        creditScore: randInt(340, 790),
-        employmentStatus: isCorp ? null : pick(["employed", "self-employed", "business_owner"]),
         sector: pick(["Cocoa", "Agriculture", "Trade", "Manufacturing", "Services", "Finance"]),
       }).returning();
       ciBorrowersCreated.push(b);
