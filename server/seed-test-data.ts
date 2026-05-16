@@ -817,6 +817,284 @@ export async function seedTestData() {
     console.log("  Created 8 Ghana retention policies");
   }
 
+  // ── Nigeria retention policies (CBN Credit Reporting Regulation 2017 — 5-year retention) ──
+  const [rpNgCheck] = await db.select({ value: count() }).from(retentionPolicies).where(eq(retentionPolicies.country, "Nigeria"));
+  if (Number(rpNgCheck.value) < 6) {
+    await db.delete(retentionPolicies).where(eq(retentionPolicies.country, "Nigeria"));
+    await db.insert(retentionPolicies).values([
+      { country: "Nigeria", entityType: "borrower", retentionYears: 5, archiveAfterYears: 7, description: "Borrower data retained 5 years per CBN Credit Reporting Regulation 2017, Section 12.", isActive: true },
+      { country: "Nigeria", entityType: "credit_account", retentionYears: 5, archiveAfterYears: 7, description: "Credit account records retained 5 years from closure per CBN CRR 2017, Section 12.", isActive: true },
+      { country: "Nigeria", entityType: "court_judgment", retentionYears: 7, archiveAfterYears: 10, description: "Court judgment records retained 7 years per Sheriffs and Civil Process Act (Cap S6 LFN 2004).", isActive: true },
+      { country: "Nigeria", entityType: "dispute", retentionYears: 5, archiveAfterYears: 7, description: "Dispute records retained 5 years per Nigeria Data Protection Act 2023 (NDPA).", isActive: true },
+      { country: "Nigeria", entityType: "audit_log", retentionYears: 7, archiveAfterYears: 10, description: "Audit trail logs retained 7 years per CBN Cybersecurity Framework 2022.", isActive: true },
+      { country: "Nigeria", entityType: "credit_inquiry", retentionYears: 2, archiveAfterYears: 5, description: "Credit inquiry logs retained 2 years per CBN CRR 2017, Section 12(3).", isActive: true },
+    ]);
+    console.log("  Created 6 Nigeria retention policies");
+  }
+
+  // ── Kenya retention policies (CBK CRB Regulations 2020 — 5-year retention) ──
+  const [rpKeCheck] = await db.select({ value: count() }).from(retentionPolicies).where(eq(retentionPolicies.country, "Kenya"));
+  if (Number(rpKeCheck.value) < 6) {
+    await db.delete(retentionPolicies).where(eq(retentionPolicies.country, "Kenya"));
+    await db.insert(retentionPolicies).values([
+      { country: "Kenya", entityType: "borrower", retentionYears: 5, archiveAfterYears: 7, description: "Borrower data retained 5 years per CBK Credit Reference Bureau Regulations 2020, Regulation 14.", isActive: true },
+      { country: "Kenya", entityType: "credit_account", retentionYears: 5, archiveAfterYears: 7, description: "Credit account records retained 5 years from closure per CBK CRB Regulations 2020.", isActive: true },
+      { country: "Kenya", entityType: "court_judgment", retentionYears: 7, archiveAfterYears: 10, description: "Court judgment records retained 7 years per Civil Procedure Act (Cap 21 Laws of Kenya).", isActive: true },
+      { country: "Kenya", entityType: "dispute", retentionYears: 5, archiveAfterYears: 7, description: "Dispute records retained 5 years per Kenya Data Protection Act 2019.", isActive: true },
+      { country: "Kenya", entityType: "audit_log", retentionYears: 7, archiveAfterYears: 10, description: "Audit trail logs retained 7 years per CBK Prudential Guidelines on IT Risk Management.", isActive: true },
+      { country: "Kenya", entityType: "credit_inquiry", retentionYears: 2, archiveAfterYears: 5, description: "Credit inquiry logs retained 2 years per CBK CRB Regulations 2020, Regulation 14(2).", isActive: true },
+    ]);
+    console.log("  Created 6 Kenya retention policies");
+  }
+
+  // ── Sierra Leone retention policies (BSL Credit Reference Act 2011 — 7-year retention) ──
+  const [rpSlCheck] = await db.select({ value: count() }).from(retentionPolicies).where(eq(retentionPolicies.country, "Sierra Leone"));
+  if (Number(rpSlCheck.value) < 5) {
+    await db.delete(retentionPolicies).where(eq(retentionPolicies.country, "Sierra Leone"));
+    await db.insert(retentionPolicies).values([
+      { country: "Sierra Leone", entityType: "borrower", retentionYears: 7, archiveAfterYears: 10, description: "Borrower data retained 7 years per Bank of Sierra Leone Credit Reference Act 2011, Section 19.", isActive: true },
+      { country: "Sierra Leone", entityType: "credit_account", retentionYears: 7, archiveAfterYears: 10, description: "Credit account records retained 7 years per BSL Credit Reference Act 2011.", isActive: true },
+      { country: "Sierra Leone", entityType: "court_judgment", retentionYears: 10, archiveAfterYears: 15, description: "Court judgment records retained 10 years per Sierra Leone Courts Act.", isActive: true },
+      { country: "Sierra Leone", entityType: "dispute", retentionYears: 5, archiveAfterYears: 8, description: "Dispute records retained 5 years per BSL Consumer Protection Guidelines.", isActive: true },
+      { country: "Sierra Leone", entityType: "audit_log", retentionYears: 7, archiveAfterYears: 10, description: "Audit trail retained 7 years per BSL Financial Institutions (Anti-Money Laundering) Guidelines.", isActive: true },
+    ]);
+    console.log("  Created 5 Sierra Leone retention policies");
+  }
+
+  // ── Côte d'Ivoire retention policies (BCEAO Instruction 004-2022 — 5-year retention) ──
+  const [rpCiCheck] = await db.select({ value: count() }).from(retentionPolicies).where(eq(retentionPolicies.country, "Côte d'Ivoire"));
+  if (Number(rpCiCheck.value) < 5) {
+    await db.delete(retentionPolicies).where(eq(retentionPolicies.country, "Côte d'Ivoire"));
+    await db.insert(retentionPolicies).values([
+      { country: "Côte d'Ivoire", entityType: "borrower", retentionYears: 5, archiveAfterYears: 7, description: "Données emprunteur conservées 5 ans selon l'Instruction BCEAO 004-2022 relative aux bureaux d'information sur le crédit.", isActive: true },
+      { country: "Côte d'Ivoire", entityType: "credit_account", retentionYears: 5, archiveAfterYears: 7, description: "Dossiers de crédit conservés 5 ans à compter de la clôture per BCEAO Instruction 004-2022, Article 18.", isActive: true },
+      { country: "Côte d'Ivoire", entityType: "court_judgment", retentionYears: 7, archiveAfterYears: 10, description: "Jugements judiciaires conservés 7 ans per Code de Procédure Civile OHADA.", isActive: true },
+      { country: "Côte d'Ivoire", entityType: "dispute", retentionYears: 5, archiveAfterYears: 7, description: "Dossiers de litiges conservés 5 ans per Loi ivoirienne sur la protection des données personnelles 2013.", isActive: true },
+      { country: "Côte d'Ivoire", entityType: "audit_log", retentionYears: 5, archiveAfterYears: 7, description: "Journaux d'audit conservés 5 ans per Directive BCEAO sur la cybersécurité des institutions financières.", isActive: true },
+    ]);
+    console.log("  Created 5 Côte d'Ivoire retention policies");
+  }
+
+  // ── Multi-country seed: Nigeria borrowers + credit accounts (CBN jurisdiction) ──
+  const [ngBorrowerCheck] = await db.select({ value: count() }).from(borrowers).where(eq(borrowers.country, "Nigeria"));
+  if (Number(ngBorrowerCheck.value) < 8) {
+    const ngBanks = ["Access Bank Nigeria", "Zenith Bank Nigeria", "GTBank", "First Bank Nigeria", "UBA Nigeria", "Stanbic IBTC", "FCMB", "Sterling Bank"];
+    const ngFirstNames = ["Emeka", "Chidi", "Babatunde", "Adaeze", "Ngozi", "Ifeanyi", "Olumide", "Chisom", "Tunde", "Amaka", "Uche", "Seun", "Dele", "Funmi"];
+    const ngLastNames = ["Okafor", "Nwosu", "Adeyemi", "Chukwu", "Eze", "Okonkwo", "Adeleke", "Igwe", "Adesanya", "Nwachukwu", "Bello", "Abubakar", "Musa", "Ibrahim"];
+    const ngCompanies = ["Lagos Cement Works Ltd", "Abuja Agro Processing Co.", "Kano Textiles Group", "Port Harcourt Oil Services Ltd", "Ibadan Foodstuffs Ltd", "Kaduna Steel Industries"];
+    const ngAcctStatuses: Array<"current"|"delinquent"|"default"|"closed"|"restructured"|"written_off"> = ["current","current","current","current","delinquent","default","closed","restructured"];
+    const ngNgBorrowers = [];
+    for (let i = 0; i < 12; i++) {
+      const isCorp = i >= 9;
+      const firstName = isCorp ? "" : pick(ngFirstNames);
+      const lastName = isCorp ? "" : pick(ngLastNames);
+      const companyName = isCorp ? pick(ngCompanies) : undefined;
+      const [b] = await db.insert(borrowers).values({
+        firstName: isCorp ? null : firstName,
+        lastName: isCorp ? null : lastName,
+        companyName: isCorp ? companyName : null,
+        type: isCorp ? "corporate" : "individual",
+        nationalId: `NG${randInt(10000000, 99999999)}`,
+        dateOfBirth: isCorp ? null : pastDate(40),
+        country: "Nigeria",
+        city: pick(["Lagos", "Abuja", "Kano", "Ibadan", "Port Harcourt", "Kaduna", "Benin City"]),
+        address: `${randInt(1, 200)} ${pick(["Broad Street", "Marina", "Victoria Island", "Maitama", "Wuse II", "Ikoyi Road", "Eko Road"])}`,
+        phone: `+2348${randInt(10000000, 99999999)}`,
+        email: isCorp ? `info@${companyName?.toLowerCase().replace(/\s+/g, "").slice(0, 12)}.ng` : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.ng`,
+        creditScore: randInt(320, 820),
+        employmentStatus: isCorp ? null : pick(["employed", "self-employed", "business_owner"]),
+        sector: pick(["Banking", "Oil & Gas", "Agriculture", "Manufacturing", "Trade", "Services"]),
+      }).returning();
+      ngNgBorrowers.push(b);
+    }
+    for (const b of ngNgBorrowers) {
+      const numAccts = randInt(1, 3);
+      for (let a = 0; a < numAccts; a++) {
+        const origAmt = randInt(500000, 50000000);
+        const status = pick(ngAcctStatuses);
+        const currentBal = status === "closed" ? 0 : randInt(0, origAmt);
+        await db.insert(creditAccounts).values({
+          borrowerId: b.id,
+          lenderInstitution: pick(ngBanks),
+          accountNumber: `NG${randInt(1000000000, 9999999999)}`,
+          accountType: pick(["Personal Loan", "Business Loan", "Trade Finance", "Overdraft", "Mortgage", "SME Loan"]),
+          originalAmount: String(origAmt),
+          currentBalance: String(currentBal),
+          currency: "NGN",
+          status,
+          daysInArrears: status === "current" || status === "closed" ? 0 : randInt(15, 180),
+          disbursementDate: pastDate(5),
+          maturityDate: futureDate(3),
+          reportingDate: new Date().toISOString().split("T")[0],
+        }).onConflictDoNothing();
+      }
+    }
+    console.log("  Created 12 Nigeria borrowers with accounts");
+  }
+
+  // ── Multi-country seed: Kenya borrowers + credit accounts (CBK jurisdiction) ──
+  const [keBorrowerCheck] = await db.select({ value: count() }).from(borrowers).where(eq(borrowers.country, "Kenya"));
+  if (Number(keBorrowerCheck.value) < 8) {
+    const keBanks = ["KCB Bank Kenya", "Equity Bank Kenya", "Cooperative Bank", "NCBA Bank Kenya", "Absa Bank Kenya", "Standard Chartered Kenya", "DTB Kenya", "I&M Bank Kenya"];
+    const keFirstNames = ["Wanjiku", "Kamau", "Otieno", "Achieng", "Mwangi", "Njoki", "Odhiambo", "Wanjiru", "Kipchoge", "Chebet", "Mutua", "Muthoni"];
+    const keLastNames = ["Kariuki", "Odhiambo", "Waweru", "Onyango", "Mwangi", "Auma", "Kiplagat", "Ndungu", "Gitau", "Mugo", "Nyambura", "Kiptoo"];
+    const keCompanies = ["Nairobi Tea Brokers Ltd", "Mombasa Freight Services", "Kisumu Agribusiness Ltd", "Nakuru Dairy Coop", "Eldoret Grain Millers Ltd"];
+    const keStatuses: Array<"current"|"delinquent"|"default"|"closed"|"restructured"|"written_off"> = ["current","current","current","current","current","delinquent","closed","restructured"];
+    const keBorrowersCreated = [];
+    for (let i = 0; i < 10; i++) {
+      const isCorp = i >= 8;
+      const firstName = isCorp ? "" : pick(keFirstNames);
+      const lastName = isCorp ? "" : pick(keLastNames);
+      const companyName = isCorp ? pick(keCompanies) : undefined;
+      const [b] = await db.insert(borrowers).values({
+        firstName: isCorp ? null : firstName,
+        lastName: isCorp ? null : lastName,
+        companyName: isCorp ? companyName : null,
+        type: isCorp ? "corporate" : "individual",
+        nationalId: `KE${randInt(10000000, 99999999)}`,
+        dateOfBirth: isCorp ? null : pastDate(35),
+        country: "Kenya",
+        city: pick(["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret", "Thika", "Malindi"]),
+        address: `${randInt(1, 100)} ${pick(["Kenyatta Avenue", "Moi Avenue", "Tom Mboya Street", "Haile Selassie Avenue", "Oginga Odinga Road"])}`,
+        phone: `+2547${randInt(10000000, 99999999)}`,
+        email: isCorp ? `contact@${companyName?.toLowerCase().replace(/\s+/g, "").slice(0, 12)}.co.ke` : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.co.ke`,
+        creditScore: randInt(350, 810),
+        employmentStatus: isCorp ? null : pick(["employed", "self-employed", "business_owner"]),
+        sector: pick(["Banking", "Agriculture", "Tourism", "Technology", "Manufacturing", "Retail"]),
+      }).returning();
+      keBorrowersCreated.push(b);
+    }
+    for (const b of keBorrowersCreated) {
+      const numAccts = randInt(1, 3);
+      for (let a = 0; a < numAccts; a++) {
+        const origAmt = randInt(50000, 5000000);
+        const status = pick(keStatuses);
+        const currentBal = status === "closed" ? 0 : randInt(0, origAmt);
+        await db.insert(creditAccounts).values({
+          borrowerId: b.id,
+          lenderInstitution: pick(keBanks),
+          accountNumber: `KE${randInt(1000000000, 9999999999)}`,
+          accountType: pick(["Personal Loan", "Business Loan", "Agricultural Loan", "Mortgage", "Overdraft", "SME Loan"]),
+          originalAmount: String(origAmt),
+          currentBalance: String(currentBal),
+          currency: "KES",
+          status,
+          daysInArrears: status === "current" || status === "closed" ? 0 : randInt(10, 120),
+          disbursementDate: pastDate(4),
+          maturityDate: futureDate(3),
+          reportingDate: new Date().toISOString().split("T")[0],
+        }).onConflictDoNothing();
+      }
+    }
+    console.log("  Created 10 Kenya borrowers with accounts");
+  }
+
+  // ── Multi-country seed: Sierra Leone borrowers + credit accounts (BSL jurisdiction) ──
+  const [slBorrowerCheck] = await db.select({ value: count() }).from(borrowers).where(eq(borrowers.country, "Sierra Leone"));
+  if (Number(slBorrowerCheck.value) < 5) {
+    const slBanks = ["Rokel Commercial Bank", "Sierra Leone Commercial Bank", "United Bank for Africa SL", "Guaranty Trust Bank SL", "Access Bank SL"];
+    const slFirstNames = ["Aminata", "Mohamed", "Fatmata", "Ibrahim", "Isatu", "Foday", "Mariama", "Alimamy", "Hawa", "Sorie"];
+    const slLastNames = ["Kamara", "Conteh", "Bangura", "Sesay", "Koroma", "Turay", "Mansaray", "Fofanah", "Kargbo", "Bah"];
+    const slStatuses: Array<"current"|"delinquent"|"default"|"closed"|"restructured"> = ["current","current","current","delinquent","closed"];
+    const slBorrowersCreated = [];
+    for (let i = 0; i < 8; i++) {
+      const isCorp = i >= 7;
+      const firstName = isCorp ? "" : pick(slFirstNames);
+      const lastName = isCorp ? "" : pick(slLastNames);
+      const [b] = await db.insert(borrowers).values({
+        firstName: isCorp ? null : firstName,
+        lastName: isCorp ? null : lastName,
+        companyName: isCorp ? "Freetown Trading & Exports Ltd" : null,
+        type: isCorp ? "corporate" : "individual",
+        nationalId: `SL${randInt(1000000, 9999999)}`,
+        dateOfBirth: isCorp ? null : pastDate(30),
+        country: "Sierra Leone",
+        city: pick(["Freetown", "Bo", "Kenema", "Makeni", "Koidu"]),
+        address: `${randInt(1, 50)} ${pick(["Siaka Stevens Street", "Lumley Beach Road", "Wilkinson Road", "Aberdeen Road"])}`,
+        phone: `+23276${randInt(100000, 999999)}`,
+        email: `${firstName.toLowerCase() || "info"}.${lastName.toLowerCase() || "ftradingsl"}@email.sl`,
+        creditScore: randInt(300, 720),
+        employmentStatus: isCorp ? null : pick(["employed", "self-employed"]),
+        sector: pick(["Mining", "Agriculture", "Trade", "Services", "Fisheries"]),
+      }).returning();
+      slBorrowersCreated.push(b);
+    }
+    for (const b of slBorrowersCreated) {
+      const origAmt = randInt(5000000, 200000000);
+      const status = pick(slStatuses);
+      await db.insert(creditAccounts).values({
+        borrowerId: b.id,
+        lenderInstitution: pick(slBanks),
+        accountNumber: `SL${randInt(100000000, 999999999)}`,
+        accountType: pick(["Personal Loan", "Business Loan", "Agricultural Loan", "Microfinance Loan"]),
+        originalAmount: String(origAmt),
+        currentBalance: String(status === "closed" ? 0 : randInt(0, origAmt)),
+        currency: "SLL",
+        status,
+        daysInArrears: status === "current" || status === "closed" ? 0 : randInt(15, 90),
+        disbursementDate: pastDate(3),
+        maturityDate: futureDate(2),
+        reportingDate: new Date().toISOString().split("T")[0],
+      }).onConflictDoNothing();
+    }
+    console.log("  Created 8 Sierra Leone borrowers with accounts");
+  }
+
+  // ── Multi-country seed: Côte d'Ivoire borrowers + credit accounts (BCEAO/CI jurisdiction) ──
+  const [ciBorrowerCheck] = await db.select({ value: count() }).from(borrowers).where(eq(borrowers.country, "Côte d'Ivoire"));
+  if (Number(ciBorrowerCheck.value) < 5) {
+    const ciBanks = ["Société Générale Côte d'Ivoire", "NSIA Banque CI", "Ecobank Côte d'Ivoire", "Banque Atlantique CI", "Bridge Bank Group", "Coris Bank CI"];
+    const ciFirstNames = ["Kouassi", "Aya", "Koffi", "Adjoua", "Yao", "Akissi", "Konan", "Affoue", "Brou", "Amenan"];
+    const ciLastNames = ["Kouadio", "Bamba", "Traoré", "Koné", "Coulibaly", "Diallo", "Touré", "Ouattara", "Gbagbo", "Soro"];
+    const ciStatuses: Array<"current"|"delinquent"|"default"|"closed"|"restructured"> = ["current","current","current","current","delinquent"];
+    const ciBorrowersCreated = [];
+    for (let i = 0; i < 8; i++) {
+      const isCorp = i >= 6;
+      const firstName = isCorp ? "" : pick(ciFirstNames);
+      const lastName = isCorp ? "" : pick(ciLastNames);
+      const companyName = isCorp ? (i === 6 ? "Abidjan Cacao Exportateurs SARL" : "Groupe Industriel Ivoirien SA") : undefined;
+      const [b] = await db.insert(borrowers).values({
+        firstName: isCorp ? null : firstName,
+        lastName: isCorp ? null : lastName,
+        companyName: isCorp ? companyName : null,
+        type: isCorp ? "corporate" : "individual",
+        nationalId: `CI${randInt(1000000, 9999999)}`,
+        dateOfBirth: isCorp ? null : pastDate(35),
+        country: "Côte d'Ivoire",
+        city: pick(["Abidjan", "Bouaké", "Daloa", "Yamoussoukro", "San-Pédro", "Korhogo"]),
+        address: `${randInt(1, 100)} ${pick(["Boulevard de la République", "Avenue Houphouët-Boigny", "Rue du Commerce", "Avenue Chardy"])}`,
+        phone: `+2250${pick(["7","5","1"])}${randInt(1000000, 9999999)}`,
+        email: isCorp ? `contact@${companyName?.toLowerCase().replace(/[\s']/g, "").slice(0, 12)}.ci` : `${firstName.toLowerCase()}.${lastName.toLowerCase()}@email.ci`,
+        creditScore: randInt(340, 790),
+        employmentStatus: isCorp ? null : pick(["employed", "self-employed", "business_owner"]),
+        sector: pick(["Cocoa", "Agriculture", "Trade", "Manufacturing", "Services", "Finance"]),
+      }).returning();
+      ciBorrowersCreated.push(b);
+    }
+    for (const b of ciBorrowersCreated) {
+      const numAccts = randInt(1, 2);
+      for (let a = 0; a < numAccts; a++) {
+        const origAmt = randInt(1000000, 100000000);
+        const status = pick(ciStatuses);
+        await db.insert(creditAccounts).values({
+          borrowerId: b.id,
+          lenderInstitution: pick(ciBanks),
+          accountNumber: `CI${randInt(100000000, 999999999)}`,
+          accountType: pick(["Personal Loan", "Business Loan", "Trade Finance", "Agricultural Loan", "Microfinance Loan"]),
+          originalAmount: String(origAmt),
+          currentBalance: String(status === "closed" ? 0 : randInt(0, origAmt)),
+          currency: "XOF",
+          status,
+          daysInArrears: status === "current" || status === "closed" ? 0 : randInt(10, 90),
+          disbursementDate: pastDate(4),
+          maturityDate: futureDate(3),
+          reportingDate: new Date().toISOString().split("T")[0],
+        }).onConflictDoNothing();
+      }
+    }
+    console.log("  Created 8 Côte d'Ivoire borrowers with accounts");
+  }
+
   const [acCheck] = await db.select({ value: count() }).from(apiConfigurations).where(eq(apiConfigurations.country, "Ghana"));
   if (Number(acCheck.value) < 5) {
     await db.delete(apiConfigurations).where(eq(apiConfigurations.country, "Ghana"));

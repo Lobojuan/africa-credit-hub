@@ -88,6 +88,39 @@ export function calculateCreditScore(
       description: "No credit accounts on file to evaluate payment behavior",
       weight: 35,
     });
+
+    // Financial inclusion: boost thin-file score using alternative data sources
+    // (mobile money, utility payments, telco data) — critical for unbanked borrowers
+    const activeAltData = alternativeData.filter(d => d.status === "active");
+    if (activeAltData.length > 0) {
+      let totalAltTxns = 0;
+      let totalAltOnTime = 0;
+      for (const d of activeAltData) {
+        totalAltTxns += (d.totalTransactions || d.data?.transactionCount || 0);
+        totalAltOnTime += (d.onTimePayments || Math.round((d.data?.onTimeRate || d.data?.regularityScore || 0.8) * (d.data?.transactionCount || d.totalTransactions || 0)));
+      }
+      const altOnTimeRatio = totalAltTxns > 0 ? totalAltOnTime / totalAltTxns : 0.8;
+      // Thin-file alt-data boost: up to +80 pts for excellent mobile money / utility signals
+      const altBonus = Math.round(altOnTimeRatio * 40 * Math.min(activeAltData.length, 2));
+      const sourceLabels: Record<string, string> = {
+        mobile_money: "Mobile Money", utility: "Utility Payments",
+        telco: "Telco Data", rent: "Rent Payments",
+        insurance: "Insurance", merchant: "Merchant Data", fiscal_receipts: "Fiscal Receipts",
+      };
+      const sources = activeAltData.map(d => sourceLabels[d.source] || d.source).join(", ");
+      factors.push({
+        name: "Alternative Data (Financial Inclusion)",
+        impact: altBonus,
+        maxImpact: 80,
+        direction: altBonus >= 20 ? "positive" : "neutral",
+        description: `${activeAltData.length} alternative source${activeAltData.length > 1 ? "s" : ""} (${sources}) provide transactional credit signal for unbanked borrower`,
+        weight: 15,
+      });
+      if (altOnTimeRatio > 0.85 && activeAltData.length >= 2) reasonCodes.push("STRONG_ALTERNATIVE_DATA");
+      const thinFileScore = Math.max(300, Math.min(680, 600 + altBonus));
+      return { score: thinFileScore, reasonCodes, factors };
+    }
+
     return { score: 600, reasonCodes, factors };
   }
 

@@ -13159,11 +13159,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const country = getCountryFilter(req);
       const orgFilter = orgScope ? sql`AND organization_id = ${orgScope}` : sql``;
       const effectiveCountry = country && country !== GLOBAL_SCOPE ? country : null;
-      const countryOrgFilter = effectiveCountry ? sql`AND organization_id IN (SELECT id FROM organizations WHERE country = ${effectiveCountry})` : sql``;
+      // Join via borrowers.country — most credit_accounts have no organization_id set,
+      // so filtering through organizations.country always returned zero rows for regulators.
+      const countryAcctFilter = effectiveCountry
+        ? sql`AND borrower_id IN (SELECT id FROM borrowers WHERE country = ${effectiveCountry})`
+        : sql``;
 
       const statusRows = await db.execute(sql`
         SELECT status, COUNT(*)::int AS cnt, COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
-        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryOrgFilter} GROUP BY status
+        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryAcctFilter} GROUP BY status
       `);
       const statusMap: Record<string, { cnt: number; exposure: number }> = {};
       let totalAccounts = 0;
@@ -13201,7 +13205,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const sectorRows = await db.execute(sql`
         SELECT account_type AS sector, status, COUNT(*)::int AS cnt,
           COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
-        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryOrgFilter} GROUP BY account_type, status
+        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryAcctFilter} GROUP BY account_type, status
       `);
       const sectorMap: Record<string, { total: number; npl: number; exposure: number; nplExposure: number }> = {};
       for (const row of sectorRows.rows as any[]) {
@@ -13223,7 +13227,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const lenderRows = await db.execute(sql`
         SELECT lender_institution AS lender, status, COUNT(*)::int AS cnt,
           COALESCE(SUM(CAST(current_balance AS DECIMAL(15,2))), 0)::text AS exposure
-        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryOrgFilter} GROUP BY lender_institution, status
+        FROM credit_accounts WHERE 1=1 ${orgFilter} ${countryAcctFilter} GROUP BY lender_institution, status
       `);
       const lenderMap: Record<string, { total: number; npl: number; exposure: number }> = {};
       for (const row of lenderRows.rows as any[]) {
@@ -13545,6 +13549,18 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   app.post("/api/papss/settlements", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const parsed = insertPapssSettlementSchema.parse(req.body);
+      // Enforce ISO-3166-1 alpha-2 country codes for PAPSS compliance
+      const VALID_PAPSS_COUNTRIES = new Set([
+        "DZ","AO","BJ","BW","BF","BI","CV","CM","CF","TD","KM","CG","CD","CI","DJ","EG","GQ","ER","SZ","ET",
+        "GA","GM","GH","GN","GW","KE","LS","LR","LY","MG","MW","ML","MR","MU","MA","MZ","NA","NE","NG","RW",
+        "ST","SN","SC","SL","SO","ZA","SS","SD","TZ","TG","TN","UG","ZM","ZW",
+      ]);
+      if (!VALID_PAPSS_COUNTRIES.has(parsed.senderCountry)) {
+        return res.status(400).json({ message: `senderCountry "${parsed.senderCountry}" is not a valid ISO-3166-1 alpha-2 African country code` });
+      }
+      if (!VALID_PAPSS_COUNTRIES.has(parsed.receiverCountry)) {
+        return res.status(400).json({ message: `receiverCountry "${parsed.receiverCountry}" is not a valid ISO-3166-1 alpha-2 African country code` });
+      }
       const [created] = await db.insert(papssSettlements).values({ ...parsed, initiatedBy: req.session.userId }).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "papss_settlement", entityId: created.id, details: `PAPSS settlement: ${created.senderInstitution} (${created.senderCountry}) → ${created.receiverInstitution} (${created.receiverCountry}), ${created.senderCurrency} ${created.senderAmount}`, ipAddress: req.ip, organizationId: null });
       res.status(201).json(created);
