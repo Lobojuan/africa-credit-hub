@@ -96,7 +96,14 @@ export default function LegalCopyrightPage() {
               <div>
                 <h2 className="text-lg font-bold text-foreground mb-2">{t("legal.copyrightNotice")}</h2>
                 <p className="text-sm font-semibold text-foreground">
-                  {t("legal.copyrightHolder")}
+                  © 2026 Universal Credit Hub Ltd — All rights reserved.
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Owner: <strong className="text-foreground">Uffe Jon Carlson / Carlson Capital</strong> — Registered in Ghana
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Legal: <a href="mailto:uffe.carlson@gmail.com" className="text-primary hover:underline">uffe.carlson@gmail.com</a>
+                  {" · "}+233 552 395548{" · "}+1 646 980 5659
                 </p>
                 <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
                   {t("legal.copyrightDesc")}
@@ -110,6 +117,9 @@ export default function LegalCopyrightPage() {
                   </Badge>
                   <Badge variant="secondary" data-testid="badge-ref">
                     <FileText className="w-3 h-3 mr-1" /> UCH-IP-2026-001
+                  </Badge>
+                  <Badge variant="secondary" data-testid="badge-jurisdiction">
+                    <Globe className="w-3 h-3 mr-1" /> Ghana Copyright Act 2005 (Act 690)
                   </Badge>
                 </div>
               </div>
@@ -265,10 +275,23 @@ export default function LegalCopyrightPage() {
               <div>
                 <h3 className="text-sm font-bold text-foreground mb-1">{t("legal.contactTitle")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  {t("legal.contactCompany")}<br />
-                  {t("legal.contactLocation")}
+                  <strong className="text-foreground">Universal Credit Hub Ltd</strong><br />
+                  Owner: <strong className="text-foreground">Uffe Jon Carlson / Carlson Capital</strong><br />
+                  Registered in Ghana — IP Reference: UCH-IP-2026-001
                 </p>
-                <p className="text-xs text-muted-foreground mt-2">{t("legal.contactDesc")}</p>
+                <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                  <p>
+                    <span className="font-semibold text-foreground">Legal / IP enforcement:</span>{" "}
+                    <a href="mailto:uffe.carlson@gmail.com" className="text-primary hover:underline">uffe.carlson@gmail.com</a>
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Phone (Ghana):</span> +233 552 395548
+                  </p>
+                  <p>
+                    <span className="font-semibold text-foreground">Phone (USA):</span> +1 646 980 5659
+                  </p>
+                  <p className="pt-1 text-muted-foreground/70 italic">{t("legal.contactDesc")}</p>
+                </div>
               </div>
             </div>
           </CardContent>

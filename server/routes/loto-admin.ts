@@ -595,7 +595,17 @@ lotoAdminRouter.get("/export.pdf", ...gate, async (req, res) => {
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename=loto-${view}-${country}-${Date.now()}.pdf`);
 
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const doc = new PDFDocument({
+      size: "A4",
+      margin: 50,
+      info: {
+        Title: `Loto Fiscal DGI Report — ${view.toUpperCase()} — ${country}`,
+        Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital",
+        Creator: "Universal Credit Hub Ltd",
+        Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd",
+        Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com",
+      },
+    });
     doc.pipe(res);
 
     doc.fontSize(18).text(`Loto Fiscal — DGI Report (${view.toUpperCase()})`, { align: "center" });

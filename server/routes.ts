@@ -3194,7 +3194,7 @@ export async function registerRoutes(
       const borrower = borrowerResult[0];
 
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 50, left: 40, right: 40 }, bufferPages: true });
+      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 50, left: 40, right: 40 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
@@ -7007,7 +7007,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const lang = bodyLang || (req.query.lang as string) || "en";
 
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: 40, right: 40 }, bufferPages: true });
+      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: 40, right: 40 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
@@ -9062,10 +9062,21 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         metadata: JSON.stringify({ format, type, recordCount: type === "portfolio" ? accounts.length : borrowersList.length }),
       });
 
+      const exporterName = (() => {
+        try {
+          const u = req.session as any;
+          return u?.displayName || u?.username || "unknown";
+        } catch { return "unknown"; }
+      })();
+      const exporterOrg = (() => { try { return (req.session as any)?.organizationId || ""; } catch { return ""; } })();
+      const exporterIp = req.ip || "unknown";
+      const exportTimestamp = new Date().toISOString();
+      const UCH_EXPORT_WATERMARK = `© 2026 Universal Credit Hub Ltd. Confidential. Unauthorised use prohibited. uffe.carlson@gmail.com | Exported by: ${exporterName} | Org: ${exporterOrg} | IP: ${exporterIp} | Time: ${exportTimestamp}`;
+
       if (format === "xlsx") {
         const ExcelJS = (await import("exceljs")).default;
         const workbook = new ExcelJS.Workbook();
-        workbook.creator = "Pan-African Credit Registry";
+        workbook.creator = "Universal Credit Hub Ltd";
         workbook.created = new Date();
         const headerStyle = { font: { bold: true, color: { argb: "FFFFFFFF" } }, fill: { type: "pattern" as const, pattern: "solid" as const, fgColor: { argb: "FF0D4A42" } } };
 
@@ -9084,6 +9095,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           sheet.getRow(1).font = headerStyle.font;
           sheet.getRow(1).fill = headerStyle.fill;
           accounts.forEach(a => sheet.addRow(a));
+          sheet.addRow([]);
+          sheet.addRow([UCH_EXPORT_WATERMARK]);
         } else if (type === "borrowers") {
           const sheet = workbook.addWorksheet("Borrowers");
           sheet.columns = [
@@ -9102,6 +9115,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
             const name = b.type === "individual" ? `${b.firstName} ${b.lastName}` : b.companyName;
             sheet.addRow({ ...b, name, isPep: b.isPep ? "Yes" : "No" });
           });
+          sheet.addRow([]);
+          sheet.addRow([UCH_EXPORT_WATERMARK]);
         } else if (type === "audit") {
           const auditLogsList = await storage.getAuditLogs(orgId, country, 5000);
           const sheet = workbook.addWorksheet("Audit Trail");
@@ -9122,6 +9137,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
               createdAt: log.createdAt ? new Date(log.createdAt).toISOString() : "",
             });
           });
+          sheet.addRow([]);
+          sheet.addRow([UCH_EXPORT_WATERMARK]);
         }
 
         const xlsxBuf = Buffer.from(await workbook.xlsx.writeBuffer() as ArrayBuffer);
@@ -9176,6 +9193,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
             csv += `"${csvSafe(ts)}","${csvSafe(log.action)}","${csvSafe(log.entity)}","${csvSafe(log.entityId || '')}","${csvSafe((log.details || '').replace(/"/g, '""'))}","${csvSafe(log.userId || '')}","${csvSafe(log.ipAddress || '')}"\n`;
           }
         }
+        csv += `\n"${csvSafe(UCH_EXPORT_WATERMARK)}"\n`;
 
         const csvHash = generateExportHash(csv);
         const csvSizeBytes = Buffer.byteLength(csv, "utf8");
@@ -11718,7 +11736,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!billing) return res.status(404).json({ message: "Billing record not found" });
 
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "A4", margins: { top: 50, bottom: 50, left: 50, right: 50 }, bufferPages: true });
+      const doc = new PDFDocument({ size: "A4", margins: { top: 50, bottom: 50, left: 50, right: 50 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
@@ -15861,7 +15879,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (_) { /* skip QR if generation fails */ }
 
     const PDFDocument = (await import("pdfkit")).default;
-    const doc = new PDFDocument({ margin: 60, size: "A4" });
+    const doc = new PDFDocument({ margin: 60, size: "A4", info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));

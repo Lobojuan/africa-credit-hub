@@ -144,8 +144,11 @@ export function generateSkipTracePdf(data: SkipTraceData): Promise<Buffer> {
       // @ts-ignore: info not in PDFKit types
       info: {
         Title: `Skip-Trace Report — ${data.borrower.firstName || data.borrower.companyName || data.borrower.id}`,
-        Author: data.organizationName,
-        Subject: "Skip-Trace Report",
+        Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital",
+        Creator: "Universal Credit Hub Ltd",
+        Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd",
+        Subject: "Skip-Trace Report — Universal Credit Hub Pan-African Credit Registry",
+        Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com",
       },
     });
     const chunks: Buffer[] = [];

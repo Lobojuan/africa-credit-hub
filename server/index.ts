@@ -6,6 +6,8 @@ import helmet from "helmet";
 import crypto from "crypto";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
+import { deviceFingerprintMiddleware } from "./middleware/device-fingerprint";
+import { botDetectionMiddleware } from "./middleware/bot-detection";
 import { createServer } from "http";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
@@ -169,6 +171,10 @@ app.use((req, res, next) => {
     res.setHeader("X-Robots-Tag", "index, follow");
   }
 
+  if (req.path.startsWith("/api") && req.session?.userId) {
+    res.setHeader("X-Robots-Tag", "noindex, noarchive, nosnippet");
+  }
+
   if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   } else if (req.path.startsWith("/api")) {
@@ -260,6 +266,9 @@ app.use(
     },
   })
 );
+
+app.use(botDetectionMiddleware);
+app.use(deviceFingerprintMiddleware);
 
 app.get("/api/auth/csrf-token", (req, res) => {
   if (!req.session.csrfToken) {
@@ -676,7 +685,12 @@ process.stderr.write = function (...args: any[]) {
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.send(
-      "User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /admin/\nDisallow: /master-control/\n\nSitemap: https://universalcredithub.com/sitemap.xml\n"
+      "# Universal Credit Hub — Automated access strictly prohibited.\n" +
+      "# © 2026 Universal Credit Hub Ltd. Registered in Ghana.\n" +
+      "# Unauthorised scraping, crawling, or data extraction is prohibited\n" +
+      "# under the Ghana Copyright Act 2005 (Act 690) and international IP treaties.\n" +
+      "# Legal: uffe.carlson@gmail.com | +233 552 395548\n\n" +
+      "User-agent: *\nDisallow: /\n"
     );
   });
 

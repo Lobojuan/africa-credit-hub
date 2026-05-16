@@ -91,6 +91,24 @@ function ensureSpace(doc: PDFKit.PDFDocument, needed: number) {
   }
 }
 
+const UCH_COPYRIGHT = "© 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana. Confidential. legal: uffe.carlson@gmail.com";
+
+function addCopyrightFooterToAllPages(doc: PDFKit.PDFDocument) {
+  const range = doc.bufferedPageRange();
+  for (let i = range.start; i < range.start + range.count; i++) {
+    doc.switchToPage(i);
+    const pageW = doc.page.width;
+    const pageH = doc.page.height;
+    doc.save()
+      .font("Helvetica")
+      .fontSize(5.5)
+      .fillOpacity(0.18)
+      .fillColor("#000000")
+      .text(UCH_COPYRIGHT, 30, pageH - 22, { width: pageW - 60, align: "center" })
+      .restore();
+  }
+}
+
 export function generatePdfFromMarkdown(markdownContent: string, title: string, stream: PassThrough): void {
   const doc = new PDFDocument({
     size: "A4",
@@ -98,10 +116,11 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
     bufferPages: true,
     info: {
       Title: title,
-      Author: process.env.PLATFORM_ADMIN_NAME || process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub",
-      Creator: process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub",
-      Producer: `UCH v2.8 | ${process.env.PLATFORM_REGISTRY_REF || "UCH-2026-001"}`,
-      Subject: `Credit Report — ${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"} Pan-African Credit Registry`,
+      Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital",
+      Creator: "Universal Credit Hub Ltd",
+      Producer: `UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd`,
+      Subject: `Credit Report — Universal Credit Hub Pan-African Credit Registry`,
+      Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com",
     },
   });
 
@@ -340,7 +359,7 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
   doc.moveDown(0.5);
   doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY)
     .text(`${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"} — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8`, { align: "center" });
-  doc.text(`© 2026 ${process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub"}. All rights reserved.`, { align: "center" });
+  doc.text(`© 2026 Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital. All rights reserved. Registered in Ghana.`, { align: "center" });
 
   const totalPages = doc.bufferedPageRange().count;
   for (let p = 0; p < totalPages; p++) {
@@ -350,5 +369,6 @@ export function generatePdfFromMarkdown(markdownContent: string, title: string, 
         { width: pageWidth, align: "center" });
   }
 
+  addCopyrightFooterToAllPages(doc);
   doc.end();
 }
