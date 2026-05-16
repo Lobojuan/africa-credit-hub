@@ -423,12 +423,15 @@ router.post("/api/auth/mfa/backup-codes/generate", async (req, res) => {
 
 router.post("/api/auth/mfa/backup-codes/verify", async (req, res) => {
   try {
-    const { code, userId: bodyUserId } = req.body;
+    const { code } = req.body;
     if (!code) return res.status(400).json({ message: "Backup code required" });
 
-    // Accept userId from session (recovery mid-login) or body (explicit recovery path)
-    const userId = req.session?.userId || bodyUserId;
-    if (!userId) return res.status(401).json({ message: "No active session or userId" });
+    // Identity MUST come from server-controlled session state only — never from
+    // request body (prevents account takeover via arbitrary userId injection).
+    // During MFA login challenge, mfaPendingUserId is set; for authenticated users
+    // managing codes, session.userId is set.
+    const userId = req.session?.mfaPendingUserId ?? req.session?.userId;
+    if (!userId) return res.status(401).json({ message: "No active authentication session" });
 
     const stored = backupCodeStore.get(userId);
     if (!stored || stored.length === 0) {

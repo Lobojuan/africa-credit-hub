@@ -260,8 +260,8 @@ test.describe("MFA — account recovery via disable endpoint", () => {
     const verifyResp = await page.request.post("/api/auth/mfa/verify", { data: { code } });
     expect(verifyResp.status()).toBe(200);
 
-    // Recovery: disable MFA — account is restored to passwordOnly state
-    const disableResp = await page.request.post("/api/auth/mfa/disable");
+    // Recovery: disable MFA — requires password per endpoint contract
+    const disableResp = await page.request.post("/api/auth/mfa/disable", { data: { password: ADMIN_PW } });
     expect(disableResp.status()).toBe(200);
 
     // Confirm MFA is gone: setup endpoint should accept a fresh setup request
