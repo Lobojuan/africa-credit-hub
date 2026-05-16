@@ -1,6 +1,6 @@
 import { getServerCountryConfig } from "./country-mode";
 
-interface AccountLike {
+export interface AccountLike {
   status: string;
   currentBalance?: string | null;
   creditLimit?: string | null;
@@ -9,11 +9,11 @@ interface AccountLike {
   amountOverdue?: string | null;
 }
 
-interface JudgmentLike {
+export interface JudgmentLike {
   status: string;
 }
 
-interface AlternativeDataLike {
+export interface AlternativeDataLike {
   source: string;
   totalTransactions: number | null;
   onTimePayments: number | null;

@@ -13726,6 +13726,8 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   await seedOrganizations();
   await seedRegistryCountryConfig();
   await ensureRegistryAuthoritySeeded();
+  const { seedAllCountryRetentionPolicies } = await import("./seed-retention-policies");
+  await seedAllCountryRetentionPolicies();
   await seedCollateralDemoData();
   try {
     const { seedCrossProductDemoData } = await import("./seed-cross-product");
