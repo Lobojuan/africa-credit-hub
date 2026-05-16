@@ -18920,7 +18920,19 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // no token is configured we accept the request — useful for sandbox / e2e
   // testing where there's no aggregator. Real production should set the env.
   // Body is parsed BEFORE the rate limiter so ussdLimiter can key on sessionId.
-  app.post("/api/loto/ussd/session", express.urlencoded({ extended: true }), express.json({ limit: "16kb" }), ussdLimiter, async (req, res) => {
+  // The verify callback captures the exact request bytes for HMAC verification.
+  app.post(
+    "/api/loto/ussd/session",
+    express.urlencoded({
+      extended: true,
+      verify: (req: any, _res, buf) => { req.rawBody = buf; },
+    }),
+    express.json({
+      limit: "16kb",
+      verify: (req: any, _res, buf) => { if (!req.rawBody) req.rawBody = buf; },
+    }),
+    ussdLimiter,
+    async (req, res) => {
     try {
       // ── Token auth (existing) ──────────────────────────────────────────────
       const expected = process.env.LOTO_USSD_TOKEN;
@@ -18938,15 +18950,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // shared-token auth above. Silently skipped when secret is not set.
       const ussdHmacSecret = process.env.LOTO_USSD_HMAC_SECRET;
       if (ussdHmacSecret) {
-        const sig = (req.headers["x-uch-signature"] as string) || (req.headers["x-webhook-signature"] as string) || "";
+        const sig = (req.headers["x-uch-signature"] as string)
+          || (req.headers["x-webhook-signature"] as string) || "";
         const ts = (req.headers["x-webhook-timestamp"] as string) || "";
-        // Re-serialise the raw body for verification — use the JSON string if
-        // body was JSON, otherwise fall back to the raw form-encoded string.
-        const rawBody = typeof (req as any).rawBody === "string"
-          ? (req as any).rawBody
-          : JSON.stringify(req.body ?? {});
+        // rawBody is captured via the verify callback above — it is always the
+        // exact bytes received (Buffer). Fall back to empty string on missing
+        // body (malformed request).
+        const rawBodyBuf = (req as any).rawBody as Buffer | undefined;
+        const rawBodyStr = Buffer.isBuffer(rawBodyBuf)
+          ? rawBodyBuf.toString("utf8")
+          : typeof rawBodyBuf === "string"
+            ? rawBodyBuf
+            : "";
         const { verifyWebhookSignature } = await import("./webhook-delivery");
-        const check = verifyWebhookSignature(rawBody, sig, ussdHmacSecret, ts);
+        const check = verifyWebhookSignature(rawBodyStr, sig, ussdHmacSecret, ts);
         if (!check.valid) {
           return res.status(401).type("text/plain").send(`END Unauthorized: ${check.reason}`);
         }

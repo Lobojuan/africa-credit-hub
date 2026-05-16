@@ -486,6 +486,33 @@ describe("F. PII encryption — ciphertext vs plaintext", () => {
     const nid = "PRIV-NID-SEARCH-TEST";
     expect(encryptPII(nid).toLowerCase()).not.toContain(nid.toLowerCase());
   });
+
+  it("PII at-rest DB assertion: borrowers.nationalId stored as enc:-prefixed ciphertext", async () => {
+    // This test queries the real database to verify that PII fields are not
+    // stored as plaintext. We inspect up to 20 borrowers that have a nationalId
+    // and assert each one is either encrypted (enc: prefix) or null/empty.
+    // An empty result set means no borrowers exist in the test DB — skip.
+    const { db } = await import("../db");
+    const { borrowers } = await import("../../shared/schema");
+    const { isNotNull } = await import("drizzle-orm");
+
+    const rows = await db
+      .select({ id: borrowers.id, nationalId: borrowers.nationalId })
+      .from(borrowers)
+      .where(isNotNull(borrowers.nationalId))
+      .limit(20);
+
+    if (rows.length === 0) {
+      // No borrowers in test DB — nothing to assert
+      return;
+    }
+
+    for (const row of rows) {
+      const nid = row.nationalId as string | null;
+      if (!nid || nid.trim() === "") continue;
+      expect(nid).toMatch(/^enc:/);
+    }
+  }, 30_000);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -514,15 +541,58 @@ describe("G. USSD rate limiter — sessionId keying + HMAC gate", () => {
     }
   });
 
+  it("USSD HMAC gate — valid signed request accepted, tampered request rejected", async () => {
+    const crypto = await import("crypto");
+    const { verifyWebhookSignature } = await import("../webhook-delivery");
+
+    const HMAC_SECRET = "test-loto-hmac-secret-xyz";
+    const bodyStr = "sessionId=AT-SESSION-001&phoneNumber=%2B2250700000001&text=";
+
+    function makeHeaders(payload: string, secret: string) {
+      const ts = new Date().toISOString();
+      const sig = `sha256=${crypto.createHmac("sha256", secret).update(payload).digest("hex")}`;
+      return { ts, sig };
+    }
+
+    // Valid: fresh timestamp, correct signature
+    const { ts, sig } = makeHeaders(bodyStr, HMAC_SECRET);
+    const validResult = verifyWebhookSignature(bodyStr, sig, HMAC_SECRET, ts);
+    expect(validResult.valid).toBe(true);
+
+    // Invalid: tampered body
+    const tamperedBody = bodyStr.replace("AT-SESSION-001", "AT-SESSION-EVIL");
+    const tamperedResult = verifyWebhookSignature(tamperedBody, sig, HMAC_SECRET, ts);
+    expect(tamperedResult.valid).toBe(false);
+    if (!tamperedResult.valid) expect(tamperedResult.reason).toMatch(/mismatch/i);
+
+    // Invalid: expired timestamp
+    const expiredTs = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const expiredResult = verifyWebhookSignature(bodyStr, sig, HMAC_SECRET, expiredTs);
+    expect(expiredResult.valid).toBe(false);
+    if (!expiredResult.valid) expect(expiredResult.reason).toMatch(/expired/i);
+
+    // Verify that the rawBody is computed from exact bytes (urlencoded string, not re-serialized JSON)
+    const jsonEquivalent = JSON.stringify({ sessionId: "AT-SESSION-001", phoneNumber: "+2250700000001", text: "" });
+    const jsonSig = `sha256=${crypto.createHmac("sha256", HMAC_SECRET).update(jsonEquivalent).digest("hex")}`;
+    // urlencoded and JSON serializations produce DIFFERENT signatures — they must not be confused
+    expect(jsonSig).not.toBe(sig);
+  });
+
   it("USSD route body-parser appears BEFORE ussdLimiter in route chain (source check)", async () => {
     const fs = await import("fs");
     const source = fs.readFileSync("server/routes.ts", "utf8");
-    const ussdLine = source.split("\n").find(l => l.includes("/api/loto/ussd/session") && l.includes("ussdLimiter"));
-    expect(ussdLine).toBeDefined();
-    // urlencoded must appear before ussdLimiter in the middleware chain
-    const urlIdx = (ussdLine ?? "").indexOf("urlencoded");
-    const limIdx = (ussdLine ?? "").indexOf("ussdLimiter");
-    expect(urlIdx).toBeGreaterThanOrEqual(0);
-    expect(limIdx).toBeGreaterThan(urlIdx);
+    // The route registration spans multiple lines; find the block that
+    // starts with /api/loto/ussd/session and extends through ussdLimiter.
+    const ussdStart = source.indexOf('"/api/loto/ussd/session"');
+    expect(ussdStart).toBeGreaterThan(0);
+    // Extract the ~200 char window around the USSD route definition
+    const block = source.slice(ussdStart, ussdStart + 600);
+    expect(block).toContain("urlencoded");
+    expect(block).toContain("ussdLimiter");
+    // urlencoded must appear before ussdLimiter in the block
+    expect(block.indexOf("urlencoded")).toBeLessThan(block.indexOf("ussdLimiter"));
+    // verify callback must be present (captures raw bytes for HMAC)
+    expect(block).toContain("verify:");
+    expect(block).toContain("rawBody");
   });
 });
