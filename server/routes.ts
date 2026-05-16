@@ -89,6 +89,10 @@ import { sendWelcomeEmail, sendBillingNotification, sendDisputeNotification, sen
 import { sendSms, sendOtpSms, isSmsConfigured } from "./sms";
 import { analyzeCreditRisk, generateReportSummary, chatWithAI, generateComplianceReport, generatePortfolioIntelligence, parseProvider, parseOptionalProvider, generateCreditNarrative, detectAnomalies, generateRegulatoryReport, naturalLanguageQuery, analyzeCrossBorderRisk, generateLoanRecommendation, generateCreditInsights, callAI, parseJSON, generateAIResponse } from "./ai";
 import { BOG_EXPORT_GENERATORS } from "./bog-export";
+import { CBN_EXPORT_GENERATORS } from "./cbn-export";
+import type { CbnFileType } from "@shared/cbn-codes";
+import { CBK_EXPORT_GENERATORS } from "./cbk-export";
+import type { CbkFileType } from "@shared/cbk-codes";
 import { getVapidPublicKey, sendPushToConsumerAccount } from "./push-notifications";
 import { getTaxAuthorityProfile } from "@shared/tax-authority";
 import type { BogFileType } from "@shared/bog-codes";
@@ -9449,6 +9453,142 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const { content, filename } = await generator(reportingDate, 1, "0", orgId);
       const lines = content.split("\n");
       res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4) });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ── CBN (Central Bank of Nigeria) Export ──────────────────────────────────
+  app.get("/api/cbn/export/:fileType", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
+    try {
+      const fileType = (req.params["fileType"] as string).toUpperCase() as CbnFileType;
+      const validTypes: CbnFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type: ${fileType}. Must be one of: ${validTypes.join(", ")}` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const sequenceNumber = parseInt(req.query.sequenceNumber as string) || 1;
+      const correctionIndicator = (req.query.correctionIndicator as string) || "0";
+
+      const orgId = getOrgScope(req);
+      const generator = CBN_EXPORT_GENERATORS[fileType];
+      const { content: rawContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+      const exporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
+      const exporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
+      const exporterName = exporterUser?.displayName || exporterUser?.username || "unknown";
+      const content = rawContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${exporterName} | Institution: ${exporterOrg} | Regulator: CBN | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
+
+      const exportHash = generateExportHash(content);
+      const sizeBytes = Buffer.byteLength(content, "utf8");
+      const recordCount = content.split("\n").filter(l => l.trim()).length - 1;
+
+      const encResult = encryptExportData(content);
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "REGULATORY_EXPORT",
+        entity: "cbn_report",
+        entityId: fileType,
+        details: JSON.stringify({ regulator: "CBN", fileType, filename, sizeBytes, recordCount, plaintextSha256: exportHash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
+        ipAddress: req.ip || "unknown",
+      });
+
+      const encFilename = `${filename}.enc`;
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${encFilename}"`);
+      res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+      res.setHeader("X-Export-Plaintext-SHA256", exportHash);
+      res.setHeader("X-Export-Encrypted", "true");
+      res.setHeader("X-Export-Size-Bytes", String(sizeBytes));
+      res.setHeader("X-Export-Record-Count", String(recordCount));
+      res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, encFilename)).toString("base64"));
+      res.send(encResult.encryptedData);
+    } catch (e: any) {
+      routeLogger.error("CBN export error:", { detail: e });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/cbn/export-preview/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const fileType = (req.params["fileType"] as string).toUpperCase() as CbnFileType;
+      const validTypes: CbnFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const orgId = getOrgScope(req);
+      const generator = CBN_EXPORT_GENERATORS[fileType];
+      const { content, filename } = await generator(reportingDate, 1, "0", orgId);
+      const lines = content.split("\n");
+      res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4), regulator: "CBN", jurisdiction: "Nigeria" });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ── CBK (Central Bank of Kenya) Export ────────────────────────────────────
+  app.get("/api/cbk/export/:fileType", requireRole("admin", "regulator", "super_admin"), exportLimiter, async (req, res) => {
+    try {
+      const fileType = (req.params["fileType"] as string).toUpperCase() as CbkFileType;
+      const validTypes: CbkFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type: ${fileType}. Must be one of: ${validTypes.join(", ")}` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const sequenceNumber = parseInt(req.query.sequenceNumber as string) || 1;
+      const correctionIndicator = (req.query.correctionIndicator as string) || "0";
+
+      const orgId = getOrgScope(req);
+      const generator = CBK_EXPORT_GENERATORS[fileType];
+      const { content: rawContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+      const exporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
+      const exporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
+      const exporterName = exporterUser?.displayName || exporterUser?.username || "unknown";
+      const content = rawContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${exporterName} | Institution: ${exporterOrg} | Regulator: CBK | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
+
+      const exportHash = generateExportHash(content);
+      const sizeBytes = Buffer.byteLength(content, "utf8");
+      const recordCount = content.split("\n").filter(l => l.trim()).length - 1;
+
+      const encResult = encryptExportData(content);
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "REGULATORY_EXPORT",
+        entity: "cbk_report",
+        entityId: fileType,
+        details: JSON.stringify({ regulator: "CBK", fileType, filename, sizeBytes, recordCount, plaintextSha256: exportHash, ciphertextSha256: encResult.ciphertextHash, encrypted: true }),
+        ipAddress: req.ip || "unknown",
+      });
+
+      const encFilename = `${filename}.enc`;
+      res.setHeader("Content-Type", "application/octet-stream");
+      res.setHeader("Content-Disposition", `attachment; filename="${encFilename}"`);
+      res.setHeader("X-Export-SHA256", encResult.ciphertextHash);
+      res.setHeader("X-Export-Plaintext-SHA256", exportHash);
+      res.setHeader("X-Export-Encrypted", "true");
+      res.setHeader("X-Export-Size-Bytes", String(sizeBytes));
+      res.setHeader("X-Export-Record-Count", String(recordCount));
+      res.setHeader("X-Export-SHA256-Companion", Buffer.from(generateSha256Companion(encResult.ciphertextHash, encFilename)).toString("base64"));
+      res.send(encResult.encryptedData);
+    } catch (e: any) {
+      routeLogger.error("CBK export error:", { detail: e });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/cbk/export-preview/:fileType", requireRole("admin", "regulator", "super_admin"), async (req, res) => {
+    try {
+      const fileType = (req.params["fileType"] as string).toUpperCase() as CbkFileType;
+      const validTypes: CbkFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
+      if (!validTypes.includes(fileType)) {
+        return res.status(400).json({ message: `Invalid file type` });
+      }
+      const reportingDate = (req.query.reportingDate as string) || new Date().toISOString().split("T")[0].replace(/-/g, "");
+      const orgId = getOrgScope(req);
+      const generator = CBK_EXPORT_GENERATORS[fileType];
+      const { content, filename } = await generator(reportingDate, 1, "0", orgId);
+      const lines = content.split("\n");
+      res.json({ filename, totalRows: lines.length - 1, headerRow: lines[0], sampleRows: lines.slice(1, 4), regulator: "CBK", jurisdiction: "Kenya" });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
