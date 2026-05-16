@@ -5852,7 +5852,13 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.post("/api/consent-records", requireRole("admin", "lender"), async (req, res) => {
     try {
       const receiptNumber = `CR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const parsed = insertConsentRecordSchema.parse({ ...req.body, receiptNumber });
+      // Strip server-controlled exemption markers from client input — these fields
+      // may only be set by the server-side loan-exemption path (POST /api/bog/consent).
+      // Allowing clients to supply them would let a lender self-create a
+      // 'loan_exemption' type consent to bypass the BoG consent gate.
+      const { loanExemption: _le, borrowerResponse: _br, consentType: _ctRaw, status: _st, ...clientBody } = req.body as Record<string, unknown>;
+      const consentType = (_ctRaw === "loan_exemption") ? "credit_report" : (_ctRaw as string | undefined);
+      const parsed = insertConsentRecordSchema.parse({ ...clientBody, receiptNumber, ...(consentType ? { consentType } : {}) });
       const record = await storage.createConsentRecord(parsed);
       await storage.createAuditLog({
         action: "GRANT_CONSENT", entity: "consent_record", entityId: record.id, userId: req.session?.userId,

@@ -318,7 +318,29 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
     }
   });
 
-  it("loan-exemption consent (canonical consentType=loan_exemption) → allowed: true with loanExemption flag", async () => {
+  it("loan_exemption consentType without approval markers → 403 (consentType alone is insufficient)", async () => {
+    // Simulates a lender-crafted record with consentType='loan_exemption' but
+    // missing the server-controlled markers (loanExemption=true, borrowerResponse='approved').
+    // The gate must reject this — consentType alone must not trigger exemption.
+    const ins = await db.execute(sql`
+      INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response)
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'loan_exemption', 'active', ${`GATE-BYPASS-${Date.now()}`}, true, false, 'pending')
+      RETURNING id
+    `);
+    const consentId = (ins.rows[0] as { id: string }).id;
+    try {
+      const ag = agent();
+      await loginAs(ag, { userId: checkerUserId, userRole: "lender", organizationId: orgAId });
+      const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
+      // Must be blocked — falls through to standard path where borrowerResponse='pending' → CONSENT_INACTIVE
+      expect(res.status).toBe(403);
+      expect(res.body.blocked).toBe(true);
+    } finally {
+      await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
+    }
+  });
+
+  it("loan-exemption consent (canonical consentType=loan_exemption + all approval markers) → allowed: true", async () => {
     const ins = await db.execute(sql`
       INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response)
       VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'loan_exemption', 'active', ${`GATE-EXEMPTION-${Date.now()}`}, true, true, 'approved')

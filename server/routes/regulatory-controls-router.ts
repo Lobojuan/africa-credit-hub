@@ -164,12 +164,32 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
     }
 
     // Path 2: Loan-origination exemption (Ghana Data Protection Act §12(3)).
-    // Canonical form: consentType === 'loan_exemption' + loanExemption === true
-    // + borrowerResponse === 'approved'. Backward compat: also accept records
-    // written with loanExemption=true prior to the canonical consentType being set.
-    const isLoanExemptionType = consent.consentType === "loan_exemption";
-    const isLoanExemptionLegacy = consent.loanExemption && consent.borrowerResponse === "approved";
-    if (isLoanExemptionType || isLoanExemptionLegacy) {
+    // ALL three invariants must hold — consentType alone is not sufficient and
+    // must not be treated as an exemption trigger by itself (prevents a lender
+    // from self-creating a 'loan_exemption' type record to bypass the gate):
+    //   • consentType === 'loan_exemption' — canonical type written by server
+    //   • loanExemption === true            — boolean flag set by server path only
+    //   • borrowerResponse === 'approved'   — approval marker set by server path only
+    // Path 2: Loan-origination exemption (Ghana Data Protection Act §12(3)).
+    // ALL three invariants must hold simultaneously. consentType alone is not a
+    // sufficient trigger — loanExemption=true and borrowerResponse='approved' must
+    // also be present (both are server-controlled fields set only via the
+    // /api/bog/consent endpoint). A 'loan_exemption' record missing any marker is
+    // explicitly rejected before the standard path so it cannot fall through.
+    const isLoanExemption =
+      consent.consentType === "loan_exemption" &&
+      consent.loanExemption === true &&
+      consent.borrowerResponse === "approved";
+
+    if (consent.consentType === "loan_exemption" && !isLoanExemption) {
+      return res.status(403).json({
+        message: "Loan-exemption consent lacks required server-controlled approval markers",
+        code: "CONSENT_INACTIVE",
+        blocked: true,
+      });
+    }
+
+    if (isLoanExemption) {
       if (consent.status !== "active") {
         return res.status(403).json({
           message: "Loan-exemption consent is no longer active",
