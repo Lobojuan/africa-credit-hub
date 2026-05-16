@@ -89,8 +89,8 @@ export const publicApiLimiter = rateLimit({
 
 export const sessionApiLimiter = rateLimit({
   keyGenerator: (req) => {
-    const userId = req.session?.userId;
-    if (userId) return String(userId);
+    const sid = req.sessionID;
+    if (sid) return sid;
     return rateLimitKeyGenerator(req);
   },
   skip: isLocalhost,

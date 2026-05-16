@@ -1,10 +1,19 @@
 import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
+import { storage } from "../storage";
 
 const SESSION_FP_KEY = "__fp__";
 const SESSION_FP_LOGGED_KEY = "__fp_logged__";
 const SESSION_FP_LAST_AUDIT_KEY = "__fp_last_audit__";
-const FP_AUDIT_INTERVAL_MS = 5 * 60 * 1000;
+const FP_HEARTBEAT_MS = 60 * 1000;
+
+declare module "express-session" {
+  interface SessionData {
+    __fp__?: string;
+    __fp_logged__?: boolean;
+    __fp_last_audit__?: number;
+  }
+}
 
 function computeFingerprint(req: Request, sessionId: string): string {
   const ua = req.headers["user-agent"] || "";
@@ -16,34 +25,34 @@ function computeFingerprint(req: Request, sessionId: string): string {
     .digest("hex");
 }
 
-function auditLog(data: Record<string, unknown>) {
-  try {
-    const { storage } = require("../storage");
-    storage.createAuditLog(data).catch(() => {});
-  } catch {}
+function writeAuditLog(data: Parameters<typeof storage.createAuditLog>[0]): void {
+  storage.createAuditLog(data).catch((err) => {
+    console.warn("[device-fingerprint] audit log write failed:", (err as Error)?.message);
+  });
 }
 
 export function deviceFingerprintMiddleware(req: Request, res: Response, next: NextFunction) {
   if (!req.session?.userId) return next();
 
-  const sessionId = (req.session as any).id || req.sessionID || "";
+  const sessionId = req.sessionID || "";
   const fp = computeFingerprint(req, sessionId);
-  const stored: string | undefined = (req.session as any)[SESSION_FP_KEY];
-  const alreadyLogged: boolean = !!(req.session as any)[SESSION_FP_LOGGED_KEY];
+  const stored: string | undefined = req.session[SESSION_FP_KEY];
+  const alreadyLogged: boolean = !!req.session[SESSION_FP_LOGGED_KEY];
 
-  (res.locals as any).deviceFingerprint = fp;
+  res.locals["deviceFingerprint"] = fp;
+  res.setHeader("X-Fp-Active", fp.slice(0, 8));
 
   if (!stored) {
-    (req.session as any)[SESSION_FP_KEY] = fp;
-    (req.session as any)[SESSION_FP_LOGGED_KEY] = true;
-    auditLog({
+    req.session[SESSION_FP_KEY] = fp;
+    req.session[SESSION_FP_LOGGED_KEY] = true;
+    writeAuditLog({
       userId: req.session.userId,
       action: "SESSION_FINGERPRINT_CREATED",
       entity: "session",
       entityId: sessionId.slice(0, 16),
       details: JSON.stringify({
         tag: "session_fingerprint_created",
-        fp: fp.slice(0, 8) + "…",
+        fp: fp.slice(0, 8) + "\u2026",
         ua: (req.headers["user-agent"] || "").slice(0, 80),
         ip: req.ip,
       }),
@@ -51,7 +60,7 @@ export function deviceFingerprintMiddleware(req: Request, res: Response, next: N
       organizationId: req.session.organizationId || null,
     });
   } else if (stored !== fp) {
-    auditLog({
+    writeAuditLog({
       userId: req.session.userId,
       action: "SESSION_FINGERPRINT_CHANGE",
       entity: "session",
@@ -59,8 +68,8 @@ export function deviceFingerprintMiddleware(req: Request, res: Response, next: N
       details: JSON.stringify({
         tag: "session_fingerprint_change",
         severity: "warning",
-        prevFp: stored.slice(0, 8) + "…",
-        newFp: fp.slice(0, 8) + "…",
+        prevFp: stored.slice(0, 8) + "\u2026",
+        newFp: fp.slice(0, 8) + "\u2026",
         ua: (req.headers["user-agent"] || "").slice(0, 80),
         ip: req.ip,
         path: req.path,
@@ -68,18 +77,18 @@ export function deviceFingerprintMiddleware(req: Request, res: Response, next: N
       ipAddress: req.ip || null,
       organizationId: req.session.organizationId || null,
     });
-    (req.session as any)[SESSION_FP_KEY] = fp;
+    req.session[SESSION_FP_KEY] = fp;
   } else {
     if (!alreadyLogged) {
-      (req.session as any)[SESSION_FP_LOGGED_KEY] = true;
-      auditLog({
+      req.session[SESSION_FP_LOGGED_KEY] = true;
+      writeAuditLog({
         userId: req.session.userId,
         action: "SESSION_FINGERPRINT_VERIFIED",
         entity: "session",
         entityId: sessionId.slice(0, 16),
         details: JSON.stringify({
           tag: "session_fingerprint_verified",
-          fp: fp.slice(0, 8) + "…",
+          fp: fp.slice(0, 8) + "\u2026",
           ua: (req.headers["user-agent"] || "").slice(0, 80),
           ip: req.ip,
         }),
@@ -87,17 +96,17 @@ export function deviceFingerprintMiddleware(req: Request, res: Response, next: N
         organizationId: req.session.organizationId || null,
       });
     }
-    const lastAudit: number = (req.session as any)[SESSION_FP_LAST_AUDIT_KEY] || 0;
-    if (Date.now() - lastAudit >= FP_AUDIT_INTERVAL_MS) {
-      (req.session as any)[SESSION_FP_LAST_AUDIT_KEY] = Date.now();
-      auditLog({
+    const lastAudit: number = req.session[SESSION_FP_LAST_AUDIT_KEY] || 0;
+    if (Date.now() - lastAudit >= FP_HEARTBEAT_MS) {
+      req.session[SESSION_FP_LAST_AUDIT_KEY] = Date.now();
+      writeAuditLog({
         userId: req.session.userId,
         action: "SESSION_FINGERPRINT_ACTIVE",
         entity: "session",
         entityId: sessionId.slice(0, 16),
         details: JSON.stringify({
           tag: "session_fingerprint_active",
-          fp: fp.slice(0, 8) + "…",
+          fp: fp.slice(0, 8) + "\u2026",
           path: req.path,
           ip: req.ip,
         }),

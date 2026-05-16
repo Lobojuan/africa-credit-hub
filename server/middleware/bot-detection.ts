@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
+import { storage } from "../storage";
 
 const KNOWN_SCRAPERS = [
   "python-requests", "python-urllib", "scrapy", "wget", "curl/",
@@ -18,8 +19,9 @@ const recentBursts = new Map<string, { count: number; windowStart: number }>();
 
 setInterval(() => {
   const now = Date.now();
-  recentBursts.forEach((v, k) => {
-    if (now - v.windowStart > 10_000) recentBursts.delete(k);
+  recentBursts.forEach((_v, k) => {
+    const entry = recentBursts.get(k);
+    if (entry && now - entry.windowStart > 10_000) recentBursts.delete(k);
   });
 }, 30_000);
 
@@ -37,9 +39,7 @@ export function botDetectionMiddleware(req: Request, res: Response, next: NextFu
   const acceptLang = req.headers["accept-language"] || "";
 
   const isScraper = ua.length > 0 && KNOWN_SCRAPERS.some(s => ua.includes(s));
-
-  const missingBrowserHeaders =
-    ua.length > 0 && (!accept || !acceptLang);
+  const missingBrowserHeaders = ua.length > 0 && (!accept || !acceptLang);
 
   const ip = req.ip || "";
   const now = Date.now();
@@ -60,26 +60,25 @@ export function botDetectionMiddleware(req: Request, res: Response, next: NextFu
   const isRapidBurst = burstCount > 10;
 
   if (isScraper || missingBrowserHeaders || isRapidBurst) {
-    try {
-      const { storage } = require("../storage");
-      storage.createAuditLog({
-        userId: req.session?.userId || null,
-        action: "BOT_DETECTION_FLAG",
-        entity: "request",
-        entityId: null,
-        details: JSON.stringify({
-          reason: isScraper ? "known_scraper_ua" : missingBrowserHeaders ? "missing_browser_headers" : "rapid_burst",
-          ua: (req.headers["user-agent"] || "").slice(0, 120),
-          accept: accept.slice(0, 60),
-          acceptLang: acceptLang.slice(0, 60),
-          path: req.path,
-          ip,
-          burstCount,
-        }),
-        ipAddress: ip || null,
-        organizationId: req.session?.organizationId || null,
-      }).catch(() => {});
-    } catch {}
+    storage.createAuditLog({
+      userId: req.session?.userId ?? null,
+      action: "BOT_DETECTION_FLAG",
+      entity: "request",
+      entityId: null,
+      details: JSON.stringify({
+        reason: isScraper ? "known_scraper_ua" : missingBrowserHeaders ? "missing_browser_headers" : "rapid_burst",
+        ua: (req.headers["user-agent"] || "").slice(0, 120),
+        accept: accept.slice(0, 60),
+        acceptLang: acceptLang.slice(0, 60),
+        path: req.path,
+        ip,
+        burstCount,
+      }),
+      ipAddress: ip || null,
+      organizationId: req.session?.organizationId ?? null,
+    }).catch((err) => {
+      console.warn("[bot-detection] audit log write failed:", (err as Error)?.message);
+    });
 
     res.setHeader("Retry-After", "60");
     return res.status(429).json({

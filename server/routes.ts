@@ -9345,7 +9345,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       const orgId = getOrgScope(req);
       const generator = BOG_EXPORT_GENERATORS[fileType];
-      const { content, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+      const { content: rawBogContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+      const bogExporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
+      const content = rawBogContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${req.session.username ?? "unknown"} | Institution: ${bogExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const bogHash = generateExportHash(content);
       const bogSizeBytes = Buffer.byteLength(content, "utf8");
@@ -9408,7 +9410,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       const orgId = getOrgScope(req);
       const generator = BSL_EXPORT_GENERATORS[fileType];
-      const { content, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+      const { content: rawBslContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
+      const bslExporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
+      const content = rawBslContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${req.session.username ?? "unknown"} | Institution: ${bslExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const bslHash = generateExportHash(content);
       const bslSizeBytes = Buffer.byteLength(content, "utf8");
