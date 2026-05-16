@@ -616,6 +616,7 @@ lotoAdminRouter.get("/export.pdf", ...gate, async (req, res) => {
         Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital",
         Creator: "Universal Credit Hub Ltd",
         Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd",
+        Subject: "Loto Fiscal DGI Report — Universal Credit Hub Pan-African Platform | Confidential",
         Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com",
       },
     });

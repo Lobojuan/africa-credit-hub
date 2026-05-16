@@ -3195,7 +3195,7 @@ export async function registerRoutes(
       const borrower = borrowerResult[0];
 
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 50, left: 40, right: 40 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
+      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 50, left: 40, right: 40 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Subject: "Credit Report — Universal Credit Hub Pan-African Credit Registry | Confidential", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
@@ -7010,7 +7010,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const lang = bodyLang || (req.query.lang as string) || "en";
 
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: 40, right: 40 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
+      const doc = new PDFDocument({ size: "A4", margins: { top: 40, bottom: 40, left: 40, right: 40 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Subject: "Business Credit Report — Universal Credit Hub Pan-African Credit Registry | Confidential", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
@@ -11744,7 +11744,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!billing) return res.status(404).json({ message: "Billing record not found" });
 
       const PDFDocument = (await import("pdfkit")).default;
-      const doc = new PDFDocument({ size: "A4", margins: { top: 50, bottom: 50, left: 50, right: 50 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
+      const doc = new PDFDocument({ size: "A4", margins: { top: 50, bottom: 50, left: 50, right: 50 }, bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Subject: "Collateral Registry Certificate — Universal Credit Hub Pan-African Platform | Confidential", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
       const chunks: Buffer[] = [];
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
 
@@ -15893,7 +15893,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (_) { /* skip QR if generation fails */ }
 
     const PDFDocument = (await import("pdfkit")).default;
-    const doc = new PDFDocument({ margin: 60, size: "A4", bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
+    const doc = new PDFDocument({ margin: 60, size: "A4", bufferPages: true, info: { Author: "Universal Credit Hub Ltd / Uffe Jon Carlson / Carlson Capital", Creator: "Universal Credit Hub Ltd", Producer: "UCH v2.8 | Registered in Ghana | © 2026 Universal Credit Hub Ltd", Subject: "Skip Trace Report — Universal Credit Hub Pan-African Credit Registry | Confidential", Keywords: "© 2026 Universal Credit Hub Ltd. Confidential. Registered in Ghana. uffe.carlson@gmail.com" } });
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
       doc.on("data", (chunk: Buffer) => chunks.push(chunk));
