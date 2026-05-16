@@ -1,18 +1,13 @@
 /**
  * Regulatory compliance control endpoints — testable Express router.
  *
- * Exposes three thin endpoints used both by production (mounted in routes.ts)
+ * Exposes four endpoints used both by production (mounted in routes.ts)
  * and by the behavioral test suite (mounted in a minimal test harness):
  *
- *   PATCH /approvals/:id      — maker-checker guard for pending approvals
- *   POST  /consent-gate-check — BoG consent gate validation
+ *   PATCH /approvals/:id      — maker-checker guard + full approval persistence
+ *   POST  /consent-gate-check — BoG consent gate (borrower-bound, IDOR-safe)
  *   GET   /export-preview/cbn/:fileType  — CBN pipe-delimited preview (JSON)
  *   GET   /export-preview/cbk/:fileType  — CBK pipe-delimited preview (JSON)
- *
- * These routes deliberately exclude side-effects (no borrower creation, no
- * webhooks) so they remain hermetic in tests. The full production PATCH handler
- * in routes.ts continues to own the downstream effects; this router only owns
- * the guard phase.
  */
 
 import { Router } from "express";
@@ -26,7 +21,7 @@ import type { CbkFileType } from "../../shared/cbk-codes";
 
 const router = Router();
 
-// ─── Maker-checker guard (PATCH /approvals/:id) ───────────────────────────────
+// ─── Maker-checker guard + approval persistence (PATCH /approvals/:id) ────────
 
 const approvalUpdateSchema = z.object({
   status: z.enum(["approved", "rejected"]),
@@ -35,17 +30,19 @@ const approvalUpdateSchema = z.object({
 
 router.patch("/approvals/:id", requireAuth, requireRole("admin", "regulator"), async (req, res) => {
   try {
-    const { status } = approvalUpdateSchema.parse(req.body);
+    const { status, reviewNotes } = approvalUpdateSchema.parse(req.body);
     const currentUserId = req.session?.userId;
     if (!currentUserId) return res.status(401).json({ message: "Not authenticated" });
 
     const approval = await storage.getPendingApproval(req.params.id as string);
     if (!approval) return res.status(404).json({ message: "Approval not found" });
 
+    // Maker-checker: same user cannot be both sides of the workflow
     if (approval.requestedBy === currentUserId) {
       return res.status(403).json({ message: "Maker cannot be the Checker.", code: "SELF_APPROVAL_FORBIDDEN" });
     }
 
+    // Org-scope: non-privileged reviewers may only act on their own org's approvals
     const reviewerOrgId = req.session?.organizationId;
     if (
       !isPlatformPrivileged(req.session?.userRole) &&
@@ -53,20 +50,36 @@ router.patch("/approvals/:id", requireAuth, requireRole("admin", "regulator"), a
       approval.organizationId &&
       reviewerOrgId !== approval.organizationId
     ) {
-      return res.status(403).json({ message: "You cannot review approvals from a different organization", code: "ORG_SCOPE_VIOLATION" });
+      return res.status(403).json({
+        message: "You cannot review approvals from a different organization",
+        code: "ORG_SCOPE_VIOLATION",
+      });
     }
 
+    // Guard against re-reviewing an already-actioned approval
     if (approval.status !== "pending") {
       return res.status(400).json({ message: "This request has already been reviewed", code: "ALREADY_REVIEWED" });
     }
 
-    res.json({ guardPassed: true, approvalId: approval.id, requestedStatus: status });
+    // Persist the decision — this is the authoritative action handler
+    const updated = await storage.updateApprovalStatus(approval.id, status, currentUserId, reviewNotes);
+
+    res.json({
+      guardPassed: true,
+      approvalId: approval.id,
+      status: updated?.status ?? status,
+      reviewedBy: currentUserId,
+    });
   } catch (e: any) {
     res.status(400).json({ message: e.message });
   }
 });
 
 // ─── BoG consent gate (POST /consent-gate-check) ─────────────────────────────
+//
+// Security requirement: consent record must be bound to the *specific borrower*
+// being accessed (borrower-ID match). A valid consent for borrower A cannot
+// authorise access to borrower B (IDOR / consent-replay defence).
 
 const consentGateSchema = z.object({
   consentId: z.string().optional(),
@@ -78,7 +91,13 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
     const { consentId, borrowerId } = consentGateSchema.parse(req.body);
     const isSuperAdmin = isPlatformPrivileged(req.session?.userRole);
 
-    if (!isSuperAdmin && !consentId) {
+    // Privileged actors bypass the gate (audit trail maintained by caller)
+    if (isSuperAdmin) {
+      return res.json({ allowed: true, isSuperAdmin: true, borrowerId });
+    }
+
+    // All other roles must supply a consentId
+    if (!consentId) {
       return res.status(403).json({
         message: "Consent verification is required before generating a credit report. Please complete the consent capture step.",
         code: "CONSENT_REQUIRED",
@@ -86,24 +105,37 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
       });
     }
 
-    if (!isSuperAdmin && consentId) {
-      const consent = await storage.getConsentRecord(consentId);
-      if (!consent) return res.status(404).json({ message: "Consent record not found", code: "CONSENT_NOT_FOUND" });
-      if (consent.status !== "active") {
-        return res.status(403).json({ message: "Consent is not active", code: "CONSENT_INACTIVE", blocked: true });
-      }
-      if (consent.expiresAt && new Date(consent.expiresAt) < new Date()) {
-        return res.status(403).json({ message: "Consent has expired", code: "CONSENT_EXPIRED", blocked: true });
-      }
+    const consent = await storage.getConsentRecord(consentId);
+    if (!consent) {
+      return res.status(404).json({ message: "Consent record not found", code: "CONSENT_NOT_FOUND" });
     }
 
-    res.json({ allowed: true, isSuperAdmin, borrowerId });
+    // IDOR / consent-replay defence: the consent must be bound to the exact
+    // borrower being accessed. A consent granted for borrower A cannot be
+    // used to access borrower B's record.
+    if (consent.borrowerId !== borrowerId) {
+      return res.status(403).json({
+        message: "Consent record does not match the requested borrower",
+        code: "CONSENT_BORROWER_MISMATCH",
+        blocked: true,
+      });
+    }
+
+    if (consent.status !== "active") {
+      return res.status(403).json({ message: "Consent is not active", code: "CONSENT_INACTIVE", blocked: true });
+    }
+
+    if (consent.expiresAt && new Date(consent.expiresAt) < new Date()) {
+      return res.status(403).json({ message: "Consent has expired", code: "CONSENT_EXPIRED", blocked: true });
+    }
+
+    res.json({ allowed: true, isSuperAdmin: false, borrowerId, consentId });
   } catch (e: any) {
     res.status(400).json({ message: e.message });
   }
 });
 
-// ─── CBN/CBK export preview (GET /export-preview/cbn/:fileType) ───────────────
+// ─── CBN/CBK export preview ───────────────────────────────────────────────────
 
 const CBN_FILE_TYPES: CbnFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];
 const CBK_FILE_TYPES: CbkFileType[] = ["CONC", "BUSC", "CONJ", "BUSJ", "COND", "BUSD"];

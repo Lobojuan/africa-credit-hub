@@ -143,12 +143,16 @@ describe("Maker-checker guard — PATCH /api/regulatory/approvals/:id", () => {
     expect(res.body.code).toBe("ORG_SCOPE_VIOLATION");
   });
 
-  it("checker from same org passes guard (guardPassed: true)", async () => {
+  it("checker from same org passes guard and persists approval decision", async () => {
     const ag = agent();
     await loginAs(ag, { userId: checkerUserId, userRole: "regulator", organizationId: orgAId });
     const res = await ag.patch(`/api/regulatory/approvals/${pendingApprovalId}`).send({ status: "approved" });
     expect(res.status).toBe(200);
     expect(res.body.guardPassed).toBe(true);
+    // Verify decision is persisted in response payload (not just a guard stub)
+    expect(res.body.status).toBe("approved");
+    expect(res.body.reviewedBy).toBe(checkerUserId);
+    expect(res.body.approvalId).toBe(pendingApprovalId);
   });
 
   it("super_admin bypasses org scope — no ORG_SCOPE_VIOLATION", async () => {
@@ -260,6 +264,30 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
       const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
       expect(res.status).toBe(403);
       expect(res.body.code).toBe("CONSENT_INACTIVE");
+    } finally {
+      await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
+    }
+  });
+
+  it("consent issued for borrower A cannot authorize access to borrower B → 403 CONSENT_BORROWER_MISMATCH", async () => {
+    // Insert borrower A's consent
+    const ins = await db.execute(sql`
+      INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed)
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'data_access', 'active', ${`GATE-MISMATCH-${Date.now()}`}, true)
+      RETURNING id
+    `);
+    const consentId = (ins.rows[0] as { id: string }).id;
+    // Fetch a different borrower ID to simulate the IDOR attempt
+    const otherResult = await db.execute(sql`SELECT id FROM borrowers WHERE id != ${testBorrowerId} LIMIT 1`);
+    const otherBorrowerId = (otherResult.rows[0] as { id: string })?.id ?? "other-00000";
+    try {
+      const ag = agent();
+      await loginAs(ag, { userId: checkerUserId, userRole: "lender", organizationId: orgAId });
+      // Present consent for borrower A while requesting access to borrower B
+      const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: otherBorrowerId, consentId });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("CONSENT_BORROWER_MISMATCH");
+      expect(res.body.blocked).toBe(true);
     } finally {
       await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
     }
