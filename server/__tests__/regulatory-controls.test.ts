@@ -269,6 +269,63 @@ describe("BoG consent gate — POST /api/regulatory/consent-gate-check", () => {
     }
   });
 
+  it("loan-exemption consent (loan_exemption=true, borrowerResponse=approved) → allowed: true with loanExemption flag", async () => {
+    const ins = await db.execute(sql`
+      INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response)
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'credit_report', 'active', ${`GATE-EXEMPTION-${Date.now()}`}, true, true, 'approved')
+      RETURNING id
+    `);
+    const consentId = (ins.rows[0] as { id: string }).id;
+    try {
+      const ag = agent();
+      await loginAs(ag, { userId: checkerUserId, userRole: "lender", organizationId: orgAId });
+      const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
+      expect(res.status).toBe(200);
+      expect(res.body.allowed).toBe(true);
+      expect(res.body.loanExemption).toBe(true);
+    } finally {
+      await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
+    }
+  });
+
+  it("expired loan-exemption consent → 403 CONSENT_EXPIRED", async () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const ins = await db.execute(sql`
+      INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response, expires_at)
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'credit_report', 'active', ${`GATE-EXPIRY-${Date.now()}`}, true, true, 'approved', ${past}::timestamp)
+      RETURNING id
+    `);
+    const consentId = (ins.rows[0] as { id: string }).id;
+    try {
+      const ag = agent();
+      await loginAs(ag, { userId: checkerUserId, userRole: "lender", organizationId: orgAId });
+      const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("CONSENT_EXPIRED");
+      expect(res.body.blocked).toBe(true);
+    } finally {
+      await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
+    }
+  });
+
+  it("loan-exemption consent with revoked status → 403 CONSENT_INACTIVE", async () => {
+    const ins = await db.execute(sql`
+      INSERT INTO consent_records (borrower_id, granted_to, purpose, consent_type, status, receipt_number, data_subject_confirmed, loan_exemption, borrower_response)
+      VALUES (${testBorrowerId}, 'test-lender', 'credit_report', 'credit_report', 'revoked', ${`GATE-EX-REVOKED-${Date.now()}`}, true, true, 'approved')
+      RETURNING id
+    `);
+    const consentId = (ins.rows[0] as { id: string }).id;
+    try {
+      const ag = agent();
+      await loginAs(ag, { userId: checkerUserId, userRole: "lender", organizationId: orgAId });
+      const res = await ag.post("/api/regulatory/consent-gate-check").send({ borrowerId: testBorrowerId, consentId });
+      expect(res.status).toBe(403);
+      expect(res.body.code).toBe("CONSENT_INACTIVE");
+    } finally {
+      await db.execute(sql`DELETE FROM consent_records WHERE id = ${consentId}`);
+    }
+  });
+
   it("consent issued for borrower A cannot authorize access to borrower B → 403 CONSENT_BORROWER_MISMATCH", async () => {
     // Insert borrower A's consent
     const ins = await db.execute(sql`

@@ -121,15 +121,41 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
       });
     }
 
-    if (consent.status !== "active") {
-      return res.status(403).json({ message: "Consent is not active", code: "CONSENT_INACTIVE", blocked: true });
-    }
-
+    // Expiry check applies equally to standard and loan-exemption consents
     if (consent.expiresAt && new Date(consent.expiresAt) < new Date()) {
       return res.status(403).json({ message: "Consent has expired", code: "CONSENT_EXPIRED", blocked: true });
     }
 
-    res.json({ allowed: true, isSuperAdmin: false, borrowerId, consentId });
+    // BoG loan-origination exemption path (Ghana Data Protection Act §12(3)):
+    // A consent record created under an active loan agreement is automatically
+    // approved (loan_exemption=true, borrower_response='approved'). Access is
+    // allowed without a separate borrower opt-in flow, but the record must still
+    // be active and borrower-bound (validated above).
+    const isLoanExemption = (consent as any).loanExemption === true;
+    const isExemptionApproved = isLoanExemption && (consent as any).borrowerResponse === "approved";
+    if (isExemptionApproved) {
+      if (consent.status !== "active") {
+        return res.status(403).json({
+          message: "Loan-exemption consent is no longer active",
+          code: "CONSENT_INACTIVE",
+          blocked: true,
+        });
+      }
+      return res.json({
+        allowed: true,
+        isSuperAdmin: false,
+        loanExemption: true,
+        borrowerId,
+        consentId,
+      });
+    }
+
+    // Standard borrower-approved consent path
+    if (consent.status !== "active") {
+      return res.status(403).json({ message: "Consent is not active", code: "CONSENT_INACTIVE", blocked: true });
+    }
+
+    res.json({ allowed: true, isSuperAdmin: false, loanExemption: false, borrowerId, consentId });
   } catch (e: any) {
     res.status(400).json({ message: e.message });
   }
