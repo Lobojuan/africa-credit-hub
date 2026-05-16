@@ -1,18 +1,3 @@
-/**
- * Loto Fiscal E2E Suite
- *
- * Covers:
- *   - Loto workspace (/loto-fiscal) renders for admin and super_admin
- *   - USSD session endpoint: root menu, option selection, auth-bypass
- *   - USSD response format is AT-compatible (CON/END prefix, ≤ 160 chars per segment)
- *   - Loto admin messaging dashboard renders for super_admin
- *   - Messaging stats and recent messages API endpoints
- *   - Consumer messaging preferences API protection
- *   - DGI officer can access /admin/loto-fiscal
- *
- * Uses /api/test/set-session for role injection.
- */
-
 import { test, expect } from "@playwright/test";
 
 async function setSession(
@@ -243,5 +228,80 @@ test.describe("Loto Fiscal — outbound message audit", () => {
   test("GET outbound messages requires auth", async ({ page }) => {
     const resp = await page.request.get("/api/loto/admin/messages");
     expect([401, 403, 404]).toContain(resp.status());
+  });
+});
+
+// ─── Draws and tickets API ────────────────────────────────────────────────────
+
+test.describe("Loto Fiscal — draws and tickets API", () => {
+  test("GET /api/loto/draws returns 200 with array for super_admin", async ({ page }) => {
+    await setSession(page, SUPER_ADMIN_SESSION);
+    const resp = await page.request.get("/api/loto/draws");
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(Array.isArray(body) || Array.isArray(body?.draws)).toBe(true);
+  });
+
+  test("GET /api/loto/draws requires auth", async ({ page }) => {
+    const resp = await page.request.get("/api/loto/draws");
+    expect([401, 403]).toContain(resp.status());
+  });
+
+  test("latest draw entry: draw list contains expected fields", async ({ page }) => {
+    await setSession(page, SUPER_ADMIN_SESSION);
+    const resp = await page.request.get("/api/loto/draws");
+    expect(resp.status()).toBe(200);
+    const body = await resp.json() as { draws?: { id: string; status: string }[] } | { id: string; status: string }[];
+    const draws = Array.isArray(body) ? body : (body as { draws?: { id: string; status: string }[] }).draws ?? [];
+    if (draws.length > 0) {
+      const draw = draws[0];
+      expect(typeof draw.id).toBe("string");
+      expect(typeof draw.status).toBe("string");
+    }
+  });
+
+  test("ticket entry via USSD: check-tickets option returns CON or END", async ({ page }) => {
+    const sessionId = `e2e-ussd-tickets-${Date.now()}`;
+    await page.request.post("/api/loto/ussd/session", {
+      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000010", text: "" },
+    });
+    const resp = await page.request.post("/api/loto/ussd/session", {
+      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000010", text: "2" },
+    });
+    expect(resp.status()).toBe(200);
+    const body = await resp.text();
+    expect(body).toMatch(/^(CON|END)/);
+  });
+
+  test("USSD draw-results flow: selecting next-draw option returns valid response", async ({ page }) => {
+    const sessionId = `e2e-ussd-draw-${Date.now()}`;
+    await page.request.post("/api/loto/ussd/session", {
+      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000011", text: "" },
+    });
+    const resp = await page.request.post("/api/loto/ussd/session", {
+      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000011", text: "3" },
+    });
+    expect(resp.status()).toBe(200);
+    const body = await resp.text();
+    expect(body).toMatch(/^(CON|END)/);
+    expect(body.length).toBeGreaterThan(4);
+  });
+
+  test("loto lottery experience page renders draw-date and ticket summary", async ({ page }) => {
+    await setSession(page, ADMIN_SESSION);
+    await page.goto("/loto-fiscal");
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 12000 });
+    await expect(
+      page.locator('[data-testid="text-draw-date"], [data-testid="card-no-tickets"], [data-testid="card-my-lucky-tickets"]').first(),
+    ).toBeVisible({ timeout: 20000 });
+  });
+
+  test("card-no-tickets or card-my-lucky-tickets is visible after loto page loads", async ({ page }) => {
+    await setSession(page, ADMIN_SESSION);
+    await page.goto("/loto-fiscal");
+    await page.waitForTimeout(2000);
+    const hasTickets = await page.locator('[data-testid="card-my-lucky-tickets"]').isVisible();
+    const noTickets = await page.locator('[data-testid="card-no-tickets"]').isVisible();
+    expect(hasTickets || noTickets).toBe(true);
   });
 });

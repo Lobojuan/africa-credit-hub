@@ -1,20 +1,3 @@
-/**
- * Regulatory Dashboard E2E Suite
- *
- * Tests all visible sections of the /regulatory-dashboard page:
- *   - KPI strip: 6 stat cards (borrowers, accounts, institutions, exposure, NPL, data quality)
- *   - KPI values are non-zero formatted strings
- *   - Portfolio status pie chart renders
- *   - Data quality panel: 3 coverage bars + overall score
- *   - Sector NPL bar chart renders
- *   - Institution compliance table renders (at least one row or empty state)
- *   - NPL exposure summary panel: total exposure, NPL exposure, delinquent/default counts
- *   - Regulatory dashboard API returns correct structure
- *   - API is blocked without auth
- *
- * Uses /api/test/set-session for role injection.
- */
-
 import { test, expect } from "@playwright/test";
 
 async function setSession(

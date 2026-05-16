@@ -71,6 +71,8 @@ export default defineConfig({
         /reports-drilldown\.spec\.ts/,
         /regulatory\.spec\.ts/,
         /consumer-portal\.spec\.ts/,
+        /batch-upload\.spec\.ts/,
+        /bog-export\.spec\.ts/,
       ],
     },
 

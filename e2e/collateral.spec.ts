@@ -1,19 +1,28 @@
-/**
- * Collateral Registry E2E Suite — registration, lien search, certificate, release
- *
- * Covers:
- *   1. Page renders for lender, super_admin, regulator
- *   2. Registration form: open → fill all required fields → submit →
- *      verify record appears in list (stateful assertion)
- *   3. Lien search: activate tab → fill asset ID → search button enables →
- *      search executes and page stays on /collateral-registry
- *   4. API: GET returns array, POST requires auth, verify endpoint 200/404
- *
- * Data: registration uses form fill + submit; the test verifies the created
- * record appears in the list by searching for the unique asset ID.
- */
-
 import { test, expect } from "@playwright/test";
+
+let e2eColId: string;
+let e2eAssetId: string;
+
+test.beforeAll(async ({ browser }) => {
+  const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+  const pg = await ctx.newPage();
+  e2eAssetId = `VIN-SUITE-${Date.now()}`;
+  const resp = await pg.request.post("/api/collateral", {
+    data: {
+      borrowerId: "GH-E2E-COL-001",
+      borrowerName: "E2E Collateral Suite Borrower",
+      collateralType: "vehicle",
+      assetLocalIdentifier: e2eAssetId,
+      estimatedValue: "50000",
+      currency: "GHS",
+      country: "Ghana",
+      description: "E2E suite test vehicle",
+    },
+  });
+  expect(resp.status()).toBe(201);
+  e2eColId = (await resp.json()).id;
+  await ctx.close();
+});
 
 const LENDER_SESSION = { userId: "e2e-col-lender", userRole: "lender" };
 const SA_SESSION = { userId: "e2e-col-sa", userRole: "super_admin" };
@@ -98,40 +107,14 @@ test.describe("Collateral Registry — registration form", () => {
 
   test("collateral registration submitted via API appears in the list", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
-    const assetId = `VIN-E2E-API-${Date.now()}`;
-
-    // Submit registration via API
-    const createResp = await page.request.post("/api/collateral", {
-      data: {
-        borrowerId: "GH-E2E-API-TEST",
-        borrowerName: "E2E API Test Borrower",
-        collateralType: "vehicle",
-        assetLocalIdentifier: assetId,
-        estimatedValue: "35000",
-        currency: "GHS",
-        location: "Kumasi, Ashanti Region, Ghana",
-        description: "E2E test vehicle registration",
-        country: "Ghana",
-      },
-    });
-    // May succeed (200/201) or fail gracefully (400 if borrower resolution fails)
-    if (![200, 201].includes(createResp.status())) {
-      test.skip(true, `Collateral creation returned ${createResp.status()} — skipping list check`);
-      return;
-    }
-    const created = await createResp.json();
-    const colId = created?.id ?? created?.collateral?.id;
-    expect(typeof colId).toBe("string");
-
-    // Navigate to the registry and search for the asset
+    // Use the record created in beforeAll — navigate to registry and verify it appears
     await page.goto("/collateral-registry");
     await page.waitForSelector('[data-testid="input-search-collateral"]', { timeout: 15000 });
-    await page.fill('[data-testid="input-search-collateral"]', assetId);
+    await page.fill('[data-testid="input-search-collateral"]', e2eAssetId);
     await page.waitForTimeout(1000);
 
-    // The registration row should appear in the list
     await expect(
-      page.locator(`[data-testid="row-collateral-${colId}"]`),
+      page.locator(`[data-testid="row-collateral-${e2eColId}"]`),
     ).toBeVisible({ timeout: 12000 });
   });
 });
@@ -181,35 +164,14 @@ test.describe("Collateral Registry — lien search", () => {
     expect(await page.locator('[data-testid="input-lien-search-asset"]').inputValue()).toBe(query);
   });
 
-  test("lien search for a registered asset returns a result row", async ({ page }) => {
-    // Create a registration first via API so we have something to search for
+  test("lien search for a known registered asset returns a result row", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
-    const assetId = `VIN-E2E-LIEN-${Date.now()}`;
-    const createResp = await page.request.post("/api/collateral", {
-      data: {
-        borrowerId: "GH-LIEN-TEST-001",
-        borrowerName: "E2E Lien Search Borrower",
-        collateralType: "vehicle",
-        assetLocalIdentifier: assetId,
-        estimatedValue: "25000",
-        currency: "GHS",
-        country: "Ghana",
-        description: "E2E lien search test vehicle",
-      },
-    });
-    if (![200, 201].includes(createResp.status())) {
-      test.skip(true, "Could not create test collateral for lien search");
-      return;
-    }
-
-    // Now perform lien search for that asset
     await page.goto("/collateral-registry");
     await page.click('[data-testid="tab-lien-search"]');
     await page.waitForSelector('[data-testid="input-lien-search-asset"]', { timeout: 10000 });
-    await page.fill('[data-testid="input-lien-search-asset"]', assetId);
+    await page.fill('[data-testid="input-lien-search-asset"]', e2eAssetId);
     await page.click('[data-testid="btn-lien-search"]');
 
-    // Result row should appear
     await expect(
       page.locator('[data-testid^="row-lien-result-"]').first(),
     ).toBeVisible({ timeout: 12000 });
@@ -221,86 +183,30 @@ test.describe("Collateral Registry — lien search", () => {
 test.describe("Collateral Registry — certificate preview", () => {
   test("preview-cert button opens certificate preview dialog with content", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
-
-    // Create a collateral registration via API to get a real record
-    const assetId = `VIN-CERT-PREVIEW-${Date.now()}`;
-    const createResp = await page.request.post("/api/collateral", {
-      data: {
-        borrowerId: "GH-CERT-TEST-001",
-        borrowerName: "E2E Certificate Preview Borrower",
-        collateralType: "vehicle",
-        assetLocalIdentifier: assetId,
-        estimatedValue: "60000",
-        currency: "GHS",
-        location: "Accra, Ghana",
-        description: "E2E certificate preview test vehicle",
-        country: "Ghana",
-      },
-    });
-    if (![200, 201].includes(createResp.status())) {
-      test.skip(true, "Could not create collateral for certificate preview test");
-      return;
-    }
-    const created = await createResp.json() as { id: string };
-    const colId = created?.id;
-    expect(typeof colId).toBe("string");
-
-    // Navigate to registry and find the registration row
     await page.goto("/collateral-registry");
     await page.waitForSelector('[data-testid="input-search-collateral"]', { timeout: 15000 });
-    await page.fill('[data-testid="input-search-collateral"]', assetId);
-    await page.waitForTimeout(1000);
+    await page.fill('[data-testid="input-search-collateral"]', e2eAssetId);
+    await page.waitForTimeout(800);
 
-    const row = page.locator(`[data-testid="row-collateral-${colId}"]`);
-    const rowVisible = await row.isVisible({ timeout: 8000 });
-    if (!rowVisible) {
-      test.skip(true, "Collateral row not found in list — creation may have partial data");
-      return;
-    }
+    await expect(page.locator(`[data-testid="row-collateral-${e2eColId}"]`)).toBeVisible({ timeout: 12000 });
 
-    // Click the certificate preview button for this record
-    const previewBtn = page.locator(`[data-testid="btn-preview-cert-${colId}"]`);
-    await previewBtn.waitFor({ timeout: 8000 });
-    await previewBtn.click();
+    await page.locator(`[data-testid="btn-preview-cert-${e2eColId}"]`).click();
 
-    // Certificate preview dialog should open
-    await expect(
-      page.locator('[data-testid="dialog-certificate-preview"]'),
-    ).toBeVisible({ timeout: 12000 });
+    await expect(page.locator('[data-testid="dialog-certificate-preview"]')).toBeVisible({ timeout: 12000 });
+    await expect(page.locator('[data-testid="certificate-preview-content"]')).toBeVisible({ timeout: 12000 });
 
-    // Dialog content should be populated (skeleton done, real content showing)
-    await expect(
-      page.locator('[data-testid="certificate-preview-content"]'),
-    ).toBeVisible({ timeout: 12000 });
-
-    // Close the dialog
     await page.locator('[data-testid="btn-close-preview"]').click();
-    await expect(
-      page.locator('[data-testid="dialog-certificate-preview"]'),
-    ).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('[data-testid="dialog-certificate-preview"]')).not.toBeVisible({ timeout: 5000 });
   });
 
   test("certificate print button is visible inside the preview dialog", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
-
-    // Quick API check: find any collateral record
-    const listResp = await page.request.get("/api/collateral?limit=1");
-    if (listResp.status() !== 200) { test.skip(true, "No collateral API"); return; }
-    const items = await listResp.json() as { id: string }[];
-    if (!Array.isArray(items) || items.length === 0) {
-      test.skip(true, "No collateral records in DB");
-      return;
-    }
-    const colId = items[0].id;
-
-    // Navigate to registry
     await page.goto("/collateral-registry");
-    await page.waitForSelector('[data-testid^="row-collateral-"]', { timeout: 15000 });
+    await page.fill('[data-testid="input-search-collateral"]', e2eAssetId);
+    await page.waitForTimeout(800);
 
-    const previewBtn = page.locator(`[data-testid="btn-preview-cert-${colId}"]`);
-    const btnVisible = await previewBtn.isVisible({ timeout: 8000 });
-    if (!btnVisible) { test.skip(true, "Preview button not found for first record"); return; }
-    await previewBtn.click();
+    await expect(page.locator(`[data-testid="row-collateral-${e2eColId}"]`)).toBeVisible({ timeout: 12000 });
+    await page.locator(`[data-testid="btn-preview-cert-${e2eColId}"]`).click();
 
     await expect(page.locator('[data-testid="dialog-certificate-preview"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="btn-print-certificate"]')).toBeVisible({ timeout: 8000 });
@@ -309,44 +215,59 @@ test.describe("Collateral Registry — certificate preview", () => {
 
 // ─── Collateral release lifecycle ─────────────────────────────────────────────
 
-test.describe("Collateral Registry — release lifecycle via API", () => {
-  test("create collateral → release via API → status changes to released", async ({ page }) => {
-    await setSession(page, LENDER_SESSION);
+test.describe("Collateral Registry — release lifecycle", () => {
+  let releaseColId: string;
 
-    // Create registration
-    const assetId = `VIN-RELEASE-${Date.now()}`;
-    const createResp = await page.request.post("/api/collateral", {
+  test.beforeAll(async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+    const pg = await ctx.newPage();
+    const resp = await pg.request.post("/api/collateral", {
       data: {
-        borrowerId: "GH-RELEASE-TEST-001",
-        borrowerName: "E2E Release Test Borrower",
-        collateralType: "vehicle",
-        assetLocalIdentifier: assetId,
-        estimatedValue: "30000",
+        borrowerId: "GH-E2E-RELEASE-001",
+        borrowerName: "E2E Release Borrower",
+        collateralType: "equipment",
+        assetLocalIdentifier: `EQ-RELEASE-${Date.now()}`,
+        estimatedValue: "25000",
         currency: "GHS",
         country: "Ghana",
-        description: "E2E release test vehicle",
+        description: "E2E release lifecycle test",
       },
     });
-    if (![200, 201].includes(createResp.status())) {
-      test.skip(true, `Collateral creation returned ${createResp.status()}`);
-      return;
-    }
-    const created = await createResp.json() as { id: string };
-    const colId = created?.id;
-    expect(typeof colId).toBe("string");
+    expect(resp.status()).toBe(201);
+    releaseColId = (await resp.json()).id;
+    await ctx.close();
+  });
 
-    // Release the collateral
-    const releaseResp = await page.request.post(`/api/collateral/${colId}/release`, {
+  test("created collateral is in active/registered status", async ({ page }) => {
+    await setSession(page, SA_SESSION);
+    const r = await page.request.get(`/api/collateral/${releaseColId}`);
+    expect(r.status()).toBe(200);
+    const rec = await r.json() as { status: string };
+    expect(["active", "registered", "pending"]).toContain(rec.status);
+  });
+
+  test("releasing collateral via API transitions status to released", async ({ page }) => {
+    await setSession(page, SA_SESSION);
+    const releaseResp = await page.request.post(`/api/collateral/${releaseColId}/release`, {
       data: { reason: "E2E test release — loan repaid in full" },
     });
     expect([200, 201]).toContain(releaseResp.status());
 
-    // Verify status is now "released" via GET
-    const getResp = await page.request.get(`/api/collateral/${colId}`);
-    if (getResp.status() === 200) {
-      const record = await getResp.json() as { status: string };
-      expect(record.status).toBe("released");
-    }
+    const after = await page.request.get(`/api/collateral/${releaseColId}`);
+    expect(after.status()).toBe(200);
+    const rec = await after.json() as { status: string };
+    expect(rec.status).toBe("released");
+  });
+
+  test("released collateral row shows released status badge in registry list", async ({ page }) => {
+    await setSession(page, SA_SESSION);
+    await page.goto("/collateral-registry");
+    await page.waitForSelector('[data-testid="input-search-collateral"]', { timeout: 15000 });
+
+    const rowLocator = page.locator(`[data-testid="row-collateral-${releaseColId}"]`);
+    await expect(rowLocator).toBeVisible({ timeout: 12000 });
+    const rowText = await rowLocator.textContent();
+    expect(rowText?.toLowerCase()).toMatch(/release/);
   });
 });
 

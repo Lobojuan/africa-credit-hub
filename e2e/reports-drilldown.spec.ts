@@ -1,19 +1,3 @@
-/**
- * Reports Drill-Down E2E Suite
- *
- * Tests the /reports page and its drill-down flow to /credit-accounts:
- *   - Page renders with title and all export controls
- *   - Generate report card and export audit trail card present
- *   - Portfolio by Institution table: lender rows exist
- *   - Clicking lender row navigates to /credit-accounts?lender=<name>
- *   - Filter banner shows with clear button after lender drill-down
- *   - Clearing filter removes lender param and hides banner
- *   - Portfolio by Account Type: type rows exist and drill down to type param
- *   - Reports API endpoints return expected responses
- *
- * Uses /api/test/set-session for role injection.
- */
-
 import { test, expect } from "@playwright/test";
 
 async function setSession(
@@ -127,20 +111,27 @@ test.describe("Reports — Portfolio by Institution drill-down", () => {
     }
   });
 
-  test("filter banner shows clear button after lender drill-down", async ({
+  test("filter banner shows clear button and lender name after drill-down", async ({
     page,
   }) => {
     await gotoReports(page);
     const firstRow = page.locator('[data-testid^="row-lender-"]').first();
     await firstRow.waitFor({ timeout: 20000 });
+
+    const testId = await firstRow.getAttribute("data-testid");
+    const lenderName = decodeURIComponent(testId?.replace("row-lender-", "") ?? "");
     await firstRow.click();
 
-    await page.waitForSelector('[data-testid="text-accounts-title"]', {
-      timeout: 15000,
-    });
-    await expect(
-      page.locator('[data-testid="button-clear-filter"]'),
-    ).toBeVisible({ timeout: 10000 });
+    await page.waitForSelector('[data-testid="text-accounts-title"]', { timeout: 15000 });
+    const clearBtn = page.locator('[data-testid="button-clear-filter"]');
+    await expect(clearBtn).toBeVisible({ timeout: 10000 });
+
+    // Verify the filter banner text contains the actual lender name
+    const bannerText = await clearBtn.locator("..").textContent();
+    expect(bannerText?.toLowerCase()).toContain(lenderName.toLowerCase().slice(0, 6));
+
+    // URL must encode the lender param
+    await expect(page).toHaveURL(/lender=/, { timeout: 5000 });
   });
 
   test("clear filter button removes lender param and hides banner", async ({
