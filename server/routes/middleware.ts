@@ -165,8 +165,19 @@ export const creditReportLimiter = rateLimit({
   validate,
 });
 
+/**
+ * USSD rate limiter: keyed by USSD sessionId from the parsed body so that
+ * different USSD sessions behind the same NAT IP are throttled independently.
+ * Falls back to IP when sessionId is absent (e.g. malformed requests).
+ *
+ * NOTE: the body parser (express.urlencoded) must run BEFORE this limiter in
+ * the route stack so that req.body is populated; see routes.ts USSD route.
+ */
 export const ussdLimiter = rateLimit({
-  keyGenerator: rateLimitKeyGenerator,
+  keyGenerator: (req: Request) => {
+    const sid = (req.body as Record<string, string> | undefined)?.sessionId;
+    return typeof sid === "string" && sid.length > 0 ? sid : rateLimitKeyGenerator(req);
+  },
   skip: isLocalhost,
   windowMs: 15 * 60 * 1000,
   max: 30,

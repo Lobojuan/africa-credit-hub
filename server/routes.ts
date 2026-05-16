@@ -18919,13 +18919,36 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // Aggregator authenticates via shared bearer token (LOTO_USSD_TOKEN). If
   // no token is configured we accept the request — useful for sandbox / e2e
   // testing where there's no aggregator. Real production should set the env.
-  app.post("/api/loto/ussd/session", ussdLimiter, express.urlencoded({ extended: true }), async (req, res) => {
+  // Body is parsed BEFORE the rate limiter so ussdLimiter can key on sessionId.
+  app.post("/api/loto/ussd/session", express.urlencoded({ extended: true }), express.json({ limit: "16kb" }), ussdLimiter, async (req, res) => {
     try {
+      // ── Token auth (existing) ──────────────────────────────────────────────
       const expected = process.env.LOTO_USSD_TOKEN;
       if (expected) {
         const supplied = (req.headers["x-ussd-token"] as string) || "";
         if (supplied !== expected) {
           return res.status(401).type("text/plain").send("END Unauthorized");
+        }
+      }
+
+      // ── Optional HMAC signature verification ─────────────────────────────
+      // When LOTO_USSD_HMAC_SECRET is configured the aggregator gateway must
+      // sign each POST with X-UCH-Signature and X-Webhook-Timestamp headers.
+      // This provides replay protection (5-minute window) in addition to the
+      // shared-token auth above. Silently skipped when secret is not set.
+      const ussdHmacSecret = process.env.LOTO_USSD_HMAC_SECRET;
+      if (ussdHmacSecret) {
+        const sig = (req.headers["x-uch-signature"] as string) || (req.headers["x-webhook-signature"] as string) || "";
+        const ts = (req.headers["x-webhook-timestamp"] as string) || "";
+        // Re-serialise the raw body for verification — use the JSON string if
+        // body was JSON, otherwise fall back to the raw form-encoded string.
+        const rawBody = typeof (req as any).rawBody === "string"
+          ? (req as any).rawBody
+          : JSON.stringify(req.body ?? {});
+        const { verifyWebhookSignature } = await import("./webhook-delivery");
+        const check = verifyWebhookSignature(rawBody, sig, ussdHmacSecret, ts);
+        if (!check.valid) {
+          return res.status(401).type("text/plain").send(`END Unauthorized: ${check.reason}`);
         }
       }
 

@@ -8,6 +8,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { deviceFingerprintMiddleware } from "./middleware/device-fingerprint";
 import { botDetectionMiddleware } from "./middleware/bot-detection";
+import { createCorsMiddleware } from "./middleware/cors";
 import { createServer } from "http";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
@@ -133,45 +134,7 @@ app.get("/health", async (_req, res) => {
 // In production, only the configured CANONICAL_URL origin is allowed.
 // Stripe and USSD webhook endpoints skip this so external systems can post.
 // In development we allow any origin so the Vite proxy works.
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (!origin) return next(); // same-origin requests have no Origin header
-
-  if (isProductionBoot) {
-    const canonical = process.env.CANONICAL_URL;
-    let allowed = false;
-    if (canonical) {
-      try {
-        const canonicalOrigin = new URL(canonical).origin;
-        allowed = origin === canonicalOrigin;
-      } catch { /* malformed CANONICAL_URL */ }
-    }
-    if (!allowed) {
-      // All cross-origin requests with a mismatched Origin header are rejected
-      // in production. Stripe webhooks and USSD aggregator POSTs never send an
-      // Origin header (they are not browser-initiated), so they are handled by
-      // the missing-origin guard at the top of this middleware and reach the
-      // route handlers normally. Only browser-initiated cross-origin requests
-      // are blocked here.
-      return res.status(403).json({ message: "Cross-origin request not allowed" });
-    }
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-CSRF-Token,Authorization,Idempotency-Key");
-    res.setHeader("Vary", "Origin");
-  } else {
-    // Development: permissive CORS so the Vite dev-server proxy works.
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type,X-CSRF-Token,Authorization,Idempotency-Key");
-    res.setHeader("Vary", "Origin");
-  }
-
-  if (req.method === "OPTIONS") return res.status(204).end();
-  next();
-});
+app.use(createCorsMiddleware(process.env.CANONICAL_URL, isProductionBoot));
 
 app.use((_req, res, next) => {
   const nonce = crypto.randomBytes(16).toString("base64");
