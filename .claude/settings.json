@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 /home/user/africa-credit-hub/.claude/hooks/ts-check.py",
+            "asyncRewake": true,
+            "timeout": 130,
+            "rewakeSummary": "UCH TypeScript errors detected",
+            "rewakeMessage": "The background UCH TypeScript check found errors. Follow the CLAUDE.md auto-fix protocol: read each error, fix the files, verify clean with npm run check, then commit and push to main."
+          }
+        ]
+      }
+    ]
+  }
+}
