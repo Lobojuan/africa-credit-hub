@@ -353,3 +353,9 @@ id = "U7U2vTPkxZUI4vizkhGm-"
 uri = "file://cdh-codebase-review.txt"
 type = "text"
 title = "Africa Credit Hub — Full Source Code (326 files)"
+
+[[outputs]]
+id = "-lC_ks-8EUGJ_Cr-DDDfg"
+uri = "file://uch-source.zip"
+type = "unspecified"
+title = "UCH Source Code"
