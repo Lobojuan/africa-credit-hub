@@ -1,14 +1,21 @@
 #!/usr/bin/env bash
 # Daily GitHub sync — pushes main branch to github remote.
 # Called by the server scheduler once every 24 hours.
-# Requires GH_TOKEN env var (set from OWNER_ADMIN_PASSWORD via Replit secret or
-# injected at runtime from the GitHub connector token).
+# Accepts the token from either GITHUB_PERSONAL_ACCESS_TOKEN or GH_TOKEN
+# (whichever is set); GITHUB_PERSONAL_ACCESS_TOKEN takes precedence.
 
 set -euo pipefail
 
 REPO_DIR="/home/runner/workspace"
-REMOTE="https://x-access-token:${GH_TOKEN}@github.com/Lobojuan/africa-credit-hub.git"
 LOG_FILE="/tmp/github-sync.log"
+_TOKEN="${GITHUB_PERSONAL_ACCESS_TOKEN:-${GH_TOKEN:-}}"
+
+if [[ -z "$_TOKEN" ]]; then
+  echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] ERROR: neither GITHUB_PERSONAL_ACCESS_TOKEN nor GH_TOKEN is set — skipping sync." >> "$LOG_FILE"
+  exit 1
+fi
+
+REMOTE="https://x-access-token:${_TOKEN}@github.com/Lobojuan/africa-credit-hub.git"
 
 echo "[$(date -u +%Y-%m-%dT%H:%M:%SZ)] Starting GitHub sync..." >> "$LOG_FILE"
 
