@@ -7,11 +7,14 @@ import { db } from "../db";
 import { eq, desc, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { createLogger } from "../logger";
-import { rateLimitKeyGenerator } from "./middleware";
+import { rateLimitKeyGenerator, requireAuth, requireSuperAdmin } from "./middleware";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { z } from "zod";
 import os from "os";
+import fs from "fs";
+import path from "path";
+import multer from "multer";
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { getOAuthCallbackBase } from "../base-url";
 
@@ -116,11 +119,318 @@ async function safeQuery(q: SQL): Promise<Record<string, string>[]> {
   } catch { return []; }
 }
 
+/**
+ * Resolves the version string for a playbook without requiring code changes.
+ * Resolution order:
+ *  1. JSON sidecar file (same basename as the PDF, extension .json) — reads `.version` field.
+ *  2. Version embedded in the PDF filename, e.g. `civ-demo-playbook-v1.2.pdf` → "v1.2".
+ *  3. Fallback: "v1.0".
+ *
+ * To bump a version, either update the sidecar JSON or rename the PDF to include -vX.Y
+ * in the filename — no code changes needed.
+ */
+function resolvePlaybookVersion(exportsDir: string, pdfFile: string): { version: string; releaseDate?: string } {
+  const sidecarFile = path.join(exportsDir, pdfFile.replace(/\.pdf$/i, ".json"));
+  try {
+    const raw = fs.readFileSync(sidecarFile, "utf8");
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.version === "string") {
+        return { version: parsed.version, releaseDate: parsed.releaseDate ?? undefined };
+      }
+      logger.warn("Playbook sidecar missing .version field — falling back to filename/default", { sidecarFile });
+    } catch {
+      logger.warn("Playbook sidecar contains invalid JSON — falling back to filename/default", { sidecarFile });
+    }
+  } catch { /* sidecar absent — fall through silently */ }
+
+  const filenameMatch = pdfFile.match(/-v(\d+\.\d+(?:\.\d+)?)\.pdf$/i);
+  if (filenameMatch) {
+    return { version: `v${filenameMatch[1]}` };
+  }
+
+  return { version: "v1.0" };
+}
+
+const PLAYBOOKS_DIR = path.resolve(process.env.PLAYBOOKS_DIR ?? "exports");
+const PLAYBOOKS_META_FILE = path.join(PLAYBOOKS_DIR, "playbooks-metadata.json");
+const PLAYBOOKS_AUDIT_FILE = path.join(PLAYBOOKS_DIR, "playbooks-audit.json");
+
+interface PlaybookMeta { name: string; flag: string; file: string }
+
+interface PlaybookAuditEntry {
+  id: string;
+  uploadedAt: string;
+  market: string;
+  marketName: string;
+  filename: string;
+  sizeBytes: number;
+  version: string;
+  uploadedBy: string;
+}
+
+function loadAuditLog(): PlaybookAuditEntry[] {
+  try {
+    if (fs.existsSync(PLAYBOOKS_AUDIT_FILE)) {
+      const raw = fs.readFileSync(PLAYBOOKS_AUDIT_FILE, "utf-8");
+      return JSON.parse(raw) as PlaybookAuditEntry[];
+    }
+  } catch { /* ignore parse errors */ }
+  return [];
+}
+
+function appendAuditEntry(entry: PlaybookAuditEntry): void {
+  try {
+    if (!fs.existsSync(PLAYBOOKS_DIR)) fs.mkdirSync(PLAYBOOKS_DIR, { recursive: true });
+    const log = loadAuditLog();
+    log.unshift(entry);
+    fs.writeFileSync(PLAYBOOKS_AUDIT_FILE, JSON.stringify(log, null, 2), "utf-8");
+  } catch (err) {
+    logger.error("Failed to persist playbook audit entry", { err });
+  }
+}
+
+function loadDynamicPlaybooks(): Record<string, PlaybookMeta> {
+  try {
+    if (fs.existsSync(PLAYBOOKS_META_FILE)) {
+      const raw = fs.readFileSync(PLAYBOOKS_META_FILE, "utf-8");
+      return JSON.parse(raw) as Record<string, PlaybookMeta>;
+    }
+  } catch { /* ignore parse errors, start fresh */ }
+  return {};
+}
+
+function saveDynamicPlaybooks(store: Record<string, PlaybookMeta>): void {
+  try {
+    if (!fs.existsSync(PLAYBOOKS_DIR)) fs.mkdirSync(PLAYBOOKS_DIR, { recursive: true });
+    fs.writeFileSync(PLAYBOOKS_META_FILE, JSON.stringify(store, null, 2), "utf-8");
+  } catch (err) {
+    logger.error("Failed to persist playbooks metadata", { err });
+  }
+}
+
+const dynamicPlaybooks: Record<string, PlaybookMeta> = loadDynamicPlaybooks();
+
+const playbookUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      if (!fs.existsSync(PLAYBOOKS_DIR)) fs.mkdirSync(PLAYBOOKS_DIR, { recursive: true });
+      cb(null, PLAYBOOKS_DIR);
+    },
+    filename: (_req, file, cb) => {
+      cb(null, file.originalname);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype === "application/pdf" || file.originalname.toLowerCase().endsWith(".pdf")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are allowed"));
+    }
+  },
+});
+
 export function registerPlatformControlRoutes(app: Express) {
+  // Role-guarded admin playbook routes — registered unconditionally (no master-password dep)
+  const PLAYBOOK_MARKETS_STATIC: Record<string, PlaybookMeta> = {
+    civ:     { name: "Côte d'Ivoire", flag: "🇨🇮", file: "civ-demo-playbook.pdf" },
+    ghana:   { name: "Ghana",         flag: "🇬🇭", file: "ghana-demo-playbook.pdf" },
+    kenya:   { name: "Kenya",         flag: "🇰🇪", file: "kenya-demo-playbook.pdf" },
+    nigeria: { name: "Nigeria",       flag: "🇳🇬", file: "nigeria-demo-playbook.pdf" },
+  };
+
+  function getMergedPlaybooks(): Record<string, PlaybookMeta> {
+    return { ...PLAYBOOK_MARKETS_STATIC, ...dynamicPlaybooks };
+  }
+
+  app.get("/api/admin/playbooks", requireAuth, requireSuperAdmin, (_req: Request, res: Response) => {
+    const exportsDir = path.resolve("exports");
+    const merged = getMergedPlaybooks();
+    const index = Object.entries(merged).map(([market, meta]) => {
+      const filePath = path.join(exportsDir, meta.file);
+      let sizeBytes = 0;
+      let missing = false;
+      try {
+        const stat = fs.statSync(filePath);
+        sizeBytes = stat.size;
+        missing = sizeBytes === 0;
+      } catch { missing = true; }
+      const { version, releaseDate } = resolvePlaybookVersion(exportsDir, meta.file);
+      const isDynamic = Object.prototype.hasOwnProperty.call(dynamicPlaybooks, market);
+      return { market, name: meta.name, flag: meta.flag, version, releaseDate, file: meta.file, sizeBytes, isDynamic, missing };
+    });
+    res.json(index);
+  });
+
+  app.get("/api/admin/playbooks/:market", requireAuth, requireSuperAdmin, (req: Request, res: Response) => {
+    const merged = getMergedPlaybooks();
+    const meta = merged[req.params.market as string];
+    if (!meta) { res.status(404).json({ message: "Playbook not found" }); return; }
+    const filePath = path.resolve("exports", meta.file);
+    if (!fs.existsSync(filePath)) { res.status(404).json({ message: "File not found on disk" }); return; }
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${meta.file}"`);
+    fs.createReadStream(filePath).pipe(res);
+  });
+
+  app.get("/api/admin/playbooks-history", requireAuth, requireSuperAdmin, (_req: Request, res: Response) => {
+    res.json(loadAuditLog());
+  });
+
   if (!MASTER_PASSWORD) {
     logger.warn("MASTER_CONTROL_PASSWORD not set — platform control center disabled");
     return;
   }
+
+  app.post(
+    "/api/platform-control/playbooks",
+    requireMasterAuth,
+    playbookUpload.single("file"),
+    async (req: Request, res: Response) => {
+      try {
+        if (!req.file) {
+          res.status(400).json({ message: "A PDF file is required" });
+          return;
+        }
+
+        const slugSchema = z.string().min(1).max(64).regex(/^[a-z0-9_-]+$/, "Slug must be lowercase letters, digits, hyphens or underscores");
+        const bodySchema = z.object({
+          market: slugSchema,
+          name: z.string().min(1).max(120),
+          flag: z.string().min(1).max(10),
+          version: z.string().min(1).max(20),
+        });
+
+        const parsed = bodySchema.safeParse(req.body);
+        if (!parsed.success) {
+          fs.unlink(req.file.path, () => {});
+          res.status(400).json({ message: "Invalid fields", errors: parsed.error.flatten().fieldErrors });
+          return;
+        }
+
+        const { market, name, flag, version } = parsed.data;
+        const filename = req.file.originalname;
+
+        // If replacing an existing dynamic playbook with a different filename, remove the old PDF + sidecar
+        const existing = dynamicPlaybooks[market];
+        if (existing && existing.file !== filename) {
+          const oldPdfPath = path.join(PLAYBOOKS_DIR, existing.file);
+          const oldSidecarPath = path.join(PLAYBOOKS_DIR, existing.file.replace(/\.pdf$/i, ".json"));
+          try { fs.unlinkSync(oldPdfPath); } catch { /* ignore if already gone */ }
+          try { fs.unlinkSync(oldSidecarPath); } catch { /* ignore if absent */ }
+          logger.info("Replaced old playbook file", { market, oldFile: existing.file, newFile: filename });
+        }
+
+        // Write sidecar JSON so resolvePlaybookVersion picks up the user-supplied version
+        const sidecarPath = path.join(PLAYBOOKS_DIR, filename.replace(/\.pdf$/i, ".json"));
+        try {
+          fs.writeFileSync(sidecarPath, JSON.stringify({ version }, null, 2), "utf-8");
+        } catch (sidecarErr) {
+          logger.warn("Could not write playbook sidecar JSON", { sidecarPath, sidecarErr });
+        }
+
+        dynamicPlaybooks[market] = { name, flag, file: filename };
+        saveDynamicPlaybooks(dynamicPlaybooks);
+
+        // Resolve uploader identity: prefer regular session user, fall back to "platform owner"
+        let uploadedBy = "platform owner";
+        try {
+          const sessionUserId = (req as Request & { session?: { userId?: number } }).session?.userId;
+          if (sessionUserId) {
+            const row = await pool.query("SELECT username FROM users WHERE id = $1 LIMIT 1", [sessionUserId]);
+            if (row.rows.length > 0) uploadedBy = (row.rows[0] as { username: string }).username;
+          }
+        } catch { /* ignore — identity best-effort */ }
+
+        appendAuditEntry({
+          id: crypto.randomUUID(),
+          uploadedAt: new Date().toISOString(),
+          market,
+          marketName: name,
+          filename,
+          sizeBytes: req.file.size,
+          version,
+          uploadedBy,
+        });
+
+        logger.info("Playbook uploaded", { market, name, version, filename, uploadedBy });
+        res.status(201).json({ market, name, flag, version, file: filename, sizeBytes: req.file.size });
+      } catch (err) {
+        logger.error("Playbook upload failed", { err });
+        res.status(500).json({ message: "Upload failed" });
+      }
+    },
+  );
+
+  const patchPlaybookVersionSchema = z.object({
+    version: z.string().min(1).max(20),
+    releaseDate: z.string().max(20).optional(),
+  });
+
+  app.patch("/api/platform-control/playbooks/:market/version", requireMasterAuth, (req: Request, res: Response) => {
+    const market = req.params.market as string;
+    const meta = getMergedPlaybooks()[market];
+    if (!meta) { res.status(404).json({ message: "Playbook market not found" }); return; }
+
+    let parsed: z.infer<typeof patchPlaybookVersionSchema>;
+    try {
+      parsed = patchPlaybookVersionSchema.parse(req.body);
+    } catch (e: unknown) {
+      res.status(400).json({ message: (e as Error).message || "Invalid request body" }); return;
+    }
+
+    const sidecarPath = path.join(PLAYBOOKS_DIR, meta.file.replace(/\.pdf$/i, ".json"));
+
+    let existing: Record<string, unknown> = {};
+    try {
+      const raw = fs.readFileSync(sidecarPath, "utf8");
+      existing = JSON.parse(raw);
+    } catch { /* sidecar absent or invalid — start fresh */ }
+
+    const updated = { ...existing, version: parsed.version, releaseDate: parsed.releaseDate ?? existing.releaseDate ?? undefined };
+    if (updated.releaseDate === undefined) delete updated.releaseDate;
+
+    try {
+      fs.writeFileSync(sidecarPath, JSON.stringify(updated, null, 2) + "\n", "utf8");
+    } catch (e: unknown) {
+      logger.error("Failed to write playbook sidecar", { market, sidecarPath, error: (e as Error).message });
+      res.status(500).json({ message: "Failed to write sidecar file" }); return;
+    }
+
+    logger.info("Playbook version bumped", { market, version: parsed.version, releaseDate: parsed.releaseDate });
+    res.json({ market, version: parsed.version, releaseDate: parsed.releaseDate ?? null });
+  });
+
+  app.delete(
+    "/api/platform-control/playbooks/:market",
+    requireMasterAuth,
+    (req: Request, res: Response) => {
+      const market = req.params.market as string;
+
+      if (!Object.prototype.hasOwnProperty.call(dynamicPlaybooks, market)) {
+        if (Object.prototype.hasOwnProperty.call(PLAYBOOK_MARKETS_STATIC, market)) {
+          res.status(403).json({ message: "Static playbooks cannot be deleted" });
+        } else {
+          res.status(404).json({ message: "Playbook not found" });
+        }
+        return;
+      }
+
+      const meta = dynamicPlaybooks[market];
+      const pdfPath = path.join(PLAYBOOKS_DIR, meta.file);
+      const sidecarPath = path.join(PLAYBOOKS_DIR, meta.file.replace(/\.pdf$/i, ".json"));
+
+      try { fs.unlinkSync(pdfPath); } catch { /* already gone */ }
+      try { fs.unlinkSync(sidecarPath); } catch { /* absent or already gone */ }
+
+      delete dynamicPlaybooks[market];
+      saveDynamicPlaybooks(dynamicPlaybooks);
+
+      logger.info("Playbook deleted", { market, file: meta.file });
+      res.status(200).json({ message: "Playbook deleted", market });
+    },
+  );
 
   app.post("/api/platform-control/auth", masterAuthLimiter, (req: Request, res: Response) => {
     const ip = req.ip || "unknown";
@@ -1242,6 +1552,34 @@ export function registerPlatformControlRoutes(app: Express) {
     });
 
     res.json(result);
+  });
+
+  // ── Tear-sheet PDF scheduler ────────────────────────────────────────────────
+
+  app.get("/api/platform-control/tearsheets/status", requireMasterAuth, async (_req, res) => {
+    try {
+      const { getTearsheetSchedulerStatus } = await import("../tearsheet-scheduler");
+      res.json(getTearsheetSchedulerStatus());
+    } catch (err: any) {
+      res.status(500).json({ message: err.message });
+    }
+  });
+
+  app.post("/api/platform-control/tearsheets/regenerate", requireMasterAuth, async (req, res) => {
+    try {
+      const { runTearsheetGeneration, getTearsheetSchedulerStatus } = await import("../tearsheet-scheduler");
+      if (getTearsheetSchedulerStatus().lastRunStatus === "running") {
+        return res.status(409).json({ ok: false, alreadyRunning: true, message: "A tear-sheet generation is already in progress." });
+      }
+      const markets: string[] | undefined = Array.isArray(req.body?.markets) ? req.body.markets : undefined;
+      // Kick off async — respond immediately so the HTTP connection isn't held open
+      runTearsheetGeneration(markets).catch((err: Error) =>
+        logger.warn("Manual tear-sheet generation failed", { error: err.message })
+      );
+      return res.status(202).json({ ok: true, message: "Tear-sheet generation started in the background." });
+    } catch (err: any) {
+      return res.status(500).json({ message: err.message });
+    }
   });
 
   // Load DB-stored registry credentials into in-memory cache at startup

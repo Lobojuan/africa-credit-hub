@@ -91,6 +91,9 @@ import {
   type PortfolioTriggerEvent, type InsertPortfolioTriggerEvent,
   type ConsumerMonitoringPrefs, type InsertConsumerMonitoringPrefs,
   type ConsumerMonitoringAlert, type InsertConsumerMonitoringAlert,
+  playbookPages, playbookVersions,
+  type PlaybookPage, type PlaybookVersion,
+  playbookDownloads, type InsertPlaybookDownload, type PlaybookDownload,
 } from "@shared/schema";
 
 export const GLOBAL_SCOPE = "__global__" as const;
@@ -155,6 +158,9 @@ export interface IStorage {
 
   getAuditLogs(organizationId?: string, country?: string, limit?: number, offset?: number): Promise<AuditLog[]>;
   createAuditLog(log: InsertAuditLog): Promise<AuditLog>;
+
+  createPlaybookDownload(data: InsertPlaybookDownload): Promise<PlaybookDownload>;
+  getPlaybookDownloads(limit?: number): Promise<PlaybookDownload[]>;
   getAuditStats(organizationId?: string, country?: string): Promise<{
     totalLogs: number; actionsToday: number; uniqueUsersToday: number; totalUniqueUsers: number;
     topActions: { action: string; count: number }[];
@@ -573,6 +579,12 @@ export interface IStorage {
     expiresAt: Date;
   }): Promise<LotoUssdSession>;
   deleteLotoUssdSession(sessionId: string): Promise<void>;
+
+  getPlaybookPage(slug: string): Promise<PlaybookPage | undefined>;
+  upsertPlaybookPage(slug: string, title: string, content: string, userId: string, label?: string): Promise<PlaybookPage>;
+  getPlaybookVersions(playbookId: string): Promise<PlaybookVersion[]>;
+  getPlaybookVersion(id: number): Promise<PlaybookVersion | undefined>;
+  restorePlaybookVersion(versionId: number, userId: string): Promise<PlaybookPage>;
 }
 
 export interface OverdueAssignmentDetail {
@@ -4442,6 +4454,69 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLotoUssdSession(sessionId: string): Promise<void> {
     await db.delete(lotoUssdSessions).where(eq(lotoUssdSessions.sessionId, sessionId));
+  }
+
+  async getPlaybookPage(slug: string): Promise<PlaybookPage | undefined> {
+    const [row] = await db.select().from(playbookPages).where(eq(playbookPages.slug, slug));
+    return row;
+  }
+
+  async upsertPlaybookPage(slug: string, title: string, content: string, userId: string, label?: string): Promise<PlaybookPage> {
+    const existing = await this.getPlaybookPage(slug);
+    let page: PlaybookPage;
+    if (existing) {
+      await db.insert(playbookVersions).values({
+        playbookId: existing.id,
+        content: existing.content,
+        savedBy: userId,
+        ...(label ? { label } : {}),
+      });
+      const [updated] = await db.update(playbookPages)
+        .set({ content, updatedBy: userId, updatedAt: new Date() })
+        .where(eq(playbookPages.slug, slug))
+        .returning();
+      page = updated;
+    } else {
+      const [created] = await db.insert(playbookPages)
+        .values({ slug, title, content, updatedBy: userId })
+        .returning();
+      await db.insert(playbookVersions).values({
+        playbookId: created.id,
+        content,
+        savedBy: userId,
+        label: "Initial version (migrated from file)",
+      });
+      page = created;
+    }
+    return page;
+  }
+
+  async getPlaybookVersions(playbookId: string): Promise<PlaybookVersion[]> {
+    return db.select().from(playbookVersions)
+      .where(eq(playbookVersions.playbookId, playbookId))
+      .orderBy(desc(playbookVersions.savedAt));
+  }
+
+  async getPlaybookVersion(id: number): Promise<PlaybookVersion | undefined> {
+    const [row] = await db.select().from(playbookVersions).where(eq(playbookVersions.id, id));
+    return row;
+  }
+
+  async restorePlaybookVersion(versionId: number, userId: string): Promise<PlaybookPage> {
+    const version = await this.getPlaybookVersion(versionId);
+    if (!version || !version.playbookId) throw new Error("Version not found");
+    const [page] = await db.select().from(playbookPages).where(eq(playbookPages.id, version.playbookId));
+    if (!page) throw new Error("Playbook page not found");
+    return this.upsertPlaybookPage(page.slug, page.title, version.content, userId);
+  }
+
+  async createPlaybookDownload(data: InsertPlaybookDownload): Promise<PlaybookDownload> {
+    const [row] = await db.insert(playbookDownloads).values(data).returning();
+    return row;
+  }
+
+  async getPlaybookDownloads(limit = 500): Promise<PlaybookDownload[]> {
+    return db.select().from(playbookDownloads).orderBy(desc(playbookDownloads.downloadedAt)).limit(limit);
   }
 }
 

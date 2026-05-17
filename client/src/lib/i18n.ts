@@ -3348,6 +3348,7 @@ const fr: typeof en = {
     findConnections: "Trouver des Connexions",
     collections: "Recouvrements",
     complianceQueue: "File de Conformité",
+    platformMap: "Carte de la plateforme",
     brandTitle: "Registre de Crédit",
     brandSubtitle: `${CO}™`,
     version: "v2.8 — Registre de Crédit",

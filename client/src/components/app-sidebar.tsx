@@ -21,6 +21,7 @@ import {
   Key,
   HelpCircle,
   BookOpen,
+  Presentation,
   DollarSign,
   Plug,
   Archive,
@@ -211,6 +212,15 @@ const apiIntegrationItems: NavItem[] = [
   { label: "Exchange Rates", tKey: "sidebar.exchangeRates", url: "/exchange-rates", icon: DollarSign, testId: "nav-exchange-rates", roles: ["admin", "super_admin"] },
 ];
 
+const salesToolsItems: NavItem[] = [
+  { label: "E&W Africa Regional Overview", url: "/sales/africa-overview-playbook", icon: Globe, testId: "nav-africa-overview-playbook", roles: ["super_admin"] },
+  { label: "Ghana Demo Playbook", url: "/sales/ghana-playbook", icon: Presentation, testId: "nav-ghana-playbook", roles: ["super_admin"] },
+  { label: "Nigeria Demo Playbook", url: "/sales/nigeria-playbook", icon: Presentation, testId: "nav-nigeria-playbook", roles: ["super_admin"] },
+  { label: "Kenya Demo Playbook", url: "/sales/kenya-playbook", icon: Presentation, testId: "nav-kenya-playbook", roles: ["super_admin"] },
+  { label: "South Africa Demo Playbook", url: "/sales/south-africa-playbook", icon: Presentation, testId: "nav-south-africa-playbook", roles: ["super_admin"] },
+  { label: "Côte d'Ivoire Demo Playbook", url: "/sales/cotedivoire-playbook", icon: Presentation, testId: "nav-cotedivoire-playbook", roles: ["super_admin"] },
+];
+
 const infrastructureItems: NavItem[] = [
   { label: "System Status", tKey: "sidebar.systemStatus", url: "/system-status", icon: Activity, testId: "nav-system-status", roles: ["admin", "super_admin"] },
   { label: "Backup & Recovery", tKey: "sidebar.backupRecovery", url: "/backup", icon: HardDrive, testId: "nav-backup", roles: ["super_admin"] },
@@ -337,6 +347,7 @@ const SECTION_ITEMS_MAP: SectionConfig[] = [
   { label: "Collateral", items: collateralItems, productIds: ["collateral"] },
   { label: "Oversight & Compliance", items: [] as NavItem[], productIds: ["credit"] },
   { label: "Cross-Border", items: crossBorderItems, productIds: ["credit"] },
+  { label: "Sales Tools", items: salesToolsItems },
   { label: "Administration", items: adminItems },
   { label: "API & Integrations", items: apiIntegrationItems },
   { label: "Infrastructure", items: infrastructureItems },
@@ -429,6 +440,7 @@ export function AppSidebar() {
   });
   const hasCrossBorderAccess = crossBorderAccess?.hasAccess ?? false;
   const visibleCrossBorder = (!isShared && hasCrossBorderAccess && productMatch(["credit"])) ? filterByRole(crossBorderItems, role) : [];
+  const visibleSalesTools = isShared ? filterByRole(salesToolsItems, role) : [];
   const visibleAdmin = isShared ? filterByRole(adminItems, role) : [];
   const visibleApiIntegration = isShared ? filterByRole(apiIntegrationItems, role) : [];
   const visibleInfrastructure = isShared ? filterByRole(infrastructureItems, role) : [];
@@ -591,6 +603,17 @@ export function AppSidebar() {
         <div className="mx-3 my-1">
           <div className="h-px bg-sidebar-foreground/10" />
         </div>
+
+        {visibleSalesTools.length > 0 && (
+          <CollapsibleSection
+            label="Sales Tools"
+            items={visibleSalesTools}
+            location={location}
+            icon={Presentation}
+            isOpen={openSection === "Sales Tools"}
+            onToggle={handleToggle}
+          />
+        )}
 
         {visibleAdmin.length > 0 && (
           <CollapsibleSection

@@ -210,11 +210,16 @@ declare module "express-session" {
     userCountry: string;
     lastActivity: number;
     mfaPendingUserId: string;
+    mfaChallengeComplete: boolean;
     viewingCountry: string;
     webauthnChallenge: string;
     webauthnUserId: string;
     csrfToken: string;
     institution?: string;
+    username?: string;
+    samlRequestId?: string;
+    consumerId?: string;
+    consumerNationalId?: string;
     /** Non-production only: e2e test bypass role set via /api/test/set-session */
     _testRole?: string;
   }
@@ -819,6 +824,10 @@ process.stderr.write = function (...args: any[]) {
 
     const { startBackupScheduler } = await import("./backup-service");
     startBackupScheduler();
+
+    const { startTearsheetScheduler } = await import("./tearsheet-scheduler");
+    const tearsheetIntervalHours = parseInt(process.env.TEARSHEET_REGEN_INTERVAL_HOURS || "168", 10);
+    startTearsheetScheduler(tearsheetIntervalHours);
 
     const { startRegistryHealthChecker } = await import("./registry-health-checker");
     await startRegistryHealthChecker();

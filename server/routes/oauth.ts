@@ -137,19 +137,19 @@ async function buildProductionDeps(): Promise<OAuthDeps> {
   const { eq } = await import("drizzle-orm");
 
   return {
-    async findUserByEmail(email) {
+    async findUserByEmail(email: string) {
       const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
       return u ?? null;
     },
-    async findConsumerByGoogleId(googleId) {
+    async findConsumerByGoogleId(googleId: string) {
       const [a] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.googleId, googleId)).limit(1);
-      return a ?? null;
+      return (a ?? null) as any;
     },
-    async findConsumerByEmail(email) {
+    async findConsumerByEmail(email: string) {
       const [a] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.email, email)).limit(1);
-      return a ?? null;
+      return (a ?? null) as any;
     },
-    async createGoogleConsumer(data) {
+    async createGoogleConsumer(data: { nationalId: string; email: string; fullName: string | null; googleId: string; profilePicture: string | null }) {
       const [newAccount] = await db.insert(consumerAccounts).values({
         nationalId: data.nationalId,
         email: data.email,
@@ -162,7 +162,7 @@ async function buildProductionDeps(): Promise<OAuthDeps> {
       }).returning();
       return { id: newAccount.id, nationalId: newAccount.nationalId };
     },
-    async linkGoogleIdToConsumer(consumerId, googleId, profilePicture, fullName) {
+    async linkGoogleIdToConsumer(consumerId: string, googleId: string, profilePicture: string | null, fullName: string | null) {
       await db.update(consumerAccounts).set({
         googleId,
         profilePicture: profilePicture ?? null,
@@ -171,19 +171,19 @@ async function buildProductionDeps(): Promise<OAuthDeps> {
         verified: true,
       }).where(eq(consumerAccounts.id, consumerId));
     },
-    async touchConsumerLastLogin(consumerId) {
+    async touchConsumerLastLogin(consumerId: string) {
       await db.update(consumerAccounts).set({ lastLogin: new Date() }).where(eq(consumerAccounts.id, consumerId));
     },
-    async getOrganization(orgId) {
-      return storage.getOrganization(orgId);
+    async getOrganization(orgId: string) {
+      return storage.getOrganization(orgId) as any;
     },
-    async findMsUserByEmail(email) {
+    async findMsUserByEmail(email: string) {
       const [u] = await db.select().from(users).where(eq(users.email, email)).limit(1);
       return u ?? null;
     },
-    async findMsConsumerByEmail(email) {
+    async findMsConsumerByEmail(email: string) {
       const [a] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.email, email)).limit(1);
-      return a ?? null;
+      return (a ?? null) as any;
     },
   };
 }
@@ -215,8 +215,8 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       );
     }
     const state = crypto.randomBytes(16).toString("hex");
-    (req.session as Record<string, unknown>).googleOAuthState = state;
-    (req.session as Record<string, unknown>).googleOAuthReturnTo = returnTo;
+    (req.session as unknown as Record<string, unknown>).googleOAuthState = state;
+    (req.session as unknown as Record<string, unknown>).googleOAuthReturnTo = returnTo;
     const redirectUri = getGoogleRedirectUri(req);
     logger.info(`[Google] Initiating OAuth: redirect_uri=${redirectUri}, returnTo=${returnTo}`);
     const params = new URLSearchParams({
@@ -235,7 +235,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   });
 
   app.get("/api/consumer/auth/google/callback", async (req: Request, res: Response) => {
-    const returnTo = (req.session as Record<string, unknown>).googleOAuthReturnTo as string || "/my-credit";
+    const returnTo = (req.session as unknown as Record<string, unknown>).googleOAuthReturnTo as string || "/my-credit";
     try {
       const { code, state, error: oauthError } = req.query;
       logger.info(`[Google] Callback: code=${code ? "yes" : "no"}, state=${state ? "yes" : "no"}, error=${oauthError || "none"}`);
@@ -246,11 +246,11 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       }
       if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
 
-      if (state !== (req.session as Record<string, unknown>).googleOAuthState) {
+      if (state !== (req.session as unknown as Record<string, unknown>).googleOAuthState) {
         logger.error(`[Google] State mismatch`);
         return res.redirect(`${returnTo}?error=invalid_state`);
       }
-      delete (req.session as Record<string, unknown>).googleOAuthState;
+      delete (req.session as unknown as Record<string, unknown>).googleOAuthState;
 
       // ── E2E test-mode bypass: skip real provider calls ───────────────────────
       // Active only when all three conditions hold:
@@ -267,8 +267,8 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       ) {
         return req.session.regenerate((regenerateErr) => {
           if (regenerateErr) return res.redirect(`${returnTo}?error=session_error`);
-          (req.session as Record<string, unknown>).consumerId = "e2e-google-consumer-test";
-          (req.session as Record<string, unknown>).consumerNationalId = "GOOGLE-E2E-TEST-001";
+          (req.session as unknown as Record<string, unknown>).consumerId = "e2e-google-consumer-test";
+          (req.session as unknown as Record<string, unknown>).consumerNationalId = "GOOGLE-E2E-TEST-001";
           req.session.lastActivity = Date.now();
           req.session.save((saveErr) => {
             if (saveErr) return res.redirect(`${returnTo}?error=session_error`);
@@ -316,7 +316,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
           req.session.organizationId = adminUser.organizationId || undefined;
           req.session.lastActivity = Date.now();
           if (isPlatformPrivileged(adminUser.role)) {
-            delete (req.session as Record<string, unknown>).viewingCountry;
+            delete (req.session as unknown as Record<string, unknown>).viewingCountry;
           } else if (organization?.country) {
             req.session.userCountry = organization.country;
           }
@@ -358,8 +358,8 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
 
       req.session.regenerate((err) => {
         if (err) return res.redirect("/my-credit?error=session_error");
-        (req.session as Record<string, unknown>).consumerId = account!.id;
-        (req.session as Record<string, unknown>).consumerNationalId = account!.nationalId;
+        (req.session as unknown as Record<string, unknown>).consumerId = account!.id;
+        (req.session as unknown as Record<string, unknown>).consumerNationalId = account!.nationalId;
         req.session.lastActivity = Date.now();
         logger.info(`[Consumer][Google] Login consumer ${account!.id.slice(0, 8)}...`);
         req.session.save((saveErr) => {
@@ -401,8 +401,8 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       );
     }
     const state = crypto.randomBytes(16).toString("hex");
-    (req.session as Record<string, unknown>).microsoftOAuthState = state;
-    (req.session as Record<string, unknown>).microsoftOAuthReturnTo = returnTo;
+    (req.session as unknown as Record<string, unknown>).microsoftOAuthState = state;
+    (req.session as unknown as Record<string, unknown>).microsoftOAuthReturnTo = returnTo;
     const redirectUri = getMicrosoftRedirectUri(req);
     const params = new URLSearchParams({
       client_id: MICROSOFT_CLIENT_ID,
@@ -417,15 +417,15 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   });
 
   app.get("/api/auth/microsoft/callback", async (req: Request, res: Response) => {
-    const returnTo = (req.session as Record<string, unknown>).microsoftOAuthReturnTo as string || "/dashboard";
+    const returnTo = (req.session as unknown as Record<string, unknown>).microsoftOAuthReturnTo as string || "/dashboard";
     try {
       const { code, state } = req.query;
       if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
 
-      if (state !== (req.session as Record<string, unknown>).microsoftOAuthState) {
+      if (state !== (req.session as unknown as Record<string, unknown>).microsoftOAuthState) {
         return res.redirect(`${returnTo}?error=invalid_state`);
       }
-      delete (req.session as Record<string, unknown>).microsoftOAuthState;
+      delete (req.session as unknown as Record<string, unknown>).microsoftOAuthState;
 
       // ── E2E test-mode bypass: skip real provider calls ───────────────────────
       // Active only when all three conditions hold:
@@ -494,7 +494,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
           req.session.organizationId = adminUser.organizationId || undefined;
           req.session.lastActivity = Date.now();
           if (isPlatformPrivileged(adminUser.role)) {
-            delete (req.session as Record<string, unknown>).viewingCountry;
+            delete (req.session as unknown as Record<string, unknown>).viewingCountry;
           } else if (organization?.country) {
             req.session.userCountry = organization.country;
           }
@@ -512,8 +512,8 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       if (consumer) {
         return req.session.regenerate((err) => {
           if (err) return res.redirect("/login?error=session_error");
-          (req.session as Record<string, unknown>).consumerId = consumer.id;
-          (req.session as Record<string, unknown>).consumerNationalId = consumer.nationalId;
+          (req.session as unknown as Record<string, unknown>).consumerId = consumer.id;
+          (req.session as unknown as Record<string, unknown>).consumerNationalId = consumer.nationalId;
           req.session.lastActivity = Date.now();
           logger.info(`[Consumer][Microsoft] Login consumer ${consumer.id.slice(0, 8)}...`);
           req.session.save(() => res.redirect("/my-credit"));

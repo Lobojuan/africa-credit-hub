@@ -1,11 +1,9 @@
 /**
  * SAML login unit tests — exercises the /api/auth/saml/login redirect flow.
  *
- * Because the SAML handler is inlined in server/routes.ts (not exported as a
- * module), this file spins up a minimal Express app that replicates the exact
- * handler logic, exercising the shared `getOAuthCallbackBase()` function from
- * base-url.ts — the same function the production route calls when constructing
- * the ACS URL embedded in the SAMLRequest.
+ * Tests import the real `registerSamlRoutes` and `getSamlAcsUrl` from
+ * `server/routes/saml.ts` so that any change to the production handler is
+ * immediately reflected here — no more hand-maintained replica code.
  *
  * See e2e/oauth-smoke.spec.ts for the end-to-end Playwright tests that hit the
  * real /api/auth/saml/login handler in a running server.
@@ -15,13 +13,17 @@ import { describe, it, expect } from "vitest";
 import express, { type Request, type Response } from "express";
 import session from "express-session";
 import request from "supertest";
-import crypto from "crypto";
-import { getOAuthCallbackBase } from "../base-url";
+import { registerSamlRoutes, type SamlDeps } from "../routes/saml";
 
-// ─── Minimal SAML test-app factory ───────────────────────────────────────────
-// Replicates the exact SAML login handler from server/routes.ts so the tests
-// exercise the same URL-building logic (getOAuthCallbackBase) used in
-// production, without booting the full server.
+// ─── No-op deps (login handler never calls DB methods) ───────────────────────
+
+const stubDeps: SamlDeps = {
+  async findUserByEmail() { return null; },
+  async findConsumerByEmail() { return null; },
+  async getOrganization() { return null; },
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function restoreEnv(saved: Record<string, string | undefined>) {
   for (const [k, v] of Object.entries(saved)) {
@@ -30,7 +32,7 @@ function restoreEnv(saved: Record<string, string | undefined>) {
   }
 }
 
-function buildSamlApp(env?: Record<string, string>) {
+async function buildSamlApp(env?: Record<string, string>) {
   const prevEnv: Record<string, string | undefined> = {};
   if (env) {
     for (const [k, v] of Object.entries(env)) {
@@ -38,11 +40,6 @@ function buildSamlApp(env?: Record<string, string>) {
       process.env[k] = v;
     }
   }
-
-  // Capture env vars *after* patching (same order as production handler does
-  // at module-load time via top-level const declarations in routes.ts).
-  const SAML_IDP_ENTRY_POINT = process.env.SAML_IDP_ENTRY_POINT || "";
-  const SAML_ISSUER = process.env.SAML_ISSUER || "pan-african-credit-registry";
 
   const app = express();
   app.set("trust proxy", 1);
@@ -55,52 +52,8 @@ function buildSamlApp(env?: Record<string, string>) {
     })
   );
 
-  // Replicate getSamlAcsUrl from routes.ts exactly.
-  function getSamlAcsUrl(req: Request): string {
-    const base = getOAuthCallbackBase();
-    if (process.env.CANONICAL_URL || !req.get("host"))
-      return `${base}/api/auth/saml/callback`;
-    const host = req.get("host");
-    const protocol = req.get("x-forwarded-proto") || req.protocol || "https";
-    return `${protocol}://${host}/api/auth/saml/callback`;
-  }
-
-  // Replicate the /api/auth/saml/login handler from routes.ts exactly.
-  app.get("/api/auth/saml/login", (req: Request, res: Response) => {
-    if (!SAML_IDP_ENTRY_POINT) {
-      return res.status(503).send(
-        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Enterprise SSO</title></head>` +
-          `<body><div><h2>Enterprise SSO</h2><p>SAML Single Sign-On requires configuration ` +
-          `by your IT administrator.</p></div></body></html>`
-      );
-    }
-
-    const samlId = "_" + crypto.randomBytes(16).toString("hex");
-    const issueInstant = new Date().toISOString();
-    const acsUrl = getSamlAcsUrl(req);
-
-    const authnRequest =
-      `<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ` +
-      `xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ` +
-      `ID="${samlId}" Version="2.0" IssueInstant="${issueInstant}" ` +
-      `Destination="${SAML_IDP_ENTRY_POINT}" ` +
-      `AssertionConsumerServiceURL="${acsUrl}" ` +
-      `ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST">` +
-      `<saml:Issuer>${SAML_ISSUER}</saml:Issuer>` +
-      `<samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" AllowCreate="true"/>` +
-      `</samlp:AuthnRequest>`;
-
-    const encodedRequest = Buffer.from(authnRequest).toString("base64");
-    (req.session as Record<string, unknown>).samlRequestId = samlId;
-    (req.session as Record<string, unknown>).samlRequestTime = Date.now();
-
-    const separator = SAML_IDP_ENTRY_POINT.includes("?") ? "&" : "?";
-    req.session.save(() => {
-      res.redirect(
-        `${SAML_IDP_ENTRY_POINT}${separator}SAMLRequest=${encodeURIComponent(encodedRequest)}`
-      );
-    });
-  });
+  // Register the real SAML routes with stub deps (no DB wiring needed for login tests)
+  await registerSamlRoutes(app, stubDeps);
 
   // Helper: expose session for assertions
   app.get("/test/get-session", (req: Request, res: Response) =>
@@ -127,7 +80,7 @@ const FAKE_IDP = "https://idp.example.com/sso/saml";
 
 describe("SAML login — no IdP configured", () => {
   it("returns 503 when SAML_IDP_ENTRY_POINT is not set", async () => {
-    const { app, prevEnv } = buildSamlApp({ SAML_IDP_ENTRY_POINT: "" });
+    const { app, prevEnv } = await buildSamlApp({ SAML_IDP_ENTRY_POINT: "" });
     try {
       const res = await request(app).get("/api/auth/saml/login");
       expect(res.status).toBe(503);
@@ -140,7 +93,7 @@ describe("SAML login — no IdP configured", () => {
 
 describe("SAML login — redirect structure", () => {
   it("redirects (302) to the configured IdP entry point", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -154,7 +107,7 @@ describe("SAML login — redirect structure", () => {
   });
 
   it("includes a SAMLRequest query parameter in the redirect", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -170,7 +123,7 @@ describe("SAML login — redirect structure", () => {
   });
 
   it("SAMLRequest value is valid base64", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -190,7 +143,7 @@ describe("SAML login — redirect structure", () => {
   });
 
   it("decoded SAMLRequest is an AuthnRequest XML document", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -207,7 +160,7 @@ describe("SAML login — redirect structure", () => {
 
 describe("SAML login — production ACS URL (universalcredithub.com)", () => {
   it("SAMLRequest AssertionConsumerServiceURL matches production ACS URL when CANONICAL_URL is set", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -224,7 +177,7 @@ describe("SAML login — production ACS URL (universalcredithub.com)", () => {
   });
 
   it("SAMLRequest Destination matches the configured IdP entry point", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -238,7 +191,7 @@ describe("SAML login — production ACS URL (universalcredithub.com)", () => {
   });
 
   it("ACS URL in SAMLRequest does not contain localhost when CANONICAL_URL is the production domain", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -255,7 +208,7 @@ describe("SAML login — production ACS URL (universalcredithub.com)", () => {
 
 describe("SAML login — session state", () => {
   it("stores samlRequestId in session after initiating login", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -278,7 +231,7 @@ describe("SAML login — session state", () => {
   });
 
   it("samlRequestId in session matches the ID attribute in the SAMLRequest XML", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });
@@ -302,7 +255,7 @@ describe("SAML login — session state", () => {
 
 describe("SAML login — issuer and IdP URL handling", () => {
   it("uses default issuer pan-african-credit-registry when SAML_ISSUER is not set", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
       SAML_ISSUER: "",
@@ -317,7 +270,7 @@ describe("SAML login — issuer and IdP URL handling", () => {
   });
 
   it("uses a custom SAML_ISSUER when provided", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
       SAML_ISSUER: "custom-issuer-id",
@@ -333,7 +286,7 @@ describe("SAML login — issuer and IdP URL handling", () => {
 
   it("appends SAMLRequest with '&' separator when IdP URL already has query params", async () => {
     const idpWithQuery = "https://idp.example.com/sso?tenant=acme";
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: idpWithQuery,
       CANONICAL_URL: PROD_BASE,
     });
@@ -349,7 +302,7 @@ describe("SAML login — issuer and IdP URL handling", () => {
   });
 
   it("appends SAMLRequest with '?' separator when IdP URL has no query params", async () => {
-    const { app, prevEnv } = buildSamlApp({
+    const { app, prevEnv } = await buildSamlApp({
       SAML_IDP_ENTRY_POINT: FAKE_IDP,
       CANONICAL_URL: PROD_BASE,
     });

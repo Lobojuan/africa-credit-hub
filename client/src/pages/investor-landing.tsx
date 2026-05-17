@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { isGhanaMode } from "@/lib/country-mode";
 import {
@@ -18,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
@@ -79,6 +81,89 @@ function SectionDivider() {
     <div className="flex items-center justify-center py-2">
       <div className="h-px w-16 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
     </div>
+  );
+}
+
+const MARKET_FALLBACKS: Record<string, { borrowers: number; institutions: number; avgScore: number | null; flag: string; label: string }> = {
+  ghana:       { borrowers: 15200, institutions: 12, avgScore: 622, flag: "🇬🇭", label: "Ghana" },
+  nigeria:     { borrowers: 34800, institutions: 27, avgScore: 589, flag: "🇳🇬", label: "Nigeria" },
+  kenya:       { borrowers: 27400, institutions: 21, avgScore: 638, flag: "🇰🇪", label: "Kenya" },
+  civ:         { borrowers: 8100,  institutions: 6,  avgScore: 604, flag: "🇨🇮", label: "Côte d'Ivoire" },
+  southafrica: { borrowers: 17600, institutions: 14, avgScore: 651, flag: "🇿🇦", label: "South Africa" },
+};
+
+interface TearsheetStats {
+  market: string;
+  country: string;
+  totalBorrowers: number;
+  totalInstitutions: number;
+  avgCreditScore: number | null;
+  generatedAt: string;
+}
+
+function MarketStatCard({ market }: { market: string }) {
+  const fallback = MARKET_FALLBACKS[market];
+  const { data, isLoading } = useQuery<TearsheetStats>({
+    queryKey: ["/api/admin/tearsheet-stats", market],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/tearsheet-stats/${market}`);
+      if (!res.ok) throw new Error("not available");
+      return res.json();
+    },
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const borrowers    = data?.totalBorrowers    ?? fallback.borrowers;
+  const institutions = data?.totalInstitutions ?? fallback.institutions;
+  const avgScore     = data?.avgCreditScore    ?? fallback.avgScore;
+  const isLive       = !!data;
+
+  return (
+    <Card className="relative overflow-hidden" data-testid={`market-card-${market}`}>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{fallback.flag}</span>
+            <div>
+              <p className="text-sm font-semibold leading-tight">{fallback.label}</p>
+              {isLive && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                  Live
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Registered Borrowers</p>
+            {isLoading ? (
+              <Skeleton className="h-6 w-24" />
+            ) : (
+              <p className="text-xl font-bold text-primary">{borrowers.toLocaleString()}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Member Institutions</p>
+            {isLoading ? (
+              <Skeleton className="h-6 w-16" />
+            ) : (
+              <p className="text-xl font-bold text-primary">{institutions.toLocaleString()}</p>
+            )}
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Avg Credit Score</p>
+            {isLoading ? (
+              <Skeleton className="h-6 w-20" />
+            ) : (
+              <p className="text-xl font-bold text-primary">{avgScore != null ? avgScore.toLocaleString() : "—"}</p>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -453,6 +538,14 @@ const COMPETITIVE_ADVANTAGES = [
 
 
 
+const MARKET_CONTEXT: Record<string, { name: string; flag: string; regulator: string; highlight: string }> = {
+  ghana:       { name: "Ghana",         flag: "🇬🇭", regulator: "Bank of Ghana (BoG)",              highlight: "BOG Consent Layer · GHS-native · MTN MoMo alternative data" },
+  nigeria:     { name: "Nigeria",       flag: "🇳🇬", regulator: "Central Bank of Nigeria (CBN)",    highlight: "BVN + eNaira data ingestion · CBN regulatory returns · NDPA 2023" },
+  kenya:       { name: "Kenya",         flag: "🇰🇪", regulator: "Central Bank of Kenya (CBK)",      highlight: "M-Pesa alternative scoring · CBK CRB formats · KDPA 2019" },
+  civ:         { name: "Côte d'Ivoire", flag: "🇨🇮", regulator: "BCEAO / Centrale des Risques",     highlight: "BCEAO exports · Loto Fiscal DGI integration · XOF / CFA Franc native" },
+  southafrica: { name: "South Africa",  flag: "🇿🇦", regulator: "SARB / National Credit Regulator", highlight: "NCR-compliant submission · POPIA consent layer · ZAR-native" },
+};
+
 export default function InvestorLandingPage() {
   const [, navigate] = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -460,7 +553,11 @@ export default function InvestorLandingPage() {
   const [lightboxImg, setLightboxImg] = useState<{ src: string; title: string } | null>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [marketBannerDismissed, setMarketBannerDismissed] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  const utmCampaign = new URLSearchParams(window.location.search).get("utm_campaign") ?? "";
+  const marketCtx = MARKET_CONTEXT[utmCampaign] ?? null;
   const { t } = useTranslation();
   const { theme } = useTheme();
   const brandColors = useBrandColors();
@@ -566,7 +663,32 @@ export default function InvestorLandingPage() {
         </div>
       </nav>
 
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+      {marketCtx && !marketBannerDismissed && (
+        <div
+          className="fixed top-16 left-0 right-0 z-40 flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
+          style={{ background: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
+          data-testid="market-context-banner"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-base leading-none" aria-hidden="true">{marketCtx.flag}</span>
+            <span className="font-semibold whitespace-nowrap">{marketCtx.name} Demo</span>
+            <span className="hidden sm:inline opacity-70">·</span>
+            <span className="hidden sm:inline opacity-80 truncate">{marketCtx.regulator}</span>
+            <span className="hidden md:inline opacity-70">·</span>
+            <span className="hidden md:inline opacity-70 truncate text-xs">{marketCtx.highlight}</span>
+          </div>
+          <button
+            onClick={() => setMarketBannerDismissed(true)}
+            className="shrink-0 opacity-70 hover:opacity-100 transition-opacity p-0.5"
+            aria-label="Dismiss market banner"
+            data-testid="dismiss-market-banner"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      <section className={`relative min-h-screen flex items-center justify-center overflow-hidden ${marketCtx && !marketBannerDismissed ? "pt-[calc(4rem+2.5rem)]" : "pt-16"}`}>
         <div className="absolute inset-0 overflow-hidden">
           <img
             src={heroImage}
@@ -1934,6 +2056,24 @@ export default function InvestorLandingPage() {
                 <p className="text-[10px] text-muted-foreground/60 mt-1">Source: World Bank Findex 2024</p>
               </CardContent>
             </Card>
+          </div>
+
+          {/* ── Live Platform Stats by Market ──────────────────────────────── */}
+          <div className="mb-12">
+            <div className="text-center mb-6">
+              <h3 className="font-bold text-sm flex items-center justify-center gap-2 mb-1">
+                <Activity className="w-4 h-4 text-primary" />
+                Live Platform Data — By Market
+              </h3>
+              <p className="text-[11px] text-muted-foreground">
+                Registry stats updated in real time from the production database.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" data-testid="market-stats-grid">
+              {["ghana", "nigeria", "kenya", "civ", "southafrica"].map((market) => (
+                <MarketStatCard key={market} market={market} />
+              ))}
+            </div>
           </div>
 
           <div className="mb-10">

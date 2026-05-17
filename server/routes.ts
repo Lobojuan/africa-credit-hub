@@ -29,7 +29,8 @@ import webauthnRouter from "./routes/webauthn";
 import lotoAdminRouter from "./routes/loto-admin";
 import regulatoryControlsRouter from "./routes/regulatory-controls-router";
 import { registerPlatformControlRoutes } from "./routes/platform-control";
-import { registerOAuthRoutes } from "./routes/oauth";
+import { registerOAuthRoutes, getGoogleRedirectUri, getMicrosoftRedirectUri } from "./routes/oauth";
+import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte } from "drizzle-orm";
@@ -45,7 +46,7 @@ import {
   identityVerifications, watchlistHits, fraudAlerts,
   dataSharingAgreements, papssSettlements, creditAccounts, countrySettings,
   auditLogs, apiKeys, apiConfigurations, billingRecords, retentionPolicies,
-  usageMetering, pricingTiers, users, organizations, borrowers, guarantors,
+  usageMetering, pricingTiers, users, organizations, borrowers, institutions, guarantors,
   creditInquiries, disputes, consentRecords, paymentHistory, courtJudgments,
   dishonouredCheques, creditReportLogs, alternativeData, insertAlternativeDataSchema,
   settlementAccounts, insertSettlementAccountSchema,
@@ -79,7 +80,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory, consumerScoreHistory, consumerPushSubscriptions } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory, consumerScoreHistory, consumerPushSubscriptions, playbookDownloads } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -536,7 +537,7 @@ export async function registerRoutes(
       if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
         return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
       }
-      const { userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity, samlRequestId } = req.session as Record<string, unknown>;
+      const { userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity, samlRequestId } = req.session as unknown as Record<string, unknown>;
       res.json({ userId, userRole, organizationId, consumerId, consumerNationalId, lastActivity, samlRequestId });
     });
   }
@@ -901,6 +902,80 @@ export async function registerRoutes(
           dbPoolTotal: pool.totalCount,
           dbPoolIdle: pool.idleCount,
         },
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ── Tear-sheet live stats ─────────────────────────────────────────────────
+  // Used by scripts/generate-tearsheet-pdf.cjs (and investors/admin UI) to get
+  // live DB counts per market.  Accessible to authenticated admins/super_admins
+  // OR to the tearsheet generator script via X-Tearsheet-Token header.
+  const TEARSHEET_MARKET_COUNTRY: Record<string, string> = {
+    ghana:        "Ghana",
+    nigeria:      "Nigeria",
+    kenya:        "Kenya",
+    civ:          "Cote d'Ivoire",
+    southafrica:  "South Africa",
+  };
+
+  app.get("/api/admin/tearsheet-stats/:market", async (req, res) => {
+    try {
+      // Allow authenticated admin sessions OR a pre-shared script token
+      const scriptToken = process.env.TEARSHEET_SCRIPT_TOKEN;
+      const headerToken = req.headers["x-tearsheet-token"] as string | undefined;
+      const tokenOk = scriptToken && headerToken && headerToken === scriptToken;
+
+      if (!tokenOk) {
+        // Any authenticated session may read aggregate stats (counts + avg score —
+        // no PII). Admin-only gate would prevent investor-page visitors from
+        // seeing live data since the page is accessible to all logged-in roles.
+        if (!req.session?.userId) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+      }
+
+      const market = req.params.market.toLowerCase();
+      const country = TEARSHEET_MARKET_COUNTRY[market];
+      if (!country) {
+        return res.status(400).json({
+          message: `Unknown market "${market}". Supported: ${Object.keys(TEARSHEET_MARKET_COUNTRY).join(", ")}`,
+        });
+      }
+
+      const [borrowerRow, institutionRow, scoreRow, consumerScoreRow] = await Promise.all([
+        db
+          .select({ total: sql<number>`count(*)::int` })
+          .from(borrowers)
+          .where(eq(borrowers.country, country)),
+        db
+          .select({ total: sql<number>`count(*)::int` })
+          .from(institutions)
+          .where(eq(institutions.country, country)),
+        db
+          .select({ avg: sql<number>`round(avg(${creditScoreHistory.score}))::int` })
+          .from(creditScoreHistory)
+          .innerJoin(borrowers, eq(creditScoreHistory.borrowerId, borrowers.id))
+          .where(eq(borrowers.country, country)),
+        db
+          .select({ avg: sql<number>`round(avg(${consumerScoreHistory.score}))::int` })
+          .from(consumerScoreHistory)
+          .innerJoin(borrowers, eq(consumerScoreHistory.borrowerId, borrowers.id))
+          .where(eq(borrowers.country, country)),
+      ]);
+
+      const avgCreditScore =
+        (scoreRow[0]?.avg ?? null) ??
+        (consumerScoreRow[0]?.avg ?? null);
+
+      return res.json({
+        market,
+        country,
+        totalBorrowers:    borrowerRow[0]?.total    ?? 0,
+        totalInstitutions: institutionRow[0]?.total  ?? 0,
+        avgCreditScore,
+        generatedAt:       new Date().toISOString(),
       });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -2374,218 +2449,9 @@ export async function registerRoutes(
   // Google OAuth, Apple stub, Microsoft SSO, and /api/auth/oauth-status are
   // registered by registerOAuthRoutes(app) above — see server/routes/oauth.ts.
 
-  const SAML_IDP_ENTRY_POINT = process.env.SAML_IDP_ENTRY_POINT || "";
-  const SAML_IDP_CERT = process.env.SAML_IDP_CERT || "";
-  const SAML_ISSUER = process.env.SAML_ISSUER || "pan-african-credit-registry";
-  const samlUsedResponseIds = new Map<string, number>();
-
-  setInterval(() => {
-    const cutoff = Date.now() - 10 * 60 * 1000;
-    for (const [id, ts] of samlUsedResponseIds) {
-      if (ts < cutoff) samlUsedResponseIds.delete(id);
-    }
-  }, 5 * 60 * 1000);
-
-  function getSamlAcsUrl(req: Request) {
-    const base = getOAuthCallbackBase();
-    if (process.env.CANONICAL_URL || !req.get('host')) return `${base}/api/auth/saml/callback`;
-    const host = req.get('host');
-    const protocol = req.get('x-forwarded-proto') || req.protocol || 'https';
-    return `${protocol}://${host}/api/auth/saml/callback`;
-  }
-
-  app.get("/api/auth/saml/metadata", (req, res) => {
-    const acsUrl = getSamlAcsUrl(req);
-    const metadata = `<?xml version="1.0"?>
-<EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${SAML_ISSUER}">
-  <SPSSODescriptor AuthnRequestsSigned="false" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-    <NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</NameIDFormat>
-    <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="${acsUrl}" index="0" isDefault="true"/>
-  </SPSSODescriptor>
-</EntityDescriptor>`;
-    res.set("Content-Type", "application/xml");
-    res.send(metadata);
-  });
-
-  app.get("/api/auth/saml/login", (req, res) => {
-    if (!SAML_IDP_ENTRY_POINT) {
-      return res.status(503).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Enterprise SSO</title></head><body style="font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;background:#f4f5f7;"><div style="max-width:400px;background:#fff;border-radius:12px;padding:40px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);"><h2 style="color:#1a1a2e;">Enterprise SSO</h2><p style="color:#555;font-size:14px;">SAML Single Sign-On requires configuration by your IT administrator. Please contact your organization's admin to set up the IdP integration, or use another sign-in method.</p><a href="/login" style="display:inline-block;margin-top:16px;background:#1a1a2e;color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;">Back to Login</a></div></body></html>`);
-    }
-
-    const samlId = "_" + crypto.randomBytes(16).toString("hex");
-    const issueInstant = new Date().toISOString();
-    const acsUrl = getSamlAcsUrl(req);
-
-    const authnRequest = `<samlp:AuthnRequest xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion" ID="${samlId}" Version="2.0" IssueInstant="${issueInstant}" Destination="${SAML_IDP_ENTRY_POINT}" AssertionConsumerServiceURL="${acsUrl}" ProtocolBinding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"><saml:Issuer>${SAML_ISSUER}</saml:Issuer><samlp:NameIDPolicy Format="urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress" AllowCreate="true"/></samlp:AuthnRequest>`;
-
-    const encodedRequest = Buffer.from(authnRequest).toString("base64");
-    (req.session as any).samlRequestId = samlId;
-    (req.session as any).samlRequestTime = Date.now();
-
-    const separator = SAML_IDP_ENTRY_POINT.includes("?") ? "&" : "?";
-    const idpRedirect = `${SAML_IDP_ENTRY_POINT}${separator}SAMLRequest=${encodeURIComponent(encodedRequest)}`;
-    req.session.save((err) => {
-      if (err) console.error("[SAML] Session save error before redirect:", err);
-      res.redirect(idpRedirect);
-    });
-  });
-
-  app.post("/api/auth/saml/callback", express.urlencoded({ extended: false }), async (req, res) => {
-    try {
-      const samlResponse = req.body.SAMLResponse;
-      if (!samlResponse) return res.redirect("/login?error=missing_saml_response");
-
-      const pendingRequestId = (req.session as any).samlRequestId;
-      const pendingRequestTime = (req.session as any).samlRequestTime;
-      if (!pendingRequestId || !pendingRequestTime) {
-        routeLogger.error("[SAML] No pending SAML request in session");
-        return res.redirect("/login?error=saml_no_request");
-      }
-
-      const requestAge = Date.now() - pendingRequestTime;
-      if (requestAge > 5 * 60 * 1000) {
-        routeLogger.error("[SAML] SAML request expired (age: " + requestAge + "ms)");
-        delete (req.session as any).samlRequestId;
-        delete (req.session as any).samlRequestTime;
-        return res.redirect("/login?error=saml_expired");
-      }
-
-      const decodedXml = Buffer.from(samlResponse, "base64").toString("utf-8");
-
-      const responseIdMatch = decodedXml.match(/\bID="([^"]+)"/);
-      const responseId = responseIdMatch?.[1];
-      if (responseId) {
-        if (samlUsedResponseIds.has(responseId)) {
-          routeLogger.error("[SAML] Replay detected: response ID already used");
-          return res.redirect("/login?error=saml_replay");
-        }
-        samlUsedResponseIds.set(responseId, Date.now());
-      }
-
-      const inResponseToMatch = decodedXml.match(/InResponseTo="([^"]+)"/);
-      if (inResponseToMatch) {
-        if (inResponseToMatch[1] !== pendingRequestId) {
-          routeLogger.error("[SAML] InResponseTo mismatch: expected " + pendingRequestId + " got " + inResponseToMatch[1]);
-          return res.redirect("/login?error=saml_invalid_response");
-        }
-      }
-
-      delete (req.session as any).samlRequestId;
-      delete (req.session as any).samlRequestTime;
-
-      if (SAML_IDP_CERT) {
-        const hasSig = decodedXml.includes("<ds:Signature") || decodedXml.includes("<Signature");
-        if (!hasSig) {
-          routeLogger.error("[SAML] Response missing required signature (IdP cert configured)");
-          return res.redirect("/login?error=saml_unsigned");
-        }
-        try {
-          const certPem = SAML_IDP_CERT.includes("BEGIN CERTIFICATE")
-            ? SAML_IDP_CERT
-            : `-----BEGIN CERTIFICATE-----\n${SAML_IDP_CERT}\n-----END CERTIFICATE-----`;
-          const xmlCrypto = await import("crypto");
-          const sigMatch = decodedXml.match(/<ds:SignatureValue[^>]*>([^<]+)<\/ds:SignatureValue>/s) ||
-                           decodedXml.match(/<SignatureValue[^>]*>([^<]+)<\/ds:SignatureValue>/s);
-          if (!sigMatch) {
-            routeLogger.error("[SAML] Could not extract signature value");
-            return res.redirect("/login?error=saml_sig_invalid");
-          }
-          routeLogger.info("[SAML] Signature present and IdP cert configured — validating assertion");
-        } catch (sigErr: any) {
-          routeLogger.error("[SAML] Signature verification error:", { detail: sigErr.message });
-          return res.redirect("/login?error=saml_sig_failed");
-        }
-      } else if (process.env.NODE_ENV === "production") {
-        routeLogger.error("[SAML] No IdP certificate configured in production");
-        return res.redirect("/login?error=saml_no_cert");
-      } else {
-        routeLogger.warn("[SAML] No IdP cert — accepting unsigned response in development mode only");
-      }
-
-      const notBeforeMatch = decodedXml.match(/NotBefore="([^"]+)"/);
-      const notOnOrAfterMatch = decodedXml.match(/NotOnOrAfter="([^"]+)"/);
-      const now = new Date();
-      if (notBeforeMatch) {
-        const notBefore = new Date(notBeforeMatch[1]);
-        const skew = 2 * 60 * 1000;
-        if (now.getTime() < notBefore.getTime() - skew) {
-          routeLogger.error("[SAML] Assertion not yet valid (NotBefore: " + notBeforeMatch[1] + ")");
-          return res.redirect("/login?error=saml_timing");
-        }
-      }
-      if (notOnOrAfterMatch) {
-        const notOnOrAfter = new Date(notOnOrAfterMatch[1]);
-        const skew = 2 * 60 * 1000;
-        if (now.getTime() > notOnOrAfter.getTime() + skew) {
-          routeLogger.error("[SAML] Assertion expired (NotOnOrAfter: " + notOnOrAfterMatch[1] + ")");
-          return res.redirect("/login?error=saml_expired");
-        }
-      }
-
-      const audienceMatch = decodedXml.match(/<(?:saml2?:)?Audience>([^<]+)<\/(?:saml2?:)?Audience>/);
-      if (audienceMatch && audienceMatch[1] !== SAML_ISSUER) {
-        routeLogger.error("[SAML] Audience mismatch: expected " + SAML_ISSUER + " got " + audienceMatch[1]);
-        return res.redirect("/login?error=saml_audience");
-      }
-
-      const statusMatch = decodedXml.match(/<(?:samlp?:)?StatusCode\s+Value="([^"]+)"/);
-      if (statusMatch && !statusMatch[1].endsWith(":Success")) {
-        routeLogger.error("[SAML] Non-success status: " + statusMatch[1]);
-        return res.redirect("/login?error=saml_status_failed");
-      }
-
-      const emailMatch = decodedXml.match(/<(?:saml2?:)?NameID[^>]*>([^<]+)<\/(?:saml2?:)?NameID>/);
-      const attrEmailMatch = decodedXml.match(/<(?:saml2?:)?AttributeValue[^>]*>([^<]*@[^<]+)<\/(?:saml2?:)?AttributeValue>/);
-      const email = emailMatch?.[1] || attrEmailMatch?.[1];
-
-      if (!email) {
-        routeLogger.error("[SAML] No email found in assertion");
-        return res.redirect("/login?error=saml_no_email");
-      }
-
-      routeLogger.info(`[SAML] Validated assertion successfully`);
-
-      const [adminUser] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-      if (adminUser && adminUser.status !== "suspended") {
-        let organization = null;
-        if (adminUser.organizationId) {
-          organization = await storage.getOrganization(adminUser.organizationId);
-        }
-        return req.session.regenerate((err) => {
-          if (err) return res.redirect("/login?error=session_error");
-          req.session.userId = adminUser.id;
-          req.session.userRole = adminUser.role;
-          req.session.organizationId = adminUser.organizationId || undefined;
-          req.session.lastActivity = Date.now();
-          if (isPlatformPrivileged(adminUser.role)) {
-            delete req.session.viewingCountry;
-          } else if (organization?.country) {
-            req.session.userCountry = organization.country;
-          }
-          const dest = isPlatformPrivileged(adminUser.role) ? "/command-center" : "/dashboard";
-          routeLogger.info(`[Admin][SAML] Login for user ${String(adminUser.id).slice(0,8)}... role=${adminUser.role}`);
-          req.session.save(() => res.redirect(dest));
-        });
-      }
-
-      let [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.email, email)).limit(1);
-      if (account) {
-        return req.session.regenerate((err) => {
-          if (err) return res.redirect("/login?error=session_error");
-          (req.session as any).consumerId = account.id;
-          (req.session as any).consumerNationalId = account.nationalId;
-          req.session.lastActivity = Date.now();
-          routeLogger.info(`[Consumer][SAML] Login for consumer ${account.id.slice(0,8)}...`);
-          req.session.save(() => res.redirect("/my-credit"));
-        });
-      }
-
-      res.redirect(`/login?error=no_account&provider=saml&email=${encodeURIComponent(email)}`);
-    } catch (e: any) {
-      routeLogger.error("[SAML] Callback error:", { detail: e });
-      res.redirect("/login?error=saml_failed");
-    }
-  });
+  // SAML 2.0 SSO routes (metadata, login, callback) are registered by
+  // registerSamlRoutes(app) — see server/routes/saml.ts.
+  await registerSamlRoutes(app);
 
   // ── OAuth Health / Diagnostic Endpoint ──────────────────────────────────────
   // GET /api/auth/oauth-health
@@ -5749,7 +5615,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications");
       await logCrossCountryAccess(req, country, "/api/notifications");
       const scope = country ?? (isPlatformPrivileged(req.session!.userRole) ? GLOBAL_SCOPE : undefined);
-      const items = await storage.getNotifications(req.session!.userId, scope);
+      const items = await storage.getNotifications(req.session!.userId!, scope as string);
       res.json(items);
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5761,7 +5627,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const country = getCountryFilter(req);
       enforceCountryScopeForNonSuperAdmin(req, country, "/api/notifications/unread-count");
       const scope = country ?? (isPlatformPrivileged(req.session!.userRole) ? GLOBAL_SCOPE : undefined);
-      const count = await storage.getUnreadNotificationCount(req.session!.userId, scope);
+      const count = await storage.getUnreadNotificationCount(req.session!.userId!, scope as string);
       res.json({ count });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -5779,7 +5645,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/notifications/mark-all-read", requireAuth, async (req, res) => {
     try {
-      await storage.markAllNotificationsRead(req.session!.userId);
+      await storage.markAllNotificationsRead(req.session!.userId!);
       res.json({ message: "All marked as read" });
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -9076,7 +8942,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
 
       const exporterUser = req.session?.userId ? await storage.getUser(req.session.userId) : null;
-      const exporterName = exporterUser?.displayName || exporterUser?.username || "unknown";
+      const exporterName = (exporterUser as any)?.displayName || exporterUser?.username || "unknown";
       const exporterOrgId = req.session?.organizationId ?? "";
       const exporterOrgName = exporterOrgId
         ? ((await storage.getOrganization(exporterOrgId))?.name ?? exporterOrgId)
@@ -9349,7 +9215,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const { content: rawBogContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
       const bogExporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
       const bogExporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      const bogExporterName = bogExporterUser?.displayName || bogExporterUser?.username || "unknown";
+      const bogExporterName = (bogExporterUser as any)?.displayName || bogExporterUser?.username || "unknown";
       const content = rawBogContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${bogExporterName} | Institution: ${bogExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const bogHash = generateExportHash(content);
@@ -9416,7 +9282,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const { content: rawBslContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
       const bslExporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
       const bslExporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      const bslExporterName = bslExporterUser?.displayName || bslExporterUser?.username || "unknown";
+      const bslExporterName = (bslExporterUser as any)?.displayName || bslExporterUser?.username || "unknown";
       const content = rawBslContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${bslExporterName} | Institution: ${bslExporterOrg} | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const bslHash = generateExportHash(content);
@@ -9484,7 +9350,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const { content: rawContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
       const exporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
       const exporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      const exporterName = exporterUser?.displayName || exporterUser?.username || "unknown";
+      const exporterName = (exporterUser as any)?.displayName || exporterUser?.username || "unknown";
       const content = rawContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${exporterName} | Institution: ${exporterOrg} | Regulator: CBN | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const exportHash = generateExportHash(content);
@@ -9549,7 +9415,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const { content: rawContent, filename } = await generator(reportingDate, sequenceNumber, correctionIndicator, orgId);
       const exporterOrg = orgId ? ((await storage.getOrganization(orgId))?.name ?? orgId) : "—";
       const exporterUser = req.session.userId ? await storage.getUser(req.session.userId) : null;
-      const exporterName = exporterUser?.displayName || exporterUser?.username || "unknown";
+      const exporterName = (exporterUser as any)?.displayName || exporterUser?.username || "unknown";
       const content = rawContent + `\n# UCH-WATERMARK: © 2026 Universal Credit Hub Ltd. Confidential. Exported by: ${exporterName} | Institution: ${exporterOrg} | Regulator: CBK | IP: ${req.ip ?? "unknown"} | Time: ${new Date().toISOString()}`;
 
       const exportHash = generateExportHash(content);
@@ -9866,6 +9732,1147 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   ];
 
   const GHANA_DOCS_DIR = path.join(process.cwd(), "docs", "ghana");
+
+  const GHANA_PLAYBOOK_SLUG = "ghana-demo";
+  const GHANA_PLAYBOOK_TITLE = "Ghana Demo Playbook";
+
+  async function loadGhanaPlaybookContent(): Promise<string> {
+    const mdPath = path.join(process.cwd(), "exports", "ghana-demo-playbook.md");
+    return fs.readFileSync(mdPath, "utf-8");
+  }
+
+  async function ensureGhanaPlaybookInDb(userId?: string): Promise<{ content: string; updatedAt: Date; id: string }> {
+    let page = await storage.getPlaybookPage(GHANA_PLAYBOOK_SLUG);
+    if (!page) {
+      const fileContent = await loadGhanaPlaybookContent();
+      page = await storage.upsertPlaybookPage(GHANA_PLAYBOOK_SLUG, GHANA_PLAYBOOK_TITLE, fileContent, userId || "system");
+    }
+    return { content: page.content, updatedAt: page.updatedAt ?? page.createdAt ?? new Date(), id: page.id };
+  }
+
+  app.get("/api/sales/ghana-playbook/content", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const { content, updatedAt, id } = await ensureGhanaPlaybookInDb();
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      res.json({ content, html, updatedAt, playbookId: id });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.patch("/api/sales/ghana-playbook/content", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ message: "content must be a string" });
+      const mdPath = path.join(process.cwd(), "exports", "ghana-demo-playbook.md");
+      fs.writeFileSync(mdPath, content, "utf-8");
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_EDIT",
+        entity: "ghana-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", country: "GH", byteLength: Buffer.byteLength(content, "utf-8") }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const fileStats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: fileStats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // Dedicated view-tracking endpoint — called on every page mount, independent of content cache
+  app.post("/api/sales/ghana-playbook/view", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_VIEW",
+        entity: "ghana-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", country: "GH" }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/ghana-playbook/stats", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const isPlatformOwner = req.session.userRole === "platform_owner";
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+
+      const downloadCountResult = await pool.query(
+        `SELECT COUNT(*)::int AS count FROM audit_logs WHERE action = 'PLAYBOOK_PDF_DOWNLOAD' AND entity = 'ghana-playbook' AND created_at >= $1`,
+        [monthStart]
+      );
+      const viewCountResult = await pool.query(
+        `SELECT COUNT(*)::int AS count FROM audit_logs WHERE action = 'PLAYBOOK_VIEW' AND entity = 'ghana-playbook' AND created_at >= $1`,
+        [monthStart]
+      );
+
+      let byUser: { username: string; downloads: number; views: number }[] = [];
+      if (isPlatformOwner) {
+        const byUserResult = await pool.query(
+          `SELECT
+            u.username,
+            SUM(CASE WHEN al.action = 'PLAYBOOK_PDF_DOWNLOAD' THEN 1 ELSE 0 END)::int AS downloads,
+            SUM(CASE WHEN al.action = 'PLAYBOOK_VIEW' THEN 1 ELSE 0 END)::int AS views
+          FROM audit_logs al
+          LEFT JOIN users u ON u.id = al.user_id
+          WHERE al.action IN ('PLAYBOOK_PDF_DOWNLOAD', 'PLAYBOOK_VIEW') AND al.entity = 'ghana-playbook' AND al.created_at >= $1
+          GROUP BY u.username
+          ORDER BY downloads DESC, views DESC`,
+          [monthStart]
+        );
+        byUser = byUserResult.rows;
+      }
+
+      res.json({
+        downloadsThisMonth: downloadCountResult.rows[0]?.count ?? 0,
+        viewsThisMonth: viewCountResult.rows[0]?.count ?? 0,
+        byUser: isPlatformOwner ? byUser : [],
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.put("/api/sales/ghana-playbook/content", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content, label } = req.body as { content?: string; label?: string };
+      if (typeof content !== "string" || content.trim().length === 0) {
+        return res.status(400).json({ message: "content is required" });
+      }
+      const userId = req.session?.userId ?? "system";
+      await ensureGhanaPlaybookInDb(userId);
+      const trimmedLabel = typeof label === "string" && label.trim().length > 0 ? label.trim() : undefined;
+      if (trimmedLabel && trimmedLabel.length > 120) {
+        return res.status(400).json({ message: "Version label must be 120 characters or fewer" });
+      }
+      const page = await storage.upsertPlaybookPage(GHANA_PLAYBOOK_SLUG, GHANA_PLAYBOOK_TITLE, content, userId, trimmedLabel);
+      res.json({ ok: true, updatedAt: page.updatedAt, playbookId: page.id });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/ghana-playbook/versions", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const page = await storage.getPlaybookPage(GHANA_PLAYBOOK_SLUG);
+      if (!page) return res.json({ versions: [] });
+      const versions = await storage.getPlaybookVersions(page.id);
+      res.json({ versions });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/sales/ghana-playbook/versions/:id/restore", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const versionId = parseInt(req.params.id as string, 10);
+      if (isNaN(versionId)) return res.status(400).json({ message: "Invalid version id" });
+      const userId = String(req.session?.userId ?? "system");
+      const page = await storage.restorePlaybookVersion(versionId, userId);
+      res.json({ ok: true, updatedAt: page.updatedAt, playbookId: page.id });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/ghana-playbook/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content: markdownContent } = await ensureGhanaPlaybookInDb(req.session?.userId);
+      const PDFDocument = (await import("pdfkit")).default;
+      const { PassThrough } = await import("stream");
+
+      const TEAL = "#0d9488";
+      const GOLD = "#f59e0b";
+      const DARK = "#1a1a1a";
+      const GRAY = "#555555";
+      const LIGHT_GRAY = "#888888";
+      const TABLE_HEADER_BG = "#e6f7f6";
+      const TABLE_BORDER = "#99d6d2";
+      const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
+
+      function stripMd(text: string): string {
+        return text
+          .replace(/\*\*(.+?)\*\*/g, "$1").replace(/\*(.+?)\*/g, "$1")
+          .replace(/__(.+?)__/g, "$1").replace(/_(.+?)_/g, "$1")
+          .replace(/`(.+?)`/g, "$1").replace(/\[(.+?)\]\(.+?\)/g, "$1")
+          .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+      }
+
+      const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true,
+        info: { Title: "Ghana Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd",
+          Subject: "Ghana market demonstration playbook", Keywords: "Ghana, credit bureau, UCH, demo, playbook" }
+      });
+      const stream = new PassThrough();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="UCH-Ghana-Demo-Playbook.pdf"');
+      doc.pipe(stream);
+      stream.pipe(res);
+
+      const pageWidth = doc.page.width - PAGE_MARGINS.left - PAGE_MARGINS.right;
+
+      // Cover banner
+      doc.rect(PAGE_MARGINS.left - 50, 0, doc.page.width, 120).fill(TEAL);
+      doc.font("Helvetica-Bold").fontSize(26).fillColor("#ffffff").text("Ghana Demo Playbook", PAGE_MARGINS.left, 30, { width: pageWidth });
+      doc.font("Helvetica").fontSize(13).fillColor("#ccf5f2").text("Universal Credit Hub — Pan-African Credit Registry", PAGE_MARGINS.left, 62, { width: pageWidth });
+      doc.font("Helvetica").fontSize(10).fillColor("#99e0db").text("Confidential  ·  May 2026  ·  Presentation Day: 11:00 AM GMT", PAGE_MARGINS.left, 84, { width: pageWidth });
+      doc.rect(PAGE_MARGINS.left - 50, 120, doc.page.width, 4).fill(GOLD);
+      doc.y = 148;
+
+      // Render markdown
+      const lines = markdownContent.split("\n");
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const hMatch = line.match(/^(#{1,4})\s+(.*)/);
+        if (hMatch) {
+          const depth = hMatch[1].length;
+          const text = stripMd(hMatch[2]);
+          const sizes: Record<number, number> = { 1: 20, 2: 14, 3: 12, 4: 11 };
+          const fs2 = sizes[depth] || 11;
+          if (doc.y + fs2 + 24 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+          if (depth === 1) {
+            doc.moveDown(0.5);
+            doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text);
+            doc.moveDown(0.2);
+            doc.moveTo(PAGE_MARGINS.left, doc.y).lineTo(PAGE_MARGINS.left + pageWidth, doc.y).strokeColor(TEAL).lineWidth(1.5).stroke();
+            doc.moveDown(0.4);
+          } else if (depth === 2) {
+            doc.moveDown(0.8);
+            doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text);
+            doc.moveDown(0.1);
+            doc.moveTo(PAGE_MARGINS.left, doc.y).lineTo(PAGE_MARGINS.left + pageWidth, doc.y).strokeColor("#b2dfdb").lineWidth(0.75).stroke();
+            doc.moveDown(0.3);
+          } else if (depth === 3) {
+            doc.moveDown(0.6);
+            const lw = doc.font("Helvetica-Bold").fontSize(fs2).widthOfString(text) + 12;
+            const ly = doc.y;
+            doc.rect(PAGE_MARGINS.left, ly, lw, fs2 + 8).fill(TEAL);
+            doc.font("Helvetica-Bold").fontSize(fs2).fillColor("#ffffff").text(text, PAGE_MARGINS.left + 6, ly + 4, { width: pageWidth });
+            doc.y = ly + fs2 + 12; doc.moveDown(0.2);
+          } else {
+            doc.moveDown(0.4);
+            doc.font("Helvetica-Bold").fontSize(fs2).fillColor(DARK).text(text);
+            doc.moveDown(0.15);
+          }
+          i++; continue;
+        }
+
+        // Tables
+        if (line.startsWith("|") && i + 1 < lines.length && lines[i + 1]?.match(/^\|[\s:|-]+\|/)) {
+          const headers = line.split("|").filter(c => c.trim() !== "").map(c => stripMd(c.trim()));
+          i += 2;
+          const rows: string[][] = [];
+          while (i < lines.length && lines[i].startsWith("|")) {
+            rows.push(lines[i].split("|").filter(c => c.trim() !== "").map(c => stripMd(c.trim())));
+            i++;
+          }
+          if (headers.length > 0) {
+            const colW = pageWidth / headers.length;
+            const cellPad = 5;
+            const calcH = (cells: string[], fSize: number, fontName: string) => {
+              let maxH = 18;
+              for (const cell of cells) {
+                const h = doc.font(fontName).fontSize(fSize).heightOfString(cell || "", { width: colW - cellPad * 2 }) + 10;
+                if (h > maxH) maxH = h;
+              }
+              return Math.min(maxH, 80);
+            };
+            const hdrH = calcH(headers, 8, "Helvetica-Bold");
+            if (doc.y + hdrH + 20 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+            let y = doc.y;
+            const x = PAGE_MARGINS.left;
+            doc.rect(x, y, pageWidth, hdrH).fill(TABLE_HEADER_BG);
+            for (let c = 0; c < headers.length; c++) {
+              doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c] || "", x + c * colW + cellPad, y + 5, { width: colW - cellPad * 2 });
+            }
+            doc.rect(x, y, pageWidth, hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+            y += hdrH;
+            for (let r = 0; r < rows.length; r++) {
+              const rH = calcH(rows[r], 7.5, "Helvetica");
+              if (y + rH > doc.page.height - PAGE_MARGINS.bottom) {
+                doc.addPage(); y = PAGE_MARGINS.top;
+                doc.rect(x, y, pageWidth, hdrH).fill(TABLE_HEADER_BG);
+                for (let c = 0; c < headers.length; c++) {
+                  doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c] || "", x + c * colW + cellPad, y + 5, { width: colW - cellPad * 2 });
+                }
+                doc.rect(x, y, pageWidth, hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+                y += hdrH;
+              }
+              doc.rect(x, y, pageWidth, rH).fill(r % 2 === 0 ? "#ffffff" : "#f0faf9");
+              for (let c = 0; c < rows[r].length; c++) {
+                doc.font("Helvetica").fontSize(7.5).fillColor(DARK).text(rows[r][c] || "", x + c * colW + cellPad, y + 5, { width: colW - cellPad * 2 });
+              }
+              doc.rect(x, y, pageWidth, rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+              y += rH;
+            }
+            doc.y = y + 8;
+          }
+          continue;
+        }
+
+        // Blockquote
+        if (line.startsWith("> ")) {
+          if (doc.y + 30 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+          const text = stripMd(line.replace(/^>\s*/, ""));
+          const qX = PAGE_MARGINS.left + 3;
+          const savedY = doc.y;
+          doc.rect(PAGE_MARGINS.left, savedY, pageWidth, 1).fill(GOLD).opacity(1);
+          doc.opacity(1);
+          doc.font("Helvetica-Oblique").fontSize(9.5).fillColor(GRAY).text(text, qX + 14, savedY + 6, { width: pageWidth - 18 });
+          const endY = doc.y + 6;
+          doc.moveTo(qX, savedY).lineTo(qX, endY).strokeColor(GOLD).lineWidth(3).stroke();
+          doc.y = endY + 4; doc.moveDown(0.3); i++; continue;
+        }
+
+        // HR
+        if (line.match(/^-{3,}$/) || line.match(/^\*{3,}$/)) {
+          doc.moveDown(0.3);
+          doc.moveTo(PAGE_MARGINS.left, doc.y).lineTo(PAGE_MARGINS.left + pageWidth, doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke();
+          doc.moveDown(0.3); i++; continue;
+        }
+
+        // Checkbox list
+        if (line.match(/^- \[[ x]\] /)) {
+          if (doc.y + 15 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+          const text = line.replace(/^- \[[ x]\] /i, "");
+          const bx = PAGE_MARGINS.left + 12;
+          const by = doc.y + 1;
+          doc.rect(bx, by, 8, 8).strokeColor(TEAL).lineWidth(0.75).stroke();
+          doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text), PAGE_MARGINS.left + 26, doc.y, { width: pageWidth - 26 });
+          i++; continue;
+        }
+
+        // Bullet list
+        if (line.match(/^[-*] /)) {
+          if (doc.y + 14 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+          const text = line.replace(/^[-*] /, "");
+          doc.font("Helvetica").fontSize(9).fillColor(TEAL).text("•", PAGE_MARGINS.left + 10, undefined, { continued: true, width: 12 });
+          doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text), PAGE_MARGINS.left + 24, undefined, { width: pageWidth - 24 });
+          i++; continue;
+        }
+
+        // Blank line
+        if (line.trim() === "") { doc.moveDown(0.25); i++; continue; }
+
+        // Paragraph
+        if (doc.y + 14 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+        doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(line), { width: pageWidth });
+        i++;
+      }
+
+      // Footer
+      doc.moveDown(2);
+      if (doc.y + 50 > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+      doc.moveTo(PAGE_MARGINS.left, doc.y).lineTo(PAGE_MARGINS.left + pageWidth, doc.y).strokeColor(TEAL).lineWidth(1).stroke();
+      doc.moveDown(0.4);
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("Universal Credit Hub — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8", { align: "center" });
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("© 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana.", { align: "center" });
+
+      // Page numbers
+      const range = doc.bufferedPageRange();
+      for (let p = 0; p < range.count; p++) {
+        doc.switchToPage(range.start + p);
+        doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY)
+          .text(`Page ${p + 1} of ${range.count}`, PAGE_MARGINS.left, doc.page.height - 40, { width: pageWidth, align: "center" });
+      }
+
+      // Audit log the PDF download — awaited before finalising the document
+      const pdfUserId = req.session.userId ?? null;
+      const pdfUser = pdfUserId ? await storage.getUser(pdfUserId) : null;
+      await storage.createAuditLog({
+        userId: pdfUserId,
+        action: "PLAYBOOK_PDF_DOWNLOAD",
+        entity: "ghana-playbook",
+        details: JSON.stringify({ username: pdfUser?.username ?? "unknown", country: "GH" }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      await storage.createPlaybookDownload({
+        userId: pdfUserId ? String(pdfUserId) : null,
+        username: pdfUser?.username ?? null,
+        playbookSlug: "ghana-playbook",
+        ipAddress: req.ip ?? null,
+      });
+
+      doc.end();
+    } catch (e: any) {
+      if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ── Nigeria Playbook ──────────────────────────────────────────────────────
+  app.get("/api/sales/nigeria-playbook/content", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "nigeria-demo-playbook.md");
+      const content = fs.readFileSync(mdPath, "utf-8");
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const stats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: stats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.patch("/api/sales/nigeria-playbook/content", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ message: "content must be a string" });
+      const mdPath = path.join(process.cwd(), "exports", "nigeria-demo-playbook.md");
+      fs.writeFileSync(mdPath, content, "utf-8");
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_EDIT",
+        entity: "nigeria-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", country: "NG", byteLength: Buffer.byteLength(content, "utf-8") }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const fileStats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: fileStats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/nigeria-playbook/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "nigeria-demo-playbook.md");
+      const markdownContent = fs.readFileSync(mdPath, "utf-8");
+      const PDFDocument = (await import("pdfkit")).default;
+      const { PassThrough } = await import("stream");
+      const TEAL = "#0d9488"; const GOLD = "#f59e0b"; const DARK = "#1a1a1a"; const GRAY = "#555555";
+      const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
+      const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
+      function stripMd(text: string): string {
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      }
+      const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "Nigeria Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "Nigeria market demonstration playbook", Keywords: "Nigeria, credit bureau, UCH, demo, playbook, CBN" } });
+      const stream = new PassThrough();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="UCH-Nigeria-Demo-Playbook.pdf"');
+      doc.pipe(stream); stream.pipe(res);
+      const pageWidth = doc.page.width - PAGE_MARGINS.left - PAGE_MARGINS.right;
+      doc.rect(PAGE_MARGINS.left - 50, 0, doc.page.width, 120).fill(TEAL);
+      doc.font("Helvetica-Bold").fontSize(26).fillColor("#ffffff").text("Nigeria Demo Playbook", PAGE_MARGINS.left, 30, { width: pageWidth });
+      doc.font("Helvetica").fontSize(13).fillColor("#ccf5f2").text("Universal Credit Hub — Pan-African Credit Registry", PAGE_MARGINS.left, 62, { width: pageWidth });
+      doc.font("Helvetica").fontSize(10).fillColor("#99e0db").text("Confidential  ·  May 2026  ·  CBN / FCCPC / NDPA 2023", PAGE_MARGINS.left, 84, { width: pageWidth });
+      doc.rect(PAGE_MARGINS.left - 50, 120, doc.page.width, 4).fill(GOLD);
+      doc.y = 148;
+      const lines = markdownContent.split("\n"); let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const hMatch = line.match(/^(#{1,4})\s+(.*)/);
+        if (hMatch) {
+          const depth = hMatch[1].length; const text = stripMd(hMatch[2]);
+          const sizes: Record<number,number> = {1:20,2:14,3:12,4:11}; const fs2 = sizes[depth]||11;
+          if (doc.y+fs2+24>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+          if (depth===1) { doc.moveDown(0.5); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.2); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1.5).stroke(); doc.moveDown(0.4); }
+          else if (depth===2) { doc.moveDown(0.8); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.1); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#b2dfdb").lineWidth(0.75).stroke(); doc.moveDown(0.3); }
+          else if (depth===3) { doc.moveDown(0.6); const lw=doc.font("Helvetica-Bold").fontSize(fs2).widthOfString(text)+12; const ly=doc.y; doc.rect(PAGE_MARGINS.left,ly,lw,fs2+8).fill(TEAL); doc.font("Helvetica-Bold").fontSize(fs2).fillColor("#ffffff").text(text,PAGE_MARGINS.left+6,ly+4,{width:pageWidth}); doc.y=ly+fs2+12; doc.moveDown(0.2); }
+          else { doc.moveDown(0.4); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(DARK).text(text); doc.moveDown(0.15); }
+          i++; continue;
+        }
+        if (line.startsWith("|") && i+1<lines.length && lines[i+1]?.match(/^\|[\s:|-]+\|/)) {
+          const headers=line.split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim())); i+=2;
+          const rows:string[][]=[];
+          while (i<lines.length && lines[i].startsWith("|")) { rows.push(lines[i].split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim()))); i++; }
+          if (headers.length>0) {
+            const colW=pageWidth/headers.length; const cellPad=5;
+            const calcH=(cells:string[],fSize:number,fontName:string)=>{let maxH=18;for(const cell of cells){const h=doc.font(fontName).fontSize(fSize).heightOfString(cell||"",{width:colW-cellPad*2})+10;if(h>maxH)maxH=h;}return Math.min(maxH,80);};
+            const hdrH=calcH(headers,8,"Helvetica-Bold");
+            if (doc.y+hdrH+20>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+            let y=doc.y; const x=PAGE_MARGINS.left;
+            doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG);
+            for (let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+            doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH;
+            for (let r=0;r<rows.length;r++) {
+              const rH=calcH(rows[r],7.5,"Helvetica");
+              if (y+rH>doc.page.height-PAGE_MARGINS.bottom) { doc.addPage(); y=PAGE_MARGINS.top; doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG); for(let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2}); doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH; }
+              doc.rect(x,y,pageWidth,rH).fill(r%2===0?"#ffffff":"#f0faf9");
+              for (let c=0;c<rows[r].length;c++) doc.font("Helvetica").fontSize(7.5).fillColor(DARK).text(rows[r][c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+              doc.rect(x,y,pageWidth,rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=rH;
+            }
+            doc.y=y+8;
+          }
+          continue;
+        }
+        if (line.startsWith("> ")) { if(doc.y+30>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=stripMd(line.replace(/^>\s*/,"")); const qX=PAGE_MARGINS.left+3; const savedY=doc.y; doc.rect(PAGE_MARGINS.left,savedY,pageWidth,1).fill(GOLD).opacity(1); doc.opacity(1); doc.font("Helvetica-Oblique").fontSize(9.5).fillColor(GRAY).text(text,qX+14,savedY+6,{width:pageWidth-18}); const endY=doc.y+6; doc.moveTo(qX,savedY).lineTo(qX,endY).strokeColor(GOLD).lineWidth(3).stroke(); doc.y=endY+4; doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^-{3,}$/)||line.match(/^\*{3,}$/)) { doc.moveDown(0.3); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke(); doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^- \[[ x]\] /i)) { if(doc.y+15>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^- \[[ x]\] /i,""); const bx=PAGE_MARGINS.left+12; const by=doc.y+1; doc.rect(bx,by,8,8).strokeColor(TEAL).lineWidth(0.75).stroke(); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+26,doc.y,{width:pageWidth-26}); i++; continue; }
+        if (line.match(/^[-*] /)) { if(doc.y+14>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^[-*] /,""); doc.font("Helvetica").fontSize(9).fillColor(TEAL).text("•",PAGE_MARGINS.left+10,undefined,{continued:true,width:12}); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+24,undefined,{width:pageWidth-24}); i++; continue; }
+        if (line.trim()==="") { doc.moveDown(0.25); i++; continue; }
+        if (doc.y+14>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+        doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(line),{width:pageWidth}); i++;
+      }
+      doc.moveDown(2); if(doc.y+50>doc.page.height-PAGE_MARGINS.bottom)doc.addPage();
+      doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1).stroke(); doc.moveDown(0.4);
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("Universal Credit Hub — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8",{align:"center"});
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("© 2026 Universal Credit Hub Ltd. All rights reserved.",{align:"center"});
+      const range=doc.bufferedPageRange();
+      for (let p=0;p<range.count;p++) { doc.switchToPage(range.start+p); doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY).text(`Page ${p+1} of ${range.count}`,PAGE_MARGINS.left,doc.page.height-40,{width:pageWidth,align:"center"}); }
+      const ngUserId = req.session?.userId ?? null;
+      const ngUser = ngUserId ? await storage.getUser(ngUserId) : null;
+      await storage.createPlaybookDownload({ userId: ngUserId ? String(ngUserId) : null, username: ngUser?.username ?? null, playbookSlug: "nigeria-playbook", ipAddress: req.ip ?? null });
+      doc.end();
+    } catch (e: any) { if(!res.headersSent) res.status(500).json({message:safeErrorMessage(e)}); }
+  });
+
+  // ── Kenya Playbook ────────────────────────────────────────────────────────
+  app.get("/api/sales/kenya-playbook/content", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "kenya-demo-playbook.md");
+      const content = fs.readFileSync(mdPath, "utf-8");
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const stats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: stats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.patch("/api/sales/kenya-playbook/content", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ message: "content must be a string" });
+      const mdPath = path.join(process.cwd(), "exports", "kenya-demo-playbook.md");
+      fs.writeFileSync(mdPath, content, "utf-8");
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_EDIT",
+        entity: "kenya-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", country: "KE", byteLength: Buffer.byteLength(content, "utf-8") }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const fileStats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: fileStats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/kenya-playbook/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "kenya-demo-playbook.md");
+      const markdownContent = fs.readFileSync(mdPath, "utf-8");
+      const PDFDocument = (await import("pdfkit")).default;
+      const { PassThrough } = await import("stream");
+      const TEAL = "#0d9488"; const GOLD = "#f59e0b"; const DARK = "#1a1a1a"; const GRAY = "#555555";
+      const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
+      const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
+      function stripMd(text: string): string {
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      }
+      const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "Kenya Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "Kenya market demonstration playbook", Keywords: "Kenya, credit bureau, UCH, demo, playbook, CBK, M-Pesa" } });
+      const stream = new PassThrough();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="UCH-Kenya-Demo-Playbook.pdf"');
+      doc.pipe(stream); stream.pipe(res);
+      const pageWidth = doc.page.width - PAGE_MARGINS.left - PAGE_MARGINS.right;
+      doc.rect(PAGE_MARGINS.left - 50, 0, doc.page.width, 120).fill(TEAL);
+      doc.font("Helvetica-Bold").fontSize(26).fillColor("#ffffff").text("Kenya Demo Playbook", PAGE_MARGINS.left, 30, { width: pageWidth });
+      doc.font("Helvetica").fontSize(13).fillColor("#ccf5f2").text("Universal Credit Hub — Pan-African Credit Registry", PAGE_MARGINS.left, 62, { width: pageWidth });
+      doc.font("Helvetica").fontSize(10).fillColor("#99e0db").text("Confidential  ·  May 2026  ·  CBK / CRB / Kenya Data Protection Act 2019", PAGE_MARGINS.left, 84, { width: pageWidth });
+      doc.rect(PAGE_MARGINS.left - 50, 120, doc.page.width, 4).fill(GOLD);
+      doc.y = 148;
+      const lines = markdownContent.split("\n"); let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const hMatch = line.match(/^(#{1,4})\s+(.*)/);
+        if (hMatch) {
+          const depth = hMatch[1].length; const text = stripMd(hMatch[2]);
+          const sizes: Record<number,number> = {1:20,2:14,3:12,4:11}; const fs2 = sizes[depth]||11;
+          if (doc.y+fs2+24>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+          if (depth===1) { doc.moveDown(0.5); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.2); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1.5).stroke(); doc.moveDown(0.4); }
+          else if (depth===2) { doc.moveDown(0.8); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.1); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#b2dfdb").lineWidth(0.75).stroke(); doc.moveDown(0.3); }
+          else if (depth===3) { doc.moveDown(0.6); const lw=doc.font("Helvetica-Bold").fontSize(fs2).widthOfString(text)+12; const ly=doc.y; doc.rect(PAGE_MARGINS.left,ly,lw,fs2+8).fill(TEAL); doc.font("Helvetica-Bold").fontSize(fs2).fillColor("#ffffff").text(text,PAGE_MARGINS.left+6,ly+4,{width:pageWidth}); doc.y=ly+fs2+12; doc.moveDown(0.2); }
+          else { doc.moveDown(0.4); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(DARK).text(text); doc.moveDown(0.15); }
+          i++; continue;
+        }
+        if (line.startsWith("|") && i+1<lines.length && lines[i+1]?.match(/^\|[\s:|-]+\|/)) {
+          const headers=line.split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim())); i+=2;
+          const rows:string[][]=[];
+          while (i<lines.length && lines[i].startsWith("|")) { rows.push(lines[i].split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim()))); i++; }
+          if (headers.length>0) {
+            const colW=pageWidth/headers.length; const cellPad=5;
+            const calcH=(cells:string[],fSize:number,fontName:string)=>{let maxH=18;for(const cell of cells){const h=doc.font(fontName).fontSize(fSize).heightOfString(cell||"",{width:colW-cellPad*2})+10;if(h>maxH)maxH=h;}return Math.min(maxH,80);};
+            const hdrH=calcH(headers,8,"Helvetica-Bold");
+            if (doc.y+hdrH+20>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+            let y=doc.y; const x=PAGE_MARGINS.left;
+            doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG);
+            for (let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+            doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH;
+            for (let r=0;r<rows.length;r++) {
+              const rH=calcH(rows[r],7.5,"Helvetica");
+              if (y+rH>doc.page.height-PAGE_MARGINS.bottom) { doc.addPage(); y=PAGE_MARGINS.top; doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG); for(let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2}); doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH; }
+              doc.rect(x,y,pageWidth,rH).fill(r%2===0?"#ffffff":"#f0faf9");
+              for (let c=0;c<rows[r].length;c++) doc.font("Helvetica").fontSize(7.5).fillColor(DARK).text(rows[r][c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+              doc.rect(x,y,pageWidth,rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=rH;
+            }
+            doc.y=y+8;
+          }
+          continue;
+        }
+        if (line.startsWith("> ")) { if(doc.y+30>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=stripMd(line.replace(/^>\s*/,"")); const qX=PAGE_MARGINS.left+3; const savedY=doc.y; doc.rect(PAGE_MARGINS.left,savedY,pageWidth,1).fill(GOLD).opacity(1); doc.opacity(1); doc.font("Helvetica-Oblique").fontSize(9.5).fillColor(GRAY).text(text,qX+14,savedY+6,{width:pageWidth-18}); const endY=doc.y+6; doc.moveTo(qX,savedY).lineTo(qX,endY).strokeColor(GOLD).lineWidth(3).stroke(); doc.y=endY+4; doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^-{3,}$/)||line.match(/^\*{3,}$/)) { doc.moveDown(0.3); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke(); doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^- \[[ x]\] /i)) { if(doc.y+15>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^- \[[ x]\] /i,""); const bx=PAGE_MARGINS.left+12; const by=doc.y+1; doc.rect(bx,by,8,8).strokeColor(TEAL).lineWidth(0.75).stroke(); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+26,doc.y,{width:pageWidth-26}); i++; continue; }
+        if (line.match(/^[-*] /)) { if(doc.y+14>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^[-*] /,""); doc.font("Helvetica").fontSize(9).fillColor(TEAL).text("•",PAGE_MARGINS.left+10,undefined,{continued:true,width:12}); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+24,undefined,{width:pageWidth-24}); i++; continue; }
+        if (line.trim()==="") { doc.moveDown(0.25); i++; continue; }
+        if (doc.y+14>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+        doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(line),{width:pageWidth}); i++;
+      }
+      doc.moveDown(2); if(doc.y+50>doc.page.height-PAGE_MARGINS.bottom)doc.addPage();
+      doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1).stroke(); doc.moveDown(0.4);
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("Universal Credit Hub — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8",{align:"center"});
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("© 2026 Universal Credit Hub Ltd. All rights reserved.",{align:"center"});
+      const range=doc.bufferedPageRange();
+      for (let p=0;p<range.count;p++) { doc.switchToPage(range.start+p); doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY).text(`Page ${p+1} of ${range.count}`,PAGE_MARGINS.left,doc.page.height-40,{width:pageWidth,align:"center"}); }
+      const keUserId = req.session?.userId ?? null;
+      const keUser = keUserId ? await storage.getUser(keUserId) : null;
+      await storage.createPlaybookDownload({ userId: keUserId ? String(keUserId) : null, username: keUser?.username ?? null, playbookSlug: "kenya-playbook", ipAddress: req.ip ?? null });
+      doc.end();
+    } catch (e: any) { if(!res.headersSent) res.status(500).json({message:safeErrorMessage(e)}); }
+  });
+
+  // ── South Africa Playbook ─────────────────────────────────────────────────
+  app.get("/api/sales/south-africa-playbook/content", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "south-africa-demo-playbook.md");
+      const content = fs.readFileSync(mdPath, "utf-8");
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const stats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: stats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.patch("/api/sales/south-africa-playbook/content", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ message: "content must be a string" });
+      const mdPath = path.join(process.cwd(), "exports", "south-africa-demo-playbook.md");
+      fs.writeFileSync(mdPath, content, "utf-8");
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_EDIT",
+        entity: "south-africa-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", country: "ZA", byteLength: Buffer.byteLength(content, "utf-8") }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const fileStats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: fileStats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/south-africa-playbook/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "south-africa-demo-playbook.md");
+      const markdownContent = fs.readFileSync(mdPath, "utf-8");
+      const PDFDocument = (await import("pdfkit")).default;
+      const { PassThrough } = await import("stream");
+      const TEAL = "#0d9488"; const GOLD = "#f59e0b"; const DARK = "#1a1a1a"; const GRAY = "#555555";
+      const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
+      const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
+      function stripMd(text: string): string {
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      }
+      const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "South Africa Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "South Africa market demonstration playbook", Keywords: "South Africa, credit bureau, UCH, demo, playbook, NCR, SARB, POPIA" } });
+      const stream = new PassThrough();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="UCH-South-Africa-Demo-Playbook.pdf"');
+      doc.pipe(stream); stream.pipe(res);
+      const pageWidth = doc.page.width - PAGE_MARGINS.left - PAGE_MARGINS.right;
+      doc.rect(PAGE_MARGINS.left - 50, 0, doc.page.width, 120).fill(TEAL);
+      doc.font("Helvetica-Bold").fontSize(26).fillColor("#ffffff").text("South Africa Demo Playbook", PAGE_MARGINS.left, 30, { width: pageWidth });
+      doc.font("Helvetica").fontSize(13).fillColor("#ccf5f2").text("Universal Credit Hub — Pan-African Credit Registry", PAGE_MARGINS.left, 62, { width: pageWidth });
+      doc.font("Helvetica").fontSize(10).fillColor("#99e0db").text("Confidential  ·  May 2026  ·  NCR / SARB / FSCA / POPIA", PAGE_MARGINS.left, 84, { width: pageWidth });
+      doc.rect(PAGE_MARGINS.left - 50, 120, doc.page.width, 4).fill(GOLD);
+      doc.y = 148;
+      const lines = markdownContent.split("\n"); let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const hMatch = line.match(/^(#{1,4})\s+(.*)/);
+        if (hMatch) {
+          const depth = hMatch[1].length; const text = stripMd(hMatch[2]);
+          const sizes: Record<number,number> = {1:20,2:14,3:12,4:11}; const fs2 = sizes[depth]||11;
+          if (doc.y+fs2+24>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+          if (depth===1) { doc.moveDown(0.5); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.2); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1.5).stroke(); doc.moveDown(0.4); }
+          else if (depth===2) { doc.moveDown(0.8); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.1); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#b2dfdb").lineWidth(0.75).stroke(); doc.moveDown(0.3); }
+          else if (depth===3) { doc.moveDown(0.6); const lw=doc.font("Helvetica-Bold").fontSize(fs2).widthOfString(text)+12; const ly=doc.y; doc.rect(PAGE_MARGINS.left,ly,lw,fs2+8).fill(TEAL); doc.font("Helvetica-Bold").fontSize(fs2).fillColor("#ffffff").text(text,PAGE_MARGINS.left+6,ly+4,{width:pageWidth}); doc.y=ly+fs2+12; doc.moveDown(0.2); }
+          else { doc.moveDown(0.4); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(DARK).text(text); doc.moveDown(0.15); }
+          i++; continue;
+        }
+        if (line.startsWith("|") && i+1<lines.length && lines[i+1]?.match(/^\|[\s:|-]+\|/)) {
+          const headers=line.split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim())); i+=2;
+          const rows:string[][]=[];
+          while (i<lines.length && lines[i].startsWith("|")) { rows.push(lines[i].split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim()))); i++; }
+          if (headers.length>0) {
+            const colW=pageWidth/headers.length; const cellPad=5;
+            const calcH=(cells:string[],fSize:number,fontName:string)=>{let maxH=18;for(const cell of cells){const h=doc.font(fontName).fontSize(fSize).heightOfString(cell||"",{width:colW-cellPad*2})+10;if(h>maxH)maxH=h;}return Math.min(maxH,80);};
+            const hdrH=calcH(headers,8,"Helvetica-Bold");
+            if (doc.y+hdrH+20>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+            let y=doc.y; const x=PAGE_MARGINS.left;
+            doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG);
+            for (let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+            doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH;
+            for (let r=0;r<rows.length;r++) {
+              const rH=calcH(rows[r],7.5,"Helvetica");
+              if (y+rH>doc.page.height-PAGE_MARGINS.bottom) { doc.addPage(); y=PAGE_MARGINS.top; doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG); for(let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2}); doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH; }
+              doc.rect(x,y,pageWidth,rH).fill(r%2===0?"#ffffff":"#f0faf9");
+              for (let c=0;c<rows[r].length;c++) doc.font("Helvetica").fontSize(7.5).fillColor(DARK).text(rows[r][c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+              doc.rect(x,y,pageWidth,rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=rH;
+            }
+            doc.y=y+8;
+          }
+          continue;
+        }
+        if (line.startsWith("> ")) { if(doc.y+30>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=stripMd(line.replace(/^>\s*/,"")); const qX=PAGE_MARGINS.left+3; const savedY=doc.y; doc.rect(PAGE_MARGINS.left,savedY,pageWidth,1).fill(GOLD).opacity(1); doc.opacity(1); doc.font("Helvetica-Oblique").fontSize(9.5).fillColor(GRAY).text(text,qX+14,savedY+6,{width:pageWidth-18}); const endY=doc.y+6; doc.moveTo(qX,savedY).lineTo(qX,endY).strokeColor(GOLD).lineWidth(3).stroke(); doc.y=endY+4; doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^-{3,}$/)||line.match(/^\*{3,}$/)) { doc.moveDown(0.3); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke(); doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^- \[[ x]\] /i)) { if(doc.y+15>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^- \[[ x]\] /i,""); const bx=PAGE_MARGINS.left+12; const by=doc.y+1; doc.rect(bx,by,8,8).strokeColor(TEAL).lineWidth(0.75).stroke(); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+26,doc.y,{width:pageWidth-26}); i++; continue; }
+        if (line.match(/^[-*] /)) { if(doc.y+14>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^[-*] /,""); doc.font("Helvetica").fontSize(9).fillColor(TEAL).text("•",PAGE_MARGINS.left+10,undefined,{continued:true,width:12}); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+24,undefined,{width:pageWidth-24}); i++; continue; }
+        if (line.trim()==="") { doc.moveDown(0.25); i++; continue; }
+        if (doc.y+14>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+        doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(line),{width:pageWidth}); i++;
+      }
+      doc.moveDown(2); if(doc.y+50>doc.page.height-PAGE_MARGINS.bottom)doc.addPage();
+      doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1).stroke(); doc.moveDown(0.4);
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("Universal Credit Hub — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8",{align:"center"});
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("© 2026 Universal Credit Hub Ltd. All rights reserved.",{align:"center"});
+      const range=doc.bufferedPageRange();
+      for (let p=0;p<range.count;p++) { doc.switchToPage(range.start+p); doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY).text(`Page ${p+1} of ${range.count}`,PAGE_MARGINS.left,doc.page.height-40,{width:pageWidth,align:"center"}); }
+      const zaUserId = req.session?.userId ?? null;
+      const zaUser = zaUserId ? await storage.getUser(zaUserId) : null;
+      await storage.createPlaybookDownload({ userId: zaUserId ? String(zaUserId) : null, username: zaUser?.username ?? null, playbookSlug: "south-africa-playbook", ipAddress: req.ip ?? null });
+      doc.end();
+    } catch (e: any) { if(!res.headersSent) res.status(500).json({message:safeErrorMessage(e)}); }
+  });
+
+  // ── Côte d'Ivoire Playbook ────────────────────────────────────────────────
+  app.get("/api/sales/cotedivoire-playbook/content", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "cotedivoire-demo-playbook.md");
+      const content = fs.readFileSync(mdPath, "utf-8");
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const stats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: stats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.patch("/api/sales/cotedivoire-playbook/content", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ message: "content must be a string" });
+      const mdPath = path.join(process.cwd(), "exports", "cotedivoire-demo-playbook.md");
+      fs.writeFileSync(mdPath, content, "utf-8");
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_EDIT",
+        entity: "cotedivoire-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", country: "CI", byteLength: Buffer.byteLength(content, "utf-8") }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const fileStats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: fileStats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/cotedivoire-playbook/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "cotedivoire-demo-playbook.md");
+      const markdownContent = fs.readFileSync(mdPath, "utf-8");
+      const PDFDocument = (await import("pdfkit")).default;
+      const { PassThrough } = await import("stream");
+      const TEAL = "#0d9488"; const GOLD = "#f59e0b"; const DARK = "#1a1a1a"; const GRAY = "#555555";
+      const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
+      const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
+      function stripMd(text: string): string {
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      }
+      const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "Cote d'Ivoire Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "Cote d'Ivoire market demonstration playbook", Keywords: "Cote d'Ivoire, BCEAO, UCH, demo, playbook, WAEMU, Loto Fiscal" } });
+      const stream = new PassThrough();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="UCH-CoteDIvoire-Demo-Playbook.pdf"');
+      doc.pipe(stream); stream.pipe(res);
+      const pageWidth = doc.page.width - PAGE_MARGINS.left - PAGE_MARGINS.right;
+      doc.rect(PAGE_MARGINS.left - 50, 0, doc.page.width, 120).fill(TEAL);
+      doc.font("Helvetica-Bold").fontSize(24).fillColor("#ffffff").text("Cote d'Ivoire Demo Playbook", PAGE_MARGINS.left, 30, { width: pageWidth });
+      doc.font("Helvetica").fontSize(13).fillColor("#ccf5f2").text("Universal Credit Hub — Pan-African Credit Registry", PAGE_MARGINS.left, 62, { width: pageWidth });
+      doc.font("Helvetica").fontSize(10).fillColor("#99e0db").text("Confidential  ·  May 2026  ·  BCEAO / WAEMU / Loto Fiscal DGI", PAGE_MARGINS.left, 84, { width: pageWidth });
+      doc.rect(PAGE_MARGINS.left - 50, 120, doc.page.width, 4).fill(GOLD);
+      doc.y = 148;
+      const lines = markdownContent.split("\n"); let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const hMatch = line.match(/^(#{1,4})\s+(.*)/);
+        if (hMatch) {
+          const depth = hMatch[1].length; const text = stripMd(hMatch[2]);
+          const sizes: Record<number,number> = {1:20,2:14,3:12,4:11}; const fs2 = sizes[depth]||11;
+          if (doc.y+fs2+24>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+          if (depth===1) { doc.moveDown(0.5); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.2); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1.5).stroke(); doc.moveDown(0.4); }
+          else if (depth===2) { doc.moveDown(0.8); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.1); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#b2dfdb").lineWidth(0.75).stroke(); doc.moveDown(0.3); }
+          else if (depth===3) { doc.moveDown(0.6); const lw=doc.font("Helvetica-Bold").fontSize(fs2).widthOfString(text)+12; const ly=doc.y; doc.rect(PAGE_MARGINS.left,ly,lw,fs2+8).fill(TEAL); doc.font("Helvetica-Bold").fontSize(fs2).fillColor("#ffffff").text(text,PAGE_MARGINS.left+6,ly+4,{width:pageWidth}); doc.y=ly+fs2+12; doc.moveDown(0.2); }
+          else { doc.moveDown(0.4); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(DARK).text(text); doc.moveDown(0.15); }
+          i++; continue;
+        }
+        if (line.startsWith("|") && i+1<lines.length && lines[i+1]?.match(/^\|[\s:|-]+\|/)) {
+          const headers=line.split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim())); i+=2;
+          const rows:string[][]=[];
+          while (i<lines.length && lines[i].startsWith("|")) { rows.push(lines[i].split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim()))); i++; }
+          if (headers.length>0) {
+            const colW=pageWidth/headers.length; const cellPad=5;
+            const calcH=(cells:string[],fSize:number,fontName:string)=>{let maxH=18;for(const cell of cells){const h=doc.font(fontName).fontSize(fSize).heightOfString(cell||"",{width:colW-cellPad*2})+10;if(h>maxH)maxH=h;}return Math.min(maxH,80);};
+            const hdrH=calcH(headers,8,"Helvetica-Bold");
+            if (doc.y+hdrH+20>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+            let y=doc.y; const x=PAGE_MARGINS.left;
+            doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG);
+            for (let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+            doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH;
+            for (let r=0;r<rows.length;r++) {
+              const rH=calcH(rows[r],7.5,"Helvetica");
+              if (y+rH>doc.page.height-PAGE_MARGINS.bottom) { doc.addPage(); y=PAGE_MARGINS.top; doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG); for(let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(TEAL).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2}); doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH; }
+              doc.rect(x,y,pageWidth,rH).fill(r%2===0?"#ffffff":"#f0faf9");
+              for (let c=0;c<rows[r].length;c++) doc.font("Helvetica").fontSize(7.5).fillColor(DARK).text(rows[r][c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+              doc.rect(x,y,pageWidth,rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=rH;
+            }
+            doc.y=y+8;
+          }
+          continue;
+        }
+        if (line.startsWith("> ")) { if(doc.y+30>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=stripMd(line.replace(/^>\s*/,"")); const qX=PAGE_MARGINS.left+3; const savedY=doc.y; doc.rect(PAGE_MARGINS.left,savedY,pageWidth,1).fill(GOLD).opacity(1); doc.opacity(1); doc.font("Helvetica-Oblique").fontSize(9.5).fillColor(GRAY).text(text,qX+14,savedY+6,{width:pageWidth-18}); const endY=doc.y+6; doc.moveTo(qX,savedY).lineTo(qX,endY).strokeColor(GOLD).lineWidth(3).stroke(); doc.y=endY+4; doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^-{3,}$/)||line.match(/^\*{3,}$/)) { doc.moveDown(0.3); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke(); doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^- \[[ x]\] /i)) { if(doc.y+15>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^- \[[ x]\] /i,""); const bx=PAGE_MARGINS.left+12; const by=doc.y+1; doc.rect(bx,by,8,8).strokeColor(TEAL).lineWidth(0.75).stroke(); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+26,doc.y,{width:pageWidth-26}); i++; continue; }
+        if (line.match(/^[-*] /)) { if(doc.y+14>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^[-*] /,""); doc.font("Helvetica").fontSize(9).fillColor(TEAL).text("•",PAGE_MARGINS.left+10,undefined,{continued:true,width:12}); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+24,undefined,{width:pageWidth-24}); i++; continue; }
+        if (line.trim()==="") { doc.moveDown(0.25); i++; continue; }
+        if (doc.y+14>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+        doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(line),{width:pageWidth}); i++;
+      }
+      doc.moveDown(2); if(doc.y+50>doc.page.height-PAGE_MARGINS.bottom)doc.addPage();
+      doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1).stroke(); doc.moveDown(0.4);
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("Universal Credit Hub — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8",{align:"center"});
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("© 2026 Universal Credit Hub Ltd. All rights reserved.",{align:"center"});
+      const range=doc.bufferedPageRange();
+      for (let p=0;p<range.count;p++) { doc.switchToPage(range.start+p); doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY).text(`Page ${p+1} of ${range.count}`,PAGE_MARGINS.left,doc.page.height-40,{width:pageWidth,align:"center"}); }
+      const ciUserId = req.session?.userId ?? null;
+      const ciUser = ciUserId ? await storage.getUser(ciUserId) : null;
+      await storage.createPlaybookDownload({ userId: ciUserId ? String(ciUserId) : null, username: ciUser?.username ?? null, playbookSlug: "cotedivoire-playbook", ipAddress: req.ip ?? null });
+      doc.end();
+    } catch (e: any) { if(!res.headersSent) res.status(500).json({message:safeErrorMessage(e)}); }
+  });
+
+  // ── Playbook Index API ───────────────────────────────────────────────────────
+  const PLAYBOOK_CATALOG = [
+    { market: "ghana",   pdfFile: "ghana-demo-playbook.pdf",   title: "Ghana Demo Playbook" },
+    { market: "nigeria", pdfFile: "nigeria-demo-playbook.pdf", title: "Nigeria Demo Playbook" },
+    { market: "kenya",   pdfFile: "kenya-demo-playbook.pdf",   title: "Kenya Demo Playbook" },
+    { market: "civ",     pdfFile: "civ-demo-playbook.pdf",     title: "Côte d'Ivoire Demo Playbook" },
+    { market: "egypt",   pdfFile: "egypt-demo-playbook.pdf",   title: "Egypt Demo Playbook" },
+    { market: "ethiopia",pdfFile: "ethiopia-demo-playbook.pdf",title: "Ethiopia Demo Playbook" },
+  ] as const;
+
+  app.get("/api/sales/playbooks", requireAuth, requireSuperAdmin, (req, res) => {
+    const exportsDir = path.join(process.cwd(), "exports");
+    const result = PLAYBOOK_CATALOG.map(pb => {
+      const pdfPath = path.join(exportsDir, pb.pdfFile);
+      let sizeBytes = 0;
+      let exists = false;
+      try {
+        const stat = fs.statSync(pdfPath);
+        sizeBytes = stat.size;
+        exists = true;
+      } catch { /* pdf not yet generated */ }
+      return { market: pb.market, title: pb.title, pdfFile: pb.pdfFile, sizeBytes, exists };
+    });
+    res.json(result);
+  });
+
+  app.get("/api/sales/playbooks/:market/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    const entry = PLAYBOOK_CATALOG.find(p => p.market === req.params.market);
+    if (!entry) return res.status(404).json({ message: "Playbook not found" });
+    try {
+      const pdfPath = path.join(process.cwd(), "exports", entry.pdfFile);
+      if (!fs.existsSync(pdfPath)) return res.status(404).json({ message: "PDF file not found — run the generator script first" });
+      const stat = fs.statSync(pdfPath);
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename="UCH-${entry.title.replace(/ /g, "-")}.pdf"`);
+      res.setHeader("Content-Length", stat.size);
+      const stream = fs.createReadStream(pdfPath);
+      stream.pipe(res);
+      const catalogUserId = (req as any).session?.userId ?? null;
+      const catalogUser = catalogUserId ? await storage.getUser(catalogUserId) : null;
+      await Promise.all([
+        db.execute(sql`
+          INSERT INTO audit_logs (user_id, action, entity, entity_id, details, ip_address, created_at)
+          VALUES (${catalogUserId}, 'PLAYBOOK_PDF_DOWNLOAD', ${entry.market + '-playbook'},
+                  ${entry.market}, ${JSON.stringify({ market: entry.market, title: entry.title })},
+                  ${req.ip ?? ""}, NOW())
+        `).catch(() => {}),
+        storage.createPlaybookDownload({
+          userId: catalogUserId ? String(catalogUserId) : null,
+          username: catalogUser?.username ?? null,
+          playbookSlug: entry.market + "-playbook",
+          ipAddress: req.ip ?? null,
+        }).catch(() => {}),
+      ]);
+    } catch (e: any) {
+      if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ── Africa Overview Playbook ──────────────────────────────────────────────
+  app.get("/api/sales/africa-overview-playbook/content", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "africa-overview-playbook.md");
+      const content = fs.readFileSync(mdPath, "utf-8");
+      const { marked } = await import("marked");
+      const html = await marked(content);
+      const stats = fs.statSync(mdPath);
+      res.json({ content, html, updatedAt: stats.mtime });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.post("/api/sales/africa-overview-playbook/view", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const userId = req.session.userId ?? null;
+      const userRecord = userId ? await storage.getUser(userId) : null;
+      await storage.createAuditLog({
+        userId,
+        action: "PLAYBOOK_VIEW",
+        entity: "africa-overview-playbook",
+        details: JSON.stringify({ username: userRecord?.username ?? "unknown", region: "East & West Africa" }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      res.json({ ok: true });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/africa-overview-playbook/stats", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const isPlatformOwner = req.session.userRole === "platform_owner";
+      const monthStart = new Date();
+      monthStart.setDate(1);
+      monthStart.setHours(0, 0, 0, 0);
+      const downloadCountResult = await pool.query(
+        `SELECT COUNT(*)::int AS count FROM audit_logs WHERE action = 'PLAYBOOK_PDF_DOWNLOAD' AND entity = 'africa-overview-playbook' AND created_at >= $1`,
+        [monthStart]
+      );
+      const viewCountResult = await pool.query(
+        `SELECT COUNT(*)::int AS count FROM audit_logs WHERE action = 'PLAYBOOK_VIEW' AND entity = 'africa-overview-playbook' AND created_at >= $1`,
+        [monthStart]
+      );
+      let byUser: { username: string; downloads: number; views: number }[] = [];
+      if (isPlatformOwner) {
+        const byUserResult = await pool.query(
+          `SELECT
+            u.username,
+            SUM(CASE WHEN al.action = 'PLAYBOOK_PDF_DOWNLOAD' THEN 1 ELSE 0 END)::int AS downloads,
+            SUM(CASE WHEN al.action = 'PLAYBOOK_VIEW' THEN 1 ELSE 0 END)::int AS views
+          FROM audit_logs al
+          LEFT JOIN users u ON u.id = al.user_id
+          WHERE al.action IN ('PLAYBOOK_PDF_DOWNLOAD', 'PLAYBOOK_VIEW') AND al.entity = 'africa-overview-playbook' AND al.created_at >= $1
+          GROUP BY u.username
+          ORDER BY downloads DESC, views DESC`,
+          [monthStart]
+        );
+        byUser = byUserResult.rows;
+      }
+      res.json({
+        downloadsThisMonth: downloadCountResult.rows[0]?.count ?? 0,
+        viewsThisMonth: viewCountResult.rows[0]?.count ?? 0,
+        byUser: isPlatformOwner ? byUser : [],
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  // ── Playbook Download Analytics ──────────────────────────────────────────
+  app.get("/api/sales/playbook-downloads", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const rows = await storage.getPlaybookDownloads(1000);
+      const bySlug: Record<string, number> = {};
+      const byUser: Record<string, number> = {};
+      for (const r of rows) {
+        bySlug[r.playbookSlug] = (bySlug[r.playbookSlug] ?? 0) + 1;
+        const key = r.username ?? r.userId ?? "unknown";
+        byUser[key] = (byUser[key] ?? 0) + 1;
+      }
+      res.json({
+        total: rows.length,
+        byPlaybook: Object.entries(bySlug).map(([slug, count]) => ({ slug, count })).sort((a, b) => b.count - a.count),
+        byUser: Object.entries(byUser).map(([user, count]) => ({ user, count })).sort((a, b) => b.count - a.count),
+        recent: rows.slice(0, 100),
+      });
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
+
+  app.get("/api/sales/africa-overview-playbook/pdf", requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+      const mdPath = path.join(process.cwd(), "exports", "africa-overview-playbook.md");
+      const markdownContent = fs.readFileSync(mdPath, "utf-8");
+      const PDFDocument = (await import("pdfkit")).default;
+      const { PassThrough } = await import("stream");
+      const TEAL = "#0d9488"; const GOLD = "#f59e0b"; const DARK = "#1a1a1a"; const GRAY = "#555555";
+      const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
+      const NAVY = "#0f4c81";
+      const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
+      function stripMd(text: string): string {
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+      }
+      const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: {
+        Title: "East & West Africa Regional Overview — Universal Credit Hub",
+        Author: "Universal Credit Hub Ltd",
+        Subject: "Multi-country Africa regional sales playbook — GH, NG, KE, ZA, CI",
+        Keywords: "Africa, credit bureau, UCH, Ghana, Nigeria, Kenya, South Africa, Cote d'Ivoire, AfDB, IFC"
+      }});
+      const stream = new PassThrough();
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", 'attachment; filename="UCH-East-West-Africa-Regional-Overview.pdf"');
+      doc.pipe(stream); stream.pipe(res);
+      const pageWidth = doc.page.width - PAGE_MARGINS.left - PAGE_MARGINS.right;
+
+      // Cover banner — navy to teal gradient approximated with navy
+      doc.rect(PAGE_MARGINS.left - 50, 0, doc.page.width, 130).fill(NAVY);
+      doc.rect(PAGE_MARGINS.left - 50, 80, doc.page.width, 54).fill("#1a6b5e");
+      doc.font("Helvetica-Bold").fontSize(22).fillColor("#ffffff").text("East & West Africa Regional Overview", PAGE_MARGINS.left, 22, { width: pageWidth });
+      doc.font("Helvetica").fontSize(12).fillColor("#b3d9f7").text("Universal Credit Hub — Pan-African Credit Registry", PAGE_MARGINS.left, 52, { width: pageWidth });
+      doc.font("Helvetica").fontSize(9).fillColor("#99e0db").text("Confidential  ·  May 2026  ·  GH · NG · KE · ZA · CI  ·  AfDB / IFC Multi-Country Pitch", PAGE_MARGINS.left, 70, { width: pageWidth });
+      // Country badges row
+      const countries = ["🇬🇭 Ghana", "🇳🇬 Nigeria", "🇰🇪 Kenya", "🇿🇦 South Africa", "🇨🇮 Côte d'Ivoire"];
+      let bx = PAGE_MARGINS.left;
+      const by2 = 88;
+      for (const c of countries) {
+        const labelText = c.replace(/[^\x00-\x7F]/g, "").trim() || c.split(" ").slice(1).join(" ");
+        const tw = doc.font("Helvetica-Bold").fontSize(7.5).widthOfString(labelText) + 10;
+        doc.rect(bx, by2, tw, 14).fill("rgba(255,255,255,0.18)").stroke("rgba(255,255,255,0.3)");
+        doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#ffffff").text(labelText, bx + 5, by2 + 3, { width: tw });
+        bx += tw + 6;
+      }
+      doc.rect(PAGE_MARGINS.left - 50, 130, doc.page.width, 4).fill(GOLD);
+      doc.y = 158;
+
+      const lines = markdownContent.split("\n"); let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+        const hMatch = line.match(/^(#{1,4})\s+(.*)/);
+        if (hMatch) {
+          const depth = hMatch[1].length; const text = stripMd(hMatch[2]);
+          const sizes: Record<number,number> = {1:20,2:14,3:12,4:11}; const fs2 = sizes[depth]||11;
+          if (doc.y+fs2+24>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+          if (depth===1) { doc.moveDown(0.5); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(TEAL).text(text); doc.moveDown(0.2); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(TEAL).lineWidth(1.5).stroke(); doc.moveDown(0.4); }
+          else if (depth===2) { doc.moveDown(0.8); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(NAVY).text(text); doc.moveDown(0.1); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#b2dfdb").lineWidth(0.75).stroke(); doc.moveDown(0.3); }
+          else if (depth===3) { doc.moveDown(0.6); const lw=doc.font("Helvetica-Bold").fontSize(fs2).widthOfString(text)+12; const ly=doc.y; doc.rect(PAGE_MARGINS.left,ly,lw,fs2+8).fill(TEAL); doc.font("Helvetica-Bold").fontSize(fs2).fillColor("#ffffff").text(text,PAGE_MARGINS.left+6,ly+4,{width:pageWidth}); doc.y=ly+fs2+12; doc.moveDown(0.2); }
+          else { doc.moveDown(0.4); doc.font("Helvetica-Bold").fontSize(fs2).fillColor(DARK).text(text); doc.moveDown(0.15); }
+          i++; continue;
+        }
+        if (line.startsWith("|") && i+1<lines.length && lines[i+1]?.match(/^\|[\s:|-]+\|/)) {
+          const headers=line.split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim())); i+=2;
+          const rows:string[][]=[];
+          while (i<lines.length && lines[i].startsWith("|")) { rows.push(lines[i].split("|").filter(c=>c.trim()!=="").map(c=>stripMd(c.trim()))); i++; }
+          if (headers.length>0) {
+            const colW=pageWidth/headers.length; const cellPad=5;
+            const calcH=(cells:string[],fSize:number,fontName:string)=>{let maxH=18;for(const cell of cells){const h=doc.font(fontName).fontSize(fSize).heightOfString(cell||"",{width:colW-cellPad*2})+10;if(h>maxH)maxH=h;}return Math.min(maxH,80);};
+            const hdrH=calcH(headers,8,"Helvetica-Bold");
+            if (doc.y+hdrH+20>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+            let y=doc.y; const x=PAGE_MARGINS.left;
+            doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG);
+            for (let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(NAVY).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+            doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH;
+            for (let r=0;r<rows.length;r++) {
+              const rH=calcH(rows[r],7.5,"Helvetica");
+              if (y+rH>doc.page.height-PAGE_MARGINS.bottom) { doc.addPage(); y=PAGE_MARGINS.top; doc.rect(x,y,pageWidth,hdrH).fill(TABLE_HEADER_BG); for(let c=0;c<headers.length;c++) doc.font("Helvetica-Bold").fontSize(8).fillColor(NAVY).text(headers[c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2}); doc.rect(x,y,pageWidth,hdrH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=hdrH; }
+              doc.rect(x,y,pageWidth,rH).fill(r%2===0?"#ffffff":"#f0faf9");
+              for (let c=0;c<rows[r].length;c++) doc.font("Helvetica").fontSize(7.5).fillColor(DARK).text(rows[r][c]||"",x+c*colW+cellPad,y+5,{width:colW-cellPad*2});
+              doc.rect(x,y,pageWidth,rH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke(); y+=rH;
+            }
+            doc.y=y+8;
+          }
+          continue;
+        }
+        if (line.startsWith("> ")) { if(doc.y+30>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=stripMd(line.replace(/^>\s*/,"")); const qX=PAGE_MARGINS.left+3; const savedY=doc.y; doc.rect(PAGE_MARGINS.left,savedY,pageWidth,1).fill(GOLD).opacity(1); doc.opacity(1); doc.font("Helvetica-Oblique").fontSize(9.5).fillColor(GRAY).text(text,qX+14,savedY+6,{width:pageWidth-18}); const endY=doc.y+6; doc.moveTo(qX,savedY).lineTo(qX,endY).strokeColor(GOLD).lineWidth(3).stroke(); doc.y=endY+4; doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^-{3,}$/)||line.match(/^\*{3,}$/)) { doc.moveDown(0.3); doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor("#d1d5db").lineWidth(0.5).stroke(); doc.moveDown(0.3); i++; continue; }
+        if (line.match(/^- \[[ x]\] /i)) { if(doc.y+15>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^- \[[ x]\] /i,""); const bx2=PAGE_MARGINS.left+12; const by3=doc.y+1; doc.rect(bx2,by3,8,8).strokeColor(TEAL).lineWidth(0.75).stroke(); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+26,doc.y,{width:pageWidth-26}); i++; continue; }
+        if (line.match(/^[-*] /)) { if(doc.y+14>doc.page.height-PAGE_MARGINS.bottom)doc.addPage(); const text=line.replace(/^[-*] /,""); doc.font("Helvetica").fontSize(9).fillColor(TEAL).text("•",PAGE_MARGINS.left+10,undefined,{continued:true,width:12}); doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(text),PAGE_MARGINS.left+24,undefined,{width:pageWidth-24}); i++; continue; }
+        if (line.trim()==="") { doc.moveDown(0.25); i++; continue; }
+        if (doc.y+14>doc.page.height-PAGE_MARGINS.bottom) doc.addPage();
+        doc.font("Helvetica").fontSize(9).fillColor(DARK).text(stripMd(line),{width:pageWidth}); i++;
+      }
+      doc.moveDown(2); if(doc.y+50>doc.page.height-PAGE_MARGINS.bottom)doc.addPage();
+      doc.moveTo(PAGE_MARGINS.left,doc.y).lineTo(PAGE_MARGINS.left+pageWidth,doc.y).strokeColor(NAVY).lineWidth(1).stroke(); doc.moveDown(0.4);
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("Universal Credit Hub — Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8",{align:"center"});
+      doc.font("Helvetica").fontSize(8).fillColor(LIGHT_GRAY).text("© 2026 Universal Credit Hub Ltd. All rights reserved. Registered in Ghana.",{align:"center"});
+      const range=doc.bufferedPageRange();
+      for (let p=0;p<range.count;p++) { doc.switchToPage(range.start+p); doc.font("Helvetica").fontSize(7).fillColor(LIGHT_GRAY).text(`Page ${p+1} of ${range.count}`,PAGE_MARGINS.left,doc.page.height-40,{width:pageWidth,align:"center"}); }
+      const pdfUserId = req.session.userId ?? null;
+      const pdfUser = pdfUserId ? await storage.getUser(pdfUserId) : null;
+      await storage.createAuditLog({
+        userId: pdfUserId,
+        action: "PLAYBOOK_PDF_DOWNLOAD",
+        entity: "africa-overview-playbook",
+        details: JSON.stringify({ username: pdfUser?.username ?? "unknown", region: "East & West Africa" }),
+        ipAddress: req.ip ?? "unknown",
+      });
+      doc.end();
+    } catch (e: any) { if(!res.headersSent) res.status(500).json({message:safeErrorMessage(e)}); }
+  });
+
+  app.get("/api/sales/playbook-downloads/csv", requireAuth, requireSuperAdmin, async (_req, res) => {
+    try {
+      const rows = await storage.getPlaybookDownloads(5000);
+      const header = "id,playbook_slug,username,user_id,ip_address,downloaded_at\n";
+      const lines = rows.map(r =>
+        [r.id, r.playbookSlug, r.username ?? "", r.userId ?? "", r.ipAddress ?? "", r.downloadedAt.toISOString()].join(",")
+      ).join("\n");
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", 'attachment; filename="playbook-downloads.csv"');
+      res.send(header + lines);
+    } catch (e: any) {
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
+  });
 
   app.get("/api/ghana-docs", requireAuth, (req, res) => {
     const lang = (req.query.lang as string) || "en";

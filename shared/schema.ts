@@ -2557,3 +2557,42 @@ export const insertLotoFraudFlagSchema = createInsertSchema(lotoFraudFlags).omit
 export type InsertLotoFraudFlag = z.infer<typeof insertLotoFraudFlagSchema>;
 export type LotoFraudFlag = typeof lotoFraudFlags.$inferSelect;
 
+export const playbookPages = pgTable("playbook_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const playbookVersions = pgTable("playbook_versions", {
+  id: serial("id").primaryKey(),
+  playbookId: varchar("playbook_id").references(() => playbookPages.id),
+  content: text("content").notNull(),
+  savedBy: varchar("saved_by").references(() => users.id),
+  savedAt: timestamp("saved_at").defaultNow(),
+  label: text("label"),
+});
+
+export const insertPlaybookPageSchema = createInsertSchema(playbookPages).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertPlaybookPage = z.infer<typeof insertPlaybookPageSchema>;
+export type PlaybookPage = typeof playbookPages.$inferSelect;
+
+export const insertPlaybookVersionSchema = createInsertSchema(playbookVersions).omit({ id: true, savedAt: true });
+export type InsertPlaybookVersion = z.infer<typeof insertPlaybookVersionSchema>;
+export type PlaybookVersion = typeof playbookVersions.$inferSelect;
+
+export const playbookDownloads = pgTable("playbook_downloads", {
+  id: serial("id").primaryKey(),
+  userId: text("user_id"),
+  username: text("username"),
+  playbookSlug: text("playbook_slug").notNull(),
+  downloadedAt: timestamp("downloaded_at").defaultNow().notNull(),
+  ipAddress: text("ip_address"),
+});
+export const insertPlaybookDownloadSchema = createInsertSchema(playbookDownloads).omit({ id: true, downloadedAt: true });
+export type InsertPlaybookDownload = z.infer<typeof insertPlaybookDownloadSchema>;
+export type PlaybookDownload = typeof playbookDownloads.$inferSelect;
+

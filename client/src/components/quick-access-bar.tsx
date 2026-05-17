@@ -18,7 +18,7 @@ import {
   LayoutDashboard, Users, Search, FileText, Upload, Shield, Monitor,
   Brain, Sparkles, BarChart3, Building2, Settings, Receipt, Activity,
   Gauge, ChevronDown, AlertCircle, Scale, Bell, Key, Plug, Globe,
-  Handshake, Eye, Archive, Webhook, DollarSign, Menu,
+  Handshake, Eye, Archive, Webhook, DollarSign, Menu, BookOpen,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -74,6 +74,7 @@ const dropdownSections: DropdownSection[] = [
     icon: Monitor,
     roles: ["admin", "super_admin"],
     items: [
+      { label: "Sales Playbooks", url: "/sales/playbooks", icon: BookOpen, testId: "quick-playbooks", roles: ["super_admin", "platform_owner"] },
       { label: "Command Center", url: "/command-center", icon: Monitor, testId: "quick-cmd-center", roles: ["super_admin"] },
       { label: "Organizations", url: "/organizations", icon: Building2, testId: "quick-orgs", roles: ["super_admin"] },
       { label: "Users", url: "/users", icon: Settings, testId: "quick-users", roles: ["admin", "super_admin"] },

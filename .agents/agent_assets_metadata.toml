@@ -359,3 +359,15 @@ id = "-lC_ks-8EUGJ_Cr-DDDfg"
 uri = "file://uch-source.zip"
 type = "unspecified"
 title = "UCH Source Code"
+
+[[outputs]]
+id = "E2HJjFr4tgDG1bKhu5-R_"
+uri = "file://exports/ghana-demo-playbook.pdf"
+type = "pdf"
+title = "Ghana Demo Playbook — Universal Credit Hub"
+
+[[outputs]]
+id = "Z7EqFkYZiD8b8MLi4TL3G"
+uri = "file://uch-codebase.zip"
+type = "unspecified"
+title = "UCH Codebase — source only (317 MB)"

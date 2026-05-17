@@ -107,6 +107,14 @@ const AppGuidePage = lazy(() => import("@/pages/app-guide"));
 const TrainingCenterPage = lazy(() => import("@/pages/training-center"));
 const OrganizationsPage = lazy(() => import("@/pages/organizations"));
 const GhanaDocsPage = lazy(() => import("@/pages/ghana-docs"));
+const GhanaPlaybookPage = lazy(() => import("@/pages/ghana-playbook"));
+const GhanaPlaybookEditorPage = lazy(() => import("@/pages/ghana-playbook-editor"));
+const NigeriaPlaybookPage = lazy(() => import("@/pages/nigeria-playbook"));
+const KenyaPlaybookPage = lazy(() => import("@/pages/kenya-playbook"));
+const SouthAfricaPlaybookPage = lazy(() => import("@/pages/south-africa-playbook"));
+const CoteDivoirePlaybookPage = lazy(() => import("@/pages/cotedivoire-playbook"));
+const PlaybookIndexPage = lazy(() => import("@/pages/playbook-index"));
+const AfricaOverviewPlaybookPage = lazy(() => import("@/pages/africa-overview-playbook"));
 const PartnerDocsPage = lazy(() => import("@/pages/partner-docs"));
 const AboutPage = lazy(() => import("@/pages/about"));
 const LegalCopyrightPage = lazy(() => import("@/pages/legal-copyright"));
@@ -274,6 +282,14 @@ function Router() {
         <Route path="/institution-branding" component={InstitutionBrandingPage} />
         <Route path="/organizations" component={OrganizationsPage} />
         <Route path="/ghana-docs" component={GhanaDocsPage} />
+        <Route path="/sales/ghana-playbook" component={GhanaPlaybookPage} />
+        <Route path="/sales/ghana-playbook/edit" component={GhanaPlaybookEditorPage} />
+        <Route path="/sales/nigeria-playbook" component={NigeriaPlaybookPage} />
+        <Route path="/sales/kenya-playbook" component={KenyaPlaybookPage} />
+        <Route path="/sales/south-africa-playbook" component={SouthAfricaPlaybookPage} />
+        <Route path="/sales/cotedivoire-playbook" component={CoteDivoirePlaybookPage} />
+        <Route path="/sales/playbooks" component={PlaybookIndexPage} />
+        <Route path="/sales/africa-overview-playbook" component={AfricaOverviewPlaybookPage} />
         <Route path="/partner-docs" component={PartnerDocsPage} />
         <Route path="/about" component={AboutPage} />
         <Route path="/legal" component={LegalCopyrightPage} />

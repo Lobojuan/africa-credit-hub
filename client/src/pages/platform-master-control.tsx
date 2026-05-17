@@ -14,7 +14,15 @@ import {
   Smartphone, CreditCard, Fingerprint, ShieldCheck, Heart,
   TrendingUp, ArrowRightLeft, GitBranch, Link2, Unlink, ExternalLink,
   HeartPulse, Signal, SignalZero, Radio, TestTube, Save, X, Pencil,
+<<<<<<< HEAD
+  BookOpen, FileDown, Upload, TrendingDown,
+=======
+  BookOpen, FileDown, Upload, History,
+>>>>>>> 9eaa46e (feat(#438): Add playbook upload history audit log)
 } from "lucide-react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
+} from "recharts";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -476,6 +484,46 @@ function SystemHealthPanel() {
             </div>
           ))}
         </div>
+      </div>
+
+      <PlaybookHealthCheck />
+    </div>
+  );
+}
+
+function PlaybookHealthCheck() {
+  const { data: playbooks } = useQuery<PlaybookEntry[]>({
+    queryKey: ["/api/admin/playbooks"],
+    queryFn: async () => {
+      const r = await pcFetch("/api/admin/playbooks");
+      if (!r.ok) return [];
+      return r.json();
+    },
+  });
+
+  if (!playbooks || playbooks.length === 0) return null;
+
+  const missing = playbooks.filter(pb => pb.missing);
+  const allOk = missing.length === 0;
+
+  return (
+    <div className="space-y-2" data-testid="playbook-health-check">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Playbook Files</p>
+      <div className="rounded-lg border border-border divide-y divide-border text-xs">
+        {playbooks.map(pb => (
+          <div key={pb.market} className="flex items-center justify-between px-3 py-1.5">
+            <span className="text-muted-foreground">{pb.flag} {pb.name}</span>
+            {pb.missing
+              ? <span className="font-medium text-amber-600 flex items-center gap-1" data-testid={`health-missing-${pb.market}`}>⚠ File missing</span>
+              : <span className="font-medium text-emerald-600">✓ OK</span>
+            }
+          </div>
+        ))}
+        {!allOk && (
+          <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
+            {missing.length} playbook file{missing.length !== 1 ? "s" : ""} missing — upload via the Playbooks tab to restore.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -3042,6 +3090,869 @@ function CollateralResetPanel() {
   );
 }
 
+interface PlaybookEntry {
+  market: string;
+  name: string;
+  flag: string;
+  version: string;
+  releaseDate?: string;
+  file: string;
+  sizeBytes: number;
+  isDynamic: boolean;
+  missing?: boolean;
+}
+
+interface PlaybookAuditEntry {
+  id: string;
+  uploadedAt: string;
+  market: string;
+  marketName: string;
+  filename: string;
+  sizeBytes: number;
+  version: string;
+  uploadedBy: string;
+}
+
+function fmtFileSize(bytes: number): string {
+  if (bytes === 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(0)} KB`;
+  return `${(kb / 1024).toFixed(1)} MB`;
+}
+
+function AddPlaybookDialog({ onSuccess }: { onSuccess: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [market, setMarket] = useState("");
+  const [name, setName] = useState("");
+  const [flag, setFlag] = useState("");
+  const [version, setVersion] = useState("v1.0");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const reset = () => {
+    setMarket(""); setName(""); setFlag(""); setVersion("v1.0");
+    setFile(null); setError(null); setUploading(false);
+  };
+
+  const handleClose = (val: boolean) => {
+    if (!val) reset();
+    setOpen(val);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!file) { setError("Please select a PDF file."); return; }
+    if (!market.match(/^[a-z0-9_-]+$/)) { setError("Market slug must be lowercase letters, digits, hyphens or underscores."); return; }
+    if (!name.trim()) { setError("Display name is required."); return; }
+    if (!flag.trim()) { setError("Flag emoji is required."); return; }
+
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("market", market);
+      fd.append("name", name);
+      fd.append("flag", flag);
+      fd.append("version", version);
+      fd.append("file", file);
+
+      const res = await pcFetch("/api/platform-control/playbooks", { method: "POST", body: fd });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? `Upload failed (${res.status})`);
+      }
+      toast({ title: "Playbook added", description: `${name} has been published successfully.` });
+      setOpen(false);
+      reset();
+      onSuccess();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1.5" data-testid="button-add-playbook">
+          <Upload className="w-3.5 h-3.5" /> Add Playbook
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md" data-testid="dialog-add-playbook">
+        <DialogHeader>
+          <DialogTitle>Add Market Playbook</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Market Slug</label>
+              <Input
+                placeholder="e.g. senegal"
+                value={market}
+                onChange={e => setMarket(e.target.value.toLowerCase())}
+                disabled={uploading}
+                data-testid="input-playbook-market"
+              />
+              <p className="text-xs text-muted-foreground">lowercase, no spaces</p>
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Flag Emoji</label>
+              <Input
+                placeholder="🇸🇳"
+                value={flag}
+                onChange={e => setFlag(e.target.value)}
+                disabled={uploading}
+                data-testid="input-playbook-flag"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Display Name</label>
+            <Input
+              placeholder="e.g. Senegal"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              disabled={uploading}
+              data-testid="input-playbook-name"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Version</label>
+            <Input
+              placeholder="v1.0"
+              value={version}
+              onChange={e => setVersion(e.target.value)}
+              disabled={uploading}
+              data-testid="input-playbook-version"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">PDF File</label>
+            <Input
+              type="file"
+              accept="application/pdf,.pdf"
+              disabled={uploading}
+              onChange={e => setFile(e.target.files?.[0] ?? null)}
+              data-testid="input-playbook-file"
+            />
+            {file && <p className="text-xs text-muted-foreground">{file.name} — {fmtFileSize(file.size)}</p>}
+          </div>
+          {error && <p className="text-xs text-red-500" data-testid="text-upload-error">{error}</p>}
+          <div className="flex justify-end gap-2 pt-1">
+            <Button type="button" variant="outline" size="sm" onClick={() => handleClose(false)} disabled={uploading} data-testid="button-cancel-upload">
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={uploading} data-testid="button-submit-upload">
+              {uploading ? <><RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Uploading…</> : <><Upload className="w-3.5 h-3.5 mr-1.5" /> Upload</>}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+const PLAYBOOK_LABELS: Record<string, string> = {
+  "ghana-playbook": "Ghana",
+  "nigeria-playbook": "Nigeria",
+  "kenya-playbook": "Kenya",
+  "south-africa-playbook": "South Africa",
+  "cotedivoire-playbook": "Côte d'Ivoire",
+};
+
+const BAR_COLORS = ["#0d9488", "#f59e0b", "#3b82f6", "#8b5cf6", "#ec4899"];
+
+interface PlaybookDownloadStats {
+  total: number;
+  byPlaybook: { slug: string; count: number }[];
+  byUser: { user: string; count: number }[];
+  recent: { id: number; playbookSlug: string; username: string | null; userId: string | null; ipAddress: string | null; downloadedAt: string }[];
+}
+
+function PlaybookDownloadsPanel() {
+  const { data, isLoading, isError, refetch } = useQuery<PlaybookDownloadStats>({
+    queryKey: ["/api/sales/playbook-downloads"],
+    queryFn: async () => {
+      const r = await pcFetch("/api/sales/playbook-downloads");
+      if (!r.ok) throw new Error(`Failed (${r.status})`);
+      return r.json();
+    },
+  });
+
+  const handleCsvExport = async () => {
+    const r = await pcFetch("/api/sales/playbook-downloads/csv");
+    if (!r.ok) return;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "playbook-downloads.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (isLoading) return <div className="text-sm text-muted-foreground p-4">Loading download stats…</div>;
+  if (isError) return <div className="text-sm text-red-500 p-4">Failed to load download stats.</div>;
+  if (!data) return null;
+
+  const chartData = data.byPlaybook.map(item => ({
+    name: PLAYBOOK_LABELS[item.slug] ?? item.slug,
+    downloads: item.count,
+  }));
+
+  return (
+    <div className="space-y-5" data-testid="playbook-downloads-panel">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold" data-testid="text-total-downloads">{data.total}</span>
+          <span className="text-sm text-muted-foreground">total downloads</span>
+        </div>
+        <div className="flex gap-2">
+          <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-refresh-downloads">
+            <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh
+          </Button>
+          <Button size="sm" variant="outline" onClick={handleCsvExport} data-testid="button-export-downloads-csv">
+            <Download className="w-3.5 h-3.5 mr-1.5" /> Export CSV
+          </Button>
+        </div>
+      </div>
+
+      {data.total === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground" data-testid="text-no-downloads">
+          No playbook downloads recorded yet. Downloads will appear here after the first PDF is downloaded.
+        </div>
+      ) : (
+        <>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Downloads by Market</p>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+                <RechartsTooltip
+                  contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                  formatter={(v: number) => [v, "Downloads"]}
+                />
+                <Bar dataKey="downloads" radius={[4, 4, 0, 0]}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">By Playbook</p>
+              <div className="space-y-1.5" data-testid="list-downloads-by-playbook">
+                {data.byPlaybook.map(item => (
+                  <div key={item.slug} className="flex items-center justify-between text-sm py-1 border-b border-border/50 last:border-0">
+                    <span data-testid={`text-playbook-label-${item.slug}`}>{PLAYBOOK_LABELS[item.slug] ?? item.slug}</span>
+                    <Badge variant="secondary" data-testid={`badge-count-${item.slug}`}>{item.count}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">By User</p>
+              <div className="space-y-1.5" data-testid="list-downloads-by-user">
+                {data.byUser.slice(0, 10).map(item => (
+                  <div key={item.user} className="flex items-center justify-between text-sm py-1 border-b border-border/50 last:border-0">
+                    <span className="font-mono text-xs" data-testid={`text-user-${item.user}`}>{item.user}</span>
+                    <Badge variant="secondary" data-testid={`badge-user-count-${item.user}`}>{item.count}</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Recent Downloads</p>
+            <div className="rounded-lg border border-border overflow-hidden">
+              <table className="w-full text-xs" data-testid="table-recent-downloads">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">Playbook</th>
+                    <th className="text-left px-3 py-2 font-medium">User</th>
+                    <th className="text-left px-3 py-2 font-medium hidden md:table-cell">IP Address</th>
+                    <th className="text-left px-3 py-2 font-medium">Downloaded At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.recent.slice(0, 20).map(row => (
+                    <tr key={row.id} className="border-t border-border/50 hover:bg-muted/20 transition-colors" data-testid={`row-download-${row.id}`}>
+                      <td className="px-3 py-2">{PLAYBOOK_LABELS[row.playbookSlug] ?? row.playbookSlug}</td>
+                      <td className="px-3 py-2 font-mono">{row.username ?? row.userId ?? "—"}</td>
+                      <td className="px-3 py-2 hidden md:table-cell text-muted-foreground">{row.ipAddress ?? "—"}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{new Date(row.downloadedAt).toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function PlaybooksPanel() {
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<PlaybookEntry | null>(null);
+  const [editVersion, setEditVersion] = useState("");
+  const [editReleaseDate, setEditReleaseDate] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const { data: playbooks, isLoading, isError } = useQuery<PlaybookEntry[]>({
+    queryKey: ["/api/admin/playbooks"],
+    queryFn: async () => {
+      const r = await pcFetch("/api/admin/playbooks");
+      if (!r.ok) throw new Error(`Failed to load playbooks (${r.status})`);
+      return r.json();
+    },
+  });
+
+  const bumpVersionMutation = useMutation({
+    mutationFn: async ({ market, version, releaseDate }: { market: string; version: string; releaseDate: string }) => {
+      const body: Record<string, string> = { version };
+      if (releaseDate.trim()) body.releaseDate = releaseDate.trim();
+      const r = await pcFetch(`/api/platform-control/playbooks/${market}/version`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error((err as { message?: string }).message || `Failed (${r.status})`);
+      }
+      return r.json();
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks"] });
+      toast({ title: "Version updated", description: `${variables.market.toUpperCase()} playbook bumped to ${variables.version}.` });
+      setEditTarget(null);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const openEditDialog = (pb: PlaybookEntry) => {
+    setEditTarget(pb);
+    setEditVersion(pb.version);
+    setEditReleaseDate(pb.releaseDate ?? "");
+  };
+
+<<<<<<< HEAD
+  const deleteMutation = useMutation({
+    mutationFn: async (market: string) => {
+      const r = await pcFetch(`/api/platform-control/playbooks/${market}`, { method: "DELETE" });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message || `Delete failed (${r.status})`);
+      }
+      return r.json();
+    },
+    onSuccess: (_data, market) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks"] });
+      toast({ title: "Playbook deleted", description: `Market "${market}" has been removed.` });
+      setConfirmDelete(null);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+      setConfirmDelete(null);
+    },
+=======
+  const { data: auditLog } = useQuery<PlaybookAuditEntry[]>({
+    queryKey: ["/api/admin/playbooks-history"],
+    queryFn: async () => {
+      const r = await pcFetch("/api/admin/playbooks-history");
+      if (!r.ok) return [];
+      return r.json();
+    },
+>>>>>>> 9eaa46e (feat(#438): Add playbook upload history audit log)
+  });
+
+
+  const handleDownload = async (market: string, fileName: string) => {
+    setDownloading(market);
+    try {
+      const res = await pcFetch(`/api/admin/playbooks/${market}`);
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Download failed", description: "Could not download the playbook. Please try again.", variant: "destructive" });
+    } finally {
+      setDownloading(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-sm text-muted-foreground p-4">Loading playbooks…</div>;
+  }
+
+  if (isError) {
+    return <div className="text-sm text-red-500 p-4">Failed to load playbooks. Make sure you are signed in as a platform owner or super admin.</div>;
+  }
+
+  return (
+<<<<<<< HEAD
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {playbooks && playbooks.length > 0 ? `${playbooks.length} playbook${playbooks.length !== 1 ? "s" : ""} published` : "No playbooks found in exports/."}
+        </p>
+        <AddPlaybookDialog onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks"] })} />
+      </div>
+      {playbooks && playbooks.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" data-testid="playbooks-grid">
+          {playbooks.map(pb => (
+            <div
+              key={pb.market}
+              className={`rounded-xl border p-4 flex flex-col gap-3 hover:bg-muted/30 transition-colors ${pb.missing ? "border-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10" : "border-border"}`}
+              data-testid={`card-playbook-${pb.market}`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-2xl" role="img" aria-label={pb.name}>{pb.flag}</span>
+                <div className="flex items-center gap-1.5">
+                  {pb.missing && (
+                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/30" data-testid={`badge-missing-${pb.market}`}>
+                      File missing
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-xs font-mono" data-testid={`badge-version-${pb.market}`}>{pb.version}</Badge>
+                  {pb.isDynamic && (
+                    confirmDelete === pb.market ? (
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="h-6 px-2 text-xs"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => deleteMutation.mutate(pb.market)}
+                          data-testid={`button-confirm-delete-${pb.market}`}
+                        >
+                          {deleteMutation.isPending ? <RefreshCw className="w-3 h-3 animate-spin" /> : "Yes"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-xs"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => setConfirmDelete(null)}
+                          data-testid={`button-cancel-delete-${pb.market}`}
+                        >
+                          No
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setConfirmDelete(pb.market)}
+                        data-testid={`button-delete-${pb.market}`}
+                        title="Delete playbook"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )
+                  )}
+                </div>
+              </div>
+              <div>
+                <p className="font-semibold text-sm leading-tight" data-testid={`text-market-name-${pb.market}`}>{pb.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-file-size-${pb.market}`}>{fmtFileSize(pb.sizeBytes)}</p>
+                <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-release-date-${pb.market}`}>
+                  {pb.releaseDate ? `Released: ${pb.releaseDate}` : "—"}
+                </p>
+              </div>
+              <div className="flex gap-2 mt-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1"
+                  disabled={downloading === pb.market || !!pb.missing}
+                  title={pb.missing ? "PDF file is not available on the server" : undefined}
+                  onClick={() => handleDownload(pb.market, pb.file)}
+                  data-testid={`button-download-${pb.market}`}
+                >
+                  {downloading === pb.market
+                    ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    : <FileDown className="w-3.5 h-3.5 mr-1.5" />}
+                  PDF
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openEditDialog(pb)}
+                  data-testid={`button-edit-version-${pb.market}`}
+                  title="Edit version"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              {confirmDelete === pb.market && (
+                <p className="text-xs text-destructive text-center -mt-1" data-testid={`text-delete-confirm-prompt-${pb.market}`}>
+                  Delete this playbook?
+                </p>
+              )}
+            </div>
+          ))}
+=======
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">
+            {playbooks && playbooks.length > 0 ? `${playbooks.length} playbook${playbooks.length !== 1 ? "s" : ""} published` : "No playbooks found in exports/."}
+          </p>
+          <AddPlaybookDialog onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks"] });
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks-history"] });
+          }} />
+>>>>>>> 9eaa46e (feat(#438): Add playbook upload history audit log)
+        </div>
+        {playbooks && playbooks.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" data-testid="playbooks-grid">
+            {playbooks.map(pb => (
+              <div
+                key={pb.market}
+                className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:bg-muted/30 transition-colors"
+                data-testid={`card-playbook-${pb.market}`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl" role="img" aria-label={pb.name}>{pb.flag}</span>
+                  <Badge variant="outline" className="text-xs font-mono" data-testid={`badge-version-${pb.market}`}>{pb.version}</Badge>
+                </div>
+                <div>
+                  <p className="font-semibold text-sm leading-tight" data-testid={`text-market-name-${pb.market}`}>{pb.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-file-size-${pb.market}`}>{fmtFileSize(pb.sizeBytes)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-release-date-${pb.market}`}>
+                    {pb.releaseDate ? `Released: ${pb.releaseDate}` : "—"}
+                  </p>
+                </div>
+                <div className="flex gap-2 mt-auto">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={downloading === pb.market}
+                    onClick={() => handleDownload(pb.market, pb.file)}
+                    data-testid={`button-download-${pb.market}`}
+                  >
+                    {downloading === pb.market
+                      ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      : <FileDown className="w-3.5 h-3.5 mr-1.5" />}
+                    PDF
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditDialog(pb)}
+                    data-testid={`button-edit-version-${pb.market}`}
+                    title="Edit version"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <Dialog open={!!editTarget} onOpenChange={open => { if (!open) setEditTarget(null); }}>
+        <DialogContent className="sm:max-w-sm" data-testid="dialog-edit-version">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4" />
+              Edit Playbook Version
+            </DialogTitle>
+          </DialogHeader>
+          {editTarget && (
+            <div className="flex flex-col gap-4 pt-1">
+              <p className="text-sm text-muted-foreground">
+                {editTarget.flag} {editTarget.name}
+              </p>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground" htmlFor="edit-version-input">Version</label>
+                <Input
+                  id="edit-version-input"
+                  value={editVersion}
+                  onChange={e => setEditVersion(e.target.value)}
+                  placeholder="e.g. v1.2"
+                  className="font-mono"
+                  data-testid="input-playbook-version"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-foreground" htmlFor="edit-release-date-input">Release Date <span className="text-muted-foreground font-normal">(optional)</span></label>
+                <Input
+                  id="edit-release-date-input"
+                  value={editReleaseDate}
+                  onChange={e => setEditReleaseDate(e.target.value)}
+                  placeholder="e.g. 2026-05"
+                  data-testid="input-playbook-release-date"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditTarget(null)}
+                  data-testid="button-cancel-edit-version"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={!editVersion.trim() || bumpVersionMutation.isPending}
+                  onClick={() => bumpVersionMutation.mutate({ market: editTarget.market, version: editVersion.trim(), releaseDate: editReleaseDate })}
+                  data-testid="button-save-version"
+                >
+                  {bumpVersionMutation.isPending
+                    ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                    : <Save className="w-3.5 h-3.5 mr-1.5" />}
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <div className="space-y-2" data-testid="playbooks-upload-history">
+        <div className="flex items-center gap-2">
+          <History className="w-3.5 h-3.5 text-muted-foreground" />
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Upload History</p>
+        </div>
+        {!auditLog || auditLog.length === 0 ? (
+          <p className="text-xs text-muted-foreground pl-5" data-testid="text-no-upload-history">No uploads recorded yet. History is captured from the next upload onwards.</p>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden" data-testid="table-upload-history">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-muted/40 border-b border-border">
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Market</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">File</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden md:table-cell">Size</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Version</th>
+                  <th className="text-left px-3 py-2 font-medium text-muted-foreground">Published by</th>
+                </tr>
+              </thead>
+              <tbody>
+                {auditLog.map((entry, idx) => (
+                  <tr
+                    key={entry.id}
+                    className={`border-b border-border last:border-0 hover:bg-muted/20 transition-colors ${idx % 2 === 1 ? "bg-muted/10" : ""}`}
+                    data-testid={`row-audit-${entry.id}`}
+                  >
+                    <td className="px-3 py-2 tabular-nums text-muted-foreground whitespace-nowrap">
+                      {new Date(entry.uploadedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                    </td>
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">
+                      <span className="mr-1">{entry.market}</span>
+                      <span className="text-muted-foreground font-normal">— {entry.marketName}</span>
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px] hidden sm:table-cell" title={entry.filename}>
+                      {entry.filename}
+                    </td>
+                    <td className="px-3 py-2 text-muted-foreground tabular-nums hidden md:table-cell">
+                      {fmtFileSize(entry.sizeBytes)}
+                    </td>
+                    <td className="px-3 py-2 hidden sm:table-cell">
+                      <Badge variant="outline" className="font-mono text-xs">{entry.version}</Badge>
+                    </td>
+                    <td className="px-3 py-2 font-medium">{entry.uploadedBy}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface TearsheetStatus {
+  enabled: boolean;
+  intervalHours: number;
+  lastRunAt: string | null;
+  lastRunStatus: "success" | "failure" | "running" | null;
+  lastRunDurationMs: number | null;
+  lastRunLog: string[];
+  nextRunAt: string | null;
+  marketsGenerated: string[];
+}
+
+const ALL_MARKETS = ["ghana", "nigeria", "kenya", "civ", "southafrica"];
+
+function TearsheetRegenPanel() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const [showLog, setShowLog] = useState(false);
+  const [selectedMarkets, setSelectedMarkets] = useState<string[]>([]);
+
+  const { data: status, isLoading } = useQuery<TearsheetStatus>({
+    queryKey: ["/api/platform-control/tearsheets/status"],
+    queryFn: async () => {
+      const r = await pcFetch("/api/platform-control/tearsheets/status");
+      return r.json();
+    },
+    refetchInterval: (query) =>
+      query.state.data?.lastRunStatus === "running" ? 3000 : 15000,
+  });
+
+  const regenMutation = useMutation({
+    mutationFn: async () => {
+      const body = selectedMarkets.length > 0 ? { markets: selectedMarkets } : {};
+      const r = await pcFetch("/api/platform-control/tearsheets/regenerate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error((await r.json()).message);
+      return r.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Tear-sheet generation started", description: "PDFs are being regenerated in the background." });
+      setTimeout(() => qc.invalidateQueries({ queryKey: ["/api/platform-control/tearsheets/status"] }), 1500);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to start generation", description: err.message, variant: "destructive" });
+    },
+  });
+
+  function fmtDate(iso: string | null) {
+    if (!iso) return "Never";
+    return new Date(iso).toLocaleString();
+  }
+
+  function statusBadge(s: TearsheetStatus["lastRunStatus"]) {
+    if (!s) return null;
+    if (s === "success") return <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs">Success</Badge>;
+    if (s === "failure") return <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 text-xs">Failed</Badge>;
+    if (s === "running") return <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs animate-pulse">Running…</Badge>;
+    return null;
+  }
+
+  function toggleMarket(m: string) {
+    setSelectedMarkets(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
+  }
+
+  if (isLoading) return <div className="py-4 text-sm text-muted-foreground">Loading…</div>;
+
+  const isRunning = status?.lastRunStatus === "running";
+  const marketsToRun = selectedMarkets.length > 0 ? selectedMarkets : ALL_MARKETS;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Schedule</p>
+          <p className="text-sm font-semibold" data-testid="text-tearsheet-interval">
+            Every {status?.intervalHours ?? 168}h ({Math.round((status?.intervalHours ?? 168) / 24)}d)
+          </p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Last Run</p>
+          <p className="text-sm font-semibold" data-testid="text-tearsheet-last-run">{fmtDate(status?.lastRunAt ?? null)}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Status</p>
+          <div data-testid="text-tearsheet-status">{statusBadge(status?.lastRunStatus ?? null) ?? <span className="text-sm text-muted-foreground">—</span>}</div>
+        </div>
+        <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Next Scheduled</p>
+          <p className="text-sm font-semibold" data-testid="text-tearsheet-next-run">{fmtDate(status?.nextRunAt ?? null)}</p>
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs text-muted-foreground mb-2">Markets to regenerate (leave all unchecked for all markets):</p>
+        <div className="flex flex-wrap gap-2">
+          {ALL_MARKETS.map((m) => {
+            const selected = selectedMarkets.includes(m);
+            const wasGenerated = status?.marketsGenerated?.includes(m);
+            return (
+              <button
+                key={m}
+                data-testid={`button-market-toggle-${m}`}
+                onClick={() => toggleMarket(m)}
+                className={`px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  selected
+                    ? "bg-teal-600 text-white border-teal-600"
+                    : "bg-background border-border text-muted-foreground hover:border-teal-400"
+                }`}
+              >
+                {m}{wasGenerated && !selected ? " ✓" : ""}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <Button
+          size="sm"
+          disabled={regenMutation.isPending || isRunning}
+          onClick={() => regenMutation.mutate()}
+          data-testid="button-regenerate-tearsheets"
+        >
+          {(regenMutation.isPending || isRunning)
+            ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            : <RefreshCw className="w-4 h-4 mr-2" />}
+          {isRunning ? "Generating…" : `Regenerate ${marketsToRun.length === ALL_MARKETS.length ? "All" : marketsToRun.length} PDF${marketsToRun.length !== 1 ? "s" : ""}`}
+        </Button>
+
+        {(status?.lastRunLog?.length ?? 0) > 0 && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setShowLog(v => !v)}
+            data-testid="button-tearsheet-toggle-log"
+          >
+            <Eye className="w-3.5 h-3.5 mr-1.5" />
+            {showLog ? "Hide" : "Show"} Log
+          </Button>
+        )}
+
+        {status?.lastRunDurationMs != null && (
+          <span className="text-xs text-muted-foreground">
+            Last run took {(status.lastRunDurationMs / 1000).toFixed(1)}s
+          </span>
+        )}
+      </div>
+
+      {showLog && (status?.lastRunLog?.length ?? 0) > 0 && (
+        <div className="rounded-md bg-black/80 text-green-400 text-xs font-mono p-3 max-h-52 overflow-y-auto" data-testid="pre-tearsheet-log">
+          {status!.lastRunLog.map((line, i) => (
+            <div key={i}>{line}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ControlDashboard() {
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["/api/platform-control/summary"],
@@ -3140,6 +4051,18 @@ function ControlDashboard() {
             <DemoResetPanel />
             <LotoResetPanel />
             <CollateralResetPanel />
+          </Panel>
+
+          <Panel title="Market Playbooks" icon={BookOpen} color="text-amber-500" defaultOpen={false}>
+            <PlaybooksPanel />
+          </Panel>
+
+          <Panel title="Playbook Download Analytics" icon={TrendingDown} color="text-teal-500" defaultOpen={false}>
+            <PlaybookDownloadsPanel />
+          </Panel>
+
+          <Panel title="Investor Tear-Sheet PDF Generator" icon={FileDown} color="text-teal-500" defaultOpen={false}>
+            <TearsheetRegenPanel />
           </Panel>
         </div>
       </div>
