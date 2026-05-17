@@ -14,11 +14,7 @@ import {
   Smartphone, CreditCard, Fingerprint, ShieldCheck, Heart,
   TrendingUp, ArrowRightLeft, GitBranch, Link2, Unlink, ExternalLink,
   HeartPulse, Signal, SignalZero, Radio, TestTube, Save, X, Pencil,
-<<<<<<< HEAD
-  BookOpen, FileDown, Upload, TrendingDown,
-=======
-  BookOpen, FileDown, Upload, History,
->>>>>>> 9eaa46e (feat(#438): Add playbook upload history audit log)
+  BookOpen, FileDown, Upload, TrendingDown, History,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, Cell,
@@ -3453,7 +3449,6 @@ function PlaybooksPanel() {
     setEditReleaseDate(pb.releaseDate ?? "");
   };
 
-<<<<<<< HEAD
   const deleteMutation = useMutation({
     mutationFn: async (market: string) => {
       const r = await pcFetch(`/api/platform-control/playbooks/${market}`, { method: "DELETE" });
@@ -3472,7 +3467,8 @@ function PlaybooksPanel() {
       toast({ title: "Delete failed", description: err.message, variant: "destructive" });
       setConfirmDelete(null);
     },
-=======
+  });
+
   const { data: auditLog } = useQuery<PlaybookAuditEntry[]>({
     queryKey: ["/api/admin/playbooks-history"],
     queryFn: async () => {
@@ -3480,7 +3476,6 @@ function PlaybooksPanel() {
       if (!r.ok) return [];
       return r.json();
     },
->>>>>>> 9eaa46e (feat(#438): Add playbook upload history audit log)
   });
 
 
@@ -3512,110 +3507,6 @@ function PlaybooksPanel() {
   }
 
   return (
-<<<<<<< HEAD
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
-          {playbooks && playbooks.length > 0 ? `${playbooks.length} playbook${playbooks.length !== 1 ? "s" : ""} published` : "No playbooks found in exports/."}
-        </p>
-        <AddPlaybookDialog onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks"] })} />
-      </div>
-      {playbooks && playbooks.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" data-testid="playbooks-grid">
-          {playbooks.map(pb => (
-            <div
-              key={pb.market}
-              className={`rounded-xl border p-4 flex flex-col gap-3 hover:bg-muted/30 transition-colors ${pb.missing ? "border-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10" : "border-border"}`}
-              data-testid={`card-playbook-${pb.market}`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-2xl" role="img" aria-label={pb.name}>{pb.flag}</span>
-                <div className="flex items-center gap-1.5">
-                  {pb.missing && (
-                    <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/30" data-testid={`badge-missing-${pb.market}`}>
-                      File missing
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="text-xs font-mono" data-testid={`badge-version-${pb.market}`}>{pb.version}</Badge>
-                  {pb.isDynamic && (
-                    confirmDelete === pb.market ? (
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          className="h-6 px-2 text-xs"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => deleteMutation.mutate(pb.market)}
-                          data-testid={`button-confirm-delete-${pb.market}`}
-                        >
-                          {deleteMutation.isPending ? <RefreshCw className="w-3 h-3 animate-spin" /> : "Yes"}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-6 px-2 text-xs"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => setConfirmDelete(null)}
-                          data-testid={`button-cancel-delete-${pb.market}`}
-                        >
-                          No
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => setConfirmDelete(pb.market)}
-                        data-testid={`button-delete-${pb.market}`}
-                        title="Delete playbook"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    )
-                  )}
-                </div>
-              </div>
-              <div>
-                <p className="font-semibold text-sm leading-tight" data-testid={`text-market-name-${pb.market}`}>{pb.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-file-size-${pb.market}`}>{fmtFileSize(pb.sizeBytes)}</p>
-                <p className="text-xs text-muted-foreground mt-0.5" data-testid={`text-release-date-${pb.market}`}>
-                  {pb.releaseDate ? `Released: ${pb.releaseDate}` : "—"}
-                </p>
-              </div>
-              <div className="flex gap-2 mt-auto">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1"
-                  disabled={downloading === pb.market || !!pb.missing}
-                  title={pb.missing ? "PDF file is not available on the server" : undefined}
-                  onClick={() => handleDownload(pb.market, pb.file)}
-                  data-testid={`button-download-${pb.market}`}
-                >
-                  {downloading === pb.market
-                    ? <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    : <FileDown className="w-3.5 h-3.5 mr-1.5" />}
-                  PDF
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openEditDialog(pb)}
-                  data-testid={`button-edit-version-${pb.market}`}
-                  title="Edit version"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              {confirmDelete === pb.market && (
-                <p className="text-xs text-destructive text-center -mt-1" data-testid={`text-delete-confirm-prompt-${pb.market}`}>
-                  Delete this playbook?
-                </p>
-              )}
-            </div>
-          ))}
-=======
     <div className="space-y-6">
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -3626,19 +3517,62 @@ function PlaybooksPanel() {
             queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks"] });
             queryClient.invalidateQueries({ queryKey: ["/api/admin/playbooks-history"] });
           }} />
->>>>>>> 9eaa46e (feat(#438): Add playbook upload history audit log)
         </div>
         {playbooks && playbooks.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" data-testid="playbooks-grid">
             {playbooks.map(pb => (
               <div
                 key={pb.market}
-                className="rounded-xl border border-border p-4 flex flex-col gap-3 hover:bg-muted/30 transition-colors"
+                className={`rounded-xl border p-4 flex flex-col gap-3 hover:bg-muted/30 transition-colors ${pb.missing ? "border-amber-400/60 bg-amber-50/30 dark:bg-amber-950/10" : "border-border"}`}
                 data-testid={`card-playbook-${pb.market}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-2xl" role="img" aria-label={pb.name}>{pb.flag}</span>
-                  <Badge variant="outline" className="text-xs font-mono" data-testid={`badge-version-${pb.market}`}>{pb.version}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    {pb.missing && (
+                      <Badge variant="outline" className="text-xs text-amber-600 border-amber-400 bg-amber-50 dark:bg-amber-950/30" data-testid={`badge-missing-${pb.market}`}>
+                        File missing
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="text-xs font-mono" data-testid={`badge-version-${pb.market}`}>{pb.version}</Badge>
+                    {pb.isDynamic && (
+                      confirmDelete === pb.market ? (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-6 px-2 text-xs"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => deleteMutation.mutate(pb.market)}
+                            data-testid={`button-confirm-delete-${pb.market}`}
+                          >
+                            {deleteMutation.isPending ? <RefreshCw className="w-3 h-3 animate-spin" /> : "Yes"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-xs"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => setConfirmDelete(null)}
+                            data-testid={`button-cancel-delete-${pb.market}`}
+                          >
+                            No
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setConfirmDelete(pb.market)}
+                          data-testid={`button-delete-${pb.market}`}
+                          title="Delete playbook"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )
+                    )}
+                  </div>
                 </div>
                 <div>
                   <p className="font-semibold text-sm leading-tight" data-testid={`text-market-name-${pb.market}`}>{pb.name}</p>
@@ -3652,7 +3586,8 @@ function PlaybooksPanel() {
                     size="sm"
                     variant="outline"
                     className="flex-1"
-                    disabled={downloading === pb.market}
+                    disabled={downloading === pb.market || !!pb.missing}
+                    title={pb.missing ? "PDF file is not available on the server" : undefined}
                     onClick={() => handleDownload(pb.market, pb.file)}
                     data-testid={`button-download-${pb.market}`}
                   >
@@ -3671,6 +3606,11 @@ function PlaybooksPanel() {
                     <Pencil className="w-3.5 h-3.5" />
                   </Button>
                 </div>
+                {confirmDelete === pb.market && (
+                  <p className="text-xs text-destructive text-center -mt-1" data-testid={`text-delete-confirm-prompt-${pb.market}`}>
+                    Delete this playbook?
+                  </p>
+                )}
               </div>
             ))}
           </div>

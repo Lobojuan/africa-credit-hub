@@ -19,6 +19,7 @@ interface PlaybookMeta {
   regulator: string;
   pdfFile: string;
   currency: string;
+  viewUrl: string | null;
 }
 
 const PLAYBOOKS: PlaybookMeta[] = [
@@ -31,6 +32,7 @@ const PLAYBOOKS: PlaybookMeta[] = [
     regulator: "Bank of Ghana",
     pdfFile: "ghana-demo-playbook.pdf",
     currency: "GHS",
+    viewUrl: "/sales/ghana-playbook",
   },
   {
     market: "nigeria",
@@ -41,6 +43,7 @@ const PLAYBOOKS: PlaybookMeta[] = [
     regulator: "Central Bank of Nigeria",
     pdfFile: "nigeria-demo-playbook.pdf",
     currency: "NGN",
+    viewUrl: "/sales/nigeria-playbook",
   },
   {
     market: "kenya",
@@ -51,6 +54,7 @@ const PLAYBOOKS: PlaybookMeta[] = [
     regulator: "Central Bank of Kenya",
     pdfFile: "kenya-demo-playbook.pdf",
     currency: "KES",
+    viewUrl: "/sales/kenya-playbook",
   },
   {
     market: "civ",
@@ -61,6 +65,18 @@ const PLAYBOOKS: PlaybookMeta[] = [
     regulator: "BCEAO / UEMOA",
     pdfFile: "civ-demo-playbook.pdf",
     currency: "XOF",
+    viewUrl: "/sales/cotedivoire-playbook",
+  },
+  {
+    market: "south-africa",
+    title: "South Africa Demo Playbook",
+    flag: "🇿🇦",
+    region: "Southern Africa",
+    summary: "Africa's most developed financial market; SARB-licensed credit bureau ecosystem; 60M population with sophisticated banking infrastructure.",
+    regulator: "South African Reserve Bank",
+    pdfFile: "south-africa-demo-playbook.pdf",
+    currency: "ZAR",
+    viewUrl: "/sales/south-africa-playbook",
   },
   {
     market: "egypt",
@@ -71,6 +87,7 @@ const PLAYBOOKS: PlaybookMeta[] = [
     regulator: "Central Bank of Egypt",
     pdfFile: "egypt-demo-playbook.pdf",
     currency: "EGP",
+    viewUrl: null,
   },
   {
     market: "ethiopia",
@@ -81,6 +98,7 @@ const PLAYBOOKS: PlaybookMeta[] = [
     regulator: "National Bank of Ethiopia",
     pdfFile: "ethiopia-demo-playbook.pdf",
     currency: "ETB",
+    viewUrl: null,
   },
 ];
 
@@ -194,23 +212,26 @@ export default function PlaybookIndexPage() {
                     <Download className="h-4 w-4" />
                     {downloading === pb.market ? "Generating…" : "Download PDF"}
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    asChild
-                    data-testid={`link-view-${pb.market}`}
-                  >
-                    <a href={`/sales/ghana-playbook`}
-                      onClick={(e) => {
-                        if (pb.market !== "ghana") {
-                          e.preventDefault();
-                          toast({ title: "Full viewer coming soon", description: `The in-platform viewer for ${pb.title} will be available shortly. Use the PDF download in the meantime.` });
-                        }
-                      }}
+                  {pb.viewUrl ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      asChild
+                      data-testid={`link-view-${pb.market}`}
+                    >
+                      <a href={pb.viewUrl}>View</a>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled
+                      data-testid={`link-view-${pb.market}`}
+                      title="In-platform viewer coming soon — use PDF download"
                     >
                       View
-                    </a>
-                  </Button>
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

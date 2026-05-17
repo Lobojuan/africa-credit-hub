@@ -163,6 +163,8 @@ const lotoItems: NavItem[] = [
   { label: "Loto Fiscal Workspace", tKey: "sidebar.lotoFiscalWorkspace", url: "/loto-fiscal", icon: Receipt, testId: "nav-loto-fiscal", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "DGI Admin Dashboard", tKey: "sidebar.lotoDgiAdmin", url: "/admin/loto-fiscal", icon: Shield, testId: "nav-loto-admin", roles: ["super_admin", "dgi_officer", "tax_authority_admin"] },
   { label: "Messaging Dashboard", tKey: "sidebar.lotoMessagingAdmin", url: "/loto/admin/messaging", icon: MessageCircle, testId: "nav-loto-messaging-admin", roles: ["super_admin", "dgi_officer", "tax_authority_admin"] },
+  { label: "POS Terminal", tKey: "sidebar.lotoPOS", url: "/loto-pos", icon: Cpu, testId: "nav-loto-pos", roles: ["super_admin", "admin", "dgi_officer"] },
+  { label: "Device Admin", tKey: "sidebar.lotoDevices", url: "/loto/admin/devices", icon: HardDrive, testId: "nav-loto-devices", roles: ["super_admin"] },
 ];
 
 const baseOversightItems: NavItem[] = [

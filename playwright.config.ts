@@ -73,6 +73,8 @@ export default defineConfig({
         /consumer-portal\.spec\.ts/,
         /batch-upload\.spec\.ts/,
         /bog-export\.spec\.ts/,
+        /ghana-playbook\.spec\.ts/,
+        /playbook-index\.spec\.ts/,
       ],
     },
 

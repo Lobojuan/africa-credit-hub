@@ -832,6 +832,27 @@ process.stderr.write = function (...args: any[]) {
     const { startRegistryHealthChecker } = await import("./registry-health-checker");
     await startRegistryHealthChecker();
 
+    // GitHub auto-sync — runs every hour (or GITHUB_SYNC_INTERVAL_HOURS env override)
+    try {
+      const { execFile } = await import("child_process");
+      const ghSyncIntervalHours = Math.max(1, parseInt(process.env.GITHUB_SYNC_INTERVAL_HOURS || "1", 10) || 1);
+      const runGithubSync = () => {
+        execFile("bash", ["scripts/github-sync.sh"], { cwd: "/home/runner/workspace" }, (err, stdout, stderr) => {
+          if (err) {
+            console.warn(`[GitHub-Sync] Failed (exit ${err.code}): ${stderr || err.message}`);
+          } else {
+            console.log(`[GitHub-Sync] Push complete.`);
+          }
+        });
+      };
+      // First sync 2 minutes after startup, then on the interval
+      setTimeout(runGithubSync, 2 * 60 * 1000);
+      setInterval(runGithubSync, ghSyncIntervalHours * 60 * 60 * 1000);
+      console.log(`[GitHub-Sync] Scheduler started — syncing every ${ghSyncIntervalHours}h`);
+    } catch (e: any) {
+      console.warn("[GitHub-Sync] Could not start scheduler:", e.message);
+    }
+
     const { isEmailConfigured } = await import("./email");
     const { isSmsConfigured } = await import("./sms");
     const isProduction = process.env.PRODUCTION_MODE === "true";
