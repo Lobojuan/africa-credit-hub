@@ -9745,7 +9745,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     let page = await storage.getPlaybookPage(GHANA_PLAYBOOK_SLUG);
     if (!page) {
       const fileContent = await loadGhanaPlaybookContent();
-      page = await storage.upsertPlaybookPage(GHANA_PLAYBOOK_SLUG, GHANA_PLAYBOOK_TITLE, fileContent, userId || "system");
+      page = await storage.upsertPlaybookPage(GHANA_PLAYBOOK_SLUG, GHANA_PLAYBOOK_TITLE, fileContent, userId ?? null);
     }
     return { content: page.content, updatedAt: page.updatedAt ?? page.createdAt ?? new Date(), id: page.id };
   }
@@ -9909,7 +9909,8 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           .replace(/__(.+?)__/g, "$1").replace(/_(.+?)_/g, "$1")
           .replace(/`(.+?)`/g, "$1").replace(/\[(.+?)\]\(.+?\)/g, "$1")
           .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/[\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2554\u2557\u255a\u255d\u2560\u2563\u2566\u2569\u256c]/g,"+").replace(/[\u2500\u2501\u2550]/g,"-").replace(/[\u2502\u2503\u2551]/g,"|").replace(/[\u2014\u2013]/g,"-").replace(/[\u2026]/g,"...").replace(/[\u25b6\u25ba\u2192]/g,">").replace(/[\u25cf\u2022\u25c6\u25c7]/g,"*").replace(/[\u2713\u2714]/g,"[x]").replace(/[\u2717\u2718]/g,"[ ]").replace(/[\u26a0]/g,"!").replace(/[\u2605\u2606]/g,"*");
       }
 
       const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true,
@@ -10161,7 +10162,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
       const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
       function stripMd(text: string): string {
-        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/[\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2554\u2557\u255a\u255d\u2560\u2563\u2566\u2569\u256c]/g,"+").replace(/[\u2500\u2501\u2550]/g,"-").replace(/[\u2502\u2503\u2551]/g,"|").replace(/[\u2014\u2013]/g,"-").replace(/[\u2026]/g,"...").replace(/[\u25b6\u25ba\u2192]/g,">").replace(/[\u25cf\u2022\u25c6\u25c7]/g,"*").replace(/[\u2713\u2714]/g,"[x]").replace(/[\u2717\u2718]/g,"[ ]").replace(/[\u26a0]/g,"!").replace(/[\u2605\u2606]/g,"*");
       }
       const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "Nigeria Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "Nigeria market demonstration playbook", Keywords: "Nigeria, credit bureau, UCH, demo, playbook, CBN" } });
       const stream = new PassThrough();
@@ -10282,7 +10283,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
       const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
       function stripMd(text: string): string {
-        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/[\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2554\u2557\u255a\u255d\u2560\u2563\u2566\u2569\u256c]/g,"+").replace(/[\u2500\u2501\u2550]/g,"-").replace(/[\u2502\u2503\u2551]/g,"|").replace(/[\u2014\u2013]/g,"-").replace(/[\u2026]/g,"...").replace(/[\u25b6\u25ba\u2192]/g,">").replace(/[\u25cf\u2022\u25c6\u25c7]/g,"*").replace(/[\u2713\u2714]/g,"[x]").replace(/[\u2717\u2718]/g,"[ ]").replace(/[\u26a0]/g,"!").replace(/[\u2605\u2606]/g,"*");
       }
       const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "Kenya Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "Kenya market demonstration playbook", Keywords: "Kenya, credit bureau, UCH, demo, playbook, CBK, M-Pesa" } });
       const stream = new PassThrough();
@@ -10403,7 +10404,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
       const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
       function stripMd(text: string): string {
-        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/[\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2554\u2557\u255a\u255d\u2560\u2563\u2566\u2569\u256c]/g,"+").replace(/[\u2500\u2501\u2550]/g,"-").replace(/[\u2502\u2503\u2551]/g,"|").replace(/[\u2014\u2013]/g,"-").replace(/[\u2026]/g,"...").replace(/[\u25b6\u25ba\u2192]/g,">").replace(/[\u25cf\u2022\u25c6\u25c7]/g,"*").replace(/[\u2713\u2714]/g,"[x]").replace(/[\u2717\u2718]/g,"[ ]").replace(/[\u26a0]/g,"!").replace(/[\u2605\u2606]/g,"*");
       }
       const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "South Africa Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "South Africa market demonstration playbook", Keywords: "South Africa, credit bureau, UCH, demo, playbook, NCR, SARB, POPIA" } });
       const stream = new PassThrough();
@@ -10524,7 +10525,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const LIGHT_GRAY = "#888888"; const TABLE_HEADER_BG = "#e6f7f6"; const TABLE_BORDER = "#99d6d2";
       const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
       function stripMd(text: string): string {
-        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/[\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2554\u2557\u255a\u255d\u2560\u2563\u2566\u2569\u256c]/g,"+").replace(/[\u2500\u2501\u2550]/g,"-").replace(/[\u2502\u2503\u2551]/g,"|").replace(/[\u2014\u2013]/g,"-").replace(/[\u2026]/g,"...").replace(/[\u25b6\u25ba\u2192]/g,">").replace(/[\u25cf\u2022\u25c6\u25c7]/g,"*").replace(/[\u2713\u2714]/g,"[x]").replace(/[\u2717\u2718]/g,"[ ]").replace(/[\u26a0]/g,"!").replace(/[\u2605\u2606]/g,"*");
       }
       const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: { Title: "Cote d'Ivoire Demo Playbook — Universal Credit Hub", Author: "Universal Credit Hub Ltd", Subject: "Cote d'Ivoire market demonstration playbook", Keywords: "Cote d'Ivoire, BCEAO, UCH, demo, playbook, WAEMU, Loto Fiscal" } });
       const stream = new PassThrough();
@@ -10760,7 +10761,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const NAVY = "#0f4c81";
       const PAGE_MARGINS = { top: 50, bottom: 60, left: 50, right: 50 };
       function stripMd(text: string): string {
-        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+        return text.replace(/\*\*(.+?)\*\*/g,"$1").replace(/\*(.+?)\*/g,"$1").replace(/__(.+?)__/g,"$1").replace(/_(.+?)_/g,"$1").replace(/`(.+?)`/g,"$1").replace(/\[(.+?)\]\(.+?\)/g,"$1").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/[\u250c\u2510\u2514\u2518\u251c\u2524\u252c\u2534\u253c\u2554\u2557\u255a\u255d\u2560\u2563\u2566\u2569\u256c]/g,"+").replace(/[\u2500\u2501\u2550]/g,"-").replace(/[\u2502\u2503\u2551]/g,"|").replace(/[\u2014\u2013]/g,"-").replace(/[\u2026]/g,"...").replace(/[\u25b6\u25ba\u2192]/g,">").replace(/[\u25cf\u2022\u25c6\u25c7]/g,"*").replace(/[\u2713\u2714]/g,"[x]").replace(/[\u2717\u2718]/g,"[ ]").replace(/[\u26a0]/g,"!").replace(/[\u2605\u2606]/g,"*");
       }
       const doc = new PDFDocument({ size: "A4", margins: PAGE_MARGINS, bufferPages: true, info: {
         Title: "East & West Africa Regional Overview — Universal Credit Hub",

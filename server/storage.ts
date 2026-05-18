@@ -581,7 +581,7 @@ export interface IStorage {
   deleteLotoUssdSession(sessionId: string): Promise<void>;
 
   getPlaybookPage(slug: string): Promise<PlaybookPage | undefined>;
-  upsertPlaybookPage(slug: string, title: string, content: string, userId: string, label?: string): Promise<PlaybookPage>;
+  upsertPlaybookPage(slug: string, title: string, content: string, userId: string | null, label?: string): Promise<PlaybookPage>;
   getPlaybookVersions(playbookId: string): Promise<PlaybookVersion[]>;
   getPlaybookVersion(id: number): Promise<PlaybookVersion | undefined>;
   restorePlaybookVersion(versionId: number, userId: string): Promise<PlaybookPage>;
@@ -4461,7 +4461,7 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
 
-  async upsertPlaybookPage(slug: string, title: string, content: string, userId: string, label?: string): Promise<PlaybookPage> {
+  async upsertPlaybookPage(slug: string, title: string, content: string, userId: string | null, label?: string): Promise<PlaybookPage> {
     const existing = await this.getPlaybookPage(slug);
     let page: PlaybookPage;
     if (existing) {
