@@ -9972,6 +9972,37 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           i++; continue;
         }
 
+        // Fenced code block
+        if (line.startsWith("```")) {
+          i++;
+          const codeLines: string[] = [];
+          while (i < lines.length && !lines[i].startsWith("```")) {
+            codeLines.push(lines[i]);
+            i++;
+          }
+          i++; // skip closing ```
+          if (codeLines.length > 0) {
+            const cFontSize = 7;
+            const cPad = 6;
+            const cLineH = cFontSize + 3.5;
+            const cTotalH = codeLines.length * cLineH + cPad * 2;
+            if (doc.y + cTotalH > doc.page.height - PAGE_MARGINS.bottom) doc.addPage();
+            const cbx = PAGE_MARGINS.left;
+            const cby = doc.y;
+            doc.rect(cbx, cby, pageWidth, cTotalH).fill("#f4f7f6");
+            doc.rect(cbx, cby, 3, cTotalH).fill(TEAL);
+            doc.rect(cbx, cby, pageWidth, cTotalH).strokeColor(TABLE_BORDER).lineWidth(0.5).stroke();
+            for (let li = 0; li < codeLines.length; li++) {
+              const sanitized = stripMd(codeLines[li]);
+              if (sanitized.trim() === "") continue;
+              doc.font("Courier").fontSize(cFontSize).fillColor(DARK)
+                .text(sanitized, cbx + cPad + 3, cby + cPad + li * cLineH, { width: pageWidth - cPad * 2 - 6, lineBreak: false });
+            }
+            doc.y = cby + cTotalH + 8;
+          }
+          continue;
+        }
+
         // Tables
         if (line.startsWith("|") && i + 1 < lines.length && lines[i + 1]?.match(/^\|[\s:|-]+\|/)) {
           const headers = line.split("|").filter(c => c.trim() !== "").map(c => stripMd(c.trim()));
