@@ -41,7 +41,8 @@ export type CrossProductPurpose =
   | "consumer_spending_credit"
   | "bureau_reputation_badge"
   | "collateral_credit_view"
-  | "credit_collateral_view";
+  | "credit_collateral_view"
+  | "fiscal_receipts_credit";
 
 export const DEFAULT_CONSENT_DURATION_MONTHS = 12;
 

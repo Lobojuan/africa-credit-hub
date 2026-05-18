@@ -10,17 +10,27 @@ const ALLOWLIST = new Set<string>([
   "server/storage.ts",
   "shared/schema.ts",
   "server/__tests__/cross-product-gateway.test.ts",
-  // Loto Fiscal — DGI/tax-authority admin internals. These files are
-  // sanctioned collaborators of the loto product and only ever query
-  // loto_merchants / loto_receipts within a single country scope; they
-  // do NOT bridge to credit/collateral, so the gateway is not required.
+  // Loto Fiscal — DGI/tax-authority admin internals and merchant-facing fiscal
+  // account route. These files are sanctioned collaborators of the loto product
+  // and only ever query loto_merchants / loto_receipts within a single country
+  // scope; they do NOT bridge to credit/collateral, so the gateway is not required.
   "server/loto-fraud-rules.ts",
   "server/routes/loto-admin.ts",
+  "server/routes/loto-fiscal.ts",
+  // Loto Fiscal route test files — seed and read loto_merchants / loto_receipts
+  // within an isolated test DB scope; no cross-product bridging occurs.
+  "server/__tests__/loto-fiscal-routes.test.ts",
   // server/routes.ts implements the self-service cross-product consent toggle
   // (POST /api/cross-product/consents/*) and the data-sharing gateway endpoints.
   // It is a sanctioned collaborator — access is read-only via db.select on
   // crossProductConsents for the ownership check in the consent grant endpoint.
   "server/routes.ts",
+  // Loto → Credit pipeline: reads loto_receipts (country-scoped) and writes
+  // alternative_data for credit scoring. Sanctioned bridge file; country
+  // isolation is enforced inside every query in this file.
+  "server/loto-credit-pipeline.ts",
+  // Pipeline test: seeds loto_receipts rows in an isolated test DB.
+  "server/__tests__/loto-credit-pipeline.test.ts",
 ]);
 
 const SCAN_ROOTS = ["server", "client/src", "shared"];

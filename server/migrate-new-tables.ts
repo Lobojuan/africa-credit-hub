@@ -859,5 +859,13 @@ export async function migrateNewTables() {
     END $$;
   `);
 
+  // Task #490: fiscal_receipts_credit purpose for cross_product_consents
+  await db.execute(sql`
+    DO $$ BEGIN
+      ALTER TYPE cross_product_purpose ADD VALUE IF NOT EXISTS 'fiscal_receipts_credit';
+    EXCEPTION WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+
   console.log('[NewTables] Migration complete');
 }
