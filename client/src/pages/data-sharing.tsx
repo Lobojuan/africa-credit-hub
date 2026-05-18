@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, ArrowRightLeft, Clock, XCircle, CheckCircle2, Activity, Eye, Lock } from "lucide-react";
+import { Shield, ArrowRightLeft, Clock, XCircle, CheckCircle2, Activity, Eye, Lock, Receipt } from "lucide-react";
 
 interface CrossProductConsent {
   id: string;
@@ -27,6 +27,14 @@ interface CollateralCreditViewStatus {
   borrowerId: string | null;
 }
 
+interface FiscalReceiptsCreditStatus {
+  consent: CrossProductConsent | null;
+  borrowerId: string | null;
+  receiptCount: number;
+  receiptDateStart: string | null;
+  receiptDateEnd: string | null;
+}
+
 const PRODUCT_LABEL: Record<string, { tKey: string; fallback: string }> = {
   loto: { tKey: "dataSharing.product.loto", fallback: "Loto Fiscal" },
   credit: { tKey: "dataSharing.product.credit", fallback: "Credit Bureau" },
@@ -39,6 +47,7 @@ const PURPOSE_LABEL: Record<string, { tKey: string; fallback: string }> = {
   bureau_reputation_badge: { tKey: "dataSharing.purpose.bureau_reputation_badge", fallback: "Display bureau reputation badge" },
   collateral_credit_view: { tKey: "dataSharing.purpose.collateral_credit_view", fallback: "Show collateral on credit reports" },
   credit_collateral_view: { tKey: "dataSharing.purpose.credit_collateral_view", fallback: "Show credit summary on collateral pages" },
+  fiscal_receipts_credit: { tKey: "dataSharing.purpose.fiscal_receipts_credit", fallback: "Use lottery receipt history for credit scoring" },
 };
 
 export default function DataSharingPage() {
@@ -54,6 +63,10 @@ export default function DataSharingPage() {
     queryKey: ["/api/cross-product/consents/collateral-credit-view/me"],
   });
 
+  const { data: frcStatus, isLoading: frcLoading } = useQuery<FiscalReceiptsCreditStatus>({
+    queryKey: ["/api/cross-product/consents/fiscal-receipts-credit/me"],
+  });
+
   const revokeMutation = useMutation({
     mutationFn: async (id: string) => {
       return apiRequest("POST", `/api/cross-product/consents/${id}/revoke`, { reason: "user_revoked" });
@@ -61,6 +74,7 @@ export default function DataSharingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents"] });
       queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents/collateral-credit-view/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents/fiscal-receipts-credit/me"] });
       toast({
         title: t("dataSharing.toast.revokedTitle", "Permission revoked"),
         description: t("dataSharing.toast.revokedBody", "Data sharing for that purpose has stopped immediately."),
@@ -94,11 +108,59 @@ export default function DataSharingPage() {
     },
   });
 
+  const grantFrcMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/cross-product/consents/fiscal-receipts-credit/grant", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents/fiscal-receipts-credit/me"] });
+      toast({
+        title: t("dataSharing.toast.grantedTitle", "Permission granted"),
+        description: t("dataSharing.toast.frcGrantedBody", "Your lottery receipt history will now contribute to your credit score."),
+      });
+    },
+    onError: (err: any) => {
+      const msg = String(err?.message ?? "");
+      const desc = msg.includes("no_linked_borrower")
+        ? t("dataSharing.toast.noLinkedBorrower", "No borrower profile is linked to your account. Contact support.")
+        : msg.includes("borrower_country_unresolvable")
+        ? t("dataSharing.toast.countryUnresolvable", "Your country of registration could not be determined. Contact support.")
+        : t("dataSharing.toast.grantFailed", "Could not grant that permission. Please try again.");
+      toast({ title: t("common.error", "Error"), description: desc, variant: "destructive" });
+    },
+  });
+
+  const revokeFrcMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("POST", "/api/cross-product/consents/fiscal-receipts-credit/revoke", { reason: "user_revoked" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/cross-product/consents/fiscal-receipts-credit/me"] });
+      toast({
+        title: t("dataSharing.toast.revokedTitle", "Permission revoked"),
+        description: t("dataSharing.toast.frcRevokedBody", "Lottery receipt data has been removed from your credit profile."),
+      });
+    },
+    onError: () => toast({
+      title: t("common.error", "Error"),
+      description: t("dataSharing.toast.revokeFailed", "Could not revoke that permission. Please try again."),
+      variant: "destructive",
+    }),
+  });
+
   const ccvConsent = ccvStatus?.consent ?? null;
   const ccvExpired = ccvConsent?.status === "active" &&
     !!ccvConsent.expiresAt && new Date(ccvConsent.expiresAt) <= new Date();
   const ccvActive = ccvConsent?.status === "active" && !ccvExpired;
   const ccvConsentId = ccvStatus?.consent?.id;
+
+  const frcConsent = frcStatus?.consent ?? null;
+  const frcExpired = frcConsent?.status === "active" &&
+    !!frcConsent.expiresAt && new Date(frcConsent.expiresAt) <= new Date();
+  const frcActive = frcConsent?.status === "active" && !frcExpired;
+  const frcConsentId = frcStatus?.consent?.id;
 
   function handleCcvToggle(checked: boolean) {
     if (checked) {
@@ -108,11 +170,20 @@ export default function DataSharingPage() {
     }
   }
 
+  function handleFrcToggle(checked: boolean) {
+    if (checked) {
+      grantFrcMutation.mutate();
+    } else {
+      revokeFrcMutation.mutate();
+    }
+  }
+
   const filtered = (consents ?? []).filter(c => filter === "all" ? true : c.status === filter);
   const activeCount = (consents ?? []).filter(c => c.status === "active").length;
   const revokedCount = (consents ?? []).filter(c => c.status === "revoked").length;
 
   const isCcvPending = grantCcvMutation.isPending || revokeMutation.isPending;
+  const isFrcPending = grantFrcMutation.isPending || revokeFrcMutation.isPending;
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto" data-testid="page-data-sharing">
@@ -165,7 +236,7 @@ export default function DataSharingPage() {
       </div>
 
       {/* Collateral credit-view self-service toggle */}
-      <Card className="mb-6 border-blue-200 dark:border-blue-900" data-testid="card-collateral-credit-view">
+      <Card className="mb-4 border-blue-200 dark:border-blue-900" data-testid="card-collateral-credit-view">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -233,6 +304,99 @@ export default function DataSharingPage() {
               {ccvLoading ? "…" : ccvActive
                 ? t("dataSharing.status.active", "active")
                 : ccvExpired
+                  ? t("dataSharing.status.expired", "expired")
+                  : t("dataSharing.status.revoked", "revoked")}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Fiscal receipts → credit score self-service toggle */}
+      <Card className="mb-6 border-orange-200 dark:border-orange-900" data-testid="card-fiscal-receipts-credit">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-950 flex items-center justify-center shrink-0">
+                <Receipt className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <CardTitle className="text-base">
+                  {t("dataSharing.frc.title", "Share lottery receipt history with credit bureau")}
+                </CardTitle>
+                <CardDescription className="mt-0.5">
+                  {t("dataSharing.frc.description", "Allow the credit bureau to use your verified Loto Fiscal VAT receipts as alternative data for credit scoring. Especially helpful if you have a thin credit file.")}
+                </CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 pt-1">
+              {frcLoading ? (
+                <Skeleton className="h-6 w-11 rounded-full" data-testid="skeleton-frc-toggle" />
+              ) : (
+                <Switch
+                  checked={frcActive}
+                  onCheckedChange={handleFrcToggle}
+                  disabled={isFrcPending || !frcStatus?.borrowerId || (!frcActive && (frcStatus?.receiptCount ?? 0) === 0)}
+                  data-testid="toggle-fiscal-receipts-credit"
+                  aria-label={t("dataSharing.frc.toggleLabel", "Toggle lottery receipt history sharing")}
+                />
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-xs font-medium" data-testid="badge-frc-source">
+                {t(PRODUCT_LABEL.loto.tKey, PRODUCT_LABEL.loto.fallback)}
+              </Badge>
+              <ArrowRightLeft className="w-3 h-3" />
+              <Badge variant="outline" className="text-xs font-medium" data-testid="badge-frc-target">
+                {t(PRODUCT_LABEL.credit.tKey, PRODUCT_LABEL.credit.fallback)}
+              </Badge>
+            </div>
+            {frcStatus?.receiptCount !== undefined && frcStatus.receiptCount > 0 && (
+              <span className="text-muted-foreground" data-testid="text-frc-receipt-count">
+                {frcStatus.receiptDateStart && frcStatus.receiptDateEnd
+                  ? t("dataSharing.frc.receiptCountWithDates", "Based on {{count}} receipts ({{start}} – {{end}})", {
+                      count: frcStatus.receiptCount,
+                      start: new Date(frcStatus.receiptDateStart).toLocaleDateString(undefined, { month: "short", year: "numeric" }),
+                      end: new Date(frcStatus.receiptDateEnd).toLocaleDateString(undefined, { month: "short", year: "numeric" }),
+                    })
+                  : t("dataSharing.frc.receiptCount", "Based on {{count}} verified receipts", { count: frcStatus.receiptCount })}
+              </span>
+            )}
+            {frcActive && frcStatus?.consent && (
+              <span data-testid="text-frc-granted-at">
+                {t("dataSharing.granted", "Granted")}: {new Date(frcStatus.consent.grantedAt).toLocaleDateString()}
+                {" · "}
+                {t("dataSharing.expires", "Expires")}: {new Date(frcStatus.consent.expiresAt).toLocaleDateString()}
+              </span>
+            )}
+            {frcStatus?.consent?.status === "revoked" && frcStatus.consent.revokedAt && (
+              <span className="text-muted-foreground" data-testid="text-frc-revoked-at">
+                {t("dataSharing.revoked", "Revoked")}: {new Date(frcStatus.consent.revokedAt).toLocaleDateString()}
+              </span>
+            )}
+            {!frcStatus?.borrowerId && !frcLoading && (
+              <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400" data-testid="text-frc-no-borrower">
+                <Lock className="w-3 h-3" />
+                {t("dataSharing.frc.noBorrower", "No borrower profile linked to your account")}
+              </span>
+            )}
+            {frcStatus?.borrowerId && !frcLoading && (frcStatus?.receiptCount ?? 0) === 0 && (
+              <span className="flex items-center gap-1 text-slate-500" data-testid="text-frc-no-receipts">
+                <Receipt className="w-3 h-3" />
+                {t("dataSharing.frc.noReceipts", "No lottery receipt history found")}
+              </span>
+            )}
+            <Badge
+              variant={frcActive ? "default" : "secondary"}
+              className={frcActive ? "bg-emerald-600" : ""}
+              data-testid="badge-frc-status"
+            >
+              {frcLoading ? "…" : frcActive
+                ? t("dataSharing.status.active", "active")
+                : frcExpired
                   ? t("dataSharing.status.expired", "expired")
                   : t("dataSharing.status.revoked", "revoked")}
             </Badge>

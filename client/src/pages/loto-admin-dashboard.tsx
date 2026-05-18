@@ -10,6 +10,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -54,6 +57,27 @@ interface FraudFlag {
   summary: string; signature: string;
   detectedAt: string; triagedAt: string | null;
   triageNote: string | null; evidence: Record<string, unknown> | null;
+}
+
+interface AdminFiscalKpis {
+  receiptsThisMonth: number; receiptsThisYear: number;
+  vatThisMonth: number; vatThisYear: number;
+  currency: string; complianceScore: number;
+  complianceBreakdown: Record<string, number>;
+}
+interface AdminFiscalLedgerItem {
+  id: string; fiscalCode: string; ticketNumber: string;
+  amount: string; vatAmount: string; currency: string;
+  issuedAt: string; category: string | null;
+  isDemo: boolean;
+  status: "valid" | "flagged" | "demo" | "expired"; flagId: string | null;
+  rejectionReason: string | null;
+}
+interface AdminFiscalAccountPayload {
+  merchant: { id: string; shopName: string; city: string | null; countryCode: string; currency: string; fiscalId: string | null; fiscalIdVerified: boolean } | null;
+  kpis: AdminFiscalKpis;
+  monthlyTrend: { month: string; receipts: number; vat: number; turnover: number }[];
+  ledger: { items: AdminFiscalLedgerItem[]; total: number; page: number; limit: number };
 }
 
 interface VatUpliftPayload {
@@ -149,6 +173,7 @@ export default function LotoAdminDashboardPage() {
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
   const [tab, setTab] = useState<"overview" | "compliance" | "fraud" | "webhooks" | "audit" | "messaging">("overview");
+  const [selectedMerchantId, setSelectedMerchantId] = useState<string | null>(null);
   const [, navigate] = useLocation();
   const isFr = i18n.language?.startsWith("fr");
 
@@ -157,6 +182,16 @@ export default function LotoAdminDashboardPage() {
   const kpiQ = useQuery<KPIData>({ queryKey: ["/api/loto/admin/kpi"] });
   const heatmapQ = useQuery<HeatmapPayload>({ queryKey: ["/api/loto/admin/heatmap"] });
   const complianceQ = useQuery<CompliancePayload>({ queryKey: ["/api/loto/admin/compliance-scorecard"], enabled: tab === "compliance" || tab === "overview" });
+  const merchantFiscalQ = useQuery<AdminFiscalAccountPayload>({
+    queryKey: ["/api/loto/merchant/fiscal-account", selectedMerchantId],
+    queryFn: async () => {
+      const r = await fetch(`/api/loto/merchant/fiscal-account?merchantId=${selectedMerchantId}`, { credentials: "include" });
+      if (!r.ok) throw new Error("Failed to load fiscal account");
+      return r.json();
+    },
+    enabled: !!selectedMerchantId,
+    retry: false,
+  });
   const upliftQ = useQuery<VatUpliftPayload>({ queryKey: ["/api/loto/admin/vat-uplift"] });
   const fraudOpenQ = useQuery<{ flags: FraudFlag[] }>({ queryKey: ["/api/loto/admin/fraud-flags"], enabled: tab === "fraud" });
   const countryConfigQ = useQuery<{
@@ -393,7 +428,12 @@ export default function LotoAdminDashboardPage() {
                     </TableHeader>
                     <TableBody>
                       {complianceQ.data.merchants.slice(0, 50).map((m) => (
-                        <TableRow key={m.merchantId} data-testid={`row-merchant-${m.merchantId}`}>
+                        <TableRow
+                          key={m.merchantId}
+                          data-testid={`row-merchant-${m.merchantId}`}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedMerchantId(m.merchantId)}
+                        >
                           <TableCell className="font-medium">{m.shopName}</TableCell>
                           <TableCell>{m.district}</TableCell>
                           <TableCell><span className={`font-bold ${scoreColor(m.score)}`} data-testid={`score-${m.merchantId}`}>{m.score}</span></TableCell>
@@ -710,6 +750,134 @@ export default function LotoAdminDashboardPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* ────── Merchant Fiscal Account Modal (Task #489) ────── */}
+      <Dialog open={!!selectedMerchantId} onOpenChange={(open) => { if (!open) setSelectedMerchantId(null); }}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto" data-testid="dialog-merchant-fiscal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {tx("Merchant Fiscal Account", "Compte fiscal du commerçant")}
+              {merchantFiscalQ.data?.merchant && (
+                <span className="font-normal text-muted-foreground">— {merchantFiscalQ.data.merchant.shopName}</span>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {merchantFiscalQ.data?.merchant
+                ? `${merchantFiscalQ.data.merchant.countryCode} · ${merchantFiscalQ.data.merchant.fiscalId ?? tx("No fiscal ID", "Pas d'identifiant fiscal")}${merchantFiscalQ.data.merchant.fiscalIdVerified ? " ✓" : ""}`
+                : tx("Loading merchant details…", "Chargement…")}
+            </DialogDescription>
+          </DialogHeader>
+
+          {merchantFiscalQ.isLoading && <Skeleton className="h-48 w-full" />}
+          {merchantFiscalQ.isError && (
+            <Alert variant="destructive">
+              <AlertTitle>{tx("Error", "Erreur")}</AlertTitle>
+              <AlertDescription>{(merchantFiscalQ.error as Error)?.message}</AlertDescription>
+            </Alert>
+          )}
+          {merchantFiscalQ.data && (() => {
+            const fa = merchantFiscalQ.data;
+            const kpis = fa.kpis;
+            const score = kpis.complianceScore;
+            const scoreClr = score >= 80 ? "text-emerald-600" : score >= 60 ? "text-amber-600" : "text-red-600";
+            const fmtVat = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+            return (
+              <div className="space-y-4 mt-2">
+                {/* KPI strip */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2" data-testid="admin-fiscal-kpi-strip">
+                  {[
+                    { v: kpis.receiptsThisMonth, label: tx("Receipts / month", "Reçus / mois"), testId: "admin-kpi-receipts-month" },
+                    { v: kpis.receiptsThisYear, label: tx("Receipts / year", "Reçus / an"), testId: "admin-kpi-receipts-year" },
+                    { v: fmtVat(kpis.vatThisMonth), label: `${tx("VAT / month", "TVA / mois")} (${kpis.currency})`, testId: "admin-kpi-vat-month" },
+                    { v: fmtVat(kpis.vatThisYear), label: `${tx("VAT / year", "TVA / an")} (${kpis.currency})`, testId: "admin-kpi-vat-year" },
+                    { v: score, label: tx("Compliance score", "Score de conformité"), testId: "admin-kpi-score", clr: scoreClr },
+                  ].map((k, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-3">
+                        <div className={`text-xl font-bold ${k.clr ?? ""}`} data-testid={k.testId}>{k.v}</div>
+                        <div className="text-xs text-muted-foreground">{k.label}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Monthly trend mini bars */}
+                {fa.monthlyTrend.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">{tx("6-month VAT trend", "Tendance TVA 6 mois")}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <MonthlyBars rows={fa.monthlyTrend} />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Receipt ledger */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      {tx("Receipt ledger", "Grand livre des reçus")}
+                      <Badge variant="outline" className="text-xs">{fa.ledger.total} {tx("total", "total")}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {fa.ledger.items.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">{tx("No receipts", "Aucun reçu")}</p>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">{tx("Fiscal code", "Code fiscal")}</TableHead>
+                            <TableHead className="text-xs">{tx("Ticket #", "Ticket n°")}</TableHead>
+                            <TableHead className="text-xs">{tx("Date", "Date")}</TableHead>
+                            <TableHead className="text-right text-xs">{tx("Amount", "Montant")}</TableHead>
+                            <TableHead className="text-right text-xs">{tx("VAT", "TVA")}</TableHead>
+                            <TableHead className="text-center text-xs">{tx("Status", "Statut")}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {fa.ledger.items.map((item) => (
+                            <TableRow key={item.id} data-testid={`admin-fiscal-row-${item.id}`}>
+                              <TableCell className="font-mono text-xs">{item.fiscalCode}</TableCell>
+                              <TableCell className="font-mono text-xs text-muted-foreground">{item.ticketNumber}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">{new Date(item.issuedAt).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-right text-xs">{parseFloat(item.amount).toLocaleString()} {item.currency}</TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">{parseFloat(item.vatAmount).toLocaleString()}</TableCell>
+                              <TableCell className="text-center">
+                                {item.status === "flagged" ? (
+                                  <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 text-xs">
+                                    {tx("Flagged", "Signalé")}
+                                  </Badge>
+                                ) : item.status === "expired" ? (
+                                  <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 text-xs">
+                                    {tx("Expired", "Expiré")}
+                                  </Badge>
+                                ) : item.status === "demo" ? (
+                                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs">
+                                    {tx("Demo", "Démo")}
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs">
+                                    {tx("Valid", "Valide")}
+                                  </Badge>
+                                )}
+                                {item.rejectionReason && (
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">{item.rejectionReason}</p>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

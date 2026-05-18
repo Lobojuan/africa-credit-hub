@@ -7,6 +7,7 @@ Thumbs.db
 server/public
 vite.config.ts.*
 *.tar.gz
+*.zip
 *.enc
 e2e/.auth/
 e2e/test-results-artifacts/

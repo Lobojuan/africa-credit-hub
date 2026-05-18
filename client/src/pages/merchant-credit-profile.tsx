@@ -6,8 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Receipt, TrendingUp, TrendingDown, Activity, ShieldCheck, AlertTriangle, Building2 } from "lucide-react";
+import {
+  Receipt, TrendingUp, TrendingDown, Activity, ShieldCheck, AlertTriangle,
+  Building2, CheckCircle2, XCircle, BarChart3, Zap,
+} from "lucide-react";
 import { getTaxAuthorityProfile } from "@shared/tax-authority";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from "recharts";
 
 interface MerchantCreditProfileResponse {
   merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; countryCode: string; category: string | null; currency: string };
@@ -22,6 +28,18 @@ interface MerchantCreditProfileResponse {
   consent: { id: string; expiresAt: string; grantedAt: string };
 }
 
+interface CreditBreakdownResponse {
+  merchant: { id: string; shopName: string; countryCode: string; currency: string; creditOptInActive: boolean; borrowerId: string | null };
+  complianceScore: number;
+  complianceBreakdown: Record<string, number>;
+  vatTrend: { month: string; vat: number }[];
+  fraudRuleResults: { ruleCode: string; pass: boolean; flag: { id: string; severity: string; summary: string } | null }[];
+  openFraudFlags: { id: string; ruleCode: string; severity: string; summary: string }[];
+  altDataRecord: { source: string; totalTransactions: number; onTimePayments: number; latePayments: number; rawScore: number | null } | null;
+  creditScoreContribution: { altDataBonus: number; source: string; onTimeRatio: number };
+  receiptCount: number;
+}
+
 const REASON_LABEL: Record<string, { tKey: string; fallback: string; tone: "positive" | "negative" | "neutral" }> = {
   STRONG_RECEIPT_FREQUENCY:    { tKey: "merchantCredit.reason.STRONG_RECEIPT_FREQUENCY",    fallback: "Strong receipt frequency",     tone: "positive" },
   MODERATE_RECEIPT_FREQUENCY:  { tKey: "merchantCredit.reason.MODERATE_RECEIPT_FREQUENCY",  fallback: "Moderate receipt frequency",   tone: "neutral" },
@@ -33,6 +51,47 @@ const REASON_LABEL: Record<string, { tKey: string; fallback: string; tone: "posi
   NO_RECEIPT_HISTORY:          { tKey: "merchantCredit.reason.NO_RECEIPT_HISTORY",          fallback: "No verified receipt history",  tone: "negative" },
   HIGH_TURNOVER_VOLUME:        { tKey: "merchantCredit.reason.HIGH_TURNOVER_VOLUME",        fallback: "High turnover volume",         tone: "positive" },
 };
+
+const FRAUD_RULE_LABELS: Record<string, string> = {
+  DUPLICATE_FISCAL_CODE: "Duplicate Fiscal Code",
+  STRUCTURED_SUBTHRESHOLD: "Structured Sub-threshold",
+  GHOST_MERCHANT: "Ghost Merchant",
+  ABNORMAL_HOUR: "Abnormal Trading Hours",
+  SINGLE_DEVICE_BURST: "Single-Device Burst",
+};
+
+function ComplianceGauge({ score }: { score: number }) {
+  const color = score >= 80 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
+  const bgColor = score >= 80 ? "bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800"
+    : score >= 60 ? "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800"
+    : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800";
+  const label = score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Poor";
+
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const dashOffset = circumference - (score / 100) * circumference;
+
+  return (
+    <div className={`flex flex-col items-center justify-center p-6 rounded-xl border ${bgColor}`} data-testid="compliance-gauge">
+      <svg width="110" height="110" viewBox="0 0 110 110">
+        <circle cx="55" cy="55" r={radius} fill="none" stroke="currentColor" strokeWidth="10" className="text-slate-200 dark:text-slate-700" />
+        <circle
+          cx="55" cy="55" r={radius}
+          fill="none" stroke={color} strokeWidth="10"
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          transform="rotate(-90 55 55)"
+          style={{ transition: "stroke-dashoffset 0.6s ease" }}
+        />
+        <text x="55" y="52" textAnchor="middle" fill={color} fontSize="22" fontWeight="bold" dominantBaseline="middle">{score}</text>
+        <text x="55" y="70" textAnchor="middle" fill="#94a3b8" fontSize="10">/100</text>
+      </svg>
+      <div className="mt-2 font-semibold text-sm" style={{ color }} data-testid="text-compliance-label">{label}</div>
+      <div className="text-xs text-muted-foreground mt-1">Compliance Score</div>
+    </div>
+  );
+}
 
 export default function MerchantCreditProfilePage() {
   const { t } = useTranslation();
@@ -49,14 +108,15 @@ export default function MerchantCreditProfilePage() {
     retry: false,
   });
 
+  const { data: breakdown, isLoading: breakdownLoading } = useQuery<CreditBreakdownResponse>({
+    queryKey: [`/api/loto/merchants/${merchantId}/credit-breakdown`],
+    enabled: !!merchantId,
+    retry: false,
+  });
+
   const errMessage = error instanceof Error ? error.message : "";
   const isConsentError = errMessage.includes("403") || errMessage.includes("no_consent");
 
-  // Resolve the merchant's local tax authority + product framing so the page
-  // says "Verified VAT-receipt history from FIRS Verified Receipts" for a
-  // Lagos merchant and "from DGI Loto Fiscal" for an Abidjan merchant. Falls
-  // back to the default Côte d'Ivoire profile until the merchant payload
-  // arrives so the subtitle never flickers blank.
   const profile = data?.merchant?.countryCode
     ? getTaxAuthorityProfile(data.merchant.countryCode)
     : getTaxAuthorityProfile("CI");
@@ -124,6 +184,187 @@ export default function MerchantCreditProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ── Compliance Score + Breakdown ── */}
+          {(breakdown || breakdownLoading) && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="md:col-span-1">
+                {breakdownLoading && <Skeleton className="h-48 w-full rounded-xl" />}
+                {breakdown && <ComplianceGauge score={breakdown.complianceScore} />}
+              </div>
+              {breakdown && (
+                <Card className="md:col-span-2" data-testid="card-compliance-breakdown">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-emerald-600" />
+                      {t("merchantCredit.complianceBreakdown", "Compliance Score Breakdown")}
+                    </CardTitle>
+                    <CardDescription>
+                      {t("merchantCredit.complianceBreakdownSubtitle", "Deterministic 0–100 score based on recency, frequency, growth, category diversity, and fraud flags.")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2" data-testid="compliance-factors">
+                      {Object.entries(breakdown.complianceBreakdown).map(([factor, pts]) => {
+                        const isNegative = factor === "penalty" || pts < 0;
+                        const display = isNegative ? pts : `+${pts}`;
+                        const color = isNegative && pts < 0 ? "text-red-600" : "text-emerald-600";
+                        const label = factor === "recency" ? "Recency (30 pts max)"
+                          : factor === "frequency" ? "Frequency (25 pts max)"
+                          : factor === "growth" ? "Growth (20 pts max)"
+                          : factor === "diversity" ? "Category Diversity (15 pts max)"
+                          : "Fraud Flag Penalty (−10 max)";
+                        return (
+                          <div key={factor} className="flex items-center justify-between text-sm" data-testid={`factor-${factor}`}>
+                            <span className="text-muted-foreground">{label}</span>
+                            <span className={`font-semibold font-mono ${color}`}>{display}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* ── VAT Trend (6 months) ── */}
+          {breakdown && breakdown.vatTrend.length > 0 && (
+            <Card className="mb-6" data-testid="card-vat-trend">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-teal-600" />
+                  {t("merchantCredit.vatTrendTitle", "VAT Revenue Trend — Last 6 Months")} ({breakdown.merchant.currency})
+                </CardTitle>
+                <CardDescription>
+                  {t("merchantCredit.vatTrendSubtitle", "Monthly VAT amounts from verified fiscal receipts used in credit scoring.")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={breakdown.vatTrend} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-700" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />
+                    <Tooltip formatter={(v: number) => [v.toLocaleString(), "VAT"]} />
+                    <Line
+                      type="monotone"
+                      dataKey="vat"
+                      stroke="#10b981"
+                      strokeWidth={2}
+                      dot={{ fill: "#10b981", r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Fraud Rule Results ── */}
+          {breakdown && (
+            <Card className="mb-6" data-testid="card-fraud-rules">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  {t("merchantCredit.fraudRulesTitle", "Fraud Detection Rules")}
+                </CardTitle>
+                <CardDescription>
+                  {t("merchantCredit.fraudRulesSubtitle", "Five deterministic rules evaluated against this merchant's receipt history. Open flags reduce the compliance score.")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" data-testid="fraud-rules-grid">
+                  {breakdown.fraudRuleResults.map(rule => (
+                    <div
+                      key={rule.ruleCode}
+                      className={`flex items-start gap-3 p-3 rounded-lg border ${rule.pass ? "border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:border-emerald-800" : "border-red-200 bg-red-50 dark:bg-red-950 dark:border-red-800"}`}
+                      data-testid={`fraud-rule-${rule.ruleCode}`}
+                    >
+                      {rule.pass
+                        ? <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 shrink-0" />
+                        : <XCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />}
+                      <div className="min-w-0">
+                        <div className={`text-sm font-medium ${rule.pass ? "text-emerald-700 dark:text-emerald-300" : "text-red-700 dark:text-red-300"}`}>
+                          {FRAUD_RULE_LABELS[rule.ruleCode] ?? rule.ruleCode}
+                        </div>
+                        {!rule.pass && rule.flag && (
+                          <div className="text-xs text-muted-foreground mt-0.5 truncate">{rule.flag.summary}</div>
+                        )}
+                        {rule.pass && (
+                          <div className="text-xs text-muted-foreground mt-0.5">No flags detected</div>
+                        )}
+                      </div>
+                      {!rule.pass && rule.flag && (
+                        <Badge variant="outline" className="ml-auto text-xs shrink-0 border-red-300 text-red-600 capitalize">
+                          {rule.flag.severity}
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* ── Credit Score Impact ── */}
+          {breakdown && (
+            <Card className="mb-6" data-testid="card-credit-score-impact">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-yellow-500" />
+                  {t("merchantCredit.creditImpactTitle", "Credit Score Impact")}
+                </CardTitle>
+                <CardDescription>
+                  {t("merchantCredit.creditImpactSubtitle", "How this merchant's Loto Fiscal compliance data currently contributes to their linked business credit score.")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!breakdown.merchant.borrowerId ? (
+                  <Alert data-testid="alert-no-borrower">
+                    <AlertTriangle className="w-4 h-4" />
+                    <AlertTitle>No linked business borrower</AlertTitle>
+                    <AlertDescription>
+                      This merchant does not yet have a linked business credit profile in the bureau. Credit score impact will appear once a business borrower record is linked by the registry.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50 dark:bg-slate-900 border">
+                      <div>
+                        <div className="text-sm font-medium">Alternative Data Source</div>
+                        <div className="text-xs text-muted-foreground mt-0.5">{breakdown.creditScoreContribution.source}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-emerald-600" data-testid="text-alt-data-bonus">+{breakdown.creditScoreContribution.altDataBonus}</div>
+                        <div className="text-xs text-muted-foreground">credit score pts</div>
+                      </div>
+                    </div>
+                    {breakdown.altDataRecord && (
+                      <div className="grid grid-cols-3 gap-3 text-sm">
+                        <div className="text-center p-3 rounded-lg border bg-white dark:bg-slate-900">
+                          <div className="text-lg font-bold" data-testid="stat-total-tx">{breakdown.altDataRecord.totalTransactions}</div>
+                          <div className="text-xs text-muted-foreground">Total receipts</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg border bg-white dark:bg-slate-900">
+                          <div className="text-lg font-bold text-emerald-600" data-testid="stat-on-time">{breakdown.altDataRecord.onTimePayments}</div>
+                          <div className="text-xs text-muted-foreground">Compliant</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg border bg-white dark:bg-slate-900">
+                          <div className="text-lg font-bold text-red-500" data-testid="stat-late">{breakdown.altDataRecord.latePayments}</div>
+                          <div className="text-xs text-muted-foreground">Flagged</div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                      <span>{breakdown.creditScoreContribution.onTimeRatio}% on-time compliance rate feeds into the "Alternative Data" factor in the credit score calculation.</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
             <Card className="lg:col-span-2" data-testid="card-monthly-turnover">

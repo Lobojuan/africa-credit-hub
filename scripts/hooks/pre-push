@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Git pre-push hook — blocks pushes that contain LFS-tracked objects.
+#
+# Install via:  bash scripts/install-hooks.sh
+#
+# This hook runs automatically before every `git push`.  It checks whether any
+# file in the commits being pushed is tracked by Git LFS.  If LFS objects are
+# found the push is aborted with a clear error message so the developer can
+# remove the LFS tracking before proceeding.
+
+set -euo pipefail
+
+REPO_DIR="$(git rev-parse --show-toplevel)"
+
+# git lfs may not be installed; if so, skip the check rather than blocking.
+if ! git lfs version &>/dev/null 2>&1; then
+  exit 0
+fi
+
+# ── Working-tree / index check ───────────────────────────────────────────────
+# Detect LFS-tracked files that are staged or modified.
+LFS_STATUS=$(git -C "$REPO_DIR" lfs status --porcelain 2>/dev/null || true)
+if [[ -n "$LFS_STATUS" ]]; then
+  echo "ERROR [pre-push]: LFS-tracked objects detected in working tree / index." >&2
+  echo "The following files are currently tracked by Git LFS:" >&2
+  echo "$LFS_STATUS" >&2
+  echo "" >&2
+  echo "To fix: run 'git lfs untrack <pattern>' and 'git rm --cached <file>' for" >&2
+  echo "each affected file, then re-add and commit without LFS tracking." >&2
+  echo "Push aborted." >&2
+  exit 1
+fi
+
+# ── Commit-range check ──────────────────────────────────────────────────────
+# Read the ref list provided by git on stdin:
+#   <local-ref> <local-sha1> <remote-ref> <remote-sha1>
+# Use `git lfs push --dry-run` against the exact ref being pushed so the check
+# covers the precise set of commits (not just HEAD) and correctly identifies
+# any LFS pointers that would be sent to the remote.
+
+REMOTE="$1"   # first argument to the hook is the remote name or URL
+
+while IFS=' ' read -r _local_ref local_sha _remote_ref remote_sha; do
+  # Skip deletion pushes (local_sha all zeros).
+  if [[ "$local_sha" == "0000000000000000000000000000000000000000" ]]; then
+    continue
+  fi
+
+  # `git lfs push --dry-run` lists objects that would be uploaded.
+  # If the remote already has all objects the output is empty.
+  PENDING=$(git -C "$REPO_DIR" lfs push --dry-run "$REMOTE" "$local_sha" 2>/dev/null || true)
+
+  if [[ -n "$PENDING" ]]; then
+    echo "ERROR [pre-push]: LFS object(s) found in commits to be pushed to ${REMOTE}:" >&2
+    echo "$PENDING" >&2
+    echo "" >&2
+    echo "These commits contain Git LFS pointers instead of real file content." >&2
+    echo "Rewrite history to remove LFS tracking before pushing." >&2
+    echo "Push aborted." >&2
+    exit 1
+  fi
+done
+
+exit 0

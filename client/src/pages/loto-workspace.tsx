@@ -11,19 +11,58 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles } from "lucide-react";
+import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles, CheckCircle2, XCircle, FileSearch, Calculator, Flag, BarChart2, AlertCircle } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { PRODUCT_REGISTRY } from "@/lib/products";
 import { LotoLotteryExperience } from "@/components/loto-lottery-experience";
 import { getTaxAuthorityProfile } from "@shared/tax-authority";
 
+interface FiscalConfig {
+  id: string;
+  countryCode: string;
+  fiscalIdLabel: string;
+  fiscalIdRegex: string;
+  adapterKey: string;
+  authorityName: string;
+  currencySymbol: string;
+}
+
 interface MerchantPayload {
-  merchant: { id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null; city: string | null; countryCode: string; currency: string; creditOptInActive: boolean; borrowerId: string | null } | null;
+  merchant: {
+    id: string; shopName: string; ownerName: string | null; vatRegistrationNumber: string | null;
+    city: string | null; countryCode: string; currency: string; creditOptInActive: boolean;
+    borrowerId: string | null;
+    fiscalId: string | null; fiscalIdType: string | null; fiscalIdVerified: boolean;
+  } | null;
   receipts: { id: string; ticketNumber: string; amount: string; vatAmount: string; currency: string; issuedAt: string; category: string | null }[];
   features: {
     totalReceipts: number; totalTurnover: number; averageMonthlyTurnover: number;
     monthsWithActivity: number; trend: string; vatActivityScore: number; currency: string;
     monthlyBreakdown: { month: string; receipts: number; turnover: number }[];
   } | null;
+}
+
+interface FiscalAccountKpis {
+  receiptsThisMonth: number; receiptsThisYear: number;
+  vatThisMonth: number; vatThisYear: number;
+  currency: string; complianceScore: number;
+  complianceBreakdown: Record<string, number>;
+}
+interface FiscalLedgerItem {
+  id: string; fiscalCode: string; ticketNumber: string;
+  amount: string; vatAmount: string; currency: string;
+  issuedAt: string; category: string | null;
+  isDemo: boolean;
+  status: "valid" | "flagged" | "demo" | "expired"; flagId: string | null;
+  flagRuleCode: string | null; flagStatus: string | null;
+  rejectionReason: string | null;
+}
+interface FiscalAccountPayload {
+  merchant: MerchantPayload["merchant"];
+  fiscalConfig: { currencySymbol: string; fiscalIdLabel: string; authorityName: string } | null;
+  kpis: FiscalAccountKpis;
+  monthlyTrend: { month: string; receipts: number; vat: number; turnover: number }[];
+  ledger: { items: FiscalLedgerItem[]; total: number; page: number; limit: number };
 }
 
 interface ConsumerPayload {
@@ -60,6 +99,90 @@ export default function LotoWorkspacePage() {
   const consumerQ = useQuery<ConsumerPayload>({ queryKey: ["/api/loto/consumers/me/spending"] });
   const consentsQ = useQuery<ConsentRow[]>({ queryKey: ["/api/cross-product/consents"] });
 
+  const [activeTab, setActiveTab] = useState("lottery");
+  const fiscalAccountQ = useQuery<FiscalAccountPayload>({
+    queryKey: ["/api/loto/merchant/fiscal-account"],
+    enabled: activeTab === "fiscal-account",
+    retry: false,
+  });
+
+  const [flaggingReceiptId, setFlaggingReceiptId] = useState<string | null>(null);
+  const [flagReason, setFlagReason] = useState("");
+
+  const flagMutation = useMutation({
+    mutationFn: async ({ receiptId, reason }: { receiptId: string; reason: string }) => {
+      const r = await apiRequest("POST", `/api/loto/merchant/receipts/${receiptId}/flag`, { reason });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? "Flag failed");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/merchant/fiscal-account"] });
+      setFlaggingReceiptId(null);
+      setFlagReason("");
+      toast({ title: t("loto.fiscalAccount.flagSuccess", "Receipt flagged for DGI review") });
+    },
+    onError: (e: unknown) => {
+      toast({
+        title: t("loto.fiscalAccount.flagError", "Could not flag receipt"),
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const merchant = merchantQ.data?.merchant ?? null;
+  const merchantCountry = merchant?.countryCode ?? null;
+
+  const fiscalConfigQ = useQuery<FiscalConfig>({
+    queryKey: ["/api/loto/fiscal-config", merchantCountry],
+    queryFn: async () => {
+      if (!merchantCountry) throw new Error("no country");
+      const r = await fetch(`/api/loto/fiscal-config?countryCode=${merchantCountry}`, { credentials: "include" });
+      if (!r.ok) throw new Error("No fiscal config");
+      return r.json();
+    },
+    enabled: !!merchantCountry,
+    retry: false,
+  });
+
+  const [fiscalIdInput, setFiscalIdInput] = useState("");
+  const [fiscalVerifyResult, setFiscalVerifyResult] = useState<{
+    verified: boolean; message: string; authorityName?: string;
+  } | null>(null);
+
+  const fiscalIdMutation = useMutation({
+    mutationFn: async (fiscalId: string) => {
+      const r = await apiRequest("PUT", "/api/loto/merchants/me/fiscal-id", { fiscalId });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? "Verification failed");
+      }
+      return r.json() as Promise<{ merchant: MerchantPayload["merchant"]; verification: { verified: boolean; message: string; authorityName?: string } }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/merchants/me/receipts"] });
+      setFiscalVerifyResult(data.verification);
+      toast({
+        title: data.verification.verified
+          ? t("loto.fiscal.verifiedTitle", "Fiscal ID verified")
+          : t("loto.fiscal.notVerifiedTitle", "Fiscal ID not verified"),
+        description: data.verification.message,
+        variant: data.verification.verified ? "default" : "destructive",
+      });
+    },
+    onError: (e: unknown) => {
+      setFiscalVerifyResult(null);
+      toast({
+        title: t("loto.fiscal.errorTitle", "Could not verify fiscal ID"),
+        description: e instanceof Error ? e.message : String(e),
+        variant: "destructive",
+      });
+    },
+  });
+
   const merchantOptInMutation = useMutation({
     mutationFn: (enable: boolean) => apiRequest("POST", "/api/loto/merchants/me/credit-opt-in", { enable }),
     onSuccess: (_d, enable) => {
@@ -83,7 +206,6 @@ export default function LotoWorkspacePage() {
     },
   });
 
-  const merchant = merchantQ.data?.merchant ?? null;
   const consumerOptedIn = (consentsQ.data ?? []).some((c) => c.status === "active" && c.purpose === "consumer_spending_credit");
 
   return (
@@ -110,17 +232,23 @@ export default function LotoWorkspacePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="lottery" className="w-full">
-        <TabsList className="grid grid-cols-6 w-full md:w-auto">
-          <TabsTrigger value="lottery" data-testid="tab-lottery">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="flex flex-wrap h-auto gap-1 w-full md:w-auto bg-muted p-1 rounded-lg">
+          <TabsTrigger value="lottery" data-testid="tab-lottery" className="flex-1 min-w-fit">
             <Sparkles className="w-3.5 h-3.5 mr-1.5 text-amber-500" />
             {t("loto.tabs.lottery", "Lottery")}
           </TabsTrigger>
-          <TabsTrigger value="overview" data-testid="tab-overview">{t("loto.tabs.overview", "Overview")}</TabsTrigger>
-          <TabsTrigger value="receipts" data-testid="tab-receipts">{t("loto.tabs.receipts", "Receipts")}</TabsTrigger>
-          <TabsTrigger value="spending" data-testid="tab-spending">{t("loto.tabs.spending", "Spending")}</TabsTrigger>
-          <TabsTrigger value="credit-profile" data-testid="tab-credit-profile">{t("loto.tabs.creditProfile", "Build Credit")}</TabsTrigger>
-          <TabsTrigger value="notifications" data-testid="tab-notifications">{t("lotoNotifications.tabTitle")}</TabsTrigger>
+          <TabsTrigger value="overview" data-testid="tab-overview" className="flex-1 min-w-fit">{t("loto.tabs.overview", "Overview")}</TabsTrigger>
+          <TabsTrigger value="receipts" data-testid="tab-receipts" className="flex-1 min-w-fit">{t("loto.tabs.receipts", "Receipts")}</TabsTrigger>
+          <TabsTrigger value="spending" data-testid="tab-spending" className="flex-1 min-w-fit">{t("loto.tabs.spending", "Spending")}</TabsTrigger>
+          <TabsTrigger value="credit-profile" data-testid="tab-credit-profile" className="flex-1 min-w-fit">{t("loto.tabs.creditProfile", "Build Credit")}</TabsTrigger>
+          <TabsTrigger value="notifications" data-testid="tab-notifications" className="flex-1 min-w-fit">{t("lotoNotifications.tabTitle")}</TabsTrigger>
+          {merchant && (
+            <TabsTrigger value="fiscal-account" data-testid="tab-fiscal-account" className="flex-1 min-w-fit">
+              <Calculator className="w-3.5 h-3.5 mr-1.5" />
+              {t("loto.tabs.fiscalAccount", "Mon Compte Fiscal")}
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="lottery" className="mt-4">
@@ -200,30 +328,125 @@ export default function LotoWorkspacePage() {
             </Card>
           )}
           {merchant && (
-            <Card data-testid="card-merchant-receipts">
-              <CardHeader>
-                <CardTitle data-testid="text-merchant-name">{merchant.shopName}</CardTitle>
-                <CardDescription>
-                  {merchant.city && `${merchant.city} · `}{merchantQ.data?.receipts.length ?? 0} {t("loto.receipts.count", "receipts")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2 max-h-96 overflow-auto">
-                  {(merchantQ.data?.receipts ?? []).slice(0, 50).map(r => (
-                    <div key={r.id} className="flex justify-between text-sm py-1 border-b last:border-0" data-testid={`row-receipt-${r.id}`}>
-                      <div>
-                        <div className="font-mono text-xs">{r.ticketNumber}</div>
-                        <div className="text-xs text-muted-foreground">{new Date(r.issuedAt).toLocaleString()}</div>
+            <>
+              {/* ── Fiscal ID verification card (Task #488) ── */}
+              {(() => {
+                const cfg = fiscalConfigQ.data;
+                const label = cfg?.fiscalIdLabel ?? merchant.fiscalIdType ?? "Fiscal ID";
+                const authority = cfg?.authorityName ?? "Tax Authority";
+                const hasVerified = merchant.fiscalIdVerified && merchant.fiscalId;
+                return (
+                  <Card className="mb-4" data-testid="card-fiscal-id">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <FileSearch className="w-4 h-4 text-emerald-600" />
+                        {t("loto.fiscal.cardTitle", "DGI Fiscal Registration")}
+                        {hasVerified && (
+                          <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-300 text-xs ml-1" data-testid="badge-fiscal-verified">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            {t("loto.fiscal.verified", "Verified")}
+                          </Badge>
+                        )}
+                        {!hasVerified && merchant.fiscalId && (
+                          <Badge variant="outline" className="border-amber-400 text-amber-700 dark:text-amber-300 text-xs ml-1" data-testid="badge-fiscal-pending">
+                            <XCircle className="w-3 h-3 mr-1" />
+                            {t("loto.fiscal.notVerified", "Not verified")}
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      <CardDescription>
+                        {cfg
+                          ? t("loto.fiscal.cardSubtitle", `Enter your ${label} issued by ${authority} to unlock full fiscal receipt eligibility.`, { label, authority })
+                          : t("loto.fiscal.cardSubtitleGeneric", "Register your fiscal tax ID with the relevant authority to enable full lottery participation.")}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {hasVerified && (
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800" data-testid="display-fiscal-id-verified">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="font-mono text-sm font-medium text-emerald-800 dark:text-emerald-200">{merchant.fiscalId}</span>
+                          <span className="text-xs text-emerald-600 ml-auto">{merchant.fiscalIdType}</span>
+                        </div>
+                      )}
+
+                      {(!hasVerified || fiscalIdInput) && (
+                        <div className="flex gap-2" data-testid="form-fiscal-id">
+                          <input
+                            data-testid="input-fiscal-id"
+                            value={fiscalIdInput}
+                            onChange={(e) => {
+                              setFiscalIdInput(e.target.value.toUpperCase());
+                              setFiscalVerifyResult(null);
+                            }}
+                            placeholder={cfg ? `${label} (e.g. 0731730R)` : "Fiscal ID"}
+                            maxLength={32}
+                            className="flex-1 px-3 py-2 border rounded-md bg-background text-sm font-mono uppercase"
+                          />
+                          <Button
+                            data-testid="button-verify-fiscal-id"
+                            onClick={() => {
+                              if (fiscalIdInput.trim()) fiscalIdMutation.mutate(fiscalIdInput.trim());
+                            }}
+                            disabled={!fiscalIdInput.trim() || fiscalIdMutation.isPending}
+                            size="sm"
+                          >
+                            {fiscalIdMutation.isPending
+                              ? t("loto.fiscal.verifying", "Verifying…")
+                              : t("loto.fiscal.verifyBtn", "Verify")}
+                          </Button>
+                        </div>
+                      )}
+
+                      {hasVerified && !fiscalIdInput && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs"
+                          data-testid="button-change-fiscal-id"
+                          onClick={() => setFiscalIdInput(merchant.fiscalId ?? "")}
+                        >
+                          {t("loto.fiscal.changeBtn", "Change fiscal ID")}
+                        </Button>
+                      )}
+
+                      {fiscalVerifyResult && (
+                        <div
+                          className={`p-3 rounded-md text-sm ${fiscalVerifyResult.verified ? "bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200" : "bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200"}`}
+                          data-testid="text-fiscal-verify-result"
+                        >
+                          {fiscalVerifyResult.message}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
+
+              <Card data-testid="card-merchant-receipts">
+                <CardHeader>
+                  <CardTitle data-testid="text-merchant-name">{merchant.shopName}</CardTitle>
+                  <CardDescription>
+                    {merchant.city && `${merchant.city} · `}{merchantQ.data?.receipts.length ?? 0} {t("loto.receipts.count", "receipts")}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-96 overflow-auto">
+                    {(merchantQ.data?.receipts ?? []).slice(0, 50).map(r => (
+                      <div key={r.id} className="flex justify-between text-sm py-1 border-b last:border-0" data-testid={`row-receipt-${r.id}`}>
+                        <div>
+                          <div className="font-mono text-xs">{r.ticketNumber}</div>
+                          <div className="text-xs text-muted-foreground">{new Date(r.issuedAt).toLocaleString()}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">{parseFloat(r.amount).toLocaleString()} {r.currency}</div>
+                          <div className="text-xs text-muted-foreground">VAT {parseFloat(r.vatAmount).toLocaleString()}</div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-medium">{parseFloat(r.amount).toLocaleString()} {r.currency}</div>
-                        <div className="text-xs text-muted-foreground">VAT {parseFloat(r.vatAmount).toLocaleString()}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
         </TabsContent>
 
@@ -326,6 +549,206 @@ export default function LotoWorkspacePage() {
 
         <TabsContent value="notifications" className="mt-4">
           <LotoMessagingPreferences />
+        </TabsContent>
+
+        {/* ────── Mon Compte Fiscal (Task #489) — only visible when user has a merchant profile ────── */}
+        <TabsContent value="fiscal-account" className="mt-4">
+          {fiscalAccountQ.isLoading && <Skeleton className="h-72 w-full" />}
+          {fiscalAccountQ.isError && !fiscalAccountQ.isLoading && (
+            <Alert variant="destructive" data-testid="alert-fiscal-account-error">
+              <AlertTitle>{t("common.error", "Error")}</AlertTitle>
+              <AlertDescription>{(fiscalAccountQ.error as Error)?.message}</AlertDescription>
+            </Alert>
+          )}
+          {fiscalAccountQ.data && (() => {
+            const fa = fiscalAccountQ.data;
+            const kpis = fa.kpis;
+            const score = kpis.complianceScore;
+            const scoreColor = score >= 80 ? "text-emerald-600" : score >= 60 ? "text-amber-600" : "text-red-600";
+            const scoreBg = score >= 80 ? "bg-emerald-50 dark:bg-emerald-950 border-emerald-200 dark:border-emerald-800" : score >= 60 ? "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800";
+            const fmtVat = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+            return (
+              <div className="space-y-4">
+                {/* KPI Strip */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3" data-testid="fiscal-kpi-strip">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-2xl font-bold" data-testid="kpi-receipts-month">{kpis.receiptsThisMonth}</div>
+                      <div className="text-xs text-muted-foreground">{t("loto.fiscalAccount.kpiReceiptsMonth", "Receipts this month")}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-2xl font-bold" data-testid="kpi-receipts-year">{kpis.receiptsThisYear}</div>
+                      <div className="text-xs text-muted-foreground">{t("loto.fiscalAccount.kpiReceiptsYear", "Receipts this year")}</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-2xl font-bold" data-testid="kpi-vat-month">{fmtVat(kpis.vatThisMonth)}</div>
+                      <div className="text-xs text-muted-foreground">{t("loto.fiscalAccount.kpiVatMonth", "VAT this month")} ({kpis.currency})</div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-2xl font-bold" data-testid="kpi-vat-year">{fmtVat(kpis.vatThisYear)}</div>
+                      <div className="text-xs text-muted-foreground">{t("loto.fiscalAccount.kpiVatYear", "VAT this year")} ({kpis.currency})</div>
+                    </CardContent>
+                  </Card>
+                  <Card className={`border ${scoreBg}`}>
+                    <CardContent className="p-4">
+                      <div className={`text-2xl font-bold ${scoreColor}`} data-testid="kpi-compliance-score">{score}</div>
+                      <div className="text-xs text-muted-foreground">{t("loto.fiscalAccount.kpiScoreLabel", "Compliance score")}</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* 6-month VAT trend chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <BarChart2 className="w-4 h-4 text-emerald-600" />
+                      {t("loto.fiscalAccount.chartTitle", "6-month VAT trend")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {fa.monthlyTrend.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">{t("loto.fiscalAccount.noData", "No receipts yet")}</p>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={fa.monthlyTrend} data-testid="chart-vat-trend">
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmtVat(v as number)} />
+                          <Tooltip formatter={(v) => [fmtVat(v as number), t("loto.fiscalAccount.chartVat", "VAT")]} />
+                          <Bar dataKey="vat" fill="#10b981" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Receipt Ledger */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Receipt className="w-4 h-4" />
+                      {t("loto.fiscalAccount.ledgerTitle", "Receipt ledger")}
+                      <Badge variant="outline" className="ml-auto text-xs">{fa.ledger.total} total</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {fa.ledger.items.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-8">{t("loto.fiscalAccount.noData", "No receipts yet")}</p>
+                    ) : (
+                      <div className="overflow-auto">
+                        <table className="w-full text-sm" data-testid="table-fiscal-ledger">
+                          <thead>
+                            <tr className="border-b text-xs text-muted-foreground">
+                              <th className="text-left py-2 pr-3">{fa.fiscalConfig?.fiscalIdLabel ?? t("loto.fiscalAccount.ledgerFiscalCode", "Fiscal code")}</th>
+                              <th className="text-left py-2 pr-3">{t("loto.fiscalAccount.ledgerTicket", "Ticket #")}</th>
+                              <th className="text-left py-2 pr-3">{t("loto.fiscalAccount.ledgerDate", "Date")}</th>
+                              <th className="text-right py-2 pr-3">{t("loto.fiscalAccount.ledgerAmount", "Amount")}</th>
+                              <th className="text-right py-2 pr-3">{t("loto.fiscalAccount.ledgerVat", "VAT")}</th>
+                              <th className="text-center py-2 pr-3">{t("loto.fiscalAccount.ledgerStatus", "Status")}</th>
+                              <th className="text-right py-2">{t("loto.fiscalAccount.ledgerFlag", "Flag")}</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {fa.ledger.items.map((item) => (
+                              <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30" data-testid={`row-fiscal-${item.id}`}>
+                                <td className="py-2 pr-3 font-mono text-xs">{item.fiscalCode}</td>
+                                <td className="py-2 pr-3 font-mono text-xs text-muted-foreground" data-testid={`ticket-${item.id}`}>{item.ticketNumber}</td>
+                                <td className="py-2 pr-3 text-xs text-muted-foreground">{new Date(item.issuedAt).toLocaleDateString()}</td>
+                                <td className="py-2 pr-3 text-right">{parseFloat(item.amount).toLocaleString()} {item.currency}</td>
+                                <td className="py-2 pr-3 text-right text-muted-foreground">{parseFloat(item.vatAmount).toLocaleString()}</td>
+                                <td className="py-2 pr-3 text-center">
+                                  {item.status === "flagged" ? (
+                                    <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-300 text-xs" data-testid={`status-flagged-${item.id}`}>
+                                      <Flag className="w-3 h-3 mr-1" />
+                                      {t("loto.fiscalAccount.statusFlagged", "Flagged")}
+                                    </Badge>
+                                  ) : item.status === "expired" ? (
+                                    <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-300 text-xs" data-testid={`status-expired-${item.id}`}>
+                                      <XCircle className="w-3 h-3 mr-1" />
+                                      {t("loto.fiscalAccount.statusExpired", "Expired")}
+                                    </Badge>
+                                  ) : item.status === "demo" ? (
+                                    <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border-amber-300 text-xs" data-testid={`status-demo-${item.id}`}>
+                                      <AlertCircle className="w-3 h-3 mr-1" />
+                                      {t("loto.fiscalAccount.statusDemo", "Demo")}
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 border-emerald-300 text-xs" data-testid={`status-valid-${item.id}`}>
+                                      <CheckCircle2 className="w-3 h-3 mr-1" />
+                                      {t("loto.fiscalAccount.statusValid", "Valid")}
+                                    </Badge>
+                                  )}
+                                  {item.rejectionReason && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5 max-w-[120px] truncate" title={item.rejectionReason}>{item.rejectionReason}</p>
+                                  )}
+                                </td>
+                                <td className="py-2 text-right">
+                                  {item.status === "flagged" ? (
+                                    <span className="text-xs text-muted-foreground">{t("loto.fiscalAccount.alreadyFlagged", "Already flagged")}</span>
+                                  ) : item.status === "demo" ? (
+                                    <span className="text-xs text-muted-foreground">—</span>
+                                  ) : flaggingReceiptId === item.id ? (
+                                    <div className="flex flex-col gap-1 items-end">
+                                      <input
+                                        data-testid={`input-flag-reason-${item.id}`}
+                                        value={flagReason}
+                                        onChange={(e) => setFlagReason(e.target.value)}
+                                        placeholder={t("loto.fiscalAccount.flagReasonPlaceholder", "Describe the discrepancy (optional)")}
+                                        className="w-48 px-2 py-1 border rounded text-xs bg-background"
+                                      />
+                                      <div className="flex gap-1">
+                                        <Button
+                                          size="sm"
+                                          variant="destructive"
+                                          className="h-6 text-xs px-2"
+                                          disabled={flagMutation.isPending}
+                                          data-testid={`button-flag-submit-${item.id}`}
+                                          onClick={() => flagMutation.mutate({ receiptId: item.id, reason: flagReason })}
+                                        >
+                                          {t("loto.fiscalAccount.flagBtnConfirm", "Submit")}
+                                        </Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className="h-6 text-xs px-2"
+                                          data-testid={`button-flag-cancel-${item.id}`}
+                                          onClick={() => { setFlaggingReceiptId(null); setFlagReason(""); }}
+                                        >
+                                          {t("common.cancel", "Cancel")}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-6 text-xs px-2 text-orange-600 hover:text-orange-700"
+                                      data-testid={`button-flag-${item.id}`}
+                                      onClick={() => { setFlaggingReceiptId(item.id); setFlagReason(""); }}
+                                    >
+                                      <Flag className="w-3 h-3 mr-1" />
+                                      {t("loto.fiscalAccount.flagBtnTitle", "Flag")}
+                                    </Button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
         </TabsContent>
       </Tabs>
     </div>

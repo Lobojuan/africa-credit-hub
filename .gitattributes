@@ -1,0 +1,49 @@
+# Explicitly mark common large/binary file types as plain binary so they are
+# never accidentally tracked via Git LFS.  The negated flags (-filter, -diff,
+# -merge) use the correct gitattributes syntax to UNSET any previously applied
+# LFS driver, even if a global .lfsconfig or parent gitattributes would
+# otherwise enrol these extensions in LFS.
+
+*.zip      binary -filter -diff -merge
+*.gz       binary -filter -diff -merge
+*.tar.gz   binary -filter -diff -merge
+*.tgz      binary -filter -diff -merge
+*.tar      binary -filter -diff -merge
+*.7z       binary -filter -diff -merge
+*.rar      binary -filter -diff -merge
+*.bz2      binary -filter -diff -merge
+*.xz       binary -filter -diff -merge
+
+*.pdf      binary -filter -diff -merge
+
+*.jpg      binary -filter -diff -merge
+*.jpeg     binary -filter -diff -merge
+*.png      binary -filter -diff -merge
+*.gif      binary -filter -diff -merge
+*.webp     binary -filter -diff -merge
+*.ico      binary -filter -diff -merge
+*.bmp      binary -filter -diff -merge
+*.tiff     binary -filter -diff -merge
+*.svg      text   -filter -diff -merge
+
+*.mp4      binary -filter -diff -merge
+*.mov      binary -filter -diff -merge
+*.avi      binary -filter -diff -merge
+*.mkv      binary -filter -diff -merge
+*.webm     binary -filter -diff -merge
+*.mp3      binary -filter -diff -merge
+*.wav      binary -filter -diff -merge
+*.ogg      binary -filter -diff -merge
+
+*.xls      binary -filter -diff -merge
+*.xlsx     binary -filter -diff -merge
+*.doc      binary -filter -diff -merge
+*.docx     binary -filter -diff -merge
+*.ppt      binary -filter -diff -merge
+*.pptx     binary -filter -diff -merge
+
+*.db       binary -filter -diff -merge
+*.sqlite   binary -filter -diff -merge
+*.sqlite3  binary -filter -diff -merge
+
+*.enc      binary -filter -diff -merge

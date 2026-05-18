@@ -134,6 +134,13 @@
       "when": 1778426539579,
       "tag": "0018_user_allowed_products",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1779060955266,
+      "tag": "0019_typical_venom",
+      "breakpoints": true
     }
   ]
 }

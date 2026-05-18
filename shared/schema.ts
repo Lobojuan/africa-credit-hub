@@ -830,6 +830,11 @@ export const alternativeData = pgTable("alternative_data", {
   dataEndDate: timestamp("data_end_date"),
   consentDate: timestamp("consent_date"),
   rawScore: integer("raw_score"),
+  // Stores source-specific structured breakdown as JSON.
+  // For source="merchant": { complianceBreakdown: { recency, frequency, growth, diversity, penalty },
+  //   openFraudFlagsCount, vatTrend }.
+  // Null for other sources that don't produce structured sub-scores.
+  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -2119,6 +2124,14 @@ export const lotoMerchants = pgTable("loto_merchants", {
   registeredAt: timestamp("registered_at").defaultNow(),
   // Indicates merchant has opted in to share receipt data with Credit Bureau
   creditOptInActive: boolean("credit_opt_in_active").notNull().default(false),
+  // DGI / e-Impots fiscal identity (Task #488 — multi-country foundation).
+  // For Côte d'Ivoire this is the NCC (Numéro de Compte Contribuable);
+  // for Ghana it is the TIN; for Nigeria it is the RC number.
+  // The type column mirrors the loto_country_fiscal_config.fiscal_id_label
+  // so a query can join and display the right label without hardcoding.
+  fiscalId: varchar("fiscal_id"),
+  fiscalIdType: varchar("fiscal_id_type"),
+  fiscalIdVerified: boolean("fiscal_id_verified").notNull().default(false),
 });
 
 export const insertLotoMerchantSchema = createInsertSchema(lotoMerchants).omit({ id: true, registeredAt: true });
@@ -2222,6 +2235,27 @@ export const lotoReceipts = pgTable("loto_receipts", {
 export const insertLotoReceiptSchema = createInsertSchema(lotoReceipts).omit({ id: true, createdAt: true });
 export type InsertLotoReceipt = z.infer<typeof insertLotoReceiptSchema>;
 export type LotoReceipt = typeof lotoReceipts.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Loto Fiscal — Per-country fiscal authority configuration (Task #488)
+// One row per country. Drives the fiscal ID label (NCC / TIN / RC),
+// format regex, adapter key, and authority name displayed in the UI.
+// CI is seeded via migration 0020; GH and NG stubs are also seeded.
+// ---------------------------------------------------------------------------
+export const lotoCountryFiscalConfig = pgTable("loto_country_fiscal_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  countryCode: varchar("country_code", { length: 3 }).notNull().unique(),
+  fiscalIdLabel: text("fiscal_id_label").notNull(),
+  fiscalIdRegex: text("fiscal_id_regex").notNull(),
+  adapterKey: text("adapter_key").notNull().default("simulated"),
+  authorityName: text("authority_name").notNull(),
+  currencySymbol: text("currency_symbol").notNull().default("XOF"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertLotoCountryFiscalConfigSchema = createInsertSchema(lotoCountryFiscalConfig).omit({ id: true, createdAt: true });
+export type InsertLotoCountryFiscalConfig = z.infer<typeof insertLotoCountryFiscalConfigSchema>;
+export type LotoCountryFiscalConfig = typeof lotoCountryFiscalConfig.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Loto Draw Engine — provably-fair commit-reveal lottery
@@ -2373,6 +2407,7 @@ export const crossProductPurposeEnum = pgEnum("cross_product_purpose", [
   "bureau_reputation_badge",
   "collateral_credit_view",
   "credit_collateral_view",
+  "fiscal_receipts_credit",
 ]);
 export const crossProductConsentStatusEnum = pgEnum("cross_product_consent_status", ["pending", "active", "revoked", "expired"]);
 
