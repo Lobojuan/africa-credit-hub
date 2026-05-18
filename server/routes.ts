@@ -1792,7 +1792,7 @@ export async function registerRoutes(
       const expenses = latestAffordability ? await storage.getExpenseCategorisationsByBorrower(req.params.id as string).catch(() => []) : [];
 
       res.json({
-        borrower,
+        borrower: decryptBorrowerPII(borrower as Record<string, any>),
         accounts,
         inquiries,
         courtJudgments: judgments,
