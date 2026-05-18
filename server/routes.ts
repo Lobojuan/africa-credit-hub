@@ -1226,12 +1226,12 @@ export async function registerRoutes(
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
         const data = await storage.searchBorrowers(search, orgId, country);
-        res.json(data);
+        res.json(decryptBorrowerArray(data as Record<string, any>[]));
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
         const result = await storage.getBorrowers(page, limit, orgId, country, recentDays > 0 ? recentDays : undefined);
-        res.json(result);
+        res.json({ ...result, data: decryptBorrowerArray(result.data as Record<string, any>[]) });
       }
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -1250,12 +1250,12 @@ export async function registerRoutes(
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
         const data = await storage.searchBorrowersByType("individual", search, orgId, country);
-        res.json(data);
+        res.json(decryptBorrowerArray(data as Record<string, any>[]));
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
         const result = await storage.getBorrowersByType("individual", page, limit, orgId, country, recentDays > 0 ? recentDays : undefined);
-        res.json(result);
+        res.json({ ...result, data: decryptBorrowerArray(result.data as Record<string, any>[]) });
       }
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -1274,12 +1274,12 @@ export async function registerRoutes(
       const recentDays = parseInt(req.query.recentDays as string) || 0;
       if (search) {
         const data = await storage.searchBorrowersByType("corporate", search, orgId, country);
-        res.json(data);
+        res.json(decryptBorrowerArray(data as Record<string, any>[]));
       } else {
         const page = Math.max(1, parseInt(req.query.page as string) || 1);
         const limit = Math.min(200, Math.max(1, parseInt(req.query.limit as string) || 50));
         const result = await storage.getBorrowersByType("corporate", page, limit, orgId, country, recentDays > 0 ? recentDays : undefined);
-        res.json(result);
+        res.json({ ...result, data: decryptBorrowerArray(result.data as Record<string, any>[]) });
       }
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
@@ -1424,7 +1424,7 @@ export async function registerRoutes(
       if (country && country !== GLOBAL_SCOPE && borrower.country !== country) {
         return res.status(403).json({ message: "Access denied: borrower belongs to a different country" });
       }
-      res.json(borrower);
+      res.json(decryptBorrowerPII(borrower as Record<string, any>));
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
