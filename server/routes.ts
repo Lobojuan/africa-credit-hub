@@ -27,13 +27,15 @@ import telcoRouter from "./routes/telco";
 import walletRouter from "./routes/wallet";
 import webauthnRouter from "./routes/webauthn";
 import lotoAdminRouter from "./routes/loto-admin";
+import lotoMerchantCreditRouter from "./routes/loto-merchant-credit";
+import lotoFiscalRouter from "./routes/loto-fiscal";
 import regulatoryControlsRouter from "./routes/regulatory-controls-router";
 import { registerPlatformControlRoutes } from "./routes/platform-control";
 import { registerOAuthRoutes, getGoogleRedirectUri, getMicrosoftRedirectUri } from "./routes/oauth";
 import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
-import { sql, eq, and, or, desc, inArray, ilike, count, gte } from "drizzle-orm";
+import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
 import { enqueueBatchAccountCreate, enqueueBatchBorrowerUpdate, enqueueBatchAccountUpdate, getJobStatus, getQueueStats } from "./batch-queue";
 import {
   insertBorrowerSchema, insertCreditAccountSchema, insertCreditInquirySchema,
@@ -69,6 +71,15 @@ import {
   syncMerchantReceiptsToAlternativeData, DEFAULT_CONSENT_DURATION_MONTHS,
   type CrossProductPurpose,
 } from "./cross-product-gateway";
+import {
+  buildFiscalReceiptsAltData,
+  purgeFiscalReceiptsAltData,
+  refreshAllFiscalReceiptsConsents,
+  normaliseBorrowerCountry,
+  buildMerchantAltData,
+  purgeMerchantAltData,
+  refreshAllMerchantConsents,
+} from "./loto-credit-pipeline";
 import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -80,7 +91,7 @@ import { recordUsageEvent } from "./usage-metering";
 import { broadcastEvent } from "./websocket";
 import { createAnchor, verifyAuditAgainstAnchor, getAnchors } from "./blockchain-anchor";
 import { deliverWebhook, getWebhookSubscriptions, getWebhookDeliveryHistory, WEBHOOK_EVENTS } from "./webhook-delivery";
-import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory, consumerScoreHistory, consumerPushSubscriptions, playbookDownloads } from "@shared/schema";
+import { webauthnCredentials, blockchainAnchors, webhookSubscriptions, webhookDeliveryLogs, consumerAccounts, telcoProfiles, telcoLoans, telcoLoanRepayments, openBankingProfiles, insertOpenBankingProfileSchema, decisionRules, insertDecisionRuleSchema, esgScores, insertEsgScoreSchema, portfolioTriggerSubscriptions, portfolioTriggerEvents, consumerMonitoringPrefs, consumerMonitoringAlerts, insertPortfolioTriggerSubscriptionSchema, insertConsumerMonitoringPrefsSchema, creditScoreHistory, consumerScoreHistory, consumerPushSubscriptions, playbookDownloads, lotoCountryFiscalConfig, lotoMerchants, lotoReceipts, lotoFraudFlags } from "@shared/schema";
 import fs from "fs";
 import path from "path";
 import * as OTPAuth from "otpauth";
@@ -1290,6 +1301,8 @@ export async function registerRoutes(
   app.use(walletRouter);
   app.use(webauthnRouter);
   app.use("/api/loto/admin", lotoAdminRouter);
+  app.use("/api/loto", requireAuth, lotoMerchantCreditRouter);
+  app.use("/api/loto", lotoFiscalRouter);
   app.use("/api/regulatory", regulatoryControlsRouter);
   registerPlatformControlRoutes(app);
 
@@ -6455,6 +6468,31 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         // stays consistent across renders.
         viewerOrganizationId: req.session?.organizationId ?? null,
         affordability: reportAffordability ? { assessment: reportAffordability, incomeSources: reportIncomeSources, expenses: reportExpenses } : null,
+        // Alternative data section surfaced explicitly in the report so the UI and PDF can
+        // render a human-readable "Loto Fiscal Compliance" label for merchant-sourced data.
+        // sourceLabel: "Loto Fiscal Compliance" when source="merchant" and provider contains
+        // "Loto Fiscal"; falls back to the raw provider string for other sources.
+        alternativeData: altData.map(d => ({
+          source: d.source,
+          // Display label hierarchy:
+          //   1. metadata.displayLabel — set by buildMerchantAltData (most accurate, human-readable)
+          //   2. provider falls back for legacy rows that predate metadata
+          // For source="merchant" the provider is the country-scoped machine key
+          // (e.g. "loto_fiscal_ci"); metadata.displayLabel is "Loto Fiscal Compliance".
+          // d.metadata is typed as `unknown` (jsonb) — single cast to the known shape.
+          sourceLabel: (d.metadata as { displayLabel?: string } | null | undefined)?.displayLabel
+            ?? d.provider ?? d.source,
+          provider: d.provider,
+          status: d.status,
+          totalTransactions: d.totalTransactions,
+          onTimePayments: d.onTimePayments,
+          latePayments: d.latePayments,
+          rawScore: d.rawScore,
+          currency: d.currency,
+          averageMonthlyAmount: d.averageMonthlyAmount,
+          dataStartDate: d.dataStartDate,
+          dataEndDate: d.dataEndDate,
+        })),
         ...(xdsBureauData ? { xdsBureauData } : {}),
         summary: {
           totalAccounts: accounts.length,
@@ -19055,9 +19093,17 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         const m = await storage.getLotoMerchantById(existing.merchantId);
         if (m?.borrowerId) {
           await storage.deleteAlternativeDataForBorrower(m.borrowerId, "fiscal_receipts");
+          await purgeMerchantAltData(m.borrowerId);
         }
       } catch (purgeErr) {
         console.error("[cross-product] revoke purge failed", purgeErr);
+      }
+    }
+    if (existing.purpose === "fiscal_receipts_credit" && existing.borrowerId) {
+      try {
+        await purgeFiscalReceiptsAltData(existing.borrowerId);
+      } catch (purgeErr) {
+        console.error("[cross-product] fiscal_receipts_credit revoke purge failed", purgeErr);
       }
     }
     return row;
@@ -19178,6 +19224,158 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // ----- Borrower self-service: fiscal_receipts_credit consent -----
+  // Allows a borrower (institution user with a linked borrower profile) to grant
+  // or revoke consent for their Loto Fiscal receipt history to be used in credit
+  // scoring as an alternative data source. On grant the pipeline runs immediately
+  // to populate alternative_data. On revoke the record is purged.
+
+  app.get("/api/cross-product/consents/fiscal-receipts-credit/me", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId as string | undefined;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const borrower = await findBorrowerForUser(userId);
+      if (!borrower) return res.json({ consent: null, borrowerId: null, receiptCount: 0 });
+      const [consent] = await db.select().from(crossProductConsents)
+        .where(and(
+          eq(crossProductConsents.userId, userId),
+          eq(crossProductConsents.sourceProduct, "loto"),
+          eq(crossProductConsents.targetProduct, "credit"),
+          eq(crossProductConsents.purpose, "fiscal_receipts_credit"),
+        ))
+        .orderBy(desc(crossProductConsents.grantedAt))
+        .limit(1);
+      // Country-scope receipt stats to match the pipeline's country fence:
+      // only count receipts from merchants in the borrower's registered country.
+      const borrowerCountryCode = normaliseBorrowerCountry(borrower.country);
+      let receiptStatsQuery = db
+        .select({
+          c: sql<number>`COUNT(*)::int`,
+          earliest: min(lotoReceipts.issuedAt),
+          latest: max(lotoReceipts.issuedAt),
+        })
+        .from(lotoReceipts)
+        .innerJoin(lotoMerchants, eq(lotoReceipts.merchantId, lotoMerchants.id))
+        .$dynamic();
+      const statsConditions = [
+        eq(lotoReceipts.consumerUserId, userId),
+        eq(lotoReceipts.isDemo, false),
+      ];
+      if (borrowerCountryCode) {
+        statsConditions.push(eq(lotoMerchants.countryCode, borrowerCountryCode) as any);
+      }
+      const [receiptStatsRow] = await receiptStatsQuery.where(and(...statsConditions as any[]));
+      res.json({
+        consent: consent ?? null,
+        borrowerId: borrower.id,
+        receiptCount: receiptStatsRow?.c ?? 0,
+        receiptDateStart: receiptStatsRow?.earliest ?? null,
+        receiptDateEnd: receiptStatsRow?.latest ?? null,
+      });
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/cross-product/consents/fiscal-receipts-credit/grant", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId as string | undefined;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const borrower = await findBorrowerForUser(userId);
+      if (!borrower) return res.status(404).json({ message: "no_linked_borrower" });
+      // Validate country BEFORE creating consent — avoids leaving stale active rows
+      const resolvedCountryCode = normaliseBorrowerCountry(borrower.country);
+      if (!resolvedCountryCode) {
+        return res.status(400).json({ message: "borrower_country_unresolvable" });
+      }
+      const months = DEFAULT_CONSENT_DURATION_MONTHS;
+      const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + months);
+      const row = await storage.createCrossProductConsent({
+        userId,
+        borrowerId: borrower.id,
+        merchantId: null,
+        sourceProduct: "loto",
+        targetProduct: "credit",
+        purpose: "fiscal_receipts_credit",
+        scopeNote: "Borrower self-granted: use Loto Fiscal receipt history as alternative data for credit scoring",
+        expiresAt,
+        grantedByIp: req.ip ?? null,
+      });
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_granted",
+          entity: "cross_product_consents",
+          entityId: row.id,
+          userId: userId ?? null,
+          details: JSON.stringify({ sourceProduct: "loto", targetProduct: "credit", purpose: "fiscal_receipts_credit", borrowerId: borrower.id, selfService: true }),
+          ipAddress: req.ip ?? null,
+        });
+      } catch (auditErr) {
+        console.error("[cross-product] fiscal_receipts_credit grant audit log write failed", auditErr);
+      }
+      try {
+        await buildFiscalReceiptsAltData(userId, borrower.id, resolvedCountryCode, borrower.country);
+      } catch (pipelineErr) {
+        console.error("[loto-credit-pipeline] post-grant pipeline failed; revoking consent:", pipelineErr);
+        try { await storage.revokeCrossProductConsent(row.id, "pipeline_failure_on_grant"); } catch (_) {}
+        return res.status(500).json({ message: "pipeline_failed", details: safeErrorMessage(pipelineErr) });
+      }
+      res.status(201).json(row);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Explicit revoke endpoint for fiscal_receipts_credit consent.
+  // Revokes the caller's active consent and purges associated alternative_data.
+  app.post("/api/cross-product/consents/fiscal-receipts-credit/revoke", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId as string | undefined;
+      if (!userId) return res.status(401).json({ message: "unauthenticated" });
+      const reason = String(req.body?.reason ?? "user_revoked");
+      const [active] = await db.select().from(crossProductConsents)
+        .where(and(
+          eq(crossProductConsents.userId, userId),
+          eq(crossProductConsents.sourceProduct, "loto"),
+          eq(crossProductConsents.targetProduct, "credit"),
+          eq(crossProductConsents.purpose, "fiscal_receipts_credit"),
+          eq(crossProductConsents.status, "active"),
+        ))
+        .orderBy(desc(crossProductConsents.grantedAt))
+        .limit(1);
+      if (!active) return res.status(404).json({ message: "no_active_consent" });
+      const revoked = await revokeConsentAndPurge(active.id, reason);
+      if (!revoked) return res.status(404).json({ message: "revoke_failed" });
+      try {
+        await storage.createAuditLog({
+          action: "cross_product_consent_revoked",
+          entity: "cross_product_consents",
+          entityId: active.id,
+          userId: userId ?? null,
+          details: JSON.stringify({ purpose: "fiscal_receipts_credit", reason, selfService: true }),
+          ipAddress: req.ip ?? null,
+        });
+      } catch (_) {}
+      res.json(revoked);
+    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // Nightly refresh: keeps alternative_data current for all active consents.
+  // Runs once every 24 hours starting from server start time.
+  setInterval(async () => {
+    try {
+      const consumerSummary = await refreshAllFiscalReceiptsConsents();
+      console.log(`[loto-credit-pipeline] consumer nightly refresh — processed: ${consumerSummary.processed}, skipped: ${consumerSummary.skipped}, errors: ${consumerSummary.errors}`);
+    } catch (err) {
+      console.error("[loto-credit-pipeline] consumer nightly refresh failed:", err);
+    }
+    try {
+      const merchantSummary = await refreshAllMerchantConsents();
+      console.log(`[loto-credit-pipeline] merchant nightly refresh — processed: ${merchantSummary.processed}, skipped: ${merchantSummary.skipped}, errors: ${merchantSummary.errors}`);
+    } catch (err) {
+      console.error("[loto-credit-pipeline] merchant nightly refresh failed:", err);
+    }
+  }, 24 * 60 * 60 * 1000);
+
+  // Merchant credit-breakdown endpoint is served by lotoMerchantCreditRouter
+  // mounted at /api/loto above (line ~1307). See server/routes/loto-merchant-credit.ts.
+
   // ----- Cross-workspace approval inbox -----
   // A workspace user can REQUEST access to data owned by another subject. The request is created
   // with status="pending" and the data owner (subject) must approve via /approve before any
@@ -19187,7 +19385,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   const requestConsentSchema = z.object({
     sourceProduct: z.enum(["loto", "credit", "collateral"]),
     targetProduct: z.enum(["loto", "credit", "collateral"]),
-    purpose: z.enum(["merchant_credit_profile","consumer_spending_credit","bureau_reputation_badge","collateral_credit_view","credit_collateral_view"]),
+    purpose: z.enum(["merchant_credit_profile","consumer_spending_credit","bureau_reputation_badge","collateral_credit_view","credit_collateral_view","fiscal_receipts_credit"]),
     subjectUserId: z.string().optional(),
     subjectMerchantId: z.string().optional(),
     subjectBorrowerId: z.string().optional(),
@@ -19467,71 +19665,10 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.post("/api/loto/merchants/me/credit-opt-in", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) return res.status(401).json({ message: "unauthenticated" });
-      const merchant = await storage.getLotoMerchantByUserId(userId);
-      if (!merchant) return res.status(404).json({ message: "merchant_not_found" });
-      const enable = Boolean(req.body?.enable);
-      await storage.updateLotoMerchantOptIn(merchant.id, enable);
-      if (enable) {
-        const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + DEFAULT_CONSENT_DURATION_MONTHS);
-        // The "Build my credit profile" toggle covers two distinct gateway
-        // purposes that both flow from the same merchant decision:
-        //   1. merchant_credit_profile  — lenders may pull verified VAT
-        //      receipt history into the bureau credit profile.
-        //   2. bureau_reputation_badge — the local-tax-authority Bureau
-        //      Reputation Badge (tier / receipts / active months) can be
-        //      issued to the merchant's own workspace and exposed on lender
-        //      views. The exact authority + product framing (e.g. "DGI Loto
-        //      Fiscal" in Côte d'Ivoire, "FIRS Verified Receipts" in Nigeria)
-        //      is resolved per merchant via shared/tax-authority.ts.
-        // Both are time-bounded with the same 12-month default expiry and
-        // revoked together when the merchant opts back out.
-        const baseConsent = {
-          userId,
-          borrowerId: merchant.borrowerId ?? null,
-          merchantId: merchant.id,
-          sourceProduct: "loto" as const,
-          targetProduct: "credit" as const,
-          expiresAt,
-          grantedByIp: req.ip ?? null,
-        };
-        await storage.createCrossProductConsent({
-          ...baseConsent,
-          purpose: "merchant_credit_profile",
-          scopeNote: "Merchant opted in to share fiscal-receipt history with credit bureau",
-        });
-        await storage.createCrossProductConsent({
-          ...baseConsent,
-          purpose: "bureau_reputation_badge",
-          scopeNote: "Merchant opted in to issue the local Bureau Reputation Badge from verified VAT receipts",
-        });
-        // best-effort sync to alternative_data
-        try {
-          await syncMerchantReceiptsToAlternativeData(merchant.id, gatewayCallerCtx(req));
-        } catch (err) {
-          // Even if sync fails (e.g. no borrower link), opt-in succeeds
-          console.warn("[loto opt-in] alt-data sync skipped:", (err as Error).message);
-        }
-      } else {
-        // Revoke BOTH merchant-side consent purposes the opt-in toggle granted
-        // (merchant_credit_profile + bureau_reputation_badge). Use the
-        // centralized revoke-and-purge service so fiscal_receipts contributions
-        // are immediately removed from downstream credit scoring state and the
-        // bureau badge endpoint stops returning data.
-        const consents = await storage.getCrossProductConsents({ merchantId: merchant.id });
-        for (const c of consents) {
-          if (c.status === "active" && (c.purpose === "merchant_credit_profile" || c.purpose === "bureau_reputation_badge")) {
-            await revokeConsentAndPurge(c.id, "merchant_opt_out");
-          }
-        }
-      }
-      const updated = await storage.getLotoMerchantByUserId(userId);
-      res.json({ merchant: updated, optInActive: enable });
-    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
+  // Merchant credit opt-in/out is handled by lotoMerchantCreditRouter
+  // (mounted at /api/loto above). The router's unified toggle endpoint handles
+  // both enable=true (opt-in) and enable=false (opt-out) in a single POST.
+  // See server/routes/loto-merchant-credit.ts for the implementation.
 
   app.get("/api/loto/consumers/me/spending", requireAuth, async (req, res) => {
     try {
@@ -19543,33 +19680,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.post("/api/loto/consumers/me/credit-opt-in", requireAuth, async (req, res) => {
-    try {
-      const userId = req.session?.userId;
-      if (!userId) return res.status(401).json({ message: "unauthenticated" });
-      const enable = Boolean(req.body?.enable);
-      if (enable) {
-        const expiresAt = new Date(); expiresAt.setMonth(expiresAt.getMonth() + DEFAULT_CONSENT_DURATION_MONTHS);
-        const row = await storage.createCrossProductConsent({
-          userId,
-          sourceProduct: "loto",
-          targetProduct: "credit",
-          purpose: "consumer_spending_credit",
-          scopeNote: "Consumer opted in to share verified spending insights with credit bureau",
-          expiresAt,
-          grantedByIp: req.ip ?? null,
-        });
-        return res.json({ optInActive: true, consent: row });
-      }
-      const consents = await storage.getCrossProductConsents({ userId });
-      for (const c of consents) {
-        if (c.status === "active" && c.purpose === "consumer_spending_credit") {
-          await revokeConsentAndPurge(c.id, "consumer_opt_out");
-        }
-      }
-      res.json({ optInActive: false });
-    } catch (e) { res.status(500).json({ message: safeErrorMessage(e) }); }
-  });
+  // Consumer credit opt-in/out is handled by lotoMerchantCreditRouter
+  // (the unified router at server/routes/loto-merchant-credit.ts mounted at /api/loto).
+  // POST /api/loto/consumers/me/credit-opt-in handles both enable=true and enable=false.
+
+  // ════════════════════════════════════════════════════════════════════════
+  // LOTO FISCAL ROUTES (Task #488) — now handled by server/routes/loto-fiscal.ts
+  // Mounted at /api/loto above (app.use("/api/loto", lotoFiscalRouter)).
+  // Routes moved to the dedicated router: GET /fiscal-config,
+  // PUT /merchants/me/fiscal-id, POST /verify, POST /pos/issue.
 
   // ────────────────────────────────────────────────────────────────────────
   // Receipt scan — demo flow that creates a synthetic verified receipt and
@@ -19598,6 +19717,19 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   const lotoScanBodySchema = z.object({
     kind: z.enum(["small", "medium", "large"]).optional(),
     fiscalCode: z.string().trim().min(6).max(32).regex(/^[A-Za-z0-9_-]+$/, "fiscalCode must be alphanumeric").optional(),
+    // ISO 8601 date string from the physical receipt (QR code / barcode).
+    // REQUIRED when fiscalCode is provided (real receipt submission) so the
+    // DGI 12-month eligibility window (Control #5) can always be enforced.
+    // Demo auto-scans that omit fiscalCode do not need this field.
+    receiptDate: z.string().datetime({ offset: true }).optional(),
+  }).superRefine((data, ctx) => {
+    if (data.fiscalCode && !data.receiptDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["receiptDate"],
+        message: "receiptDate is required when fiscalCode is provided (DGI Control #5 age validation requires the receipt issue date)",
+      });
+    }
   });
 
   const DEMO_SCAN_MERCHANT_TAG = "__loto_demo_scan__";
@@ -19613,6 +19745,26 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       }
       const kind = parsed.data.kind ?? "medium";
       const manualCode = parsed.data.fiscalCode?.toUpperCase() ?? null;
+
+      // DGI Control #5 — 12-month receipt eligibility window.
+      // If the caller supplies a receiptDate (e.g. parsed from a QR code on
+      // the physical receipt), validate it is within the 12-month window.
+      // Demo auto-generated receipts never supply this field, so the check
+      // only fires on real fiscal-code submissions.
+      if (parsed.data.receiptDate) {
+        const { isReceiptWithinEligibilityWindow } = await import("./services/loto-fiscal-adapter");
+        const rDate = new Date(parsed.data.receiptDate);
+        if (isNaN(rDate.getTime())) {
+          return res.status(400).json({ message: "receiptDate is not a valid date" });
+        }
+        if (!isReceiptWithinEligibilityWindow(rDate, 12)) {
+          return res.status(422).json({
+            message: "This receipt is older than 12 months and is no longer eligible for a lottery entry (DGI rule: invoice TVA eligibility window).",
+            code: "RECEIPT_OUTSIDE_ELIGIBILITY_WINDOW",
+            receiptDate: parsed.data.receiptDate,
+          });
+        }
+      }
 
       // Country MUST resolve — no silent fallback. Super-admins viewing in
       // global mode have to pick a country before scanning.
@@ -19657,14 +19809,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const vatNum = Math.round(amountNum * 0.18);
 
       // Manual codes are deterministic — `${countryCode}-MANUAL-${code}`.
-      // The DB unique constraint on lotoReceipts.fiscalCode then enforces
-      // single-use semantics: pasting the same code twice will be rejected
-      // (which mirrors real fiscal-receipt behavior). Sample-tier scans
-      // remain time-keyed because they're auto-generated demo entries.
+      // Country-scoped uniqueness: the stored fiscalCode is prefixed with
+      // countryCode so two countries cannot collide on the same raw code.
+      // Sample-tier scans remain time-keyed (auto-generated demo entries).
       const fiscalCode = manualCode
         ? `${countryCode}-MANUAL-${manualCode}`
         : `${countryCode}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
       const ticketNumber = (Math.floor(Math.random() * 1_000_000)).toString().padStart(6, "0");
+
+      // Explicit country-scoped duplicate check BEFORE insert so we return a
+      // deterministic 409 with a clear error code — not relying solely on the
+      // DB unique-constraint exception which can surface different messages
+      // across Postgres versions.
+      if (manualCode) {
+        const [existing] = await db
+          .select({ id: lotoReceipts.id })
+          .from(lotoReceipts)
+          .where(eq(lotoReceipts.fiscalCode, fiscalCode))
+          .limit(1);
+        if (existing) {
+          return res.status(409).json({
+            message: "This fiscal code has already been used for a lottery entry in this country.",
+            code: "RECEIPT_FISCAL_CODE_DUPLICATE",
+            fiscalCode: manualCode,
+            countryCode,
+          });
+        }
+      }
 
       let receipt;
       try {
@@ -19681,11 +19852,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           issuedAt: new Date(),
         });
       } catch (insertErr) {
-        // Postgres unique-violation on fiscalCode → friendly 409.
+        // Safety net: if two concurrent requests slip past the pre-check above
+        // and both reach INSERT, the DB unique constraint fires — still 409.
         const msg = (insertErr as Error)?.message ?? "";
         if (manualCode && /unique|duplicate/i.test(msg)) {
           return res.status(409).json({
-            message: "This fiscal code has already been used for a lottery ticket.",
+            message: "This fiscal code has already been used for a lottery entry in this country.",
+            code: "RECEIPT_FISCAL_CODE_DUPLICATE",
+            fiscalCode: manualCode,
+            countryCode,
           });
         }
         throw insertErr;
