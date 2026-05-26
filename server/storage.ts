@@ -465,6 +465,7 @@ export interface IStorage {
   getLotoMerchantByShopNameAndCountry(shopName: string, countryCode: string): Promise<LotoMerchant | undefined>;
   countLotoReceiptsByConsumer(userId: string): Promise<number>;
   updateLotoMerchantOptIn(id: string, optIn: boolean): Promise<LotoMerchant | undefined>;
+  updateLotoMerchantBorrower(id: string, borrowerId: string): Promise<LotoMerchant | undefined>;
   listLotoMerchants(limit?: number): Promise<LotoMerchant[]>;
   listLotoReceiptsByMerchant(merchantId: string, limit?: number): Promise<LotoReceipt[]>;
   listLotoReceiptsByConsumer(userId: string, limit?: number): Promise<LotoReceipt[]>;
@@ -3789,6 +3790,10 @@ export class DatabaseStorage implements IStorage {
   }
   async updateLotoMerchantOptIn(id: string, optIn: boolean): Promise<LotoMerchant | undefined> {
     const [row] = await db.update(lotoMerchants).set({ creditOptInActive: optIn }).where(eq(lotoMerchants.id, id)).returning();
+    return row;
+  }
+  async updateLotoMerchantBorrower(id: string, borrowerId: string): Promise<LotoMerchant | undefined> {
+    const [row] = await db.update(lotoMerchants).set({ borrowerId }).where(eq(lotoMerchants.id, id)).returning();
     return row;
   }
   async listLotoMerchants(limit = 50): Promise<LotoMerchant[]> {

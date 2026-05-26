@@ -28,8 +28,11 @@ import {
   lotoFraudFlags,
   webhookSubscriptions,
   auditLogs,
+  alternativeData,
+  crossProductConsents,
   type LotoFraudFlag,
 } from "@shared/schema";
+import { buildMerchantAltData, PipelineCountryError } from "../loto-credit-pipeline";
 import {
   requireAuth,
   requireRole,
@@ -338,7 +341,144 @@ lotoAdminRouter.get("/compliance-scorecard", ...gate, async (req, res) => {
   }
 });
 
-// ─── 4. Fraud queue + triage actions ────────────────────────────────────
+// ─── 4. Merchant credit-bureau status ───────────────────────────────────
+// Returns every merchant for a country augmented with:
+//   - optedIn: whether an active merchant_credit_profile consent exists
+//   - lastSyncAt: the consentDate from the alternative_data record (last pipeline run)
+//   - rawScore: the compliance score written by buildMerchantAltData
+lotoAdminRouter.get("/merchants/credit-status", ...gate, async (req, res) => {
+  try {
+    const country = resolveCountry(req);
+    await logCrossCountryAccess(req, country, "/api/loto/admin/merchants/credit-status");
+
+    const merchants = await db
+      .select({
+        id: lotoMerchants.id,
+        shopName: lotoMerchants.shopName,
+        city: lotoMerchants.city,
+        category: lotoMerchants.category,
+        borrowerId: lotoMerchants.borrowerId,
+      })
+      .from(lotoMerchants)
+      .where(eq(lotoMerchants.countryCode, country))
+      .limit(200);
+
+    if (merchants.length === 0) {
+      return res.json({ countryCode: country, merchants: [] });
+    }
+
+    const merchantIds = merchants.map((m) => m.id);
+    const borrowerIds = merchants.map((m) => m.borrowerId).filter(Boolean) as string[];
+
+    // Active opt-in consents
+    const consents = merchantIds.length
+      ? await db
+          .select({ merchantId: crossProductConsents.merchantId })
+          .from(crossProductConsents)
+          .where(
+            and(
+              inArray(crossProductConsents.merchantId, merchantIds),
+              eq(crossProductConsents.purpose, "merchant_credit_profile"),
+              eq(crossProductConsents.status, "active"),
+            ),
+          )
+      : [];
+    const optedInSet = new Set(consents.map((c) => c.merchantId).filter(Boolean) as string[]);
+
+    // alternative_data rows (source = "merchant") for linked borrowers
+    const altRows = borrowerIds.length
+      ? await db
+          .select({
+            borrowerId: alternativeData.borrowerId,
+            rawScore: alternativeData.rawScore,
+            consentDate: alternativeData.consentDate,
+          })
+          .from(alternativeData)
+          .where(
+            and(
+              inArray(alternativeData.borrowerId, borrowerIds),
+              eq(alternativeData.source, "merchant"),
+            ),
+          )
+      : [];
+    const altByBorrower = new Map(altRows.map((r) => [r.borrowerId, r]));
+
+    const out = merchants.map((m) => {
+      const alt = m.borrowerId ? altByBorrower.get(m.borrowerId) : undefined;
+      return {
+        merchantId: m.id,
+        shopName: m.shopName,
+        city: m.city,
+        category: m.category,
+        borrowerId: m.borrowerId,
+        optedIn: optedInSet.has(m.id),
+        synced: !!alt,
+        lastSyncAt: alt?.consentDate?.toISOString() ?? null,
+        rawScore: alt?.rawScore ?? null,
+      };
+    });
+
+    res.json({ countryCode: country, merchants: out });
+  } catch (err) {
+    console.error("[loto-admin] credit-status failed", err);
+    res.status(500).json({ message: (err as Error).message });
+  }
+});
+
+// ─── 4b. Manual re-sync: trigger buildMerchantAltData for a merchant ────
+lotoAdminRouter.post("/merchants/:id/resync", ...gate, async (req, res) => {
+  try {
+    const country = resolveCountry(req);
+    const merchantId = req.params.id as string;
+
+    const [merchant] = await db
+      .select({ id: lotoMerchants.id, countryCode: lotoMerchants.countryCode, borrowerId: lotoMerchants.borrowerId })
+      .from(lotoMerchants)
+      .where(eq(lotoMerchants.id, merchantId))
+      .limit(1);
+
+    if (!merchant) return res.status(404).json({ message: "Merchant not found" });
+    if (merchant.countryCode !== country) return res.status(403).json({ message: "Cross-country re-sync forbidden" });
+    if (!merchant.borrowerId) return res.status(422).json({ message: "Merchant has no linked borrower — cannot sync to credit bureau" });
+
+    // Require an active merchant_credit_profile consent — re-sync without opt-in is forbidden.
+    const [activeConsent] = await db
+      .select({ id: crossProductConsents.id })
+      .from(crossProductConsents)
+      .where(
+        and(
+          eq(crossProductConsents.merchantId, merchantId),
+          eq(crossProductConsents.purpose, "merchant_credit_profile"),
+          eq(crossProductConsents.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (!activeConsent) {
+      return res.status(409).json({
+        message: "Merchant has not opted in to credit bureau sharing — re-sync requires an active merchant_credit_profile consent",
+      });
+    }
+
+    const result = await buildMerchantAltData(merchantId, country);
+    await audit(req, "LOTO_MERCHANT_CREDIT_RESYNC", merchantId, `Re-sync ${merchantId} → score ${result.aggregate.complianceScore}`);
+
+    res.json({
+      merchantId,
+      inserted: result.inserted,
+      complianceScore: result.aggregate.complianceScore,
+      syncedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    if (err instanceof PipelineCountryError) {
+      return res.status(400).json({ message: err.message });
+    }
+    console.error("[loto-admin] merchant resync failed", err);
+    res.status(500).json({ message: (err as Error).message });
+  }
+});
+
+// ─── 5. Fraud queue + triage actions ────────────────────────────────────
 lotoAdminRouter.get("/fraud-flags", ...gate, async (req, res) => {
   try {
     const country = resolveCountry(req);

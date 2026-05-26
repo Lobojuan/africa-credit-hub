@@ -23,7 +23,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import {
   Activity, Receipt, Building2, AlertTriangle, ShieldCheck, Map, BarChart3,
   Webhook, FileSpreadsheet, FileText, RefreshCw, History, Trash2, Clock, Zap,
-  MessageCircle,
+  MessageCircle, DatabaseZap,
 } from "lucide-react";
 import { useLocation } from "wouter";
 
@@ -50,6 +50,19 @@ interface ComplianceMerchant {
   momPct: number; openFlags: number; lastReceiptAt: string | null;
 }
 interface CompliancePayload { countryCode: string; merchants: ComplianceMerchant[]; }
+
+interface MerchantCreditStatus {
+  merchantId: string;
+  shopName: string;
+  city: string | null;
+  category: string | null;
+  borrowerId: string | null;
+  optedIn: boolean;
+  synced: boolean;
+  lastSyncAt: string | null;
+  rawScore: number | null;
+}
+interface MerchantCreditStatusPayload { countryCode: string; merchants: MerchantCreditStatus[]; }
 
 interface FraudFlag {
   id: string; ruleCode: string; severity: string; status: string;
@@ -182,6 +195,7 @@ export default function LotoAdminDashboardPage() {
   const kpiQ = useQuery<KPIData>({ queryKey: ["/api/loto/admin/kpi"] });
   const heatmapQ = useQuery<HeatmapPayload>({ queryKey: ["/api/loto/admin/heatmap"] });
   const complianceQ = useQuery<CompliancePayload>({ queryKey: ["/api/loto/admin/compliance-scorecard"], enabled: tab === "compliance" || tab === "overview" });
+  const creditStatusQ = useQuery<MerchantCreditStatusPayload>({ queryKey: ["/api/loto/admin/merchants/credit-status"], enabled: tab === "compliance" });
   const merchantFiscalQ = useQuery<AdminFiscalAccountPayload>({
     queryKey: ["/api/loto/merchant/fiscal-account", selectedMerchantId],
     queryFn: async () => {
@@ -206,6 +220,20 @@ export default function LotoAdminDashboardPage() {
   });
   const webhooksQ = useQuery<WebhookPayload>({ queryKey: ["/api/loto/admin/webhooks"], enabled: tab === "webhooks" });
   const auditQ = useQuery<AuditPayload>({ queryKey: ["/api/loto/admin/audit"], enabled: tab === "audit" });
+
+  const resyncMu = useMutation({
+    mutationFn: async (merchantId: string) => apiRequest("POST", `/api/loto/admin/merchants/${merchantId}/resync`, {}),
+    onSuccess: async (resp) => {
+      const data = await resp.json();
+      toast({
+        title: tx("Re-sync complete", "Re-synchronisation terminée"),
+        description: tx(`Score: ${data.complianceScore}`, `Score : ${data.complianceScore}`),
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/merchants/credit-status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/admin/audit"] });
+    },
+    onError: (e: any) => toast({ title: tx("Re-sync failed", "Échec de la re-synchronisation"), description: e.message, variant: "destructive" }),
+  });
 
   const scanMu = useMutation({
     mutationFn: async () => apiRequest("POST", "/api/loto/admin/fraud-flags/scan", {}),
@@ -413,39 +441,98 @@ export default function LotoAdminDashboardPage() {
             </CardHeader>
             <CardContent>
               {complianceQ.isLoading ? <Skeleton className="h-64 w-full" /> :
-                complianceQ.data ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{tx("Shop", "Boutique")}</TableHead>
-                        <TableHead>{tx("District", "District")}</TableHead>
-                        <TableHead>{tx("Score", "Score")}</TableHead>
-                        <TableHead>{tx("Receipts (30d)", "Reçus (30j)")}</TableHead>
-                        <TableHead>{tx("Turnover (30d)", "CA (30j)")}</TableHead>
-                        <TableHead>{tx("MoM Δ", "Δ M/M")}</TableHead>
-                        <TableHead>{tx("Open flags", "Drapeaux")}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {complianceQ.data.merchants.slice(0, 50).map((m) => (
-                        <TableRow
-                          key={m.merchantId}
-                          data-testid={`row-merchant-${m.merchantId}`}
-                          className="cursor-pointer hover:bg-muted/50"
-                          onClick={() => setSelectedMerchantId(m.merchantId)}
-                        >
-                          <TableCell className="font-medium">{m.shopName}</TableCell>
-                          <TableCell>{m.district}</TableCell>
-                          <TableCell><span className={`font-bold ${scoreColor(m.score)}`} data-testid={`score-${m.merchantId}`}>{m.score}</span></TableCell>
-                          <TableCell>{fmtNum(m.receiptsLast30Days)}</TableCell>
-                          <TableCell>{fmtCurr(m.turnoverLast30Days)}</TableCell>
-                          <TableCell className={m.momPct < 0 ? "text-red-600" : "text-emerald-600"}>{m.momPct.toFixed(1)}%</TableCell>
-                          <TableCell>{m.openFlags > 0 ? <Badge className="bg-red-500 text-white">{m.openFlags}</Badge> : <span className="text-slate-400">—</span>}</TableCell>
+                complianceQ.data ? (() => {
+                  const creditByMerchant = new Map(
+                    (creditStatusQ.data?.merchants ?? []).map((c) => [c.merchantId, c])
+                  );
+                  return (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{tx("Shop", "Boutique")}</TableHead>
+                          <TableHead>{tx("District", "District")}</TableHead>
+                          <TableHead>{tx("Score", "Score")}</TableHead>
+                          <TableHead>{tx("Receipts (30d)", "Reçus (30j)")}</TableHead>
+                          <TableHead>{tx("Turnover (30d)", "CA (30j)")}</TableHead>
+                          <TableHead>{tx("MoM Δ", "Δ M/M")}</TableHead>
+                          <TableHead>{tx("Open flags", "Drapeaux")}</TableHead>
+                          <TableHead className="text-center">
+                            <span className="flex items-center justify-center gap-1">
+                              <DatabaseZap className="h-3.5 w-3.5" />
+                              {tx("Credit Bureau", "Bureau de crédit")}
+                            </span>
+                          </TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : <Alert><AlertTitle>{tx("No data", "Aucune donnée")}</AlertTitle></Alert>}
+                      </TableHeader>
+                      <TableBody>
+                        {complianceQ.data.merchants.slice(0, 50).map((m) => {
+                          const cs = creditByMerchant.get(m.merchantId);
+                          const isResyncing = resyncMu.isPending && resyncMu.variables === m.merchantId;
+                          return (
+                            <TableRow
+                              key={m.merchantId}
+                              data-testid={`row-merchant-${m.merchantId}`}
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => setSelectedMerchantId(m.merchantId)}
+                            >
+                              <TableCell className="font-medium">{m.shopName}</TableCell>
+                              <TableCell>{m.district}</TableCell>
+                              <TableCell><span className={`font-bold ${scoreColor(m.score)}`} data-testid={`score-${m.merchantId}`}>{m.score}</span></TableCell>
+                              <TableCell>{fmtNum(m.receiptsLast30Days)}</TableCell>
+                              <TableCell>{fmtCurr(m.turnoverLast30Days)}</TableCell>
+                              <TableCell className={m.momPct < 0 ? "text-red-600" : "text-emerald-600"}>{m.momPct.toFixed(1)}%</TableCell>
+                              <TableCell>{m.openFlags > 0 ? <Badge className="bg-red-500 text-white">{m.openFlags}</Badge> : <span className="text-slate-400">—</span>}</TableCell>
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                {creditStatusQ.isLoading ? (
+                                  <Skeleton className="h-6 w-24" />
+                                ) : cs ? (
+                                  <div className="flex flex-col gap-1 items-start min-w-[140px]" data-testid={`credit-bureau-cell-${m.merchantId}`}>
+                                    <div className="flex items-center gap-1.5">
+                                      {cs.optedIn ? (
+                                        <Badge className="bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 text-xs" data-testid={`badge-opted-in-${m.merchantId}`}>
+                                          {tx("Opted in", "Inscrit")}
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="secondary" className="text-xs" data-testid={`badge-not-opted-in-${m.merchantId}`}>
+                                          {tx("Not opted in", "Non inscrit")}
+                                        </Badge>
+                                      )}
+                                      {cs.synced && cs.rawScore !== null && (
+                                        <span className={`text-xs font-bold ${scoreColor(cs.rawScore)}`} data-testid={`credit-score-${m.merchantId}`}>
+                                          {cs.rawScore}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {cs.lastSyncAt && (
+                                      <span className="text-[10px] text-muted-foreground" data-testid={`last-sync-${m.merchantId}`}>
+                                        {tx("Synced", "Synchronisé")} {new Date(cs.lastSyncAt).toLocaleDateString()}
+                                      </span>
+                                    )}
+                                    {cs.optedIn && cs.borrowerId && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-6 text-xs px-2 py-0"
+                                        disabled={isResyncing}
+                                        onClick={() => resyncMu.mutate(m.merchantId)}
+                                        data-testid={`button-resync-${m.merchantId}`}
+                                      >
+                                        <RefreshCw className={`h-3 w-3 mr-1 ${isResyncing ? "animate-spin" : ""}`} />
+                                        {tx("Re-sync", "Re-sync")}
+                                      </Button>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  );
+                })() : <Alert><AlertTitle>{tx("No data", "Aucune donnée")}</AlertTitle></Alert>}
             </CardContent>
           </Card>
         </TabsContent>

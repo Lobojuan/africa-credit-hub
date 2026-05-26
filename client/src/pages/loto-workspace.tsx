@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles, CheckCircle2, XCircle, FileSearch, Calculator, Flag, BarChart2, AlertCircle } from "lucide-react";
+import { Ticket, ScanLine, Activity, Award, Receipt, ShieldCheck, TrendingUp, Building2, ArrowRight, Bell, BadgeCheck, ShieldAlert, Sparkles, CheckCircle2, XCircle, FileSearch, Calculator, Flag, BarChart2, AlertCircle, Search, Loader2, Link2, CheckCircle } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { PRODUCT_REGISTRY } from "@/lib/products";
 import { LotoLotteryExperience } from "@/components/loto-lottery-experience";
@@ -181,6 +181,52 @@ export default function LotoWorkspacePage() {
         variant: "destructive",
       });
     },
+  });
+
+  const [borrowerSearchQuery, setBorrowerSearchQuery] = useState("");
+  const [selectedBorrowerId, setSelectedBorrowerId] = useState<string | null>(null);
+  const [showBorrowerSearch, setShowBorrowerSearch] = useState(false);
+
+  interface BorrowerCandidate {
+    id: string; companyName: string | null; firstName: string | null; lastName: string | null;
+    tinNumber: string | null; businessRegNumber: string | null; country: string | null;
+  }
+  const borrowerCandidatesQ = useQuery<BorrowerCandidate[]>({
+    queryKey: ["/api/loto/merchants/me/borrower-candidates", borrowerSearchQuery],
+    queryFn: async () => {
+      const qs = borrowerSearchQuery ? `?query=${encodeURIComponent(borrowerSearchQuery)}` : "";
+      const r = await fetch(`/api/loto/merchants/me/borrower-candidates${qs}`, { credentials: "include" });
+      if (!r.ok) return [];
+      return r.json();
+    },
+    enabled: showBorrowerSearch,
+    staleTime: 30_000,
+  });
+
+  const linkBorrowerMutation = useMutation({
+    mutationFn: async (borrowerId: string) => {
+      const r = await apiRequest("PATCH", "/api/loto/merchants/me", { borrowerId });
+      if (!r.ok) {
+        const body = await r.json().catch(() => ({}));
+        throw new Error((body as { message?: string }).message ?? "Failed to link profile");
+      }
+      return r.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/loto/merchants/me/receipts"] });
+      setShowBorrowerSearch(false);
+      setSelectedBorrowerId(null);
+      setBorrowerSearchQuery("");
+      toast({
+        title: t("loto.linkBorrower.successTitle", "Business profile linked"),
+        description: t("loto.linkBorrower.successBody", "Your business credit profile is now connected. Credit scoring is active."),
+      });
+    },
+    onError: (e: unknown) => toast({
+      title: t("loto.linkBorrower.errorTitle", "Could not link profile"),
+      description: e instanceof Error ? e.message : String(e),
+      variant: "destructive",
+    }),
   });
 
   const merchantOptInMutation = useMutation({
@@ -512,6 +558,107 @@ export default function LotoWorkspacePage() {
                   />
                 </CardHeader>
               </Card>
+
+              {merchant.creditOptInActive && !merchant.borrowerId && (
+                <Card className="mt-4 border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950" data-testid="card-link-borrower">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                      <Link2 className="w-5 h-5" />
+                      {t("loto.linkBorrower.title", "Link your business credit profile to activate credit scoring")}
+                    </CardTitle>
+                    <CardDescription className="text-amber-700 dark:text-amber-300">
+                      {t("loto.linkBorrower.subtitle", "Your VAT receipts are ready to share, but we need to connect them to your business credit record in the Credit Bureau. Search for your company by name or VAT number.")}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {!showBorrowerSearch && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        data-testid="button-open-borrower-search"
+                        onClick={() => setShowBorrowerSearch(true)}
+                      >
+                        <Search className="w-4 h-4 mr-1.5" />
+                        {t("loto.linkBorrower.searchButton", "Search for my business profile")}
+                      </Button>
+                    )}
+                    {showBorrowerSearch && (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <input
+                            data-testid="input-borrower-search"
+                            value={borrowerSearchQuery}
+                            onChange={e => setBorrowerSearchQuery(e.target.value)}
+                            placeholder={t("loto.linkBorrower.searchPlaceholder", "Business name or VAT / TIN number…")}
+                            className="flex-1 px-3 py-2 border rounded-md bg-background text-sm"
+                          />
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            data-testid="button-close-borrower-search"
+                            onClick={() => { setShowBorrowerSearch(false); setSelectedBorrowerId(null); setBorrowerSearchQuery(""); }}
+                          >
+                            {t("common.cancel", "Cancel")}
+                          </Button>
+                        </div>
+
+                        {borrowerCandidatesQ.isLoading && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2" data-testid="borrower-search-loading">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            {t("loto.linkBorrower.searching", "Searching…")}
+                          </div>
+                        )}
+
+                        {borrowerCandidatesQ.data && borrowerCandidatesQ.data.length === 0 && (
+                          <p className="text-sm text-muted-foreground py-2" data-testid="borrower-search-empty">
+                            {t("loto.linkBorrower.noResults", "No matching business profiles found in your country. Contact your credit bureau administrator to register a business borrower profile.")}
+                          </p>
+                        )}
+
+                        {borrowerCandidatesQ.data && borrowerCandidatesQ.data.length > 0 && (
+                          <ul className="space-y-2 max-h-56 overflow-y-auto" data-testid="borrower-candidate-list">
+                            {borrowerCandidatesQ.data.map(b => (
+                              <li key={b.id}>
+                                <button
+                                  data-testid={`borrower-candidate-${b.id}`}
+                                  className={`w-full text-left px-3 py-2 rounded-md border text-sm transition-colors ${selectedBorrowerId === b.id ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-border hover:bg-muted"}`}
+                                  onClick={() => setSelectedBorrowerId(b.id === selectedBorrowerId ? null : b.id)}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {selectedBorrowerId === b.id && <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium truncate">{b.companyName ?? `${b.firstName ?? ""} ${b.lastName ?? ""}`.trim()}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {b.tinNumber && <span>TIN: {b.tinNumber}</span>}
+                                        {b.businessRegNumber && <span className="ml-2">Reg: {b.businessRegNumber}</span>}
+                                        {b.country && <span className="ml-2">{b.country}</span>}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        {selectedBorrowerId && (
+                          <Button
+                            size="sm"
+                            data-testid="button-confirm-link-borrower"
+                            disabled={linkBorrowerMutation.isPending}
+                            onClick={() => linkBorrowerMutation.mutate(selectedBorrowerId)}
+                          >
+                            {linkBorrowerMutation.isPending
+                              ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{t("loto.linkBorrower.linking", "Linking…")}</>
+                              : <><CheckCircle className="w-4 h-4 mr-1.5" />{t("loto.linkBorrower.confirmButton", "Link this profile")}</>
+                            }
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
               {merchantQ.data?.features && (
                 <Card className="mt-4" data-testid="card-feature-preview">

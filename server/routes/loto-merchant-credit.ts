@@ -4,13 +4,15 @@
  * Mounted at /api/loto in routes.ts (with requireAuth applied at mount time).
  *
  * Endpoints:
- *   GET  /merchants/:merchantId/credit-breakdown
- *   POST /merchants/me/credit-opt-in    (unified toggle: enable=true|false)
- *   POST /merchants/me/credit-opt-out   (thin wrapper)
- *   POST /merchant/credit-opt-in        (singular alias)
- *   POST /merchant/credit-opt-out       (singular alias)
- *   POST /consumers/me/credit-opt-in    (consumer credit bridge unified toggle)
- *   POST /consumers/me/credit-opt-out   (thin wrapper)
+ *   GET   /merchants/me/borrower-candidates?query=...
+ *   PATCH /merchants/me                                 (link borrower profile)
+ *   GET   /merchants/:merchantId/credit-breakdown
+ *   POST  /merchants/me/credit-opt-in    (unified toggle: enable=true|false)
+ *   POST  /merchants/me/credit-opt-out   (thin wrapper)
+ *   POST  /merchant/credit-opt-in        (singular alias)
+ *   POST  /merchant/credit-opt-out       (singular alias)
+ *   POST  /consumers/me/credit-opt-in    (consumer credit bridge unified toggle)
+ *   POST  /consumers/me/credit-opt-out   (thin wrapper)
  *
  * Access rules for credit-breakdown:
  *   - Merchant owner (merchant.userId === session.userId): always allowed
@@ -33,7 +35,7 @@
 
 import { Router, Request, Response } from "express";
 import type { Session, SessionData } from "express-session";
-import { eq, and } from "drizzle-orm";
+import { eq, and, ilike, or, desc } from "drizzle-orm";
 import { db } from "../db";
 import { storage } from "../storage";
 import {
@@ -187,6 +189,138 @@ async function handleMerchantOptIn(
 }
 
 router.post("/merchants/me/credit-opt-in", handleMerchantOptIn);
+
+// ─── GET /merchants/me/borrower-candidates?query=... ──────────────────────────
+// Returns corporate borrowers registered in the same country as the merchant.
+// Used by the "Link business credit profile" search dialog in the Loto workspace.
+// Accessible to the authenticated merchant owner only.
+router.get("/merchants/me/borrower-candidates", async (req: Request, res: Response) => {
+  try {
+    const session = req.session as TypedSession;
+    const userId = session.userId;
+    if (!userId) return res.status(401).json({ message: "unauthenticated" });
+
+    const merchant = await storage.getLotoMerchantByUserId(userId);
+    if (!merchant) return res.status(404).json({ message: "merchant_not_found" });
+
+    const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+    const countryCode = merchant.countryCode.toUpperCase();
+
+    const searchPattern = query ? `%${query}%` : undefined;
+    const baseFilters: any[] = [
+      eq(borrowers.type, "corporate"),
+    ];
+    const ccFilter = ilike(borrowers.country, `%${countryCode}%`);
+    baseFilters.push(ccFilter);
+
+    let rows;
+    if (searchPattern) {
+      const searchCondition = or(
+        ilike(borrowers.companyName, searchPattern),
+        ilike(borrowers.tinNumber, searchPattern),
+        ilike(borrowers.businessRegNumber, searchPattern),
+        ilike(borrowers.nationalId, searchPattern),
+      );
+      rows = await db
+        .select({
+          id: borrowers.id,
+          companyName: borrowers.companyName,
+          firstName: borrowers.firstName,
+          lastName: borrowers.lastName,
+          tinNumber: borrowers.tinNumber,
+          businessRegNumber: borrowers.businessRegNumber,
+          country: borrowers.country,
+        })
+        .from(borrowers)
+        .where(and(...baseFilters, searchCondition))
+        .orderBy(desc(borrowers.createdAt))
+        .limit(20);
+    } else {
+      rows = await db
+        .select({
+          id: borrowers.id,
+          companyName: borrowers.companyName,
+          firstName: borrowers.firstName,
+          lastName: borrowers.lastName,
+          tinNumber: borrowers.tinNumber,
+          businessRegNumber: borrowers.businessRegNumber,
+          country: borrowers.country,
+        })
+        .from(borrowers)
+        .where(and(...baseFilters))
+        .orderBy(desc(borrowers.createdAt))
+        .limit(20);
+    }
+
+    res.json(rows);
+  } catch (e) {
+    res.status(500).json({ message: safeError(e) });
+  }
+});
+
+// ─── PATCH /merchants/me ──────────────────────────────────────────────────────
+// Links a business borrower profile to the merchant and immediately triggers the
+// credit pipeline if the merchant has opted in.
+// Body: { borrowerId: string }
+// Country isolation: the borrower must be registered in the same country as the
+// merchant (normalised ISO code comparison — uses normaliseBorrowerCountry from
+// loto-credit-pipeline to handle full country names like "Côte d'Ivoire").
+router.patch("/merchants/me", async (req: Request, res: Response) => {
+  try {
+    const session = req.session as TypedSession;
+    const userId = session.userId;
+    if (!userId) return res.status(401).json({ message: "unauthenticated" });
+
+    const merchant = await storage.getLotoMerchantByUserId(userId);
+    if (!merchant) return res.status(404).json({ message: "merchant_not_found" });
+
+    const { borrowerId } = (req.body ?? {}) as { borrowerId?: string };
+    if (!borrowerId || typeof borrowerId !== "string") {
+      return res.status(400).json({ message: "borrowerId is required" });
+    }
+
+    const [borrower] = await db
+      .select({ id: borrowers.id, country: borrowers.country, type: borrowers.type })
+      .from(borrowers)
+      .where(eq(borrowers.id, borrowerId))
+      .limit(1);
+
+    if (!borrower) {
+      return res.status(404).json({ message: "borrower_not_found" });
+    }
+
+    if (borrower.type !== "corporate") {
+      return res.status(422).json({ message: "Only corporate (business) borrower profiles can be linked to a merchant." });
+    }
+
+    const normalisedBorrowerCode = normaliseBorrowerCountry(borrower.country);
+    if (normalisedBorrowerCode.toUpperCase() !== merchant.countryCode.toUpperCase()) {
+      return res.status(422).json({
+        message: `Country mismatch: the selected borrower is registered in "${borrower.country}" but your merchant is in "${merchant.countryCode}". Only borrowers in the same country can be linked.`,
+        code: "COUNTRY_MISMATCH",
+      });
+    }
+
+    const updated = await storage.updateLotoMerchantBorrower(merchant.id, borrowerId);
+    if (!updated) {
+      return res.status(500).json({ message: "Failed to update merchant" });
+    }
+
+    let pipelineResult: { inserted: boolean } | null = null;
+    if (merchant.creditOptInActive) {
+      try {
+        const result = await buildMerchantAltData(merchant.id, merchant.countryCode);
+        pipelineResult = { inserted: result.inserted };
+      } catch (pipeErr) {
+        if (!(pipeErr instanceof PipelineCountryError)) throw pipeErr;
+      }
+    }
+
+    res.json({ merchant: updated, pipelineTriggered: merchant.creditOptInActive, pipelineResult });
+  } catch (e) {
+    res.status(500).json({ message: safeError(e) });
+  }
+});
 
 // ─── POST /merchants/me/credit-opt-out ────────────────────────────────────────
 // Explicit opt-out endpoint (thin wrapper around handleMerchantOptIn with
