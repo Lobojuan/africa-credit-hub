@@ -188,7 +188,7 @@ async function handleMerchantOptIn(
   }
 }
 
-router.post("/merchants/me/credit-opt-in", handleMerchantOptIn);
+router.post("/merchants/me/credit-opt-in", (req: Request, res: Response) => handleMerchantOptIn(req, res));
 
 // ─── GET /merchants/me/borrower-candidates?query=... ──────────────────────────
 // Returns corporate borrowers registered in the same country as the merchant.
@@ -333,7 +333,7 @@ router.post("/merchants/me/credit-opt-out", (req: Request, res: Response) => {
 // ─── Singular aliases: /merchant/credit-opt-in and /merchant/credit-opt-out ───
 // The task spec defines paths without the trailing 's' on "merchant".
 // Both aliases proxy to the same unified handleMerchantOptIn toggle.
-router.post("/merchant/credit-opt-in", handleMerchantOptIn);
+router.post("/merchant/credit-opt-in", (req: Request, res: Response) => handleMerchantOptIn(req, res));
 router.post("/merchant/credit-opt-out", (req: Request, res: Response) => {
   return handleMerchantOptIn(req, res, false);
 });
@@ -342,7 +342,7 @@ router.post("/merchant/credit-opt-out", (req: Request, res: Response) => {
 
 router.get("/merchants/:merchantId/credit-breakdown", async (req: Request, res: Response) => {
   try {
-    const { merchantId } = req.params;
+    const merchantId = String(req.params.merchantId);
     const session = req.session as TypedSession;
     const userId = session.userId;
     const userRole = session.userRole ?? "";
@@ -684,7 +684,7 @@ async function handleConsumerOptIn(
   }
 }
 
-router.post("/consumers/me/credit-opt-in", handleConsumerOptIn);
+router.post("/consumers/me/credit-opt-in", (req: Request, res: Response) => handleConsumerOptIn(req, res));
 router.post("/consumers/me/credit-opt-out", (req: Request, res: Response) => {
   return handleConsumerOptIn(req, res, false);
 });

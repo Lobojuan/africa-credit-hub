@@ -730,7 +730,7 @@ router.post("/merchant/receipts/:id/flag", requireAuth, async (req, res) => {
     const userId = req.session?.userId;
     if (!userId) return res.status(401).json({ message: "unauthenticated" });
 
-    const { id: receiptId } = req.params;
+    const receiptId = String(req.params.id);
     const { reason } = req.body ?? {};
 
     const role = req.session?.userRole as string | undefined;

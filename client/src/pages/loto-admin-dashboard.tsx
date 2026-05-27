@@ -442,8 +442,8 @@ export default function LotoAdminDashboardPage() {
             <CardContent>
               {complianceQ.isLoading ? <Skeleton className="h-64 w-full" /> :
                 complianceQ.data ? (() => {
-                  const creditByMerchant = new Map(
-                    (creditStatusQ.data?.merchants ?? []).map((c) => [c.merchantId, c])
+                  const creditByMerchant = new globalThis.Map(
+                    (creditStatusQ.data?.merchants ?? []).map((c): [string, typeof c] => [c.merchantId, c])
                   );
                   return (
                     <Table>
