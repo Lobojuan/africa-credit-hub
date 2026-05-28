@@ -805,9 +805,11 @@ router.post("/merchant/receipts/:id/flag", requireAuth, async (req, res) => {
         receiptId: receipt.id,
         severity: "low",
         reportedBy: userId,
+      }).catch((_webhookErr: unknown) => {
+        // Webhook delivery failure must not block the API response
       });
     } catch (_webhookErr) {
-      // Webhook delivery failure must not block the API response
+      // import() failure must not block the API response
     }
 
     await storage.createAuditLog({

@@ -45,7 +45,8 @@ import {
   borrowers,
   type AlternativeData,
 } from "@shared/schema";
-import { isPlatformPrivileged } from "./middleware";
+import { isPlatformPrivileged, getCountryFilter } from "./middleware";
+import { COUNTRY_REGISTRY } from "../country-mode";
 import { computeMerchantComplianceScore } from "../loto-fraud-rules";
 import {
   buildMerchantAltData,
@@ -206,12 +207,19 @@ router.get("/merchants/me/borrower-candidates", async (req: Request, res: Respon
     const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
     const countryCode = merchant.countryCode.toUpperCase();
 
+    // Build exact country filter: match borrowers whose country field stores either
+    // the 2-letter ISO code (e.g. "CI") or the full country name (e.g. "Côte d'Ivoire").
+    // Substring matching (%code%) is intentionally avoided — it leaks cross-country
+    // records when codes appear inside other country names.
+    const countryEntry = Object.values(COUNTRY_REGISTRY).find(
+      c => c.code.toUpperCase() === countryCode,
+    );
+    const ccFilter = countryEntry
+      ? or(ilike(borrowers.country, countryCode), ilike(borrowers.country, countryEntry.name))
+      : ilike(borrowers.country, countryCode);
+
     const searchPattern = query ? `%${query}%` : undefined;
-    const baseFilters: any[] = [
-      eq(borrowers.type, "corporate"),
-    ];
-    const ccFilter = ilike(borrowers.country, `%${countryCode}%`);
-    baseFilters.push(ccFilter);
+    const baseFilters: any[] = [eq(borrowers.type, "corporate"), ccFilter];
 
     let rows;
     if (searchPattern) {
@@ -370,6 +378,16 @@ router.get("/merchants/:merchantId/credit-breakdown", async (req: Request, res: 
       if (!isPrivilegedRole) {
         return res.status(403).json({ message: "access_denied" });
       }
+
+      // Country-scope guard: non-platform-admin users may only access merchants
+      // in their own country/org scope. getCountryFilter returns null for
+      // super_admin (unrestricted), or the scoped country string otherwise.
+      const callerCountry = getCountryFilter(req as any);
+      if (callerCountry && merchantRecord.countryCode &&
+          callerCountry.toLowerCase() !== merchantRecord.countryCode.toLowerCase()) {
+        return res.status(403).json({ message: "country_scope_mismatch" });
+      }
+
       const consents = await storage.getCrossProductConsents({ merchantId });
       const typedConsents = consents as Array<{ purpose: string; status: string }>;
       const hasActiveConsent = typedConsents.some(

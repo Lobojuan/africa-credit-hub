@@ -315,7 +315,7 @@ app.use((req, res, next) => {
   if (req.path === "/api/loto/ussd/session") return next();
 
   const csrfToken = req.headers["x-csrf-token"] as string;
-  if (req.session?.userId) {
+  if (req.session?.userId || req.session?.consumerId) {
     if (!req.session.csrfToken) {
       req.session.csrfToken = generateCSRFToken();
     }

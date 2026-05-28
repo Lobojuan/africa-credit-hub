@@ -991,14 +991,19 @@ lotoAdminRouter.patch(
 // ─── 8. Loto-scoped audit log ───────────────────────────────────────────
 lotoAdminRouter.get("/audit", ...gate, async (req, res) => {
   try {
-    resolveCountry(req); // validation only — audit_logs is global, but we
-                         // restrict to loto-prefixed entities/actions below.
+    const country = getCountryFilter(req);
+    enforceCountryScopeForNonSuperAdmin(req, country, req.path);
     const limit = Math.min(parseInt(String(req.query.limit ?? "100")), 500);
+
+    const lotoPattern = sql`(${auditLogs.entity} LIKE 'loto%' OR ${auditLogs.action} LIKE 'LOTO_%' OR ${auditLogs.action} LIKE 'loto_%')`;
+
     const rows = await db
       .select()
       .from(auditLogs)
       .where(
-        sql`${auditLogs.entity} LIKE 'loto%' OR ${auditLogs.action} LIKE 'LOTO_%' OR ${auditLogs.action} LIKE 'loto_%'`,
+        country
+          ? sql`${lotoPattern} AND ${auditLogs.details} LIKE ${"%" + country + "%"}`
+          : lotoPattern,
       )
       .orderBy(desc(auditLogs.createdAt))
       .limit(limit);
