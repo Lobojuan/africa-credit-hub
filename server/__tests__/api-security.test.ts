@@ -453,7 +453,38 @@ describe("USSD rate limiter configuration", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 10. isSafeWebhookUrl — SSRF protection
+// 10. Bot detection public route exemptions
+// ─────────────────────────────────────────────────────────────────────────────
+describe("Bot detection public route exemptions", () => {
+  it("allows the SPA login shell to load before API authentication", async () => {
+    const { botDetectionMiddleware } = await import("../middleware/bot-detection");
+    let nextCalled = false;
+    const req: any = {
+      path: "/login",
+      headers: {
+        "user-agent": "curl/8.0.0",
+      },
+      ip: "203.0.113.10",
+      session: {},
+    };
+    const res: any = {
+      setHeader: () => {},
+      status: () => res,
+      json: () => {
+        throw new Error("Login shell route should not be bot-blocked");
+      },
+    };
+
+    botDetectionMiddleware(req, res, () => {
+      nextCalled = true;
+    });
+
+    expect(nextCalled).toBe(true);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 11. isSafeWebhookUrl — SSRF protection
 // ─────────────────────────────────────────────────────────────────────────────
 describe("Webhook URL SSRF protection", () => {
   it("isSafeWebhookUrl is exported from url-safety", async () => {
