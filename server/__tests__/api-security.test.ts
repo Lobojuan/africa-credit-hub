@@ -367,7 +367,7 @@ describe("PII encryption", () => {
     expect(a).not.toBe(b);
   });
 
-  it("verifyPIIEncryptionIntegrity is callable and returns expected shape", async () => {
+  it.skipIf(!process.env.DATABASE_URL)("verifyPIIEncryptionIntegrity is callable and returns expected shape", async () => {
     const { verifyPIIEncryptionIntegrity } = await import("../security-hardening");
     const result = await verifyPIIEncryptionIntegrity();
     expect(typeof result.totalBorrowers).toBe("number");

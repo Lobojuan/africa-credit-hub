@@ -8,6 +8,7 @@ export default defineConfig({
     globals: true,
     include: [
       "server/__tests__/logger.test.ts",
+      "server/__tests__/api-security.test.ts",
       "server/__tests__/credit-score.test.ts",
       "server/__tests__/performance-cache.test.ts",
       "server/__tests__/loto-draw-engine.test.ts",
@@ -19,7 +20,7 @@ export default defineConfig({
       "client/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
     exclude: ["node_modules", "dist"],
-    setupFiles: ["./client/src/test-setup.ts"],
+    setupFiles: ["./server/__tests__/unit-env.ts", "./client/src/test-setup.ts"],
   },
   resolve: {
     alias: {
