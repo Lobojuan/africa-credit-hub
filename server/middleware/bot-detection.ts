@@ -27,10 +27,22 @@ setInterval(() => {
 }, 30_000);
 
 export function botDetectionMiddleware(req: Request, res: Response, next: NextFunction) {
+  const isDev = process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true";
+  if (
+    isDev && (
+      req.path.startsWith("/src/") ||
+      req.path.startsWith("/@vite") ||
+      req.path.startsWith("/@react-refresh") ||
+      req.path.startsWith("/node_modules/")
+    )
+  ) {
+    return next();
+  }
+
   if (
     req.path.startsWith("/.well-known") ||
     EXEMPT_PATHS.has(req.path) ||
-    req.path.match(/\.(js|css|png|jpg|ico|woff2?)$/)
+    req.path.match(/\.(js|jsx|ts|tsx|css|png|jpg|ico|woff2?)$/)
   ) {
     return next();
   }
