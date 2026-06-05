@@ -42,6 +42,55 @@ const LIVE_DECISIONS: LiveDecision[] = [
   { country: "🇷🇼", flag: "RW", actionKey: "scoreRefreshed", subject: "BK · Kigali", amount: "705", color: "blue" },
 ];
 
+const CREDIT_HERO_FR = {
+  eyebrow: "Intelligence de Crédit Panafricaine",
+  title: "Le plus grand graphe de crédit unifié d'Afrique",
+  subtitle: "Décisions de crédit en temps réel dans 54 pays, 6 régulateurs et tous les grands prêteurs — avec données alternatives, scoring IA et passerelle inter-produits contrôlée par le consentement.",
+  kpiBorrowers: "Emprunteurs suivis",
+  kpiInquiries: "Demandes en direct aujourd'hui",
+  kpiDecisions: "Décisions / mois",
+  kpiCoverage: "Couverture",
+  yoy: "+8,2 % sur un an",
+  liveTicking: "Mise à jour en direct",
+  latency: "~ 240 ms de latence p95",
+  coverageSub: "Pays africains · 6 régulateurs",
+  isoBadge: "Aligné ISO 27001",
+  aiBadge: "Scoring IA · données alternatives prêtes",
+  tickerLabel: "Décisions en direct sur le réseau",
+  streaming: "En direct",
+  trustCoverage: "54 juridictions africaines",
+  trustAccuracy: "Précision du modèle",
+  trustSpeed: "Vitesse de décision",
+  moreCountries: "+ 42 autres",
+  accuracySub: "AUC auprès des prêteurs pilotes",
+  speedSub: "p95 de bout en bout · API + passerelle + score",
+  actions: {
+    loanApproved: "Prêt approuvé",
+    creditInquiry: "Demande de crédit",
+    scoreRefreshed: "Score actualisé",
+    disputeResolved: "Litige résolu",
+    creditPulled: "Crédit consulté",
+    scoreUpdated: "Score mis à jour",
+    telcoScoring: "Scoring télécom",
+    inquiryBatch: "Lot de demandes",
+    decisionEngine: "Moteur de décision",
+  },
+  amounts: {
+    cleared: "Résolu",
+    tierA: "Niveau A",
+    approved: "Approuvé",
+  },
+} as const;
+
+function getCreditHeroFrenchText(key: string): string | undefined {
+  let current: unknown = CREDIT_HERO_FR;
+  for (const part of key.replace(/^creditHero\./, "").split(".")) {
+    if (!current || typeof current !== "object" || !(part in current)) return undefined;
+    current = (current as Record<string, unknown>)[part];
+  }
+  return typeof current === "string" ? current : undefined;
+}
+
 function useCountUp(target: number, durationMs = 1800) {
   const [value, setValue] = useState(0);
   useEffect(() => {
@@ -87,7 +136,9 @@ export function CreditInvestorHero({
   totalAccounts,
   totalInquiries,
 }: CreditInvestorHeroProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isFrench = i18n.resolvedLanguage?.startsWith("fr") || i18n.language?.startsWith("fr");
+  const tr = (key: string, fallback: string) => isFrench ? getCreditHeroFrenchText(key) ?? fallback : t(key, fallback);
   const animatedBorrowers = useCountUp(totalBorrowers, 2200);
   const liveInquiries = useTickingCounter(totalInquiries ?? 247_812, 0.5, 2.4);
   const decisionsToday = useTickingCounter(totalAccounts ?? 1_842_360, 1.2, 4.8);
@@ -140,50 +191,50 @@ export function CreditInvestorHero({
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-3.5 h-3.5 text-blue-300 credit-pulse-soft" />
             <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-blue-200/90" data-testid="text-credit-hero-eyebrow">
-              {t("creditHero.eyebrow", "Pan-African Credit Intelligence")}
+              {tr("creditHero.eyebrow", "Pan-African Credit Intelligence")}
             </span>
           </div>
 
           <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-white via-blue-100 to-violet-100 bg-clip-text text-transparent leading-tight mb-2" data-testid="text-credit-hero-title">
-            {t("creditHero.title", "Africa's largest unified credit graph")}
+            {tr("creditHero.title", "Africa's largest unified credit graph")}
           </h1>
 
           <p className="text-sm md:text-base text-blue-100/80 max-w-2xl mb-6" data-testid="text-credit-hero-subtitle">
-            {t("creditHero.subtitle", "Real-time credit decisions across 54 countries, 6 regulators, and every major lender — backed by alternative data, AI scoring, and a consent-controlled cross-product bridge.")}
+            {tr("creditHero.subtitle", "Real-time credit decisions across 54 countries, 6 regulators, and every major lender — backed by alternative data, AI scoring, and a consent-controlled cross-product bridge.")}
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-borrowers">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
                 <Users className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiBorrowers", "Borrowers tracked")}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold">{tr("creditHero.kpiBorrowers", "Borrowers tracked")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">{formatLargeNumber(animatedBorrowers)}</div>
-              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><TrendingUp className="w-2.5 h-2.5" />{t("creditHero.yoy", "+8.2% YoY")}</div>
+              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><TrendingUp className="w-2.5 h-2.5" />{tr("creditHero.yoy", "+8.2% YoY")}</div>
             </div>
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-inquiries">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
                 <Activity className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiInquiries", "Live inquiries today")}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold">{tr("creditHero.kpiInquiries", "Live inquiries today")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">{liveInquiries.toLocaleString()}</div>
-              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block credit-pulse-soft" />{t("creditHero.liveTicking", "Live ticking")}</div>
+              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block credit-pulse-soft" />{tr("creditHero.liveTicking", "Live ticking")}</div>
             </div>
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-decisions">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
                 <Cpu className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiDecisions", "Decisions / month")}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold">{tr("creditHero.kpiDecisions", "Decisions / month")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">{(decisionsToday / 1000).toFixed(1)}K</div>
-              <div className="text-[10px] text-blue-200 mt-0.5">{t("creditHero.latency", "~ 240ms latency p95")}</div>
+              <div className="text-[10px] text-blue-200 mt-0.5">{tr("creditHero.latency", "~ 240ms latency p95")}</div>
             </div>
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-coverage">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
                 <Globe className="w-3.5 h-3.5" />
-                <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiCoverage", "Coverage")}</span>
+                <span className="text-[10px] uppercase tracking-wider font-semibold">{tr("creditHero.kpiCoverage", "Coverage")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">54</div>
-              <div className="text-[10px] text-blue-200 mt-0.5">{t("creditHero.coverageSub", "African countries · 6 regulators")}</div>
+              <div className="text-[10px] text-blue-200 mt-0.5">{tr("creditHero.coverageSub", "African countries · 6 regulators")}</div>
             </div>
           </div>
 
@@ -194,10 +245,10 @@ export function CreditInvestorHero({
               </Badge>
             ))}
             <Badge variant="outline" className="text-[10px] bg-emerald-500/20 border-emerald-300/40 text-emerald-100 backdrop-blur" data-testid="badge-iso">
-              <Lock className="w-2.5 h-2.5 mr-1" />{t("creditHero.isoBadge", "ISO 27001 aligned")}
+              <Lock className="w-2.5 h-2.5 mr-1" />{tr("creditHero.isoBadge", "ISO 27001 aligned")}
             </Badge>
             <Badge variant="outline" className="text-[10px] bg-violet-500/20 border-violet-300/40 text-violet-100 backdrop-blur" data-testid="badge-ai">
-              <Brain className="w-2.5 h-2.5 mr-1" />{t("creditHero.aiBadge", "AI scoring · alt-data ready")}
+              <Brain className="w-2.5 h-2.5 mr-1" />{tr("creditHero.aiBadge", "AI scoring · alt-data ready")}
             </Badge>
           </div>
         </div>
@@ -207,10 +258,10 @@ export function CreditInvestorHero({
         <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block credit-pulse-soft" />
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">{t("creditHero.tickerLabel", "Live decisions across the network")}</span>
+            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">{tr("creditHero.tickerLabel", "Live decisions across the network")}</span>
           </div>
           <Badge variant="outline" className="ml-auto text-[10px] border-slate-300 dark:border-slate-700">
-            <BarChart3 className="w-2.5 h-2.5 mr-1" />{t("creditHero.streaming", "Streaming")}
+            <BarChart3 className="w-2.5 h-2.5 mr-1" />{tr("creditHero.streaming", "Streaming")}
           </Badge>
         </div>
         <div className="overflow-hidden py-2.5">
@@ -225,11 +276,11 @@ export function CreditInvestorHero({
               return (
                 <div key={i} className={`shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colorMap[d.color]} text-xs font-medium`}>
                   <span className="text-base leading-none">{d.country}</span>
-                  <span className="font-semibold">{t(`creditHero.actions.${d.actionKey}`, d.actionKey)}</span>
+                  <span className="font-semibold">{tr(`creditHero.actions.${d.actionKey}`, d.actionKey)}</span>
                   <span className="opacity-70">·</span>
                   <span className="opacity-80">{d.subject}</span>
                   <span className="opacity-70">·</span>
-                  <span className="font-mono font-bold">{d.amountKey ? t(`creditHero.amounts.${d.amountKey}`, d.amountKey) : d.amount}</span>
+                  <span className="font-mono font-bold">{d.amountKey ? tr(`creditHero.amounts.${d.amountKey}`, d.amountKey) : d.amount}</span>
                 </div>
               );
             })}
@@ -243,11 +294,11 @@ export function CreditInvestorHero({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white">
               <Globe className="w-4 h-4" />
             </div>
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{t("creditHero.trustCoverage", "54 African jurisdictions")}</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{tr("creditHero.trustCoverage", "54 African jurisdictions")}</div>
           </div>
           <div className="text-base">
             {COUNTRY_FLAGS.slice(0, 12).join(" ")}
-            <span className="text-xs text-muted-foreground ml-1.5">{t("creditHero.moreCountries", "+ 42 more")}</span>
+            <span className="text-xs text-muted-foreground ml-1.5">{tr("creditHero.moreCountries", "+ 42 more")}</span>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4" data-testid="trust-tile-accuracy">
@@ -255,20 +306,20 @@ export function CreditInvestorHero({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white">
               <CheckCircle2 className="w-4 h-4" />
             </div>
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{t("creditHero.trustAccuracy", "Model accuracy")}</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{tr("creditHero.trustAccuracy", "Model accuracy")}</div>
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">94.2%</div>
-          <div className="text-[10px] text-muted-foreground">{t("creditHero.accuracySub", "AUC across pilot lenders")}</div>
+          <div className="text-[10px] text-muted-foreground">{tr("creditHero.accuracySub", "AUC across pilot lenders")}</div>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4" data-testid="trust-tile-speed">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center text-white">
               <Zap className="w-4 h-4" />
             </div>
-            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{t("creditHero.trustSpeed", "Decision speed")}</div>
+            <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{tr("creditHero.trustSpeed", "Decision speed")}</div>
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">240<span className="text-sm">ms</span></div>
-          <div className="text-[10px] text-muted-foreground">{t("creditHero.speedSub", "p95 end-to-end · API + bridge + score")}</div>
+          <div className="text-[10px] text-muted-foreground">{tr("creditHero.speedSub", "p95 end-to-end · API + bridge + score")}</div>
         </div>
       </div>
     </div>
