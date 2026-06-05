@@ -36,3 +36,7 @@ sed*
 # Logs
 *.log
 npm-debug.log*
+
+# Package managers
+pnpm-lock.yaml
+pnpm-workspace.yaml
