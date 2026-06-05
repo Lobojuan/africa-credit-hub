@@ -5,6 +5,7 @@ import { creditInquiries, courtJudgments, borrowers, creditAccounts, disputes } 
 import { inArray, sql, and, eq, gte, lte } from "drizzle-orm";
 import { calculateCreditScore } from "../credit-score";
 import { indexByArray } from "../utils/index-utils";
+import { getOrComputeAggregation } from "../utils/aggregation-cache";
 import {
   requireAuth, requireRole, getOrgScope, getCountryFilter, safeErrorMessage,
 } from "./middleware";
@@ -16,7 +17,12 @@ router.get("/api/dashboard/stats", requireAuth, async (req, res) => {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
     const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
-    const stats = await storage.getDashboardStats(orgId, scope);
+    const stats = await getOrComputeAggregation(
+      "dashboard_stats",
+      () => storage.getDashboardStats(orgId, scope),
+      orgId,
+      scope,
+    );
     res.json(stats);
   } catch (e: any) {
     res.status(500).json({ message: safeErrorMessage(e) });
@@ -112,9 +118,9 @@ router.get("/api/dashboard/chart-data", requireAuth, async (req, res) => {
     const country = getCountryFilter(req);
     const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
     const [stats, portfolio, borrowerAgg] = await Promise.all([
-      storage.getDashboardStats(orgId, scope),
-      storage.getPortfolioAggregates(orgId, country),
-      storage.getBorrowerAggregates(orgId, country),
+      getOrComputeAggregation("dashboard_stats", () => storage.getDashboardStats(orgId, scope), orgId, scope),
+      getOrComputeAggregation("portfolio", () => storage.getPortfolioAggregates(orgId, country), orgId, country),
+      getOrComputeAggregation("borrower_agg", () => storage.getBorrowerAggregates(orgId, country), orgId, country),
     ]);
 
     const countryBreakdown = [{
@@ -177,9 +183,9 @@ router.get("/api/platform-kpis", requireAuth, async (req, res) => {
     const country = getCountryFilter(req);
     const scope = country ?? (req.session?.userRole === "super_admin" ? GLOBAL_SCOPE : undefined);
     const [stats, portfolio, borrowerAgg] = await Promise.all([
-      storage.getDashboardStats(orgId, scope),
-      storage.getPortfolioAggregates(orgId, country),
-      storage.getBorrowerAggregates(orgId, country),
+      getOrComputeAggregation("dashboard_stats", () => storage.getDashboardStats(orgId, scope), orgId, scope),
+      getOrComputeAggregation("portfolio", () => storage.getPortfolioAggregates(orgId, country), orgId, country),
+      getOrComputeAggregation("borrower_agg", () => storage.getBorrowerAggregates(orgId, country), orgId, country),
     ]);
 
     const totalPortfolio = portfolio.totalValue;

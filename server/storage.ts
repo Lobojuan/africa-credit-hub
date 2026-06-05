@@ -104,6 +104,12 @@ function capListLimit(limit: number): number {
   return Math.max(0, Math.min(limit, MAX_LIST_LIMIT));
 }
 
+function invalidateAggregationCache(organizationId?: string | null, country?: string | null): void {
+  import("./utils/aggregation-cache")
+    .then(({ invalidateAggregations }) => invalidateAggregations(organizationId ?? undefined, country ?? undefined))
+    .catch(() => {});
+}
+
 export function isGlobalScope(country: CountryScope): boolean {
   return country === GLOBAL_SCOPE;
 }
@@ -965,6 +971,7 @@ export class DatabaseStorage implements IStorage {
     } catch (e: any) {
       console.error("[trace] capture on create failed:", e.message);
     }
+    invalidateAggregationCache(decrypted.organizationId, decrypted.country);
     return decrypted;
   }
 
@@ -989,6 +996,7 @@ export class DatabaseStorage implements IStorage {
       const err = e as Error;
       console.error("[trace] capture on update failed:", err.message);
     }
+    invalidateAggregationCache(decrypted.organizationId, decrypted.country);
     return decrypted;
   }
 
@@ -1284,6 +1292,7 @@ export class DatabaseStorage implements IStorage {
       const err = e as Error;
       console.error("[trace] account-create capture failed:", err.message);
     }
+    invalidateAggregationCache(created.organizationId);
     return created;
   }
 
@@ -1307,6 +1316,7 @@ export class DatabaseStorage implements IStorage {
         console.error("[trace] account-update capture failed:", err.message);
       }
     }
+    if (updated) invalidateAggregationCache(updated.organizationId);
     return updated;
   }
 
@@ -1325,6 +1335,7 @@ export class DatabaseStorage implements IStorage {
 
   async createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry> {
     const [created] = await db.insert(creditInquiries).values(inquiry).returning();
+    invalidateAggregationCache();
     return created;
   }
 
@@ -1696,6 +1707,7 @@ export class DatabaseStorage implements IStorage {
       correctionType,
       slaDeadline,
     }).returning();
+    invalidateAggregationCache(created.organizationId, created.country);
     return created;
   }
 
@@ -1705,6 +1717,7 @@ export class DatabaseStorage implements IStorage {
       updateData.resolvedAt = new Date();
     }
     const [updated] = await db.update(disputes).set(updateData).where(eq(disputes.id, id)).returning();
+    if (updated) invalidateAggregationCache(updated.organizationId, updated.country);
     return updated;
   }
 
