@@ -110,6 +110,12 @@ function invalidateAggregationCache(organizationId?: string | null, country?: st
     .catch(() => {});
 }
 
+function invalidateScoreCache(borrowerId?: string | null): void {
+  import("./utils/score-cache")
+    .then(({ invalidateCreditScore }) => invalidateCreditScore(borrowerId ?? undefined))
+    .catch(() => {});
+}
+
 export function isGlobalScope(country: CountryScope): boolean {
   return country === GLOBAL_SCOPE;
 }
@@ -972,6 +978,7 @@ export class DatabaseStorage implements IStorage {
       console.error("[trace] capture on create failed:", e.message);
     }
     invalidateAggregationCache(decrypted.organizationId, decrypted.country);
+    invalidateScoreCache(decrypted.id);
     return decrypted;
   }
 
@@ -997,6 +1004,7 @@ export class DatabaseStorage implements IStorage {
       console.error("[trace] capture on update failed:", err.message);
     }
     invalidateAggregationCache(decrypted.organizationId, decrypted.country);
+    invalidateScoreCache(decrypted.id);
     return decrypted;
   }
 
@@ -1293,6 +1301,7 @@ export class DatabaseStorage implements IStorage {
       console.error("[trace] account-create capture failed:", err.message);
     }
     invalidateAggregationCache(created.organizationId);
+    invalidateScoreCache(created.borrowerId);
     return created;
   }
 
@@ -1317,6 +1326,7 @@ export class DatabaseStorage implements IStorage {
       }
     }
     if (updated) invalidateAggregationCache(updated.organizationId);
+    if (updated) invalidateScoreCache(updated.borrowerId);
     return updated;
   }
 
@@ -1336,6 +1346,7 @@ export class DatabaseStorage implements IStorage {
   async createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry> {
     const [created] = await db.insert(creditInquiries).values(inquiry).returning();
     invalidateAggregationCache();
+    invalidateScoreCache(created.borrowerId);
     return created;
   }
 
@@ -1802,6 +1813,8 @@ export class DatabaseStorage implements IStorage {
 
   async createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment> {
     const [created] = await db.insert(courtJudgments).values(judgment).returning();
+    invalidateAggregationCache(created.organizationId);
+    invalidateScoreCache(created.borrowerId);
     return created;
   }
 

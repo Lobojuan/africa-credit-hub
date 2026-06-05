@@ -6,6 +6,7 @@ import { inArray, sql, and, eq, gte, lte } from "drizzle-orm";
 import { calculateCreditScore } from "../credit-score";
 import { indexByArray } from "../utils/index-utils";
 import { getOrComputeAggregation } from "../utils/aggregation-cache";
+import { buildScoreFingerprint, getOrComputeScore } from "../utils/score-cache";
 import {
   requireAuth, requireRole, getOrgScope, getCountryFilter, safeErrorMessage,
 } from "./middleware";
@@ -318,7 +319,19 @@ router.get("/api/score-band-performance", requireAuth, requireRole("admin", "len
       const bAccounts = accountsByBorrower.get(b.id) ?? [];
       const bInquiries = inquiriesByBorrower.get(b.id) ?? [];
       const bJudgments = judgmentsByBorrower.get(b.id) ?? [];
-      const scoreResult = calculateCreditScore(bAccounts, bInquiries.length, bJudgments, b.isPep ?? false);
+      const scoreFingerprint = buildScoreFingerprint([
+        b.isPep ?? false,
+        bAccounts.length,
+        bInquiries.length,
+        bJudgments.length,
+        ...bAccounts.map((account) => `${account.id}:${account.status}:${account.currentBalance}:${account.updatedAt?.getTime?.() ?? ""}`),
+        ...bJudgments.map((judgment) => `${judgment.id}:${judgment.status}`),
+      ]);
+      const scoreResult = await getOrComputeScore(
+        b.id,
+        scoreFingerprint,
+        () => calculateCreditScore(bAccounts, bInquiries.length, bJudgments, b.isPep ?? false),
+      );
       borrowerScores.set(b.id, scoreResult.score);
     }
 
