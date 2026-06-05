@@ -33,6 +33,8 @@ import regulatoryControlsRouter from "./routes/regulatory-controls-router";
 import { registerPlatformControlRoutes } from "./routes/platform-control";
 import { registerOAuthRoutes, getGoogleRedirectUri, getMicrosoftRedirectUri } from "./routes/oauth";
 import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
+import { getAggregationCacheStats } from "./utils/aggregation-cache";
+import { getScoreCacheStats } from "./utils/score-cache";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -11941,6 +11943,21 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   const serverStartTime = Date.now();
 
+  app.get("/api/platform/performance-status", requireAuth, requireSuperAdmin, (_req, res) => {
+    res.json({
+      monitor: {
+        enabled: process.env.PERF_MONITOR_ENABLED !== "false",
+        paused: process.env.PERF_MONITOR_PAUSED === "true",
+        slowMs: Number.parseInt(process.env.PERF_MONITOR_SLOW_MS || "1000", 10),
+        includeStatic: process.env.PERF_MONITOR_INCLUDE_STATIC === "true",
+      },
+      caches: {
+        aggregations: getAggregationCacheStats(),
+        scores: getScoreCacheStats(),
+      },
+    });
+  });
+
   app.get("/api/platform/system-stats", requireAuth, requireSuperAdmin, async (_req, res) => {
     try {
       const dbVersionResult = await db.execute(sql`SELECT version()`);
@@ -21298,4 +21315,3 @@ async function seedCollateralDemoData() {
     routeLogger.info("[Seed] seedCollateralDemoData skipped: " + e.message);
   }
 }
-
