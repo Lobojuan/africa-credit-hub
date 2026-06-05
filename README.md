@@ -199,6 +199,19 @@ npm run dev
 
 The application starts on port **5000** with the Express backend serving both the API and the Vite-bundled frontend.
 
+### Testing
+
+```bash
+# Fast local suite: no external PostgreSQL or production secrets required
+npm test
+
+# Same local suite, explicit name
+npm run test:unit
+
+# Full suite: requires DATABASE_URL plus required test secrets such as PII_ENCRYPTION_KEY and PII_ENCRYPTION_SALT
+npm run test:all
+```
+
 ### Default Admin Credentials
 
 | Field | Value |
