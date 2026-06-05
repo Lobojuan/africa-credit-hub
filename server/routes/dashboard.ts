@@ -4,6 +4,7 @@ import { storage, GLOBAL_SCOPE } from "../storage";
 import { creditInquiries, courtJudgments, borrowers, creditAccounts, disputes } from "@shared/schema";
 import { inArray, sql, and, eq, gte, lte } from "drizzle-orm";
 import { calculateCreditScore } from "../credit-score";
+import { indexByArray } from "../utils/index-utils";
 import {
   requireAuth, requireRole, getOrgScope, getCountryFilter, safeErrorMessage,
 } from "./middleware";
@@ -300,11 +301,15 @@ router.get("/api/score-band-performance", requireAuth, requireRole("admin", "len
       ? await db.select().from(courtJudgments).where(inArray(courtJudgments.borrowerId, borrowerIds))
       : [];
 
+    const accountsByBorrower = indexByArray(allAccounts, (account) => account.borrowerId);
+    const inquiriesByBorrower = indexByArray(allInquiries, (inquiry) => inquiry.borrowerId);
+    const judgmentsByBorrower = indexByArray(allJudgments, (judgment) => judgment.borrowerId);
+
     const borrowerScores = new Map<string, number>();
     for (const b of allBorrowers) {
-      const bAccounts = allAccounts.filter(a => a.borrowerId === b.id);
-      const bInquiries = allInquiries.filter(i => i.borrowerId === b.id);
-      const bJudgments = allJudgments.filter(j => j.borrowerId === b.id);
+      const bAccounts = accountsByBorrower.get(b.id) ?? [];
+      const bInquiries = inquiriesByBorrower.get(b.id) ?? [];
+      const bJudgments = judgmentsByBorrower.get(b.id) ?? [];
       const scoreResult = calculateCreditScore(bAccounts, bInquiries.length, bJudgments, b.isPep ?? false);
       borrowerScores.set(b.id, scoreResult.score);
     }
@@ -316,7 +321,7 @@ router.get("/api/score-band-performance", requireAuth, requireRole("admin", "len
 
       const sampleSize = bandBorrowerIds.length;
       const badBorrowers = bandBorrowerIds.filter(id => {
-        const bAccounts = allAccounts.filter(a => a.borrowerId === id);
+        const bAccounts = accountsByBorrower.get(id) ?? [];
         return bAccounts.some(a => a.status === "default" || a.status === "written_off");
       }).length;
 
