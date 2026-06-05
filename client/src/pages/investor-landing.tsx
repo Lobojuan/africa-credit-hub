@@ -763,13 +763,14 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="relative flex items-center justify-center">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black relative" style={{ maxHeight: "470px" }}>
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black relative w-full max-w-[300px] sm:max-w-[340px] aspect-video">
                 <video
                   ref={videoRef}
                   src={platformDemoVideo}
                   playsInline
                   controls={videoPlaying}
-                  className="w-auto h-full max-h-[470px] mx-auto"
+                  preload="metadata"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${videoPlaying ? "opacity-100" : "opacity-0"}`}
                   data-testid="video-platform-demo"
                   onEnded={() => setVideoPlaying(false)}
                 />
