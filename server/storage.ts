@@ -98,6 +98,11 @@ import {
 
 export const GLOBAL_SCOPE = "__global__" as const;
 export type CountryScope = string | string[] | typeof GLOBAL_SCOPE | undefined;
+const MAX_LIST_LIMIT = 5_000;
+
+function capListLimit(limit: number): number {
+  return Math.max(0, Math.min(limit, MAX_LIST_LIMIT));
+}
 
 export function isGlobalScope(country: CountryScope): boolean {
   return country === GLOBAL_SCOPE;
@@ -149,6 +154,7 @@ export interface IStorage {
   getCreditAccount(id: string): Promise<CreditAccount | undefined>;
   getCreditAccountsByBorrower(borrowerId: string): Promise<CreditAccount[]>;
   getAllCreditAccounts(organizationId?: string, country?: string, limit?: number, offset?: number, recentDays?: number): Promise<CreditAccount[]>;
+  getAllCreditAccountsWithPagination(organizationId?: string, country?: string, limit?: number, offset?: number, recentDays?: number): Promise<{ data: CreditAccount[]; total: number }>;
   createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount>;
   updateCreditAccount(id: string, data: Partial<InsertCreditAccount>): Promise<CreditAccount | undefined>;
 
@@ -1230,7 +1236,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllCreditAccounts(organizationId?: string, country?: string, limit = 100, offset = 0, recentDays?: number): Promise<CreditAccount[]> {
+    const result = await this.getAllCreditAccountsWithPagination(organizationId, country, limit, offset, recentDays);
+    return result.data;
+  }
+
+  async getAllCreditAccountsWithPagination(organizationId?: string, country?: string, limit = 100, offset = 0, recentDays?: number): Promise<{ data: CreditAccount[]; total: number }> {
     requireCountryScope(country, "getAllCreditAccounts");
+    const safeLimit = capListLimit(limit);
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
     if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
@@ -1239,7 +1251,11 @@ export class DatabaseStorage implements IStorage {
       filters.push(or(gte(creditAccounts.createdAt, cutoff), gte(creditAccounts.updatedAt, cutoff)));
     }
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(creditAccounts).where(where).orderBy(desc(creditAccounts.createdAt)).limit(limit).offset(offset);
+    const [countResult, data] = await Promise.all([
+      db.select({ value: count() }).from(creditAccounts).where(where),
+      db.select().from(creditAccounts).where(where).orderBy(desc(creditAccounts.createdAt)).limit(safeLimit).offset(offset),
+    ]);
+    return { data, total: countResult[0]?.value ?? 0 };
   }
 
   async createCreditAccount(account: InsertCreditAccount): Promise<CreditAccount> {

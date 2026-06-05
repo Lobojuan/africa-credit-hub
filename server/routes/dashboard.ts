@@ -281,8 +281,10 @@ router.get("/api/score-band-performance", requireAuth, requireRole("admin", "len
   try {
     const orgId = getOrgScope(req);
     const country = getCountryFilter(req);
-    const allAccounts = await storage.getAllCreditAccounts(orgId, country, 100000);
-    const borrowerResult = await storage.getBorrowers(1, 100000, orgId, country);
+    const limit = Math.min(Number.parseInt(String(req.query.limit ?? "5000"), 10) || 5000, 5000);
+    const accountsResult = await storage.getAllCreditAccountsWithPagination(orgId, country, limit);
+    const allAccounts = accountsResult.data;
+    const borrowerResult = await storage.getBorrowers(1, limit, orgId, country);
     const allBorrowers = borrowerResult.data;
 
     const bands = [
