@@ -14,7 +14,8 @@
     "test": "vitest run --config vitest.unit.config.ts",
     "test:unit": "vitest run --config vitest.unit.config.ts",
     "test:all": "vitest run",
-    "test:watch": "vitest",
+    "test:watch": "vitest --config vitest.unit.config.ts",
+    "test:all:watch": "vitest",
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate"
   },

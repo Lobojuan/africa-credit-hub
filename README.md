@@ -208,8 +208,14 @@ npm test
 # Same local suite, explicit name
 npm run test:unit
 
+# Watch the fast local suite
+npm run test:watch
+
 # Full suite: requires DATABASE_URL plus required test secrets such as PII_ENCRYPTION_KEY and PII_ENCRYPTION_SALT
 npm run test:all
+
+# Watch the full DB-backed suite
+npm run test:all:watch
 ```
 
 ### Default Admin Credentials
