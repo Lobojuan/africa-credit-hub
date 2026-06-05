@@ -78,16 +78,47 @@ describe("aggregation cache", () => {
 
   it("invalidates matching aggregation entries without clearing unrelated entries", async () => {
     await getOrComputeAggregation("dashboard_stats", async () => "ghana", "org-1", "GH");
+    await getOrComputeAggregation("dashboard_stats", async () => "org-one-kenya", "org-1", "KE");
+    await getOrComputeAggregation("dashboard_stats", async () => "org-two-ghana", "org-2", "GH");
     await getOrComputeAggregation("dashboard_stats", async () => "kenya", "org-2", "KE");
 
     invalidateAggregations("org-1", "GH");
 
-    expect(getAggregationCacheStats().entries).toBe(1);
+    expect(getAggregationCacheStats().entries).toBe(3);
     const orgOneValue = await getOrComputeAggregation("dashboard_stats", async () => "fresh-ghana", "org-1", "GH");
+    const orgOneKenyaValue = await getOrComputeAggregation(
+      "dashboard_stats",
+      async () => "fresh-org-one-kenya",
+      "org-1",
+      "KE",
+    );
+    const orgTwoGhanaValue = await getOrComputeAggregation(
+      "dashboard_stats",
+      async () => "fresh-org-two-ghana",
+      "org-2",
+      "GH",
+    );
     const orgTwoValue = await getOrComputeAggregation("dashboard_stats", async () => "kenya-fresh", "org-2", "KE");
 
     expect(orgOneValue).toBe("fresh-ghana");
+    expect(orgOneKenyaValue).toBe("org-one-kenya");
+    expect(orgTwoGhanaValue).toBe("org-two-ghana");
     expect(orgTwoValue).toBe("kenya");
+  });
+
+  it("invalidates all aggregation entries for an org when country is omitted", async () => {
+    await getOrComputeAggregation("dashboard_stats", async () => "ghana", "org-1", "GH");
+    await getOrComputeAggregation("dashboard_stats", async () => "kenya", "org-1", "KE");
+    await getOrComputeAggregation("dashboard_stats", async () => "other", "org-2", "GH");
+
+    invalidateAggregations("org-1");
+
+    expect(getAggregationCacheStats().entries).toBe(1);
+    const orgOneValue = await getOrComputeAggregation("dashboard_stats", async () => "fresh-ghana", "org-1", "GH");
+    const orgTwoValue = await getOrComputeAggregation("dashboard_stats", async () => "fresh-other", "org-2", "GH");
+
+    expect(orgOneValue).toBe("fresh-ghana");
+    expect(orgTwoValue).toBe("other");
   });
 });
 

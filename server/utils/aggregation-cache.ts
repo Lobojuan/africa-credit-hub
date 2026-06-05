@@ -46,9 +46,10 @@ export function invalidateAggregations(organizationId?: string, country?: string
   }
 
   for (const key of cache.keys()) {
-    const matchesOrg = !organizationId || key.includes(`:${organizationId}:`);
-    const matchesCountry = !country || key.endsWith(`:${country}`);
-    if (matchesOrg || matchesCountry) {
+    const [, , cachedOrg, cachedCountry] = key.split(":");
+    const matchesOrg = !organizationId || cachedOrg === organizationId;
+    const matchesCountry = !country || cachedCountry === country;
+    if (matchesOrg && matchesCountry) {
       cache.delete(key);
     }
   }
