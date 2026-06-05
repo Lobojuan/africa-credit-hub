@@ -9,6 +9,7 @@ import { serveStatic } from "./static";
 import { deviceFingerprintMiddleware } from "./middleware/device-fingerprint";
 import { botDetectionMiddleware } from "./middleware/bot-detection";
 import { createCorsMiddleware } from "./middleware/cors";
+import { performanceMonitoringMiddleware } from "./middleware/performance-monitor";
 import { createServer } from "http";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
@@ -193,6 +194,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+app.use(performanceMonitoringMiddleware);
 const httpServer = createServer(app);
 
 declare module "http" {
