@@ -17,19 +17,29 @@ const REGULATORS = [
   { code: "BSL", name: "Bank of Sierra Leone" },
 ];
 
-const LIVE_DECISIONS = [
-  { country: "🇬🇭", flag: "GH", action: "Loan approved", subject: "Mortgage · Accra", amount: "₵180,000", color: "emerald" },
-  { country: "🇳🇬", flag: "NG", action: "Credit inquiry", subject: "MFB · Lagos", amount: "₦2.4M", color: "blue" },
-  { country: "🇰🇪", flag: "KE", action: "Score refreshed", subject: "Equity · Nairobi", amount: "742", color: "violet" },
-  { country: "🇨🇮", flag: "CI", action: "Loan approved", subject: "SME · Abidjan", amount: "₣8.5M", color: "emerald" },
-  { country: "🇿🇦", flag: "ZA", action: "Dispute resolved", subject: "FNB · Johannesburg", amount: "Cleared", color: "amber" },
-  { country: "🇪🇬", flag: "EG", action: "Credit pulled", subject: "CIB · Cairo", amount: "E£45k", color: "blue" },
-  { country: "🇲🇦", flag: "MA", action: "Score updated", subject: "BMCE · Casablanca", amount: "688", color: "violet" },
-  { country: "🇸🇳", flag: "SN", action: "Loan approved", subject: "BICIS · Dakar", amount: "₣3.2M", color: "emerald" },
-  { country: "🇰🇪", flag: "KE", action: "Telco scoring", subject: "M-Pesa · Mombasa", amount: "Tier A", color: "blue" },
-  { country: "🇨🇲", flag: "CM", action: "Inquiry batch", subject: "Afriland · Douala", amount: "1,240", color: "violet" },
-  { country: "🇹🇿", flag: "TZ", action: "Decision engine", subject: "CRDB · Dar", amount: "Approved", color: "emerald" },
-  { country: "🇷🇼", flag: "RW", action: "Score refreshed", subject: "BK · Kigali", amount: "705", color: "blue" },
+type LiveDecision = {
+  country: string;
+  flag: string;
+  actionKey: string;
+  subject: string;
+  amount?: string;
+  amountKey?: string;
+  color: "emerald" | "blue" | "violet" | "amber";
+};
+
+const LIVE_DECISIONS: LiveDecision[] = [
+  { country: "🇬🇭", flag: "GH", actionKey: "loanApproved", subject: "Mortgage · Accra", amount: "₵180,000", color: "emerald" },
+  { country: "🇳🇬", flag: "NG", actionKey: "creditInquiry", subject: "MFB · Lagos", amount: "₦2.4M", color: "blue" },
+  { country: "🇰🇪", flag: "KE", actionKey: "scoreRefreshed", subject: "Equity · Nairobi", amount: "742", color: "violet" },
+  { country: "🇨🇮", flag: "CI", actionKey: "loanApproved", subject: "PME · Abidjan", amount: "₣8.5M", color: "emerald" },
+  { country: "🇿🇦", flag: "ZA", actionKey: "disputeResolved", subject: "FNB · Johannesburg", amountKey: "cleared", color: "amber" },
+  { country: "🇪🇬", flag: "EG", actionKey: "creditPulled", subject: "CIB · Cairo", amount: "E£45k", color: "blue" },
+  { country: "🇲🇦", flag: "MA", actionKey: "scoreUpdated", subject: "BMCE · Casablanca", amount: "688", color: "violet" },
+  { country: "🇸🇳", flag: "SN", actionKey: "loanApproved", subject: "BICIS · Dakar", amount: "₣3.2M", color: "emerald" },
+  { country: "🇰🇪", flag: "KE", actionKey: "telcoScoring", subject: "M-Pesa · Mombasa", amountKey: "tierA", color: "blue" },
+  { country: "🇨🇲", flag: "CM", actionKey: "inquiryBatch", subject: "Afriland · Douala", amount: "1,240", color: "violet" },
+  { country: "🇹🇿", flag: "TZ", actionKey: "decisionEngine", subject: "CRDB · Dar", amountKey: "approved", color: "emerald" },
+  { country: "🇷🇼", flag: "RW", actionKey: "scoreRefreshed", subject: "BK · Kigali", amount: "705", color: "blue" },
 ];
 
 function useCountUp(target: number, durationMs = 1800) {
@@ -149,7 +159,7 @@ export function CreditInvestorHero({
                 <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiBorrowers", "Borrowers tracked")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">{formatLargeNumber(animatedBorrowers)}</div>
-              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><TrendingUp className="w-2.5 h-2.5" />+8.2% YoY</div>
+              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><TrendingUp className="w-2.5 h-2.5" />{t("creditHero.yoy", "+8.2% YoY")}</div>
             </div>
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-inquiries">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
@@ -157,7 +167,7 @@ export function CreditInvestorHero({
                 <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiInquiries", "Live inquiries today")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">{liveInquiries.toLocaleString()}</div>
-              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block credit-pulse-soft" />Live ticking</div>
+              <div className="text-[10px] text-emerald-300 mt-0.5 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block credit-pulse-soft" />{t("creditHero.liveTicking", "Live ticking")}</div>
             </div>
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-decisions">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
@@ -165,7 +175,7 @@ export function CreditInvestorHero({
                 <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiDecisions", "Decisions / month")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">{(decisionsToday / 1000).toFixed(1)}K</div>
-              <div className="text-[10px] text-blue-200 mt-0.5">~ 240ms latency p95</div>
+              <div className="text-[10px] text-blue-200 mt-0.5">{t("creditHero.latency", "~ 240ms latency p95")}</div>
             </div>
             <div className="rounded-xl bg-white/10 backdrop-blur border border-white/15 p-4" data-testid="kpi-coverage">
               <div className="flex items-center gap-1.5 text-blue-200/80 mb-1.5">
@@ -173,7 +183,7 @@ export function CreditInvestorHero({
                 <span className="text-[10px] uppercase tracking-wider font-semibold">{t("creditHero.kpiCoverage", "Coverage")}</span>
               </div>
               <div className="text-2xl md:text-3xl font-black tabular-nums">54</div>
-              <div className="text-[10px] text-blue-200 mt-0.5">African countries · 6 regulators</div>
+              <div className="text-[10px] text-blue-200 mt-0.5">{t("creditHero.coverageSub", "African countries · 6 regulators")}</div>
             </div>
           </div>
 
@@ -184,10 +194,10 @@ export function CreditInvestorHero({
               </Badge>
             ))}
             <Badge variant="outline" className="text-[10px] bg-emerald-500/20 border-emerald-300/40 text-emerald-100 backdrop-blur" data-testid="badge-iso">
-              <Lock className="w-2.5 h-2.5 mr-1" />ISO 27001 aligned
+              <Lock className="w-2.5 h-2.5 mr-1" />{t("creditHero.isoBadge", "ISO 27001 aligned")}
             </Badge>
             <Badge variant="outline" className="text-[10px] bg-violet-500/20 border-violet-300/40 text-violet-100 backdrop-blur" data-testid="badge-ai">
-              <Brain className="w-2.5 h-2.5 mr-1" />AI scoring · alt-data ready
+              <Brain className="w-2.5 h-2.5 mr-1" />{t("creditHero.aiBadge", "AI scoring · alt-data ready")}
             </Badge>
           </div>
         </div>
@@ -200,7 +210,7 @@ export function CreditInvestorHero({
             <span className="text-[10px] uppercase tracking-wider font-bold text-slate-700 dark:text-slate-200">{t("creditHero.tickerLabel", "Live decisions across the network")}</span>
           </div>
           <Badge variant="outline" className="ml-auto text-[10px] border-slate-300 dark:border-slate-700">
-            <BarChart3 className="w-2.5 h-2.5 mr-1" />Streaming
+            <BarChart3 className="w-2.5 h-2.5 mr-1" />{t("creditHero.streaming", "Streaming")}
           </Badge>
         </div>
         <div className="overflow-hidden py-2.5">
@@ -215,11 +225,11 @@ export function CreditInvestorHero({
               return (
                 <div key={i} className={`shrink-0 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border ${colorMap[d.color]} text-xs font-medium`}>
                   <span className="text-base leading-none">{d.country}</span>
-                  <span className="font-semibold">{d.action}</span>
+                  <span className="font-semibold">{t(`creditHero.actions.${d.actionKey}`, d.actionKey)}</span>
                   <span className="opacity-70">·</span>
                   <span className="opacity-80">{d.subject}</span>
                   <span className="opacity-70">·</span>
-                  <span className="font-mono font-bold">{d.amount}</span>
+                  <span className="font-mono font-bold">{d.amountKey ? t(`creditHero.amounts.${d.amountKey}`, d.amountKey) : d.amount}</span>
                 </div>
               );
             })}
@@ -237,7 +247,7 @@ export function CreditInvestorHero({
           </div>
           <div className="text-base">
             {COUNTRY_FLAGS.slice(0, 12).join(" ")}
-            <span className="text-xs text-muted-foreground ml-1.5">+ 42 more</span>
+            <span className="text-xs text-muted-foreground ml-1.5">{t("creditHero.moreCountries", "+ 42 more")}</span>
           </div>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4" data-testid="trust-tile-accuracy">
@@ -248,7 +258,7 @@ export function CreditInvestorHero({
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{t("creditHero.trustAccuracy", "Model accuracy")}</div>
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">94.2%</div>
-          <div className="text-[10px] text-muted-foreground">AUC across pilot lenders</div>
+          <div className="text-[10px] text-muted-foreground">{t("creditHero.accuracySub", "AUC across pilot lenders")}</div>
         </div>
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4" data-testid="trust-tile-speed">
           <div className="flex items-center gap-2 mb-2">
@@ -258,7 +268,7 @@ export function CreditInvestorHero({
             <div className="text-xs font-bold text-slate-900 dark:text-slate-100">{t("creditHero.trustSpeed", "Decision speed")}</div>
           </div>
           <div className="text-2xl font-black text-slate-900 dark:text-slate-50 tabular-nums">240<span className="text-sm">ms</span></div>
-          <div className="text-[10px] text-muted-foreground">p95 end-to-end · API + bridge + score</div>
+          <div className="text-[10px] text-muted-foreground">{t("creditHero.speedSub", "p95 end-to-end · API + bridge + score")}</div>
         </div>
       </div>
     </div>
