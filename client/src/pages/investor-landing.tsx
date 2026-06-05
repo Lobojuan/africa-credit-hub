@@ -763,7 +763,7 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="relative flex items-center justify-center">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black relative w-full max-w-[300px] sm:max-w-[340px] aspect-video">
+              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black relative w-full max-w-[520px] aspect-video">
                 <video
                   ref={videoRef}
                   src={platformDemoVideo}
