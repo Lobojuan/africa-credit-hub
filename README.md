@@ -168,6 +168,15 @@ Create a `.env` file or configure the following secrets:
 | `STRIPE_SECRET_KEY` | No | Stripe secret key for billing |
 | `VITE_COUNTRY_MODE` | No | Set to `ghana` for single-country mode; leave blank for pan-African |
 | `PRODUCTION_MODE` | No | Set to `true` to skip demo data seeding |
+| `PERF_MONITOR_ENABLED` | No | Enable slow-request logging for API and health endpoints; default `true` |
+| `PERF_MONITOR_PAUSED` | No | Temporarily pause slow-request logging; default `false` |
+| `PERF_MONITOR_SLOW_MS` | No | Slow-request threshold in milliseconds; default `1000` |
+| `AGG_CACHE_ENABLED` | No | Enable in-memory dashboard aggregation caching; default `true` |
+| `AGG_CACHE_PAUSED` | No | Temporarily bypass aggregation cache reads/writes; default `false` |
+| `AGG_CACHE_TTL_SECONDS` | No | Aggregation cache TTL; default `300` |
+| `SCORE_CACHE_ENABLED` | No | Enable in-memory dashboard score caching; default `true` |
+| `SCORE_CACHE_PAUSED` | No | Temporarily bypass score cache reads/writes; default `false` |
+| `SCORE_CACHE_TTL_SECONDS` | No | Score cache TTL; default `1800` |
 
 ### Installation
 
@@ -197,6 +206,18 @@ The application starts on port **5000** with the Express backend serving both th
 | Username | `admin` |
 | Password | `admin0987` |
 | Role | `super_admin` |
+
+### Performance Operations
+
+Dashboard-heavy endpoints use startup-created PostgreSQL indexes, bounded list limits, map-based lookups, and in-memory caches for aggregation and score results. Cache invalidation is automatic on borrower, account, inquiry, judgment, dispute, and related write paths.
+
+Super admins can inspect runtime performance flags and cache entry counts at:
+
+```bash
+GET /api/platform/performance-status
+```
+
+Use `PERF_MONITOR_PAUSED=true`, `AGG_CACHE_PAUSED=true`, or `SCORE_CACHE_PAUSED=true` to pause a feature temporarily during diagnosis while keeping the code path deployed.
 
 ---
 

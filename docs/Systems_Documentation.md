@@ -1418,9 +1418,9 @@ Non-paginated endpoints apply query limits to prevent memory issues:
 
 | Entity | Default Limit |
 |--------|-------------|
-| Credit Accounts | 200 records |
-| Credit Inquiries | 200 records |
-| Audit Logs | 200 records |
+| Credit Accounts | 100 records, capped at 5,000 |
+| Credit Inquiries | 100 records, capped at 5,000 |
+| Audit Logs | 100 records, capped at 5,000 |
 | Court Judgments | 200 records |
 | Consent Records | 200 records |
 | Credit Report Logs | 200 records |
@@ -1428,7 +1428,35 @@ Non-paginated endpoints apply query limits to prevent memory issues:
 | Notifications | 50 records |
 | Payment History | 12 records (per account) |
 
-### 11.4 Seed Data Volumes
+### 11.4 Dashboard Caching
+
+Dashboard aggregation and score calculations use in-memory TTL caches to reduce repeated table scans and scoring loops:
+
+| Cache | Default TTL | Controls |
+|-------|-------------|----------|
+| Aggregations | 300 seconds | `AGG_CACHE_ENABLED`, `AGG_CACHE_PAUSED`, `AGG_CACHE_TTL_SECONDS` |
+| Credit Scores | 1,800 seconds | `SCORE_CACHE_ENABLED`, `SCORE_CACHE_PAUSED`, `SCORE_CACHE_TTL_SECONDS` |
+
+Aggregation cache entries are scoped by aggregation type, organization, and country. Score cache entries are scoped by borrower and a data fingerprint that changes when relevant account, inquiry, judgment, or PEP inputs change. Write paths invalidate affected cache entries automatically.
+
+Super admins can inspect cache state and slow-request monitor flags at:
+
+```http
+GET /api/platform/performance-status
+```
+
+### 11.5 Slow-Request Monitoring
+
+The server logs slow API and health requests using `performanceMonitoringMiddleware`. Defaults:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PERF_MONITOR_ENABLED` | `true` | Enables slow-request monitoring |
+| `PERF_MONITOR_PAUSED` | `false` | Temporarily disables monitoring |
+| `PERF_MONITOR_SLOW_MS` | `1000` | Millisecond threshold before logging |
+| `PERF_MONITOR_INCLUDE_STATIC` | `false` | Includes static asset requests when enabled |
+
+### 11.6 Seed Data Volumes
 
 The system is seeded with production-representative data volumes:
 
