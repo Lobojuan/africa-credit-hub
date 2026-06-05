@@ -185,7 +185,11 @@ app.use((req, res, next) => {
     res.setHeader("X-Robots-Tag", "noindex, noarchive, nosnippet");
   }
 
-  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+  if (req.path === "/sw.js") {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+  } else if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
   } else if (req.path.startsWith("/api")) {
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
