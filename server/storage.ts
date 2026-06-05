@@ -1336,11 +1336,12 @@ export class DatabaseStorage implements IStorage {
 
   async getAllCreditInquiries(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<CreditInquiry[]> {
     requireCountryScope(country, "getAllCreditInquiries");
+    const safeLimit = capListLimit(limit);
     const filters: any[] = [];
     if (organizationId) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE organization_id = ${organizationId})`);
     if (country && !isGlobalScope(country)) filters.push(sql`${creditInquiries.borrowerId} IN (SELECT id FROM borrowers WHERE country = ${country})`);
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(creditInquiries).where(where).orderBy(desc(creditInquiries.createdAt)).limit(limit).offset(offset);
+    return db.select().from(creditInquiries).where(where).orderBy(desc(creditInquiries.createdAt)).limit(safeLimit).offset(offset);
   }
 
   async createCreditInquiry(inquiry: InsertCreditInquiry): Promise<CreditInquiry> {
@@ -1352,11 +1353,12 @@ export class DatabaseStorage implements IStorage {
 
   async getAuditLogs(organizationId?: string, country?: string, limit = 100, offset = 0): Promise<AuditLog[]> {
     requireCountryScope(country, "getAuditLogs");
+    const safeLimit = capListLimit(limit);
     const filters: any[] = [];
     if (organizationId) filters.push(eq(auditLogs.organizationId, organizationId));
     if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(auditLogs, country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
-    return db.select().from(auditLogs).where(where).orderBy(desc(auditLogs.createdAt)).limit(limit).offset(offset);
+    return db.select().from(auditLogs).where(where).orderBy(desc(auditLogs.createdAt)).limit(safeLimit).offset(offset);
   }
 
   async createAuditLog(log: InsertAuditLog): Promise<AuditLog> {
@@ -2754,10 +2756,11 @@ export class DatabaseStorage implements IStorage {
 
   async getDecisionLogs(organizationId?: string, country?: string, limit = 100): Promise<TelcoDecisionLog[]> {
     requireCountryScope(country, "getDecisionLogs");
+    const safeLimit = capListLimit(limit);
     const filters: any[] = [eq(telcoDecisionLogs.country, country!)];
     if (organizationId) filters.push(eq(telcoDecisionLogs.organizationId, organizationId));
     const where = and(...filters);
-    return db.select().from(telcoDecisionLogs).where(where).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(limit);
+    return db.select().from(telcoDecisionLogs).where(where).orderBy(desc(telcoDecisionLogs.decidedAt)).limit(safeLimit);
   }
 
   async createDecisionLog(log: InsertTelcoDecisionLog): Promise<TelcoDecisionLog> {
@@ -3531,10 +3534,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPortfolioTriggerEvents(organizationId: string, limit = 50): Promise<PortfolioTriggerEvent[]> {
+    const safeLimit = capListLimit(limit);
     return db.select().from(portfolioTriggerEvents)
       .where(eq(portfolioTriggerEvents.organizationId, organizationId))
       .orderBy(desc(portfolioTriggerEvents.firedAt))
-      .limit(limit);
+      .limit(safeLimit);
   }
 
   async createPortfolioTriggerEvent(data: InsertPortfolioTriggerEvent): Promise<PortfolioTriggerEvent> {
@@ -3643,10 +3647,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getConsumerMonitoringAlerts(consumerAccountId: string, limit = 50): Promise<ConsumerMonitoringAlert[]> {
+    const safeLimit = capListLimit(limit);
     return db.select().from(consumerMonitoringAlerts)
       .where(eq(consumerMonitoringAlerts.consumerAccountId, consumerAccountId))
       .orderBy(desc(consumerMonitoringAlerts.sentAt))
-      .limit(limit);
+      .limit(safeLimit);
   }
 
   async createConsumerMonitoringAlert(data: InsertConsumerMonitoringAlert): Promise<ConsumerMonitoringAlert> {
@@ -3839,7 +3844,7 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
   async listLotoMerchants(limit = 50): Promise<LotoMerchant[]> {
-    return db.select().from(lotoMerchants).orderBy(desc(lotoMerchants.registeredAt)).limit(limit);
+    return db.select().from(lotoMerchants).orderBy(desc(lotoMerchants.registeredAt)).limit(capListLimit(limit));
   }
   async getLotoMerchantByShopNameAndCountry(shopName: string, countryCode: string): Promise<LotoMerchant | undefined> {
     const [row] = await db.select().from(lotoMerchants)
@@ -3853,10 +3858,10 @@ export class DatabaseStorage implements IStorage {
     return row?.n ?? 0;
   }
   async listLotoReceiptsByMerchant(merchantId: string, limit = 200): Promise<LotoReceipt[]> {
-    return db.select().from(lotoReceipts).where(eq(lotoReceipts.merchantId, merchantId)).orderBy(desc(lotoReceipts.issuedAt)).limit(limit);
+    return db.select().from(lotoReceipts).where(eq(lotoReceipts.merchantId, merchantId)).orderBy(desc(lotoReceipts.issuedAt)).limit(capListLimit(limit));
   }
   async listLotoReceiptsByConsumer(userId: string, limit = 200): Promise<LotoReceipt[]> {
-    return db.select().from(lotoReceipts).where(eq(lotoReceipts.consumerUserId, userId)).orderBy(desc(lotoReceipts.issuedAt)).limit(limit);
+    return db.select().from(lotoReceipts).where(eq(lotoReceipts.consumerUserId, userId)).orderBy(desc(lotoReceipts.issuedAt)).limit(capListLimit(limit));
   }
   async createLotoReceipt(input: InsertLotoReceipt): Promise<LotoReceipt> {
     const [row] = await db.insert(lotoReceipts).values(input).returning();
@@ -3911,7 +3916,7 @@ export class DatabaseStorage implements IStorage {
     return row;
   }
   async listLotoDraws(filter: { countryCode?: string; limit?: number } = {}): Promise<LotoDraw[]> {
-    const limit = filter.limit ?? 25;
+    const limit = capListLimit(filter.limit ?? 25);
     if (filter.countryCode) {
       return db.select().from(lotoDraws).where(eq(lotoDraws.countryCode, filter.countryCode))
         .orderBy(desc(lotoDraws.drawNumber)).limit(limit);
@@ -4102,6 +4107,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(crossProductConsents.createdAt));
   }
   async getCrossProductAuditEntries(limit = 100, filter?: { source?: string; target?: string; purpose?: string; action?: string; since?: Date }): Promise<AuditLog[]> {
+    const safeLimit = capListLimit(limit);
     const conditions = [eq(auditLogs.action, "cross_product_access")];
     if (filter?.since) {
       conditions.push(sql`${auditLogs.createdAt} >= ${filter.since}`);
@@ -4109,7 +4115,7 @@ export class DatabaseStorage implements IStorage {
     const rows = await db.select().from(auditLogs)
       .where(and(...conditions))
       .orderBy(desc(auditLogs.createdAt))
-      .limit(limit);
+      .limit(safeLimit);
     if (!filter || (!filter.source && !filter.target && !filter.purpose && !filter.action)) return rows;
     return rows.filter((r) => {
       try {
@@ -4265,6 +4271,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async listPendingLotoOutboundMessages(limit: number): Promise<LotoOutboundMessage[]> {
+    const safeLimit = capListLimit(limit);
     return db.select().from(lotoOutboundMessages)
       .where(and(
         eq(lotoOutboundMessages.status, "pending"),
@@ -4272,7 +4279,7 @@ export class DatabaseStorage implements IStorage {
         sql`${lotoOutboundMessages.attempts} < 5`,
       ))
       .orderBy(lotoOutboundMessages.scheduledAt)
-      .limit(limit);
+      .limit(safeLimit);
   }
 
   async getLotoMessagingStats(filter?: { countryCode?: string; sinceDays?: number }): Promise<{
@@ -4563,7 +4570,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlaybookDownloads(limit = 500): Promise<PlaybookDownload[]> {
-    return db.select().from(playbookDownloads).orderBy(desc(playbookDownloads.downloadedAt)).limit(limit);
+    return db.select().from(playbookDownloads).orderBy(desc(playbookDownloads.downloadedAt)).limit(capListLimit(limit));
   }
 }
 
