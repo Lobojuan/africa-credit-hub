@@ -5,6 +5,19 @@
 @tailwind components;
 @tailwind utilities;
 
+[data-testid="investor-landing"] [data-testid="select-language"],
+[data-testid="investor-landing"] [data-testid="button-theme-toggle"] {
+  border-color: #34343a;
+  background: #0f1011;
+  color: #f7f8f8;
+}
+
+[data-testid="investor-landing"] [data-testid="select-language"]:hover,
+[data-testid="investor-landing"] [data-testid="button-theme-toggle"]:hover {
+  background: #18191a;
+  color: #ffffff;
+}
+
 /* LIGHT MODE — Nordic Color Palette */
 :root {
   --button-outline: rgba(0,0,0, .10);

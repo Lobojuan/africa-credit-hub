@@ -615,11 +615,11 @@ export default function InvestorLandingPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground" data-testid="investor-landing">
+    <div className="min-h-screen bg-[#010102] text-[#f7f8f8]" data-testid="investor-landing">
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
-            ? "bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm"
+            ? "bg-[#010102]/95 backdrop-blur-md border-b border-[#23252a]"
             : "bg-transparent"
         }`}
       >
@@ -632,12 +632,12 @@ export default function InvestorLandingPage() {
               <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
-              <span className="font-bold text-sm tracking-tight">Universal Credit Hub</span>
-              <span className="text-[10px] text-muted-foreground ml-1.5">v2.8</span>
+              <span className="font-bold text-sm text-[#f7f8f8]">Universal Credit Hub</span>
+              <span className="text-[10px] text-[#8a8f98] ml-1.5">v2.8</span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="text-xs hidden sm:inline-flex" onClick={() => navigate("/security")} data-testid="nav-security-link">
+            <Button variant="ghost" size="sm" className="text-xs hidden sm:inline-flex text-[#d0d6e0] hover:text-white hover:bg-[#141516]" onClick={() => navigate("/security")} data-testid="nav-security-link">
               Security
             </Button>
             <ThemeToggle />
@@ -645,7 +645,7 @@ export default function InvestorLandingPage() {
             <Button
               variant="outline"
               size="sm"
-              className="text-xs"
+              className="text-xs border-[#34343a] bg-[#0f1011] text-[#f7f8f8] hover:bg-[#18191a]"
               onClick={() => navigate("/login")}
               data-testid="nav-login"
             >
@@ -653,7 +653,7 @@ export default function InvestorLandingPage() {
             </Button>
             <Button
               size="sm"
-              className="text-xs"
+              className="text-xs bg-[#5e6ad2] text-white hover:bg-[#828fff]"
               onClick={() => navigate("/start-trial")}
               data-testid="nav-start-trial"
             >
@@ -693,9 +693,9 @@ export default function InvestorLandingPage() {
           <img
             src={heroImage}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover opacity-[0.06]"
+            className="absolute inset-0 w-full h-full object-cover opacity-[0.05]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/95 to-background" />
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(1,1,2,0.72),rgba(1,1,2,0.96)_42%,#010102)]" />
           <div
             className="absolute top-0 left-0 w-full h-full opacity-[0.03]"
             style={{
@@ -703,22 +703,19 @@ export default function InvestorLandingPage() {
               backgroundSize: "60px 60px",
             }}
           />
-          <div className="absolute top-1/4 -left-32 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: brandColors.glowA }} />
-          <div className="absolute bottom-1/4 -right-32 w-96 h-96 rounded-full opacity-10 blur-3xl" style={{ background: brandColors.glowB }} />
-          <div className="absolute top-2/3 left-1/2 w-64 h-64 rounded-full opacity-5 blur-3xl" style={{ background: "hsl(200 60% 40%)" }} />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            <div className="text-center lg:text-right flex flex-col justify-center lg:items-end">
-              <Badge variant="secondary" className="mb-4 text-xs px-3 py-1 font-medium" data-testid="badge-version">
+            <div className="text-center lg:text-left flex flex-col justify-center lg:items-start">
+              <Badge variant="secondary" className="mb-4 text-xs px-3 py-1 font-medium border border-[#23252a] bg-[#0f1011] text-[#d0d6e0]" data-testid="badge-version">
                 <Star className="w-3 h-3 mr-1" />
                 {t('landing.versionBadge')}
               </Badge>
 
-              <div className="flex items-center gap-2 mb-6 justify-center lg:justify-end" data-testid="system-clock">
-                <Clock className="w-3.5 h-3.5 text-muted-foreground/60" />
-                <span className="text-xs text-muted-foreground/80 font-mono tracking-tight">
+              <div className="flex items-center gap-2 mb-6 justify-center lg:justify-start" data-testid="system-clock">
+                <Clock className="w-3.5 h-3.5 text-[#8a8f98]" />
+                <span className="text-xs text-[#8a8f98] font-mono">
                   {currentTime.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })}
                   {" "}
                   {currentTime.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
@@ -726,33 +723,32 @@ export default function InvestorLandingPage() {
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-extrabold tracking-tight leading-[1.1] mb-6">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-5xl font-semibold leading-[1.08] mb-6 max-w-2xl">
                 <span className="block">{t('landing.heroTitle1')}</span>
                 <span
-                  className="block bg-clip-text text-transparent"
-                  style={{ backgroundImage: brandColors.textGradient }}
+                  className="block text-[#828fff]"
                 >
                   {t('landing.heroTitle2')}
                 </span>
               </h1>
 
-              <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-4 leading-relaxed"
+              <p className="text-base sm:text-lg text-[#d0d6e0] max-w-2xl mb-4 leading-relaxed"
                 dangerouslySetInnerHTML={{ __html: t('landing.heroDesc') }}
               />
 
-              <p className="text-sm text-muted-foreground/80 max-w-xl mb-8"
+              <p className="text-sm text-[#8a8f98] max-w-xl mb-8"
                 dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
               />
 
-              <div className="flex flex-col sm:flex-row items-center lg:items-end justify-center lg:justify-end gap-3 mb-8">
-                <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
+              <div className="flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-3 mb-8">
+                <Button size="lg" className="text-sm px-8 gap-2 bg-[#5e6ad2] text-white hover:bg-[#828fff]" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
                   <ArrowRight className="w-4 h-4" />
                   {t('landing.startTrial')}
                 </Button>
                 <Button
                   variant="outline"
                   size="lg"
-                  className="text-sm px-8 gap-2"
+                  className="text-sm px-8 gap-2 border-[#34343a] bg-[#0f1011] text-[#f7f8f8] hover:bg-[#18191a]"
                   onClick={() => navigate("/contact-sales")}
                   data-testid="cta-explore"
                 >
@@ -763,7 +759,7 @@ export default function InvestorLandingPage() {
             </div>
 
             <div className="relative flex items-center justify-center">
-              <div className="rounded-xl overflow-hidden border border-border/50 shadow-xl bg-black relative w-full max-w-[300px] sm:max-w-[340px] aspect-video">
+              <div className="rounded-xl overflow-hidden border border-[#34343a] shadow-2xl bg-black relative w-full max-w-[300px] sm:max-w-[340px] aspect-video">
                 <video
                   ref={videoRef}
                   src={platformDemoVideo}
@@ -800,43 +796,43 @@ export default function InvestorLandingPage() {
             {HERO_STATS.map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-3 text-center"
+                className="rounded-xl border border-[#34343a] bg-[#0f1011]/85 backdrop-blur-sm p-3 text-center"
                 data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
               >
-                <stat.icon className="w-4 h-4 mx-auto mb-1.5 text-primary/70" />
-                <div className="text-xl sm:text-2xl font-bold tracking-tight">
+                <stat.icon className="w-4 h-4 mx-auto mb-1.5 text-[#828fff]" />
+                <div className="text-xl sm:text-2xl font-bold text-[#f7f8f8]">
                   <AnimatedCounter end={stat.value} suffix={stat.suffix} />
                 </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">{stat.label}</div>
+                <div className="text-[10px] text-[#8a8f98] mt-0.5">{stat.label}</div>
               </div>
             ))}
           </div>
 
           {/* Bureau Coverage Comparison Strip */}
           <div className="mt-10 max-w-3xl mx-auto">
-            <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">African Country Coverage — Side by Side</p>
+            <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-[#8a8f98] mb-3">African Country Coverage — Side by Side</p>
             <div className="grid grid-cols-4 gap-2 sm:gap-3">
               {[
-                { name: "Universal Credit Hub", count: "54 / 54", bar: 100, color: "bg-green-500", textColor: "text-green-600 dark:text-green-400", badge: "✓ Full Continent", highlight: true },
-                { name: "Experian", count: "~12 / 54", bar: 22, color: "bg-red-400", textColor: "text-red-500", badge: "22% Coverage" },
-                { name: "TransUnion", count: "8 / 54", bar: 15, color: "bg-amber-400", textColor: "text-amber-500", badge: "15% Coverage" },
-                { name: "Equifax", count: "0 / 54", bar: 0, color: "bg-muted", textColor: "text-muted-foreground", badge: "Not in Africa" },
+                { name: "Universal Credit Hub", count: "54 / 54", bar: 100, color: "bg-[#27a644]", textColor: "text-[#8cffaa]", badge: "Full Continent", highlight: true },
+                { name: "Experian", count: "~12 / 54", bar: 22, color: "bg-[#8a8f98]", textColor: "text-[#d0d6e0]", badge: "22% Coverage" },
+                { name: "TransUnion", count: "8 / 54", bar: 15, color: "bg-[#8a8f98]", textColor: "text-[#d0d6e0]", badge: "15% Coverage" },
+                { name: "Equifax", count: "0 / 54", bar: 0, color: "bg-[#34343a]", textColor: "text-[#8a8f98]", badge: "Not in Africa" },
               ].map((b) => (
                 <div
                   key={b.name}
-                  className={`rounded-xl border p-3 text-center transition-all ${b.highlight ? "border-green-500/30 bg-green-500/5 shadow-sm" : "border-border/50 bg-card/40"}`}
+                  className={`rounded-xl border p-3 text-center transition-all ${b.highlight ? "border-[#27a644]/35 bg-[#27a644]/10" : "border-[#23252a] bg-[#0f1011]/70"}`}
                   data-testid={`bureau-bar-${b.name.toLowerCase().replace(/\s/g, "-")}`}
                 >
                   <p className={`text-[10px] font-bold mb-1.5 ${b.textColor}`}>{b.name}</p>
-                  <div className="text-lg sm:text-xl font-extrabold mb-1.5">{b.count}</div>
-                  <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden mb-1.5">
+                  <div className="text-lg sm:text-xl font-extrabold mb-1.5 text-[#f7f8f8]">{b.count}</div>
+                  <div className="w-full h-1.5 rounded-full bg-[#23252a] overflow-hidden mb-1.5">
                     <div className={`h-full rounded-full ${b.color} transition-all`} style={{ width: `${b.bar}%` }} />
                   </div>
                   <span className={`text-[9px] font-semibold ${b.textColor}`}>{b.badge}</span>
                 </div>
               ))}
             </div>
-            <p className="text-center text-[9px] text-muted-foreground mt-2">
+            <p className="text-center text-[9px] text-[#62666d] mt-2">
               Sources: Experian FY2025 Annual Report · TransUnion 2024 Investor Day · Equifax 10-K 2024 ·{" "}
               <button
                 className="underline hover:text-primary transition-colors"
