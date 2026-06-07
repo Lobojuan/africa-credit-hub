@@ -1,13 +1,13 @@
 # Ghana Credit Registry — Data Protection and Privacy Policy
 
-**Africa Credit Hub**
-**Version 2.5 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.8**
+**Universal Credit Hub**
+**Version 2.8 | Aligned with Data Protection Act, 2012 (Act 843) | CDH v2.8**
 
 ---
 
 ## 1. Introduction
 
-This Data Protection and Privacy Policy governs the collection, processing, storage, and sharing of personal data within the Ghana Credit Registry operated by Africa Credit Hub. This policy ensures compliance with the Data Protection Act, 2012 (Act 843) and the Credit Reporting Act, 2007 (Act 726).
+This Data Protection and Privacy Policy governs the collection, processing, storage, and sharing of personal data within the Ghana Credit Registry operated by Universal Credit Hub. This policy ensures compliance with the Data Protection Act, 2012 (Act 843) and the Credit Reporting Act, 2007 (Act 726).
 
 ---
 
@@ -15,10 +15,10 @@ This Data Protection and Privacy Policy governs the collection, processing, stor
 
 | Detail | Information |
 |--------|-------------|
-| Data Controller | Africa Credit Hub |
+| Data Controller | Universal Credit Hub |
 | Registration | Data Protection Commission, Ghana |
 | Data Protection Officer | Appointed per Act 843, Section 50 |
-| Contact | support@africacredithub.com |
+| Contact | support@universalcredithub.com |
 | Registered Office | Accra, Ghana |
 
 ---
@@ -183,7 +183,7 @@ The system implements automated retention policy enforcement:
 
 For data protection inquiries, complaints, or to exercise your rights:
 
-- **Data Protection Officer**: support@africacredithub.com
+- **Data Protection Officer**: support@universalcredithub.com
 - **Data Protection Commission**: www.dataprotection.org.gh
 - **Bank of Ghana CRB Unit**: www.bog.gov.gh
 

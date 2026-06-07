@@ -534,7 +534,7 @@ export default function AppGuidePage() {
               <Button size="sm" variant="outline" onClick={() => setLocation("/training")} data-testid="link-training-center">
                 Training Center
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setLocation("/docs")} data-testid="link-documentation">
+              <Button size="sm" variant="outline" onClick={() => setLocation("/documentation")} data-testid="link-documentation">
                 Full Documentation
               </Button>
               <Button size="sm" variant="outline" onClick={() => setLocation("/api-docs")} data-testid="link-api-docs">

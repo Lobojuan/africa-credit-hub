@@ -1,17 +1,17 @@
 # Ghana Credit Registry — Service Level Agreement (SLA)
 
-**Africa Credit Hub**
-**Version 2.5 | Effective Date: January 2026 | CDH v2.8**
+**Universal Credit Hub**
+**Version 2.8 | Effective Date: January 2026 | CDH v2.8**
 **Regulatory Framework: Credit Reporting Act, 2007 (Act 726)**
 
 ---
 
 ## 1. Purpose and Scope
 
-This Service Level Agreement (SLA) defines the performance standards, responsibilities, and compliance obligations for the Ghana Credit Registry operated by Africa Credit Hub. This agreement aligns with Bank of Ghana (BoG) Credit Reporting Bureau (CRB) Standards v1.1 and the Credit Reporting Act, 2007 (Act 726).
+This Service Level Agreement (SLA) defines the performance standards, responsibilities, and compliance obligations for the Ghana Credit Registry operated by Universal Credit Hub. This agreement aligns with Bank of Ghana (BoG) Credit Reporting Bureau (CRB) Standards v1.1 and the Credit Reporting Act, 2007 (Act 726).
 
 ### 1.1 Parties
-- **Service Provider**: Africa Credit Hub (Registry Operator)
+- **Service Provider**: Universal Credit Hub (Registry Operator)
 - **Service Recipients**: Licensed credit institutions, microfinance companies, and non-bank financial institutions in Ghana
 - **Regulatory Authority**: Bank of Ghana (BoG)
 
@@ -157,7 +157,7 @@ This Service Level Agreement (SLA) defines the performance standards, responsibi
 
 This SLA is reviewed annually in consultation with the Bank of Ghana and participating institutions. Amendments require 30 days' written notice to all parties.
 
-**Approved by**: Africa Credit Hub, Board of Directors
+**Approved by**: Universal Credit Hub, Board of Directors
 **Regulatory Alignment**: Bank of Ghana Credit Reporting Bureau Unit
 
 ---

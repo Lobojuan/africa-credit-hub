@@ -1,4 +1,4 @@
-# Africa Credit Hub - Performance Optimization Guide
+# Universal Credit Hub - Performance Optimization Guide
 
 ## Overview
 This guide provides a complete, staged approach to fixing performance bottlenecks in the codebase.

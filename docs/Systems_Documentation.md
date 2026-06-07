@@ -1,8 +1,8 @@
-# Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5 — Systems Documentation
+# Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8 — Systems Documentation
 
-**Prepared for:** Systems In Motion Limited  
-**Document Version:** 2.5  
-**Date:** April 2026  
+**Prepared for:** Systems In Motion Limited
+**Document Version:** 2.8
+**Date:** April 2026
 **Classification:** Confidential
 
 ---
@@ -1756,7 +1756,7 @@ const openai = new OpenAI({
 
 ### 14.4 Credit Risk Analysis
 
-**Endpoint:** `POST /api/ai/credit-risk/:borrowerId`  
+**Endpoint:** `POST /api/ai/credit-risk/:borrowerId`
 **Authentication:** Required (any authenticated user)
 
 **Process:**
@@ -1782,7 +1782,7 @@ const openai = new OpenAI({
 
 ### 14.5 AI Report Summary
 
-**Endpoint:** `POST /api/ai/report-summary/:borrowerId`  
+**Endpoint:** `POST /api/ai/report-summary/:borrowerId`
 **Authentication:** Required (any authenticated user)
 
 **Process:**
@@ -1804,7 +1804,7 @@ const openai = new OpenAI({
 
 ### 14.6 AI Smart Chatbot (SSE Streaming)
 
-**Endpoint:** `POST /api/ai/chat`  
+**Endpoint:** `POST /api/ai/chat`
 **Authentication:** Required (any authenticated user)
 
 **Process:**
@@ -1829,7 +1829,7 @@ data: [DONE]
 
 ### 14.7 AI Compliance Reports
 
-**Endpoint:** `POST /api/ai/compliance-report`  
+**Endpoint:** `POST /api/ai/compliance-report`
 **Authentication:** Required; roles restricted to `admin`, `super_admin`, `regulator`
 
 **Process:**
@@ -1872,7 +1872,7 @@ All `/api/*` routes are tracked via the `trackApiUsage()` function, which is cal
 
 ### 15.3 Usage Statistics Endpoint
 
-**Endpoint:** `GET /api/admin/api-usage`  
+**Endpoint:** `GET /api/admin/api-usage`
 **Authentication:** Required; roles restricted to `admin`, `super_admin`
 
 **Response Schema:**
@@ -1977,7 +1977,7 @@ The `NotificationBell` component (`client/src/components/notification-bell.tsx`)
 
 ### 18.1 API Endpoint
 
-**Endpoint:** `GET /api/dashboard/trends`  
+**Endpoint:** `GET /api/dashboard/trends`
 **Authentication:** Required (any authenticated user)
 
 ### 18.2 Trend Data Generation
@@ -2094,5 +2094,5 @@ The monetization system tracks per-transaction billable events across organizati
 
 *End of Systems Documentation*
 
-*Document prepared by Systems In Motion Limited*  
-*Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5*
+*Document prepared by Systems In Motion Limited*
+*Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8*

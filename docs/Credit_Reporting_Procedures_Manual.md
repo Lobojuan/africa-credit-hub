@@ -1,10 +1,10 @@
 # Credit Reporting Procedures Manual
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8
 
-**Prepared for:** Africa Credit Hub  
-**Document Version:** 2.5  
-**Date:** April 2026  
+**Prepared for:** Universal Credit Hub
+**Document Version:** 2.8
+**Date:** April 2026
 **Classification:** Confidential
 
 ---
@@ -381,8 +381,8 @@ The platform supports multiple AI providers:
 | Field | Value |
 |-------|-------|
 | Document ID | CDH-CRP-2026-001 |
-| Version | 2.5 |
+| Version | 2.8 |
 | Classification | Confidential |
-| Authors | Africa Credit Hub Team |
-| Organisation | Africa Credit Hub |
+| Authors | Universal Credit Hub Team |
+| Organisation | Universal Credit Hub |
 | Last Updated | April 2026 |

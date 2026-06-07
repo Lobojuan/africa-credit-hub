@@ -1,10 +1,10 @@
 # Architecture & Compliance Technical Reference
 
-**Africa Credit Hub — CDH v2.8**
+**Universal Credit Hub — CDH v2.8**
 **Classification: Confidential — For Regulatory Auditors and Data Protection Officers**
 
-**Prepared by:** Africa Credit Hub
-**Version:** 2.5 | **Date:** April 2026
+**Prepared by:** Universal Credit Hub
+**Version:** 2.8 | **Date:** April 2026
 
 ---
 
@@ -23,7 +23,7 @@
 
 ## 1. Executive Summary
 
-Africa Credit Hub (CDH v2.8) is a multi-tenant, SaaS credit registry platform engineered to serve all 54 African countries. This document details the architectural decisions and technical controls implemented to satisfy the requirements of Central Bank supervisors, National Data Protection Authorities, and financial sector regulators across the continent.
+Universal Credit Hub (CDH v2.8) is a multi-tenant, SaaS credit registry platform engineered to serve all 54 African countries. This document details the architectural decisions and technical controls implemented to satisfy the requirements of Central Bank supervisors, National Data Protection Authorities, and financial sector regulators across the continent.
 
 The platform is designed with the following compliance objectives:
 
@@ -381,6 +381,6 @@ This model supports both country-to-country and institution-to-institution agree
 | Document ID | CDH-ARC-2026-001 |
 | Version | 2.1 |
 | Classification | Confidential |
-| Authors | Africa Credit Hub Team |
-| Organisation | Africa Credit Hub |
+| Authors | Universal Credit Hub Team |
+| Organisation | Universal Credit Hub |
 | Last Updated | March 2026 |

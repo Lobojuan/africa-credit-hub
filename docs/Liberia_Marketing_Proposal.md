@@ -1,8 +1,8 @@
 # Credit Bureau Solution for the Republic of Liberia
 # Marketing & Technical Proposal
 
-**Prepared by: Africa Credit Hub**
-**Version 1.0 | Cross-Jurisdictional Central Data Hub (CDH) v2.5**
+**Prepared by: Universal Credit Hub**
+**Version 1.0 | Cross-Jurisdictional Central Data Hub (CDH) v2.8**
 **Date: March 2026**
 
 ---
@@ -20,14 +20,14 @@
 9. [Multi-Currency & Regional Integration](#9-multi-currency--regional-integration)
 10. [Implementation Roadmap](#10-implementation-roadmap)
 11. [Investment & Pricing](#11-investment--pricing)
-12. [Why Africa Credit Hub](#12-why-carlson-capital--systems-in-motion)
+12. [Why Universal Credit Hub](#12-why-carlson-capital--systems-in-motion)
 13. [Appendix: Compliance Gap Analysis](#appendix-compliance-gap-analysis)
 
 ---
 
 ## 1. Executive Summary
 
-Africa Credit Hub presents its Cross-Jurisdictional Central Data Hub (CDH) v2.5 as a turnkey credit bureau and credit registry solution for the Republic of Liberia. Our platform is purpose-built for the African financial ecosystem and is already operational in Ghana under Bank of Ghana CRB v1.1 compliance standards.
+Universal Credit Hub presents its Cross-Jurisdictional Central Data Hub (CDH) v2.8 as a turnkey credit bureau and credit registry solution for the Republic of Liberia. Our platform is purpose-built for the African financial ecosystem and is already operational in Ghana under Bank of Ghana CRB v1.1 compliance standards.
 
 Liberia's financial sector is at a critical inflection point. The Central Bank of Liberia (CBL) has established the regulatory foundation for credit reporting through CBL Credit Reference Bureau Regulations (CBL/SD/003/2010), and the growing demand for financial inclusion requires a robust, modern credit information system that serves banks, microfinance institutions, mobile money operators, and the CBL itself.
 
@@ -479,7 +479,7 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 
 ---
 
-## 12. Why Africa Credit Hub
+## 12. Why Universal Credit Hub
 
 ### 12.1 Proven Track Record
 
@@ -505,7 +505,7 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 | Client | Country | Scope |
 |--------|---------|-------|
 | Bank of Ghana (BoG) | Ghana | CRB v1.1 compliant credit registry |
-| Africa Credit Hub | Ghana | Multi-institutional credit reporting |
+| Universal Credit Hub | Ghana | Multi-institutional credit reporting |
 | 17+ Financial Institutions | Ghana | Active data providers and consumers |
 
 ---
@@ -551,11 +551,11 @@ For Liberian nationals with credit exposure in ECOWAS member states:
 
 **Contact Information**
 
-Africa Credit Hub
-Africa Credit Hub — support@africacredithub.com
+Universal Credit Hub
+Universal Credit Hub — support@universalcredithub.com
 
-Platform: https://africacredithub.com — Cross-Jurisdictional Central Data Hub (CDH) v2.5
+Platform: https://universalcredithub.com — Cross-Jurisdictional Central Data Hub (CDH) v2.8
 
 ---
 
-*This document is confidential and proprietary. It is intended solely for the named recipient and may not be reproduced or distributed without written consent from Africa Credit Hub.*
+*This document is confidential and proprietary. It is intended solely for the named recipient and may not be reproduced or distributed without written consent from Universal Credit Hub.*

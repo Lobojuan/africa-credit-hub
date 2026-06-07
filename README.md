@@ -275,6 +275,7 @@ The platform is designed for deployment on Replit with built-in PostgreSQL, TLS,
 | User Manual | `docs/Users_Manual.md` | End users |
 | Data Dictionary | `docs/Data_Dictionary.md` | Database administrators |
 | Deployment Guide | `docs/Deployment_Guide.md` | DevOps engineers |
+| Version History | `docs/Version_History.md` | Operators, release reviewers |
 
 ---
 

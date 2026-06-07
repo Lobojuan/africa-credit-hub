@@ -1,7 +1,7 @@
 # CDH v2.8 — Information Security Policy
 
 **Document Classification:** CONFIDENTIAL
-**Version:** 2.5.0
+**Version:** 2.8.0
 **Effective Date:** 2026-01-01
 **Review Date:** 2026-06-30
 **Approved By:** Chief Information Security Officer (CISO)

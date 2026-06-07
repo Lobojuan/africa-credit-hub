@@ -12,4 +12,6 @@ export VITE_PLATFORM_CONTACT_PHONE="${PLATFORM_CONTACT_PHONE:-}"
 export VITE_PLATFORM_CTO_NAME="${PLATFORM_CTO_NAME:-}"
 export VITE_PLATFORM_CTO_EMAIL="${PLATFORM_CTO_EMAIL:-}"
 
+node scripts/generate-version-history.cjs
+
 exec node --require ./server/stdout-guard.cjs --import tsx/esm server/index.ts 2>&1

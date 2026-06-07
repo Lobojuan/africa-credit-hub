@@ -1,10 +1,10 @@
 # Data Protection Compliance Guide
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8
 
-**Prepared for:** Africa Credit Hub  
-**Document Version:** 2.5  
-**Date:** April 2026  
+**Prepared for:** Universal Credit Hub
+**Document Version:** 2.8
+**Date:** April 2026
 **Classification:** Confidential
 
 ---
@@ -292,7 +292,7 @@ The platform enforces jurisdiction-specific data retention through automated pol
 
 | Field | Details |
 |-------|---------|
-| Organisation | Africa Credit Hub |
+| Organisation | Universal Credit Hub |
 | Email | dpo@systemsinmotion.com |
 | Reporting Line | Reports directly to the Board of Directors |
 | Independence | DPO operates independently of the data processing function |
@@ -356,8 +356,8 @@ Data is shared with participating financial institutions under the following con
 | Field | Value |
 |-------|-------|
 | Document ID | CDH-DPC-2026-001 |
-| Version | 2.5 |
+| Version | 2.8 |
 | Classification | Confidential |
-| Authors | Africa Credit Hub Team |
-| Organisation | Africa Credit Hub |
+| Authors | Universal Credit Hub Team |
+| Organisation | Universal Credit Hub |
 | Last Updated | April 2026 |

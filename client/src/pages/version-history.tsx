@@ -39,8 +39,11 @@ import {
   Mail,
   Fingerprint,
   ScanFace,
+  GitBranch,
+  GitCommit,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { repoVersionHistory } from "@/generated/version-history";
 
 type VersionEntry = {
   version: string;
@@ -178,6 +181,7 @@ const versions: VersionEntry[] = [
 
 export default function VersionHistoryPage() {
   const { t } = useTranslation();
+  const generatedDate = new Date(repoVersionHistory.generatedAt).toLocaleString();
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1400px] mx-auto">
@@ -189,6 +193,65 @@ export default function VersionHistoryPage() {
           {t("versionHistory.subtitle")}
         </p>
       </div>
+
+      <Card data-testid="card-repo-version-history">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg sm:text-xl">
+                Universal Credit Hub v{repoVersionHistory.packageVersion}
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Repository-backed version history, refreshed from Git before dev, build, and type checks.
+              </p>
+            </div>
+            <Badge variant="outline" className="gap-1">
+              <GitCommit className="h-3 w-3" />
+              {repoVersionHistory.currentCommit}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md border bg-muted/30 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Branch</p>
+              <p className="mt-1 flex items-center gap-2 text-sm font-medium">
+                <GitBranch className="h-4 w-4 text-primary" />
+                {repoVersionHistory.branch}
+              </p>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Current Commit</p>
+              <p className="mt-1 flex items-center gap-2 text-sm font-medium">
+                <GitCommit className="h-4 w-4 text-primary" />
+                {repoVersionHistory.currentCommit}
+              </p>
+            </div>
+            <div className="rounded-md border bg-muted/30 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Generated</p>
+              <p className="mt-1 flex items-center gap-2 text-sm font-medium">
+                <Clock className="h-4 w-4 text-primary" />
+                {generatedDate}
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-md border">
+            <div className="border-b bg-muted/30 px-3 py-2 text-sm font-medium">
+              Latest repository changes
+            </div>
+            <div className="divide-y">
+              {repoVersionHistory.commits.slice(0, 8).map((commit) => (
+                <div key={commit.hash} className="grid gap-2 px-3 py-2 text-sm sm:grid-cols-[90px_90px_1fr]">
+                  <span className="text-muted-foreground">{commit.date}</span>
+                  <code className="text-xs text-primary">{commit.shortHash}</code>
+                  <span className="min-w-0 truncate">{commit.subject}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="relative">
         <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border hidden sm:block" />

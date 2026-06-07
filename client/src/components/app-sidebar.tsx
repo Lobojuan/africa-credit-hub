@@ -286,7 +286,7 @@ function CollapsibleSection({
     <Collapsible open={isOpen} onOpenChange={() => onToggle(label)}>
       <SidebarGroup className="py-0">
         <CollapsibleTrigger className="w-full group">
-          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 cursor-pointer transition-all duration-200 ease-[cubic-bezier(0.4,0,0.2,1)] flex items-center justify-between rounded-lg mx-1.5 my-0.5 ${
+          <div className={`text-[10px] font-bold uppercase tracking-widest px-3 py-2 cursor-pointer transition-all duration-200 ease-in-out flex items-center justify-between rounded-lg mx-1.5 my-0.5 ${
             hasActive && isOpen
               ? "text-primary-foreground bg-primary/90 shadow-sm"
               : hasActive && !isOpen

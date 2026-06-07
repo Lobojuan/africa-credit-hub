@@ -1,11 +1,11 @@
 # Regulatory Engagement Pack
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8
 
-**Prepared for:** Central Bank Supervisors, National Data Protection Authorities & Financial Sector Regulators  
-**Prepared by:** Africa Credit Hub  
-**Document Version:** 2.5  
-**Date:** April 2026  
+**Prepared for:** Central Bank Supervisors, National Data Protection Authorities & Financial Sector Regulators
+**Prepared by:** Universal Credit Hub
+**Document Version:** 2.8
+**Date:** April 2026
 **Classification:** Confidential
 
 ---
@@ -18,13 +18,13 @@ The Pan-African Credit Registry System (CDH v2.8) is a multi-tenant, SaaS credit
 
 | Attribute | Detail |
 |-----------|--------|
-| Platform Name | Africa Credit Hub — Cross-Jurisdictional Central Data Hub |
-| Version | 2.5 |
+| Platform Name | Universal Credit Hub — Cross-Jurisdictional Central Data Hub |
+| Version | 2.8 |
 | Architecture | Full-stack web application (React/TypeScript frontend, Express/Node.js backend, PostgreSQL database) |
 | Deployment | Cloud-hosted SaaS with per-country data sovereignty |
 | Languages | English, French, Portuguese, Arabic, Swahili |
 | Coverage | 54 African countries with country-specific regulatory mappings |
-| Operator | Africa Credit Hub |
+| Operator | Universal Credit Hub |
 
 ### 1.2 Core Capabilities
 
@@ -331,9 +331,9 @@ Cross-border data access requires:
 
 | Role | Name | Organisation |
 |------|------|-------------|
-| Platform Operator | Africa Credit Hub Team | Africa Credit Hub |
-| Technical Lead | Africa Credit Hub Team | Africa Credit Hub |
-| Data Protection Officer | DPO Office | Africa Credit Hub |
+| Platform Operator | Universal Credit Hub Team | Universal Credit Hub |
+| Technical Lead | Universal Credit Hub Team | Universal Credit Hub |
+| Data Protection Officer | DPO Office | Universal Credit Hub |
 
 ---
 
@@ -342,8 +342,8 @@ Cross-border data access requires:
 | Field | Value |
 |-------|-------|
 | Document ID | CDH-REP-2026-001 |
-| Version | 2.5 |
+| Version | 2.8 |
 | Classification | Confidential |
-| Authors | Africa Credit Hub Team |
-| Organisation | Africa Credit Hub |
+| Authors | Universal Credit Hub Team |
+| Organisation | Universal Credit Hub |
 | Last Updated | April 2026 |

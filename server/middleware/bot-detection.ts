@@ -29,14 +29,7 @@ setInterval(() => {
 
 export function botDetectionMiddleware(req: Request, res: Response, next: NextFunction) {
   const isDev = process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true";
-  if (
-    isDev && (
-      req.path.startsWith("/src/") ||
-      req.path.startsWith("/@vite") ||
-      req.path.startsWith("/@react-refresh") ||
-      req.path.startsWith("/node_modules/")
-    )
-  ) {
+  if (isDev) {
     return next();
   }
 

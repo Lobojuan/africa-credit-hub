@@ -1,14 +1,14 @@
-# Africa Credit Hub
+# Universal Credit Hub
 # Pan-African Credit Registry — External API Integration Guide
-## Cross-Jurisdictional Credit Data Hub (CDH) v2.5
+## Cross-Jurisdictional Credit Data Hub (CDH) v2.8
 
 ---
 
-**Document Version:** 2.5  
-**Last Updated:** April 2026  
-**Classification:** CONFIDENTIAL — For Authorized Institutions Only  
-**Contact:** Africa Credit Hub — support@africacredithub.com  
-**Website:** https://africacredithub.com
+**Document Version:** 2.8
+**Last Updated:** April 2026
+**Classification:** CONFIDENTIAL — For Authorized Institutions Only
+**Contact:** Universal Credit Hub — support@universalcredithub.com
+**Website:** https://universalcredithub.com
 
 ---
 
@@ -930,34 +930,34 @@ curl -X POST \
 
 ## 13. Frequently Asked Questions
 
-**Q: How do I get API credentials?**  
+**Q: How do I get API credentials?**
 A: Contact Systems In Motion Limited or your national regulatory authority. Your institution must be registered and approved before API access is provisioned.
 
-**Q: Can I use both API key and OAuth authentication?**  
+**Q: Can I use both API key and OAuth authentication?**
 A: Yes. Both methods work on all endpoints. Use API key auth for simplicity, or OAuth for enhanced security with short-lived tokens.
 
-**Q: What happens if I submit a borrower with a nationalId that already exists?**  
+**Q: What happens if I submit a borrower with a nationalId that already exists?**
 A: You will receive a `400` error with a duplicate key message. Use the search endpoint first to check if the borrower already exists, then submit credit accounts against the existing borrower ID.
 
-**Q: How do I update an existing borrower record?**  
+**Q: How do I update an existing borrower record?**
 A: Currently, the external API supports record creation and querying. To update existing records, contact the CDH administrator or submit a correction through the dispute resolution process.
 
-**Q: How many records can I send in a batch?**  
+**Q: How many records can I send in a batch?**
 A: We recommend batches of up to 100 records. Larger batches may time out depending on network conditions.
 
-**Q: Is there a sandbox environment for testing?**  
+**Q: Is there a sandbox environment for testing?**
 A: Contact us to discuss sandbox provisioning for your integration development and testing.
 
-**Q: How is the credit score calculated?**  
+**Q: How is the credit score calculated?**
 A: The score is based on the borrower's account performance, payment history, delinquencies, defaults, write-offs, and court judgments. Scores range from 300 (very poor) to 850 (excellent). See Section 5.7 for the detailed scoring model.
 
-**Q: Which countries are covered?**  
+**Q: Which countries are covered?**
 A: The CDH covers all 54 African Union member states. Cross-border entity resolution allows tracking borrowers across jurisdictions.
 
-**Q: How often should we submit data?**  
+**Q: How often should we submit data?**
 A: Submit new accounts as they are originated, and report payment history monthly. Update account statuses whenever they change (e.g., from `current` to `delinquent`).
 
-**Q: Is the API available 24/7?**  
+**Q: Is the API available 24/7?**
 A: Yes, the API is designed for continuous availability. Planned maintenance windows will be communicated in advance.
 
 ---
@@ -1579,13 +1579,13 @@ Returns the 100 most recent audit events with resolved user names.
 
 | Contact | Details |
 |---|---|
-| **Africa Credit Hub Support** | support@africacredithub.com |
+| **Universal Credit Hub Support** | support@universalcredithub.com |
 
 | **Technical Documentation** | This document |
-| **Platform** | https://africacredithub.com |
+| **Platform** | https://universalcredithub.com |
 
 For urgent production issues, include your institution name, API key prefix (e.g., `sim_a1b2c3d4`), and a description of the error including the full HTTP response.
 
 ---
 
-*© 2026 Africa Credit Hub. All rights reserved. This document is confidential and intended only for authorized institutions integrating with the Pan-African Credit Registry.*
+*© 2026 Universal Credit Hub. All rights reserved. This document is confidential and intended only for authorized institutions integrating with the Pan-African Credit Registry.*

@@ -1,10 +1,10 @@
-# Credit Registry System — Users Manual v2.5
+# Credit Registry System — Users Manual v2.8
 
 **Cross-Jurisdictional Central Data Hub & Credit Registry System**
 
 **Prepared for:** Systems In Motion Limited
 
-**Version:** 2.5
+**Version:** 2.8
 
 **Date:** April 2026
 

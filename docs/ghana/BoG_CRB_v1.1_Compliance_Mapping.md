@@ -1,7 +1,7 @@
 # BoG CRB v1.1 Compliance Mapping
 
-**Africa Credit Hub**
-**Version 2.5 | Bank of Ghana Credit Reporting Bureau Data Format Compliance | CDH v2.8**
+**Universal Credit Hub**
+**Version 2.8 | Bank of Ghana Credit Reporting Bureau Data Format Compliance | CDH v2.8**
 
 ---
 

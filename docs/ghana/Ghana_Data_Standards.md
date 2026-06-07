@@ -1,7 +1,7 @@
 # Ghana Credit Registry — BoG CRB Data Standards Reference
 
-**Africa Credit Hub**
-**Version 2.5 | Bank of Ghana CRB Data Format Specification | CDH v2.8**
+**Universal Credit Hub**
+**Version 2.8 | Bank of Ghana CRB Data Format Specification | CDH v2.8**
 
 ---
 

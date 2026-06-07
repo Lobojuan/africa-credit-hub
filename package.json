@@ -7,9 +7,13 @@
     "node": ">=20.0.0"
   },
   "scripts": {
+    "version:history": "node scripts/generate-version-history.cjs",
+    "predev": "npm run version:history",
     "dev": "NODE_ENV=development tsx server/index.ts",
+    "prebuild": "npm run version:history",
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
+    "precheck": "npm run version:history",
     "check": "tsc",
     "test": "vitest run --config vitest.unit.config.ts",
     "test:unit": "vitest run --config vitest.unit.config.ts",

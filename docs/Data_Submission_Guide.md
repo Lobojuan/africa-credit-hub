@@ -1,8 +1,8 @@
 # Data Submission Guide
 
-**Version 2.5** | Pan-African Credit Registry — Central Data Hub (CDH)
+**Version 2.8** | Pan-African Credit Registry — Central Data Hub (CDH)
 
-**Africa Credit Hub™**
+**Universal Credit Hub™**
 
 ---
 
@@ -593,12 +593,12 @@ POST /api/external/v1/consent
 
 | Resource | Contact |
 |----------|---------|
-| Technical support | helpdesk@africacredithub.com |
+| Technical support | helpdesk@universalcredithub.com |
 | API documentation | API Integration Guide (available in Documentation section) |
 | BoG data standards | Ghana Data Standards Reference (Ghana documentation) |
-| Africa Credit Hub Support | support@africacredithub.com |
+| Universal Credit Hub Support | support@universalcredithub.com |
 
 
 ---
 
-*© 2026 Africa Credit Hub. All rights reserved.*
+*© 2026 Universal Credit Hub. All rights reserved.*

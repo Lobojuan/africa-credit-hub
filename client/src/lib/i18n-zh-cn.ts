@@ -3425,6 +3425,41 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     englishOnly: "本文件以英文提供。如需翻译，请联系我们。",
   },
 
+  salesPlaybook: {
+    downloadsThisMonth: "本月下载量",
+    viewsThisMonth: "本月浏览量",
+    byUser: "按用户",
+    userStats: "{{downloads}} 次下载 · {{views}} 次浏览",
+    confidential: "机密",
+    updated: "更新于 {{date}}",
+    downloadPdf: "下载 PDF",
+    generating: "正在生成...",
+    downloadedTitle: "PDF 已下载",
+    downloadedDesc: "{{title}} 已保存到下载文件夹。",
+    downloadFailedTitle: "下载失败",
+    downloadFailedDesc: "无法生成 PDF。请重试。",
+    marketReadyPositioning: "面向市场的定位",
+    meetingFlow: "会议流程",
+    meetingFlowDesc: "用这个节奏完成紧凑的 20 分钟会议。",
+    twentyMinutes: "20 分钟",
+    durationTwoMin: "2 分钟",
+    durationFourMin: "4 分钟",
+    durationTwelveMin: "12 分钟",
+    flowOpening: "开场钩子 + 市场概览",
+    flowDemo: "现场演示，步骤 1-7",
+    flowQuestions: "难题与回答",
+    flowClose: "上线提案 + 收尾",
+    demoCredentials: "演示凭据",
+    demoCredentialsDesc: "仅在演练演示路径时显示凭据。",
+    showDemoCredentials: "显示演示凭据",
+    fullPlaybook: "完整 Playbook",
+    readyForRehearsal: "可用于销售演练",
+    loadErrorTitle: "无法加载 playbook 内容",
+    loadErrorDesc: "请确认源 markdown 存在后刷新。",
+    confidentialNotice: "本文件为机密文件，仅供指定收件人使用。",
+    copyright: "© 2026 Universal Credit Hub Ltd. 保留所有权利。",
+  },
+
   lotoNotifications: {
     tabTitle: "通知",
     tabSubtitle: "管理 Loto Fiscal 联系您的方式。",
@@ -3459,4 +3494,4 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
 };
 
   export default zhCN;
-  
+

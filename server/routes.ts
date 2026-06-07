@@ -9608,6 +9608,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     { id: "regulatory-pack", filename: "Regulatory_Engagement_Pack.md", title: "Regulatory Engagement Pack", description: "System capabilities summary, compliance evidence matrix, security controls attestation, and go-live readiness checklist for regulators" },
     { id: "data-submission", filename: "Data_Submission_Guide.md", title: "Data Submission Guide", description: "Step-by-step instructions for submitting credit data — manual entry, batch CSV upload, REST API, and BoG IFF file formats" },
     { id: "dispute-procedures", filename: "Dispute_Handling_Procedures.md", title: "Dispute Handling Procedures", description: "Standard operating procedures for dispute intake, investigation, SLA timelines, escalation paths, cross-border disputes, and resolution actions" },
+    { id: "version-history", filename: "Version_History.md", title: "Version History", description: "Automatically generated repository version history with the current app version, branch, commit, and latest changes" },
   ];
 
   const DOC_TRANSLATIONS: Record<string, Record<string, { title: string; description: string }>> = {
@@ -9630,6 +9631,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       "regulatory-pack": { title: "Pack d'Engagement Réglementaire", description: "Résumé des capacités du système, matrice de preuves de conformité, attestation des contrôles de sécurité et liste de contrôle de préparation au lancement" },
       "data-submission": { title: "Guide de Soumission des Données", description: "Instructions étape par étape pour soumettre des données de crédit — saisie manuelle, téléchargement CSV par lot, API REST et formats de fichiers BoG IFF" },
       "dispute-procedures": { title: "Procédures de Traitement des Litiges", description: "Procédures opérationnelles standard pour l'admission, l'investigation, les délais SLA, les voies d'escalade, les litiges transfrontaliers et les actions de résolution" },
+      "version-history": { title: "Historique des Versions", description: "Historique généré automatiquement depuis le dépôt avec la version, la branche, le commit et les derniers changements" },
     },
     pt: {
       "api-guide": { title: "Guia de Integração API", description: "Guia completo para bancos e credores se conectarem via API REST — autenticação, endpoints, modelos de dados e exemplos" },
@@ -9650,6 +9652,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       "regulatory-pack": { title: "Pacote de Engajamento Regulatório", description: "Resumo das capacidades do sistema, matriz de evidências de conformidade, atestado de controlos de segurança e lista de verificação de preparação para lançamento" },
       "data-submission": { title: "Guia de Submissão de Dados", description: "Instruções passo a passo para submeter dados de crédito — entrada manual, carregamento CSV em lote, API REST e formatos de ficheiros BoG IFF" },
       "dispute-procedures": { title: "Procedimentos de Tratamento de Litígios", description: "Procedimentos operacionais padrão para admissão, investigação, prazos SLA, vias de escalada, litígios transfronteiriços e ações de resolução" },
+      "version-history": { title: "Histórico de Versões", description: "Histórico gerado automaticamente a partir do repositório com versão, ramo, commit e alterações recentes" },
     },
     ar: {
       "api-guide": { title: "دليل تكامل API", description: "دليل شامل للبنوك والمقرضين للاتصال عبر REST API — المصادقة ونقاط النهاية ونماذج البيانات والأمثلة" },
@@ -9670,6 +9673,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       "regulatory-pack": { title: "حزمة المشاركة التنظيمية", description: "ملخص قدرات النظام ومصفوفة أدلة الامتثال وشهادة ضوابط الأمان وقائمة مراجعة الجاهزية للإطلاق" },
       "data-submission": { title: "دليل تقديم البيانات", description: "تعليمات خطوة بخطوة لتقديم بيانات الائتمان — الإدخال اليدوي والتحميل المجمع بصيغة CSV وواجهة REST API وتنسيقات ملفات BoG IFF" },
       "dispute-procedures": { title: "إجراءات التعامل مع النزاعات", description: "إجراءات التشغيل القياسية لقبول النزاعات والتحقيق والجداول الزمنية لاتفاقية مستوى الخدمة ومسارات التصعيد والنزاعات العابرة للحدود وإجراءات الحل" },
+      "version-history": { title: "سجل الإصدارات", description: "سجل يتم إنشاؤه تلقائياً من المستودع ويعرض الإصدار والفرع والالتزام وآخر التغييرات" },
     },
     sw: {
       "api-guide": { title: "Mwongozo wa Muunganisho wa API", description: "Mwongozo kamili kwa benki na wakopeshaji kuunganisha kupitia REST API — uthibitishaji, vituo, miundo ya data na mifano" },
@@ -9690,6 +9694,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       "regulatory-pack": { title: "Kifurushi cha Ushirikiano wa Udhibiti", description: "Muhtasari wa uwezo wa mfumo, jedwali la ushahidi wa utiifu, uthibitisho wa vidhibiti vya usalama na orodha ya ukaguzi wa utayari wa uzinduzi" },
       "data-submission": { title: "Mwongozo wa Uwasilishaji wa Data", description: "Maagizo hatua kwa hatua ya kuwasilisha data ya mikopo — uingizaji wa mikono, upakiaji wa CSV kwa wingi, API ya REST na muundo wa faili za BoG IFF" },
       "dispute-procedures": { title: "Taratibu za Kushughulikia Migogoro", description: "Taratibu za kawaida za uendeshaji kwa mapokezi ya migogoro, uchunguzi, ratiba za SLA, njia za kupandisha, migogoro ya kuvuka mipaka na hatua za utatuzi" },
+      "version-history": { title: "Historia ya Matoleo", description: "Historia inayozalishwa kiotomatiki kutoka kwenye repo yenye toleo, tawi, commit na mabadiliko ya karibuni" },
     },
   };
 

@@ -1,7 +1,7 @@
 # CDH v2.8 — Change Management Policy
 
 **Document Classification:** INTERNAL
-**Version:** 2.5.0
+**Version:** 2.8.0
 **Effective Date:** 2026-01-01
 **Review Date:** 2026-06-30
 **Approved By:** Chief Technology Officer (CTO)

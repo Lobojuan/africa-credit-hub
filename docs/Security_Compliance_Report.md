@@ -1,10 +1,10 @@
 # Security Compliance Report
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8
 
-**Prepared for:** Systems In Motion Limited  
-**Document Version:** 2.5  
-**Date:** April 2026  
+**Prepared for:** Systems In Motion Limited
+**Document Version:** 2.8
+**Date:** April 2026
 **Classification:** Confidential
 
 ---
@@ -393,7 +393,7 @@ const parsed = insertBorrowerSchema.parse(req.body);
 3. For each entry, server recomputes the expected `currentHash` from `previousHash` + entry data
 4. Server verifies that `currentHash` matches the stored value
 5. Server verifies that `previousHash` matches the prior entry's `currentHash`
-6. Returns `{ valid: true/false, totalEntries, checkedEntries, brokenAt }` 
+6. Returns `{ valid: true/false, totalEntries, checkedEntries, brokenAt }`
 7. Frontend displays green "Valid" badge or red "Broken" badge accordingly
 
 ### 7.4 Audit Log Immutability

@@ -2,8 +2,8 @@
 
 ## Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v2.5
 
-**Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 2.5  
+**Préparé pour :** Systems In Motion Limited
+**Version du Document :** 2.8
 **Date :** Avril 2026
 
 ---

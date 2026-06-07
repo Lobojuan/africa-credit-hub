@@ -838,7 +838,7 @@ The UCH v2.8 is a multi-tenant SaaS credit registry platform currently operating
 
 16. EXCHANGE RATES: Live rates for 42 African currencies + USD/EUR/GBP. Auto-updated every 6 hours. Manual refresh available. Currency conversion on all financial displays.
 
-17. DOCUMENTATION: 18 platform documents served via /api/docs — API Guide, UAT Test Document, Systems Documentation, Users Manual, SRS Traceability Matrix, Data Dictionary, Deployment Guide, Security & Compliance Report, Security Policy, Disaster Recovery Plan, Change Management, Penetration Testing Readiness, Liberia Marketing Proposal, Credit Procedures, Data Protection Policy, Regulatory Pack, Data Submission Guide, Dispute Procedures. All available as rendered HTML with PDF download.
+17. DOCUMENTATION: 19 platform documents served via /api/docs — API Guide, UAT Test Document, Systems Documentation, Users Manual, SRS Traceability Matrix, Data Dictionary, Deployment Guide, Security & Compliance Report, Security Policy, Disaster Recovery Plan, Change Management, Penetration Testing Readiness, Liberia Marketing Proposal, Credit Procedures, Data Protection Policy, Regulatory Pack, Data Submission Guide, Dispute Procedures, and generated Version History. All available as rendered HTML with PDF download.
 
 18. MULTI-LANGUAGE: English, French, Portuguese, Arabic (RTL), and Swahili. AI summaries and narratives respect selected language.
 

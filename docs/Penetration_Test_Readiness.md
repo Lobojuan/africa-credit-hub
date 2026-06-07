@@ -1,7 +1,7 @@
 # CDH v2.8 — Penetration Test Readiness Report
 
 **Document Classification:** CONFIDENTIAL
-**Version:** 2.5.0
+**Version:** 2.8.0
 **Date:** 2026-03-29
 **Prepared By:** Security Engineering Team
 

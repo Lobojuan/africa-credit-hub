@@ -12,6 +12,7 @@ interface PlaybookEditorProps {
   patchEndpoint: string;
   playbookTitle: string;
   currentContent?: string;
+  buttonClassName?: string;
 }
 
 export function PlaybookEditorButton({
@@ -19,6 +20,7 @@ export function PlaybookEditorButton({
   patchEndpoint,
   playbookTitle,
   currentContent,
+  buttonClassName,
 }: PlaybookEditorProps) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -63,7 +65,7 @@ export function PlaybookEditorButton({
       <Button
         variant="outline"
         onClick={() => setOpen(true)}
-        className="shrink-0 bg-white/10 border-white/30 text-white hover:bg-white/20 font-semibold"
+        className={buttonClassName ?? "shrink-0 bg-white/10 border-white/30 text-white hover:bg-white/20 font-semibold"}
         data-testid="button-edit-playbook"
         disabled={currentContent === undefined}
       >

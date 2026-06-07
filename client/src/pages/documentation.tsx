@@ -48,6 +48,7 @@ function DocIcon({ id }: { id: string }) {
     "regulatory-pack": "bg-sky-100 dark:bg-sky-900 text-sky-700 dark:text-sky-300",
     "data-submission": "bg-lime-100 dark:bg-lime-900 text-lime-700 dark:text-lime-300",
     "dispute-procedures": "bg-fuchsia-100 dark:bg-fuchsia-900 text-fuchsia-700 dark:text-fuchsia-300",
+    "version-history": "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200",
   };
   return (
     <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${colors[id] || "bg-muted text-foreground"}`}>

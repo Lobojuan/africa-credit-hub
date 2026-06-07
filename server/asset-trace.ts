@@ -148,7 +148,7 @@ async function getOAuthToken(provider: string, config: OAuthConfig): Promise<str
     accessToken: data.access_token,
     expiresAt: Date.now() + expiresIn * 1000,
   });
-  console.log(`[AssetTrace] OAuth token refreshed for ${provider}, expires in ${expiresIn}s`);
+  console.log(`[AssetTrace] OAuth credential refreshed for ${provider}, expires in ${expiresIn}s`);
   return data.access_token;
 }
 

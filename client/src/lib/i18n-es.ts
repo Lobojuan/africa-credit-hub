@@ -2710,7 +2710,7 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
       feature3Title: "Certificados verificables", feature3Body: "Cada registro incluye un certificado a prueba de manipulaciones y un código QR.",
       feature4Title: "Búsqueda transfronteriza", feature4Body: "Busque al mismo prestatario en todos los registros participantes con una sola consulta.",
     },
-  
+
   notFound: {
     title: "404 — Página no encontrada",
     subtitle: "La página que busca no existe.",
@@ -3258,6 +3258,41 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
     englishOnly: "Este documento se proporciona en inglés. Las traducciones están disponibles bajo petición.",
   },
 
+  salesPlaybook: {
+    downloadsThisMonth: "Descargas este mes",
+    viewsThisMonth: "Vistas este mes",
+    byUser: "Por usuario",
+    userStats: "{{downloads}} descargas · {{views}} vistas",
+    confidential: "Confidencial",
+    updated: "Actualizado el {{date}}",
+    downloadPdf: "Descargar PDF",
+    generating: "Generando...",
+    downloadedTitle: "PDF descargado",
+    downloadedDesc: "{{title}} se guardó en tu carpeta de descargas.",
+    downloadFailedTitle: "Error de descarga",
+    downloadFailedDesc: "No se pudo generar el PDF. Inténtalo de nuevo.",
+    marketReadyPositioning: "Posicionamiento listo para el mercado",
+    meetingFlow: "Flujo de reunión",
+    meetingFlowDesc: "Usa este ritmo para una reunión precisa de 20 minutos.",
+    twentyMinutes: "20 min",
+    durationTwoMin: "2 min",
+    durationFourMin: "4 min",
+    durationTwelveMin: "12 min",
+    flowOpening: "Apertura + panorama del mercado",
+    flowDemo: "Demo en vivo, pasos 1-7",
+    flowQuestions: "Preguntas difíciles y respuestas",
+    flowClose: "Propuesta de onboarding + cierre",
+    demoCredentials: "Credenciales de demo",
+    demoCredentialsDesc: "Muestra las credenciales solo al ensayar la demo.",
+    showDemoCredentials: "Mostrar credenciales de demo",
+    fullPlaybook: "Playbook completo",
+    readyForRehearsal: "Listo para ensayo comercial",
+    loadErrorTitle: "No se pudo cargar el contenido del playbook",
+    loadErrorDesc: "Verifica que exista el markdown de origen y actualiza.",
+    confidentialNotice: "Este documento es confidencial y está destinado únicamente al destinatario indicado.",
+    copyright: "© 2026 Universal Credit Hub Ltd. Todos los derechos reservados.",
+  },
+
   lotoNotifications: {
     tabTitle: "Notificaciones",
     tabSubtitle: "Gestiona cómo Loto Fiscal te contacta.",
@@ -3292,4 +3327,4 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } fro
 };
 
   export default es;
-  
+

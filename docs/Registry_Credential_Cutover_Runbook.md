@@ -8,7 +8,7 @@
 
 ## Overview
 
-The Africa Credit Hub asset-trace system uses live government registry APIs when production credentials are available, and falls back to a deterministic sandbox when they are not. Credentials are configured entirely through environment secrets — no code changes are required to switch from sandbox to live.
+The Universal Credit Hub asset-trace system uses live government registry APIs when production credentials are available, and falls back to a deterministic sandbox when they are not. Credentials are configured entirely through environment secrets — no code changes are required to switch from sandbox to live.
 
 This runbook documents the exact steps to activate production credentials for each supported African vehicle and property registry.
 

@@ -1,9 +1,9 @@
 # Deployment Guide
 
-## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.5
+## Cross-Jurisdictional Central Data Hub & Credit Registry System v2.8
 
-**Prepared for:** Systems In Motion Limited  
-**Document Version:** 2.5  
+**Prepared for:** Systems In Motion Limited
+**Document Version:** 2.8
 **Date:** April 2026
 
 ---

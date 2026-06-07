@@ -31,6 +31,29 @@ for var in $REQUIRED_VARS; do
   fi
 done
 
+if [ "${PRODUCTION_MODE:-false}" = "true" ] || [ "${NODE_ENV:-}" = "production" ]; then
+  PROD_REQUIRED_VARS="PII_ENCRYPTION_KEY PII_ENCRYPTION_SALT EXTERNAL_API_JWT_SECRET MASTER_CONTROL_PASSWORD CANONICAL_URL"
+  for var in $PROD_REQUIRED_VARS; do
+    if [ -z "${!var:-}" ]; then
+      fail "Missing production env var: $var"
+    else
+      pass "$var is set"
+    fi
+  done
+
+  if [ "${ENABLE_E2E_TEST_AUTH:-false}" = "true" ]; then
+    fail "ENABLE_E2E_TEST_AUTH must not be true in production"
+  else
+    pass "E2E auth bypass is disabled"
+  fi
+
+  if [ "${RUN_SEED:-false}" = "true" ]; then
+    warn "RUN_SEED=true in production — confirm this is intentional before deploying"
+  else
+    pass "Demo seeding is not enabled"
+  fi
+fi
+
 OPTIONAL_VARS="SMTP_HOST SMTP_USER SMTP_PASS SENDGRID_API_KEY"
 for var in $OPTIONAL_VARS; do
   if [ -z "${!var:-}" ]; then

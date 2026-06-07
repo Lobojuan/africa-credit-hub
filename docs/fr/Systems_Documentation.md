@@ -1,8 +1,8 @@
 # Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v2.5 — Documentation Système
 
-**Préparé pour :** Systems In Motion Limited  
-**Version du Document :** 2.5  
-**Date :** Avril 2026  
+**Préparé pour :** Systems In Motion Limited
+**Version du Document :** 2.8
+**Date :** Avril 2026
 **Classification :** Confidentiel
 
 ---
@@ -1617,10 +1617,10 @@ Les conditions d'erreur sont journalisées via `console.error()` pour :
   - **Intégration :** Enregistré comme ressource de langue `pt` dans la configuration i18next de `client/src/lib/i18n.ts`
   - **Sélecteur de Langue :** Sélecteur de langue manuel disponible sur la page de connexion et l'en-tête principal de l'application (`client/src/components/language-switcher.tsx`)
   - **Couverture :** Toute la navigation, les formulaires, les messages d'erreur, les libellés du tableau de bord et les clés spécifiques aux fonctionnalités (AMF, chatbot, téléversement par lots, litiges, etc.)
-  
+
 ---
 
 *Fin de la Documentation Système*
 
-*Document préparé par Systems In Motion Limited*  
+*Document préparé par Systems In Motion Limited*
 *Système de Hub Central de Données Inter-Juridictionnel et Registre de Crédit v2.5*
