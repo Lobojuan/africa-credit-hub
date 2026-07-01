@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { Seo } from "@/components/seo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -99,6 +100,11 @@ export default function SecurityCompliancePage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground" data-testid="security-page">
+      <Seo
+        title="Security & Compliance — Universal Credit Hub"
+        description="Enterprise-grade security for pan-African credit infrastructure. MFA, WebAuthn, RBAC, PII encryption at rest, blockchain audit anchoring, and compliance across 54 African jurisdictions."
+        canonical="https://universalcredithub.com/security"
+      />
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/solutions")}>

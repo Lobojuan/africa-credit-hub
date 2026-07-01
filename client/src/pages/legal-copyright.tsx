@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Seo } from "@/components/seo";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -62,6 +63,11 @@ export default function LegalCopyrightPage() {
 
   return (
     <div className="min-h-screen">
+      <Seo
+        title="Legal & IP Protection — Universal Credit Hub"
+        description="Universal Credit Hub legal notices, intellectual property rights, and copyright protection across pan-African credit registry operations."
+        canonical="https://universalcredithub.com/legal"
+      />
       <div className="section-banner mb-8 relative z-10">
         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">

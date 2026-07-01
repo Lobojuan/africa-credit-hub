@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Seo } from "@/components/seo";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBrandColors } from "@/hooks/use-brand-colors";
@@ -92,6 +93,11 @@ export default function AboutPage() {
 
   return (
     <div className="min-h-screen pb-16">
+      <Seo
+        title="About Universal Credit Hub — Pan-African Credit Registry"
+        description="Learn about Universal Credit Hub's mission to modernize credit infrastructure across 54 African countries with consent-first architecture, 8 languages, and full regulatory compliance."
+        canonical="https://universalcredithub.com/about"
+      />
       <div className="relative overflow-hidden rounded-2xl mx-4 mt-4 mb-8" style={{ background: brandColors.heroGradient }}>
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-full opacity-[0.04]" style={{ backgroundImage: brandColors.heroDotPattern, backgroundSize: "50px 50px" }} />

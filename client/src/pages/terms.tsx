@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Seo } from "@/components/seo";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,11 @@ export default function TermsOfServicePage() {
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Terms of Service — Universal Credit Hub"
+        description="Universal Credit Hub terms of service. Governing usage of the pan-African credit registry platform across 54 African jurisdictions."
+        canonical="https://universalcredithub.com/terms"
+      />
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <nav className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
           <Link href="/">

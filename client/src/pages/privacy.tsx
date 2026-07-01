@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Seo } from "@/components/seo";
 import { Link } from "wouter";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,11 @@ export default function PrivacyPolicyPage() {
   const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Privacy Policy — Universal Credit Hub"
+        description="Universal Credit Hub privacy policy. How we collect, store, and protect personal data under Ghana's Data Protection Act and pan-African data sovereignty requirements."
+        canonical="https://universalcredithub.com/privacy"
+      />
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <nav className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
           <Link href="/">

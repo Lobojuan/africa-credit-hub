@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Loader2, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
+import { Seo } from "@/components/seo";
 
 const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
 
@@ -11,6 +12,11 @@ export default function CreditLandingPage() {
   const brand = PLATFORM_COMPANY_NAME;
   return (
     <div className="relative">
+      <Seo
+        title="Universal Credit Hub — Pan-African Credit Registry Platform"
+        description="The only consent-first credit infrastructure covering all 54 African countries. Credit bureau, collateral registry and Loto Fiscal verified-receipt scoring on one platform. 8 languages · regulator-ready."
+        canonical="https://universalcredithub.com/"
+      />
       <div className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-9 flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
           <Link href="/" className="hover:underline font-medium" data-testid="link-breadcrumb-platform">{brand}</Link>
