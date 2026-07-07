@@ -18,10 +18,31 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-07T08:05:12.575Z",
+  "generatedAt": "2026-07-07T10:34:02.576Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "b3be797",
+  "currentCommit": "92f596e",
   "commits": [
+    {
+      "hash": "92f596e287cc0ca586b28d35c88465b81c7ba3c5",
+      "shortHash": "92f596e",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs(review): mark F1/C1/I2/F3 fixed, I1 partial — Scorecard v1.1 progress"
+    },
+    {
+      "hash": "8f3c4b9c1530eae03d82b5b982d85cb122512da4",
+      "shortHash": "8f3c4b9",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "fix(scoring): UCH Scorecard v1.1 — activate utilization, unify score inputs, repair soft-pull"
+    },
+    {
+      "hash": "6fe9358215d16f6c27a4f21bc25594a90908b14b",
+      "shortHash": "6fe9358",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "b3be7975c0f1a2f617431a49d601dbff266d2fd6",
       "shortHash": "b3be797",
@@ -84,27 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-01",
       "author": "Uffe J Carlson",
       "subject": "seo: expand sitemap to 21 URLs + add <Seo> to 6 public pages"
-    },
-    {
-      "hash": "d286423684c20136d88a848b0537a7311f1bba06",
-      "shortHash": "d286423",
-      "date": "2026-06-07",
-      "author": "Uffe J Carlson",
-      "subject": "Rebrand: Africa Credit Hub -> Universal Credit Hub across docs (54 refs, 18 files)"
-    },
-    {
-      "hash": "5b0eda4b10e850a1ed7d9d75cec98c3baff7794f",
-      "shortHash": "5b0eda4",
-      "date": "2026-06-06",
-      "author": "Uffe J Carlson",
-      "subject": "Revert \"Clean up production landing hero\""
-    },
-    {
-      "hash": "26e44e18d19d2e5b7cad9635278afdd52c9864f4",
-      "shortHash": "26e44e1",
-      "date": "2026-06-06",
-      "author": "Uffe J Carlson",
-      "subject": "Clean up production landing hero"
     }
   ]
 };
