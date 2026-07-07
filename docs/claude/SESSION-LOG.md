@@ -16,9 +16,17 @@
 - False positive noted: pagination parseInt||1 already NaN-safe
 - Environment lesson: container reset wiped node_modules mid-session → phantom tsc 6.x errors; `npm install` fixed
 
+## 2026-07-07 (later) — total review complete + memory system live
+- Memory: brain repo Lobojuan/AI-Brain-and-Memory bootstrapped (local commits; push pending GitHub App)
+- Environment shift recorded: Replit RETIRED, Claude Code only, GitHub App = push path (enabled today, takes effect next session)
+- Platform sweep: 112 unvalidated write endpoints (10 money/PII P1s), 67 raw error leaks, 10 orphan admin routes, 4 tracked ZIPs, 47 untranslated pages → REVIEW-2026-07.md Part A
+- Scoring deep audit: utilization factor DEAD CODE (no credit_limit column), inquiry penalties unfiltered (no consent/soft/12-mo), soft-pull endpoint always 500s, score differs per surface (decisions ~100pts high), batch tampering vectors, affordability income inflation → REVIEW-2026-07.md Part B
+- Fixed + committed: timing-safe OAuth client_id (e305343)
+- ROADMAP.md written: NOW (Scorecard v1.1 correctness bundle) / NEXT (bureau parity: reason codes, model governance, trended data, dispute SLA, OpenAPI, NDPR) / LATER (monolith split, i18n)
+
 ## PENDING (next session picks up here)
-1. Total code review — scoring core DEEP (calculateCreditScore, affordability-service, alt-data, batch ingestion), platform medium
-2. Missing-features roadmap vs commercial bureau parity → docs/claude/ROADMAP.md
-3. Ecobank quick wins: NDPR consent endpoint, timing-safe fix, OpenAPI spec generation
-4. PAT setup for direct push (user has brain repo, PAT not yet provided)
-5. CVM Phase 1 verification in Replit → then Phase 2 (AI engine)
+1. PUSH EVERYTHING (branch claude/production-check-WFJxR + brain repo) — GitHub App enabled 2026-07-07, fresh session should have credentials
+2. Execute ROADMAP "NOW" bundle as UCH Scorecard v1.1 (I2+I1 first, then F1/F3+C1, B1/B2, A1-A3)
+3. Ecobank remaining: OpenAPI spec, NDPR consent endpoint
+4. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
+5. User's PAT is in this session's history — recommend ROTATING it (it cannot be used from these sessions anyway)

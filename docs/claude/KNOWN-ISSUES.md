@@ -20,6 +20,20 @@ Status legend: OPEN / FIXED(date) / FALSE-POSITIVE
 | 13 | Push subscription SSRF claim | routes.ts 18720 | FALSE-POSITIVE — isSafeWebhookUrl applied |
 | 14 | Pagination NaN claim | routes.ts ~1577 | FALSE-POSITIVE — parseInt()||default is NaN-safe |
 
+## Scoring core (July 2026 deep audit — full detail in REVIEW-2026-07.md Part B)
+| ID | Severity | One-liner | Status |
+|---|---|---|---|
+| F1 | CRITICAL | Utilization factor dead code — no credit_limit column | OPEN |
+| I1 | HIGH | All inquiries penalize score — no consent/soft/12-mo filter | OPEN |
+| I2 | HIGH | Soft-pull endpoint 500s — shifted args hidden by as-any | OPEN |
+| C1 | HIGH | Different scores per surface; decisions run ~100pts high | OPEN |
+| F2 | HIGH | Empty alt-data rows grant +64 boost | OPEN |
+| B1 | HIGH | Cross-lender tradeline tampering via batch upload | OPEN |
+| B2 | HIGH | Batch identity overwrite via global nationalId match | OPEN |
+| A1-A3 | HIGH | Affordability income inflation trio | OPEN |
+| F3,F4,A4,A5,B3,B4,C2,C4 | MEDIUM | See review Part B | OPEN |
+| 15 | FIXED | Timing-safe client_id in OAuth token endpoint | FIXED 2026-07-07 (e305343) |
+
 ## Historic (fixed earlier, keep for context)
 - 39 TS errors = 4 missing @types packages (2026-05)
 - Playbook PDFs unreadable = Unicode box chars vs Helvetica (2026-05/07, stripMd sanitizers)
