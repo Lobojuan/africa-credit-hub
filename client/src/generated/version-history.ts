@@ -18,10 +18,38 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-07T01:13:00.565Z",
+  "generatedAt": "2026-07-07T08:05:12.575Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "78e6007",
+  "currentCommit": "b3be797",
   "commits": [
+    {
+      "hash": "b3be7975c0f1a2f617431a49d601dbff266d2fd6",
+      "shortHash": "b3be797",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs(review): scoring deep-audit findings + bureau-parity roadmap + session log"
+    },
+    {
+      "hash": "8b1da6a8ea56b3de5cf291b05ac9579833ff9dca",
+      "shortHash": "8b1da6a",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
+    {
+      "hash": "d666ba61e385fc5c0a4163f39421553e33f04655",
+      "shortHash": "d666ba6",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs(review): platform sweep findings — validation gaps, error leaks, nav, hygiene, i18n"
+    },
+    {
+      "hash": "e30534305190da4e692618fcfa94f5cb1f68c148",
+      "shortHash": "e305343",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "fix(security): timing-safe client_id comparison in OAuth token endpoint"
+    },
     {
       "hash": "78e6007322dfb1dc1b60c2e03ac6debddce59540",
       "shortHash": "78e6007",
@@ -77,34 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-06-06",
       "author": "Uffe J Carlson",
       "subject": "Clean up production landing hero"
-    },
-    {
-      "hash": "f2f789cb1383f5c43589d33b4b4fa72e1d0aba51",
-      "shortHash": "f2f789c",
-      "date": "2026-06-06",
-      "author": "Uffe J Carlson",
-      "subject": "Restore readable landing video format"
-    },
-    {
-      "hash": "e56e2dba9d2ab66b528cd348345b44a9a4b21825",
-      "shortHash": "e56e2db",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Widen landing intro video card"
-    },
-    {
-      "hash": "a5ef440affe04d1368435b962fe92efd4c9e2844",
-      "shortHash": "a5ef440",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Restore landing intro video card"
-    },
-    {
-      "hash": "1c362994ef8aa99e881d811e71b06c0eb9f0dbf5",
-      "shortHash": "1c36299",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Force French dashboard hero fallback"
     }
   ]
 };
