@@ -34,3 +34,16 @@ Arabic, Swahili, Chinese (CN/TW). When a native translator is engaged, add these
 namespaces to i18n-ar.ts, i18n-sw.ts, i18n-zh-cn.ts, i18n-zh-tw.ts:
 - consentRespond (done for en/fr/pt/es)
 - (append others as pages are completed)
+
+## Graphics / SVG / chart language audit (2026-07-07)
+Raster images: 5 PNGs (favicon, PWA icons, og-image) — no in-UI text to translate; og-image is a
+single-language social-share card (conventional). No action.
+
+SVG `<text>` / chart labels that bypass i18n:
+- credit-score-gauge.tsx — band label ("Excellent/Good/Fair/Poor/Very Poor") baked in SVG.
+  FIXED 2026-07-07: now t("scoreGuide.<band>") — consumer-facing score graphic translates.
+- sample-id-cards.tsx — bilingual EN/FR labels ("SURNAME / NOM", etc.). CORRECT AS-IS: it DEPICTS
+  a real Ghana Card (legally bilingual). Do NOT translate — it's an illustration of a physical document.
+- recharts `name=`/`label=` props (legend/tooltip) hardcoded English on: dashboard-charts.tsx,
+  system-status.tsx, platform-metrics.tsx, telco-scoring.tsx, organizations.tsx. Mostly admin/analytics
+  surfaces — LOW priority. TODO when those pages are internationalized.
