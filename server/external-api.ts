@@ -133,7 +133,15 @@ export function registerExternalApi(app: Express) {
       }
       const hash = hashApiKey(client_secret);
       const apiKey = await storage.getApiKeyByHash(hash);
-      if (!apiKey || !apiKey.keyPrefix.startsWith(client_id)) {
+      // Constant-time comparison of the client_id against the key prefix —
+      // string equality here would leak prefix-match timing to a network attacker.
+      const clientIdMatches = (() => {
+        if (!apiKey) return false;
+        const expected = Buffer.from(apiKey.keyPrefix.slice(0, String(client_id).length));
+        const provided = Buffer.from(String(client_id));
+        return expected.length === provided.length && crypto.timingSafeEqual(expected, provided);
+      })();
+      if (!apiKey || !clientIdMatches) {
         return res.status(401).json({ error: "invalid_client", error_description: "Invalid client credentials" });
       }
       if (apiKey.status !== "active") {
