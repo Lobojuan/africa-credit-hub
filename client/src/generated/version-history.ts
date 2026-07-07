@@ -18,10 +18,52 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-06-06T23:57:53.897Z",
-  "branch": "main",
-  "currentCommit": "5b0eda4",
+  "generatedAt": "2026-07-07T01:13:00.565Z",
+  "branch": "claude/production-check-WFJxR",
+  "currentCommit": "78e6007",
   "commits": [
+    {
+      "hash": "78e6007322dfb1dc1b60c2e03ac6debddce59540",
+      "shortHash": "78e6007",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "refactor(cleanup): code review pass — remove unsafe casts, fix hardcoded values, structured logging"
+    },
+    {
+      "hash": "10b2fae7a696afa935521ae89664fdfbe752a925",
+      "shortHash": "10b2fae",
+      "date": "2026-07-01",
+      "author": "Uffe J Carlson",
+      "subject": "fix: add wget to replit.nix to force fresh Nix layer + build-script pruning"
+    },
+    {
+      "hash": "9aaea138a79baebf415c8940fa313e268bd360a5",
+      "shortHash": "9aaea13",
+      "date": "2026-07-01",
+      "author": "Uffe J Carlson",
+      "subject": "fix: prune dev-only dirs in build script to reduce deployment image size"
+    },
+    {
+      "hash": "7ac2f673c0c0fbe91509e983487b6194ce1ce20d",
+      "shortHash": "7ac2f67",
+      "date": "2026-07-01",
+      "author": "Uffe J Carlson",
+      "subject": "fix: add .replitignore to reduce deployment image below 8 GiB limit"
+    },
+    {
+      "hash": "aa1530997c1ed6455e34c12cbdfad50140281054",
+      "shortHash": "aa15309",
+      "date": "2026-07-01",
+      "author": "Uffe J Carlson",
+      "subject": "seo: expand sitemap to 21 URLs + add <Seo> to 6 public pages"
+    },
+    {
+      "hash": "d286423684c20136d88a848b0537a7311f1bba06",
+      "shortHash": "d286423",
+      "date": "2026-06-07",
+      "author": "Uffe J Carlson",
+      "subject": "Rebrand: Africa Credit Hub -> Universal Credit Hub across docs (54 refs, 18 files)"
+    },
     {
       "hash": "5b0eda4b10e850a1ed7d9d75cec98c3baff7794f",
       "shortHash": "5b0eda4",
@@ -63,48 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-06-05",
       "author": "Uffe J Carlson",
       "subject": "Force French dashboard hero fallback"
-    },
-    {
-      "hash": "6588fa9bbe90a19ead77531cdbf84c2cf62fd6c0",
-      "shortHash": "6588fa9",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Refresh service worker cache on deploy"
-    },
-    {
-      "hash": "19107abeb153f3753599dd67bc0258bb5c1fa929",
-      "shortHash": "19107ab",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Translate dashboard credit hero"
-    },
-    {
-      "hash": "ba9303c8b40b1f2978b6ce22bf4dc70ec4720436",
-      "shortHash": "ba9303c",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Allow public auth shell routes"
-    },
-    {
-      "hash": "5aa4d8a40ba9dac9dce8cd0f86ff94caccc6b471",
-      "shortHash": "5aa4d8a",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Align watch test scripts"
-    },
-    {
-      "hash": "3f9b50e74abf5fe903d8b333e6ef1b4c8cbba541",
-      "shortHash": "3f9b50e",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Expand local security test coverage"
-    },
-    {
-      "hash": "5ffeb3108fb7642f788832739017b4d3275159b8",
-      "shortHash": "5ffeb31",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Split local and integration tests"
     }
   ]
 };
