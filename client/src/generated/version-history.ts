@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-07T11:03:38.487Z",
+  "generatedAt": "2026-07-07T13:39:15.298Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "cf06169",
+  "currentCommit": "b5dfba3",
   "commits": [
+    {
+      "hash": "b5dfba31ace5120162a71d41efeb948a63e766eb",
+      "shortHash": "b5dfba3",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "fix(i18n): translate credit-score-gauge band label (consumer SVG graphic)"
+    },
+    {
+      "hash": "b19991c26864fc64d35e1da1bf9b770885030894",
+      "shortHash": "b19991c",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "cf061694dd8aa9d1593a82fbbf343c3f30577e4a",
       "shortHash": "cf06169",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "docs(review): platform sweep findings — validation gaps, error leaks, nav, hygiene, i18n"
-    },
-    {
-      "hash": "e30534305190da4e692618fcfa94f5cb1f68c148",
-      "shortHash": "e305343",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "fix(security): timing-safe client_id comparison in OAuth token endpoint"
-    },
-    {
-      "hash": "78e6007322dfb1dc1b60c2e03ac6debddce59540",
-      "shortHash": "78e6007",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "refactor(cleanup): code review pass — remove unsafe casts, fix hardcoded values, structured logging"
     }
   ]
 };
