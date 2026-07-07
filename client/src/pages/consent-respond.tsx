@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
 import { CheckCircle, XCircle, Clock, AlertTriangle, Loader2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,17 +18,8 @@ type ConsentInfo = {
   respondedAt?: string;
 };
 
-const PURPOSE_LABELS: Record<string, string> = {
-  new_credit: "Credit Application / Loan Origination",
-  review: "Account / Portfolio Review",
-  collection: "Debt Collection",
-  regulatory: "Regulatory / Supervisory Purpose",
-  portfolio_monitoring: "Portfolio Monitoring",
-  fraud_investigation: "Fraud Investigation",
-  employment: "Employment Screening",
-};
-
 export default function ConsentRespondPage() {
+  const { t } = useTranslation();
   const [location] = useLocation();
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token");
@@ -42,7 +34,7 @@ export default function ConsentRespondPage() {
 
   useEffect(() => {
     if (!token) {
-      setError("No consent token provided. This link may be invalid.");
+      setError(t("consentRespond.noToken"));
       setLoading(false);
       return;
     }
@@ -94,7 +86,7 @@ export default function ConsentRespondPage() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center">
           <Loader2 className="w-10 h-10 animate-spin text-blue-600 mx-auto mb-3" />
-          <p className="text-slate-500">Loading consent request...</p>
+          <p className="text-slate-500">{t("consentRespond.loading")}</p>
         </div>
       </div>
     );
@@ -108,10 +100,10 @@ export default function ConsentRespondPage() {
             <div className="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center mx-auto mb-3">
               <Clock className="w-8 h-8 text-orange-500" />
             </div>
-            <CardTitle className="text-xl text-slate-800">Request Expired</CardTitle>
+            <CardTitle className="text-xl text-slate-800">{t("consentRespond.expiredTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="text-center pt-2">
-            <p className="text-slate-600">This consent request has expired. Please ask the requesting institution to send a new request.</p>
+            <p className="text-slate-600">{t("consentRespond.expiredBody")}</p>
           </CardContent>
         </Card>
       </div>
@@ -126,7 +118,7 @@ export default function ConsentRespondPage() {
             <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
               <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
-            <CardTitle className="text-xl text-slate-800">Invalid Request</CardTitle>
+            <CardTitle className="text-xl text-slate-800">{t("consentRespond.invalidTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="text-center pt-2">
             <p className="text-slate-600">{error}</p>
@@ -149,24 +141,24 @@ export default function ConsentRespondPage() {
               }
             </div>
             <CardTitle className="text-xl text-slate-800">
-              {approved ? "Consent Approved" : "Consent Denied"}
+              {approved ? t("consentRespond.approvedTitle") : t("consentRespond.deniedTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center space-y-3 pt-2">
             <p className="text-slate-600">
               {approved
-                ? `You have approved ${result.lenderName}'s request to access your credit report.`
-                : `You have denied ${result.lenderName}'s request to access your credit report. Your data is protected.`
+                ? t("consentRespond.approvedBody", { lender: result.lenderName })
+                : t("consentRespond.deniedBody", { lender: result.lenderName })
               }
             </p>
             <div className={`rounded-lg p-3 text-sm ${approved ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
               {approved
-                ? "A reference has been logged. You may revoke this consent at any time by contacting the Ghana Credit Registry."
-                : "No credit report will be generated. You have the right to deny any credit report request."
+                ? t("consentRespond.approvedNote")
+                : t("consentRespond.deniedNote")
               }
             </div>
             <p className="text-xs text-slate-400 pt-2">
-              Protected under the Ghana Data Protection Act 2012 (Act 843)
+              {t("consentRespond.actProtection")}
             </p>
           </CardContent>
         </Card>
@@ -189,13 +181,15 @@ export default function ConsentRespondPage() {
               }
             </div>
             <CardTitle className="text-xl text-slate-800">
-              Already {isApproved ? "Approved" : "Denied"}
+              {isApproved ? t("consentRespond.alreadyApproved") : t("consentRespond.alreadyDenied")}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-center pt-2">
             <p className="text-slate-600">
-              This consent request was already {info.status}
-              {info.respondedAt ? ` on ${new Date(info.respondedAt).toLocaleString()}` : ""}.
+              {t("consentRespond.alreadyBody", {
+                status: isApproved ? t("consentRespond.alreadyApproved") : t("consentRespond.alreadyDenied"),
+                when: info.respondedAt ? ` — ${new Date(info.respondedAt).toLocaleString()}` : "",
+              })}
             </p>
           </CardContent>
         </Card>
@@ -203,7 +197,9 @@ export default function ConsentRespondPage() {
     );
   }
 
-  const purposeLabel = PURPOSE_LABELS[info.purpose] || PURPOSE_LABELS[info.permissiblePurpose] || info.purpose;
+  const purposeKey = info.purpose || info.permissiblePurpose;
+  const translatedPurpose = t(`consentRespond.purposes.${purposeKey}`, "");
+  const purposeLabel = translatedPurpose || info.purpose;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
@@ -211,55 +207,55 @@ export default function ConsentRespondPage() {
         <div className="text-center mb-2">
           <div className="inline-flex items-center gap-2 bg-white rounded-full px-4 py-1.5 shadow text-sm text-slate-600 border border-slate-100">
             <ShieldCheck className="w-4 h-4 text-blue-600" />
-            <span>Ghana Credit Registry — Secure Consent Portal</span>
+            <span>{t("consentRespond.portalBadge")}</span>
           </div>
         </div>
 
         <Card className="shadow-xl border-0">
           <CardHeader className="pb-3 border-b border-slate-100">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-slate-800">Credit Report Access Request</CardTitle>
-              <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">Action Required</Badge>
+              <CardTitle className="text-lg text-slate-800">{t("consentRespond.cardTitle")}</CardTitle>
+              <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">{t("consentRespond.actionRequired")}</Badge>
             </div>
-            <p className="text-sm text-slate-500 mt-1">You are being asked to approve or deny access to your credit report</p>
+            <p className="text-sm text-slate-500 mt-1">{t("consentRespond.cardSubtitle")}</p>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             <div className="bg-slate-50 rounded-lg p-4 space-y-2.5">
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 font-medium">Your Name</span>
+                <span className="text-slate-500 font-medium">{t("consentRespond.yourName")}</span>
                 <span className="text-slate-800 font-semibold" data-testid="text-borrower-name">{info.borrowerName}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 font-medium">Requesting Institution</span>
+                <span className="text-slate-500 font-medium">{t("consentRespond.requestingInstitution")}</span>
                 <span className="text-slate-800 font-semibold" data-testid="text-lender-name">{info.lenderName}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 font-medium">Purpose</span>
+                <span className="text-slate-500 font-medium">{t("consentRespond.purposeLabel")}</span>
                 <span className="text-slate-800 text-right max-w-[55%]">{purposeLabel}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 font-medium">Requested At</span>
+                <span className="text-slate-500 font-medium">{t("consentRespond.requestedAt")}</span>
                 <span className="text-slate-700">{new Date(info.requestedAt).toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-slate-500 font-medium">Expires At</span>
+                <span className="text-slate-500 font-medium">{t("consentRespond.expiresAt")}</span>
                 <span className="text-amber-600 font-medium">{new Date(info.expiresAt).toLocaleString()}</span>
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
-              <p className="font-semibold mb-1">Your Rights Under Ghana Data Protection Act</p>
+              <p className="font-semibold mb-1">{t("consentRespond.rightsTitle")}</p>
               <ul className="text-xs space-y-1 text-blue-700 list-disc list-inside">
-                <li>You may deny this request — no report will be generated without your approval</li>
-                <li>Approving grants one-time access for the stated purpose only</li>
-                <li>You may revoke consent at any time via the Ghana Credit Registry</li>
+                <li>{t("consentRespond.right1")}</li>
+                <li>{t("consentRespond.right2")}</li>
+                <li>{t("consentRespond.right3")}</li>
               </ul>
             </div>
 
             {submitting ? (
               <div className="flex items-center justify-center gap-2 py-4 text-slate-500">
                 <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Submitting your response...</span>
+                <span>{t("consentRespond.submitting")}</span>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3 pt-1">
@@ -271,7 +267,7 @@ export default function ConsentRespondPage() {
                   disabled={submitting}
                 >
                   <XCircle className="w-4 h-4 mr-2" />
-                  Deny Access
+                  {t("consentRespond.denyAccess")}
                 </Button>
                 <Button
                   className="bg-green-600 hover:bg-green-700 text-white h-12"
@@ -280,7 +276,7 @@ export default function ConsentRespondPage() {
                   disabled={submitting}
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Approve Access
+                  {t("consentRespond.approveAccess")}
                 </Button>
               </div>
             )}
@@ -288,7 +284,7 @@ export default function ConsentRespondPage() {
         </Card>
 
         <p className="text-center text-xs text-slate-400">
-          This page is secured by Universal Credit Hub. Your response is logged and protected under Act 843.
+          {t("consentRespond.footer")}
         </p>
       </div>
     </div>
