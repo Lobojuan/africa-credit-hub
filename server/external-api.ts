@@ -5,7 +5,7 @@ import {
   insertCourtJudgmentSchema, insertConsentRecordSchema,
 } from "@shared/schema";
 import crypto from "crypto";
-import { calculateCreditScore } from "./credit-score";
+import { calculateCreditScore, countScorableInquiries } from "./credit-score";
 import { computeTelcoKPIs, generateTelcoCreditScore } from "./telco-scoring";
 import jwt from "jsonwebtoken";
 import rateLimit from "express-rate-limit";
@@ -330,6 +330,7 @@ export function registerExternalApi(app: Express) {
       const accounts = await storage.getCreditAccountsByBorrower(borrower.id);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrower.id);
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
+      const altData = await storage.getAlternativeDataByBorrower(borrower.id);
       const consents = await storage.getConsentRecordsByBorrower(borrower.id);
 
       const serialNumber = `CR-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
@@ -341,7 +342,9 @@ export function registerExternalApi(app: Express) {
         serialNumber,
       });
 
-      const { score, reasonCodes } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined);
+      // Score parity: the external API must return the SAME score as the internal
+      // report — include alternative data and use the shared hard/12-month inquiry count.
+      const { score, reasonCodes } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
 
       await storage.createAuditLog({
         action: "API_CREDIT_REPORT", entity: "borrower", entityId: borrower.id,

@@ -155,6 +155,37 @@ describe("calculateCreditScore", () => {
     expect(utilizationFactor!.direction).toBe("neutral");
   });
 
+  // F1 regression: real DB rows have NO creditLimit column. Utilization must
+  // still compute for revolving facilities by falling back to originalAmount,
+  // otherwise the 15%-weight factor is dead code for every production borrower.
+  it("computes utilization for revolving accounts from originalAmount when creditLimit is absent", () => {
+    const accounts = [
+      { status: "current", accountType: "credit_card", originalAmount: "100000", currentBalance: "90000" },
+      { status: "current", accountType: "commercial_bank_overdraft", originalAmount: "50000", currentBalance: "48000" },
+    ];
+    const result = calculateCreditScore(accounts, 0);
+    const utilizationFactor = result.factors.find(f => f.name === "Utilization Ratio");
+    expect(utilizationFactor).toBeDefined();
+    expect(utilizationFactor!.impact).toBeLessThan(0); // ~92% utilization must penalize
+    expect(utilizationFactor!.direction).toBe("negative");
+    expect(result.reasonCodes).toContain("HIGH_UTILIZATION");
+  });
+
+  // Term loans are drawn in full and paid down — utilization does not apply,
+  // so they must NOT be forced to 0% and must NOT emit a utilization signal.
+  it("excludes term loans (no creditLimit) from utilization", () => {
+    const accounts = [
+      { status: "current", accountType: "personal_loan", originalAmount: "100000", currentBalance: "60000" },
+      { status: "current", accountType: "mortgage", originalAmount: "500000", currentBalance: "400000" },
+    ];
+    const result = calculateCreditScore(accounts, 0);
+    const utilizationFactor = result.factors.find(f => f.name === "Utilization Ratio");
+    expect(utilizationFactor).toBeDefined();
+    expect(utilizationFactor!.impact).toBe(0);
+    expect(utilizationFactor!.direction).toBe("neutral");
+    expect(result.reasonCodes).not.toContain("HIGH_UTILIZATION");
+  });
+
   it("clamps score between 300 and 850", () => {
     const badAccounts = Array.from({ length: 10 }, () => ({ status: "written_off", currentBalance: "100000" }));
     const judgments = Array.from({ length: 5 }, () => ({ status: "active" }));
