@@ -32,9 +32,17 @@
 - Commit 8f3c4b9. TypeScript clean, 20/20 scoring tests pass.
 - REMAINING scoring: F2 (alt-data empty boost), B1/B2 (batch tampering), A1-A3 (affordability income), F4/A4/A5/B3/B4/C2/C4 (medium). See REVIEW-2026-07.md Part B.
 
+## 2026-07-07 (i18n) — corrected finding + first public page internationalized
+- CORRECTED the audit's i18n claim: locale dictionaries are NOT ~50% missing. Measured leaf strings: en~2904, fr 100% (typeof en enforced), pt 98%, ar 96%, sw 98%, es 99%, zh-CN 104%, zh-TW 117%. Dictionaries essentially COMPLETE. Earlier number counted nested keys.
+- REAL gap = 47/128 pages never call useTranslation → hardcoded English bypasses the complete dictionary. This is per-page extraction, not dictionary translation.
+- Policy agreed: en/fr/pt/es reliable in-session; ar/sw/zh fall back to English (tracked, no unverified content ships).
+- DONE: consent-respond.tsx (legal, public) fully internationalized — new `consentRespond` namespace in en/fr/pt/es, ~35 strings, 0 hardcoded left, tsc clean (fr enforced). Commit a39abf5.
+- Tracker + proven per-page recipe: docs/claude/I18N-TRACKER.md. Remaining high-value public pages queued: country-selection, consumer-portal, collections, loan-origination, collateral-registry, telco-lending, papps-settlements.
+
 ## PENDING (next session picks up here)
 1. PUSH EVERYTHING (branch claude/production-check-WFJxR + brain repo) — GitHub App enabled 2026-07-07, fresh session should have credentials
 2. Continue Scorecard v1.1: F2 (alt-data empty boost), B1/B2 (batch tampering), A1-A3 (affordability). F1/F3/C1/I2 DONE (8f3c4b9); I1 partial (consent backfill pending)
 3. Ecobank remaining: OpenAPI spec, NDPR consent endpoint
-4. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
+4. i18n: finish 7 remaining high-value public pages per docs/claude/I18N-TRACKER.md recipe (consent-respond DONE)
+5. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
 5. User's PAT is in this session's history — recommend ROTATING it (it cannot be used from these sessions anyway)
