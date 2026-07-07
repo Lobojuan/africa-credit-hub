@@ -18,10 +18,38 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-07T10:34:02.576Z",
+  "generatedAt": "2026-07-07T11:03:38.487Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "92f596e",
+  "currentCommit": "cf06169",
   "commits": [
+    {
+      "hash": "cf061694dd8aa9d1593a82fbbf343c3f30577e4a",
+      "shortHash": "cf06169",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs: log i18n correction + consent-respond internationalization"
+    },
+    {
+      "hash": "a39abf57a2b6ac7ee794d98a7d0b087712793a41",
+      "shortHash": "a39abf5",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "feat(i18n): internationalize consent-respond page (legal, public-facing)"
+    },
+    {
+      "hash": "fdf3e1886e369710c0986a030c141d7f78c88e8c",
+      "shortHash": "fdf3e18",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs(review): correct i18n finding — dictionaries complete, real gap is 47 hardcoded pages"
+    },
+    {
+      "hash": "b1b2e0729b8354cfc69d4a64889af9c5f2560492",
+      "shortHash": "b1b2e07",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "92f596e287cc0ca586b28d35c88465b81c7ba3c5",
       "shortHash": "92f596e",
@@ -77,34 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "refactor(cleanup): code review pass — remove unsafe casts, fix hardcoded values, structured logging"
-    },
-    {
-      "hash": "10b2fae7a696afa935521ae89664fdfbe752a925",
-      "shortHash": "10b2fae",
-      "date": "2026-07-01",
-      "author": "Uffe J Carlson",
-      "subject": "fix: add wget to replit.nix to force fresh Nix layer + build-script pruning"
-    },
-    {
-      "hash": "9aaea138a79baebf415c8940fa313e268bd360a5",
-      "shortHash": "9aaea13",
-      "date": "2026-07-01",
-      "author": "Uffe J Carlson",
-      "subject": "fix: prune dev-only dirs in build script to reduce deployment image size"
-    },
-    {
-      "hash": "7ac2f673c0c0fbe91509e983487b6194ce1ce20d",
-      "shortHash": "7ac2f67",
-      "date": "2026-07-01",
-      "author": "Uffe J Carlson",
-      "subject": "fix: add .replitignore to reduce deployment image below 8 GiB limit"
-    },
-    {
-      "hash": "aa1530997c1ed6455e34c12cbdfad50140281054",
-      "shortHash": "aa15309",
-      "date": "2026-07-01",
-      "author": "Uffe J Carlson",
-      "subject": "seo: expand sitemap to 21 URLs + add <Seo> to 6 public pages"
     }
   ]
 };
