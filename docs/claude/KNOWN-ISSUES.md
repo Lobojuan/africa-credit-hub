@@ -23,15 +23,16 @@ Status legend: OPEN / FIXED(date) / FALSE-POSITIVE
 ## Scoring core (July 2026 deep audit — full detail in REVIEW-2026-07.md Part B)
 | ID | Severity | One-liner | Status |
 |---|---|---|---|
-| F1 | CRITICAL | Utilization factor dead code — no credit_limit column | OPEN |
-| I1 | HIGH | All inquiries penalize score — no consent/soft/12-mo filter | OPEN |
-| I2 | HIGH | Soft-pull endpoint 500s — shifted args hidden by as-any | OPEN |
-| C1 | HIGH | Different scores per surface; decisions run ~100pts high | OPEN |
+| F1 | CRITICAL | Utilization factor dead code — no credit_limit column | FIXED 2026-07-07 (8f3c4b9 — effectiveLimit from originalAmount for revolving) |
+| I1 | HIGH | All inquiries penalize score — no consent/soft/12-mo filter | PARTIAL 2026-07-07 (8f3c4b9 — soft+12mo filtered via countScorableInquiries; consent filter still pending data backfill) |
+| I2 | HIGH | Soft-pull endpoint 500s — shifted args hidden by as-any | FIXED 2026-07-07 (8f3c4b9) |
+| C1 | HIGH | Different scores per surface; decisions run ~100pts high | FIXED 2026-07-07 (8f3c4b9 — altData on all surfaces, shared inquiry count) |
 | F2 | HIGH | Empty alt-data rows grant +64 boost | OPEN |
 | B1 | HIGH | Cross-lender tradeline tampering via batch upload | OPEN |
 | B2 | HIGH | Batch identity overwrite via global nationalId match | OPEN |
 | A1-A3 | HIGH | Affordability income inflation trio | OPEN |
-| F3,F4,A4,A5,B3,B4,C2,C4 | MEDIUM | See review Part B | OPEN |
+| F3 | MEDIUM | creditLimit NaN zeroes utilization | FIXED 2026-07-07 (8f3c4b9 — safeAmount guard) |
+| F4,A4,A5,B3,B4,C2,C4 | MEDIUM | See review Part B | OPEN |
 | 15 | FIXED | Timing-safe client_id in OAuth token endpoint | FIXED 2026-07-07 (e305343) |
 
 ## Historic (fixed earlier, keep for context)

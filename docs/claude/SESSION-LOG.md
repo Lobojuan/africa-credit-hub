@@ -24,9 +24,17 @@
 - Fixed + committed: timing-safe OAuth client_id (e305343)
 - ROADMAP.md written: NOW (Scorecard v1.1 correctness bundle) / NEXT (bureau parity: reason codes, model governance, trended data, dispute SLA, OpenAPI, NDPR) / LATER (monolith split, i18n)
 
+## 2026-07-07 (later still) — Scorecard v1.1: fixed F1, C1, I2 (+ F3, partial I1)
+- F1/F3: utilization factor now live — effectiveLimit() derives limit from originalAmount for revolving types (credit_card/overdraft/revolving/credit_line), NaN-guarded via safeAmount(); term loans excluded (correct). No DB migration needed. +2 regression tests (20/20 pass).
+- C1: score parity across all surfaces — external-api.ts and dashboard.ts now include altData; decision engine (routes.ts:15790) loads real inquiries+altData instead of 0/[]. New storage.getAlternativeDataByBorrower(). Dashboard score-cache fingerprint now includes altData.
+- I1 (partial): all 9 calculateCreditScore sites use shared countScorableInquiries() = hard pulls, trailing 12mo. Consent filtering deferred (needs consent_provided backfill — documented in helper).
+- I2: soft-pull endpoint repaired — was `(calculateCreditScore as any)(borrower, accounts, ...)`, threw on every call; now correct signature with judgments+altData.
+- Commit 8f3c4b9. TypeScript clean, 20/20 scoring tests pass.
+- REMAINING scoring: F2 (alt-data empty boost), B1/B2 (batch tampering), A1-A3 (affordability income), F4/A4/A5/B3/B4/C2/C4 (medium). See REVIEW-2026-07.md Part B.
+
 ## PENDING (next session picks up here)
 1. PUSH EVERYTHING (branch claude/production-check-WFJxR + brain repo) — GitHub App enabled 2026-07-07, fresh session should have credentials
-2. Execute ROADMAP "NOW" bundle as UCH Scorecard v1.1 (I2+I1 first, then F1/F3+C1, B1/B2, A1-A3)
+2. Continue Scorecard v1.1: F2 (alt-data empty boost), B1/B2 (batch tampering), A1-A3 (affordability). F1/F3/C1/I2 DONE (8f3c4b9); I1 partial (consent backfill pending)
 3. Ecobank remaining: OpenAPI spec, NDPR consent endpoint
 4. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
 5. User's PAT is in this session's history — recommend ROTATING it (it cannot be used from these sessions anyway)
