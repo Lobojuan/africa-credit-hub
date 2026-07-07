@@ -53,7 +53,7 @@ export async function runTearsheetGeneration(markets?: string[]): Promise<{ ok: 
     const proc = spawn(process.execPath, [scriptPath, ...args], {
       env: {
         ...process.env,
-        UCH_API_BASE_URL: "http://localhost:" + (process.env.PORT || "5000"),
+        UCH_API_BASE_URL: process.env.UCH_API_BASE_URL || "http://localhost:" + (process.env.PORT || "5000"),
       },
       cwd: process.cwd(),
     });

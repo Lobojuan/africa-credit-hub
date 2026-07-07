@@ -68,7 +68,10 @@ async function getTableStats(): Promise<{ tables: number; rows: number }> {
       ORDER BY n_live_tup DESC
     `);
     const tables = result.rows.length;
-    const rows = result.rows.reduce((sum: number, r: any) => sum + parseInt(r.n_live_tup || "0"), 0);
+    const rows = result.rows.reduce((sum: number, r: any) => {
+      const n = parseInt(String(r.n_live_tup ?? "0"));
+      return sum + (isNaN(n) ? 0 : n);
+    }, 0);
     return { tables, rows };
   } catch {
     return { tables: 0, rows: 0 };
@@ -284,7 +287,7 @@ async function logBackupAudit(userId: string, action: string, details: string) {
   try {
     await pool.query(
       `INSERT INTO audit_logs (id, user_id, action, entity, details, ip_address, created_at)
-       VALUES (gen_random_uuid(), $1, $2, 'backup', $3, '127.0.0.1', NOW())`,
+       VALUES (gen_random_uuid(), $1, $2, 'backup', $3, 'system', NOW())`,
       [userId, action, details]
     );
   } catch {}

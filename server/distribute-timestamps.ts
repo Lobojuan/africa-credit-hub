@@ -1,23 +1,35 @@
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 
+/** Normalize a db.execute() result to a plain row array across driver shapes. */
+function resultRows(result: unknown): Record<string, unknown>[] {
+  if (Array.isArray(result)) return result as Record<string, unknown>[];
+  const rows = (result as { rows?: unknown })?.rows;
+  return Array.isArray(rows) ? (rows as Record<string, unknown>[]) : [];
+}
+
+/** Postgres booleans may arrive as true, "t", or "true" depending on driver. */
+function pgBool(value: unknown): boolean {
+  return value === true || value === "t" || value === "true";
+}
+
 export async function distributeCreatedAtTimestamps() {
   const check = await db.execute(sql`
     SELECT EXISTS(
-      SELECT 1 FROM credit_accounts 
+      SELECT 1 FROM credit_accounts
       WHERE created_at >= NOW() - INTERVAL '2 days'
         AND created_at <= NOW() - INTERVAL '1 day'
       LIMIT 1
     ) as has_distributed
   `);
-  
-  const hasDistributed = (check as any).rows?.[0]?.has_distributed ?? (check as any)[0]?.has_distributed;
-  if (hasDistributed === true || hasDistributed === 't' || hasDistributed === 'true') {
+
+  if (pgBool(resultRows(check)[0]?.has_distributed)) {
     return;
   }
 
   const totalCheck = await db.execute(sql`SELECT COUNT(*) as c FROM credit_accounts`);
-  const totalRecords = parseInt((totalCheck as any).rows?.[0]?.c ?? (totalCheck as any)[0]?.c ?? "0");
+  const totalRecords = parseInt(String(resultRows(totalCheck)[0]?.c ?? "0"));
+  if (isNaN(totalRecords)) return;
   if (totalRecords > 10000) {
     console.log(`[Timestamps] Skipping distribution — ${totalRecords} records too large for startup redistribution`);
     return;
@@ -37,8 +49,8 @@ export async function distributeCreatedAtTimestamps() {
     try {
       const t = sql.identifier(table);
       const countResult = await db.execute(sql`SELECT COUNT(*) as c FROM ${t}`);
-      const total = parseInt((countResult as any).rows?.[0]?.c ?? (countResult as any)[0]?.c ?? "0");
-      if (total === 0) continue;
+      const total = parseInt(String(resultRows(countResult)[0]?.c ?? "0"));
+      if (isNaN(total) || total === 0) continue;
 
       await db.execute(sql`
         WITH numbered AS (
@@ -63,7 +75,7 @@ export async function distributeCreatedAtTimestamps() {
       const hasUpdatedAt = await db.execute(sql`
         SELECT 1 FROM information_schema.columns WHERE table_name=${table} AND column_name='updated_at' LIMIT 1
       `);
-      const updRows = (hasUpdatedAt as any).rows ?? hasUpdatedAt;
+      const updRows = resultRows(hasUpdatedAt);
       if (updRows.length > 0) {
         await db.execute(sql`UPDATE ${t} SET updated_at = created_at`);
       }
