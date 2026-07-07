@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `b5dfba3`
+**Current Commit:** `742f6c8`
 **Branch:** `claude/production-check-WFJxR`
-**Generated:** 2026-07-07T13:39:15.298Z
+**Generated:** 2026-07-07T13:39:34.768Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-07 | `742f6c8` | chore: refresh generated version history | Claude |
 | 2026-07-07 | `b5dfba3` | fix(i18n): translate credit-score-gauge band label (consumer SVG graphic) | Claude |
 | 2026-07-07 | `b19991c` | chore: refresh generated version history | Claude |
 | 2026-07-07 | `cf06169` | docs: log i18n correction + consent-respond internationalization | Claude |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-07 | `6fe9358` | chore: refresh generated version history | Claude |
 | 2026-07-07 | `b3be797` | docs(review): scoring deep-audit findings + bureau-parity roadmap + session log | Claude |
 | 2026-07-07 | `8b1da6a` | chore: refresh generated version history | Claude |
-| 2026-07-07 | `d666ba6` | docs(review): platform sweep findings — validation gaps, error leaks, nav, hygiene, i18n | Claude |

@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-07T13:39:15.298Z",
+  "generatedAt": "2026-07-07T13:39:34.768Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "b5dfba3",
+  "currentCommit": "742f6c8",
   "commits": [
+    {
+      "hash": "742f6c80b15a8b4e12090fba1c1dbce440536ac5",
+      "shortHash": "742f6c8",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "b5dfba31ace5120162a71d41efeb948a63e766eb",
       "shortHash": "b5dfba3",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "chore: refresh generated version history"
-    },
-    {
-      "hash": "d666ba61e385fc5c0a4163f39421553e33f04655",
-      "shortHash": "d666ba6",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "docs(review): platform sweep findings — validation gaps, error leaks, nav, hygiene, i18n"
     }
   ]
 };
