@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `d021366`
+**Current Commit:** `17c299d`
 **Branch:** `claude/production-check-WFJxR`
-**Generated:** 2026-07-08T19:05:38.810Z
+**Generated:** 2026-07-08T19:06:34.311Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-08 | `17c299d` | chore: refresh generated version history | Claude |
 | 2026-07-08 | `d021366` | chore: refresh generated version history | Claude |
 | 2026-07-08 | `5dbf3f0` | chore: refresh generated version history | Claude |
 | 2026-07-07 | `58bf120` | chore: refresh generated version history | Claude |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-07 | `fdf3e18` | docs(review): correct i18n finding — dictionaries complete, real gap is 47 hardcoded pages | Claude |
 | 2026-07-07 | `b1b2e07` | chore: refresh generated version history | Claude |
 | 2026-07-07 | `92f596e` | docs(review): mark F1/C1/I2/F3 fixed, I1 partial — Scorecard v1.1 progress | Claude |
-| 2026-07-07 | `8f3c4b9` | fix(scoring): UCH Scorecard v1.1 — activate utilization, unify score inputs, repair soft-pull | Claude |

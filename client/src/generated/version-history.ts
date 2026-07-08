@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-08T19:05:38.810Z",
+  "generatedAt": "2026-07-08T19:06:34.311Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "d021366",
+  "currentCommit": "17c299d",
   "commits": [
+    {
+      "hash": "17c299d964f2b492526c9655f588656404b4ba63",
+      "shortHash": "17c299d",
+      "date": "2026-07-08",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "d021366bd10f243f9bb8301093c29f6f23f7f713",
       "shortHash": "d021366",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "docs(review): mark F1/C1/I2/F3 fixed, I1 partial — Scorecard v1.1 progress"
-    },
-    {
-      "hash": "8f3c4b9c1530eae03d82b5b982d85cb122512da4",
-      "shortHash": "8f3c4b9",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "fix(scoring): UCH Scorecard v1.1 — activate utilization, unify score inputs, repair soft-pull"
     }
   ]
 };
