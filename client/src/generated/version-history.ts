@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-07T13:39:34.768Z",
+  "generatedAt": "2026-07-07T14:00:09.540Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "742f6c8",
+  "currentCommit": "58bf120",
   "commits": [
+    {
+      "hash": "58bf120e3f81bdfa022954e75b69131cd4980c02",
+      "shortHash": "58bf120",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "742f6c80b15a8b4e12090fba1c1dbce440536ac5",
       "shortHash": "742f6c8",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "docs(review): scoring deep-audit findings + bureau-parity roadmap + session log"
-    },
-    {
-      "hash": "8b1da6a8ea56b3de5cf291b05ac9579833ff9dca",
-      "shortHash": "8b1da6a",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "chore: refresh generated version history"
     }
   ]
 };
