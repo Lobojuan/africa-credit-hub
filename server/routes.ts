@@ -86,7 +86,7 @@ import { processIFFData, detectIFFType, type IFFType } from "./iff-processor";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { registerExternalApi, generateApiKey } from "./external-api";
-import { calculateCreditScore, getDefaultCurrencyCode } from "./credit-score";
+import { calculateCreditScore, countScorableInquiries, getDefaultCurrencyCode } from "./credit-score";
 import { calculateMLCreditScore } from "./ml-credit-score";
 import { calculateFraudRisk } from "./fraud-detection";
 import { recordUsageEvent } from "./usage-metering";
@@ -1332,6 +1332,11 @@ export async function registerRoutes(
       if (!searchType || (searchType !== "consumer" && searchType !== "business" && searchType !== "telco")) {
         return res.status(400).json({ message: "searchType must be 'consumer', 'business', or 'telco'" });
       }
+      // Reject oversized identifier inputs before they reach queries or the audit trail
+      const oversized = Object.entries(req.query).find(([, v]) => typeof v === "string" && v.length > 200);
+      if (oversized) {
+        return res.status(400).json({ message: `Parameter '${oversized[0]}' exceeds the 200-character limit` });
+      }
       if (searchType === "consumer") {
         if (!reasonForRequest) {
           return res.status(400).json({ message: "reasonForRequest is required for consumer searches" });
@@ -1481,7 +1486,9 @@ export async function registerRoutes(
             });
           }
         }
-      } catch {}
+      } catch (notifyErr: any) {
+        routeLogger.warn(`[Approvals] Reviewer notification failed (non-fatal): ${notifyErr.message}`);
+      }
 
       broadcastEvent({
         type: "approval_pending",
@@ -1792,7 +1799,7 @@ export async function registerRoutes(
       const totalDebt = accounts.reduce((sum, a) => sum + parseFloat(a.currentBalance || "0"), 0);
       const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
-      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       await storage.createAuditLog({
@@ -2357,7 +2364,7 @@ export async function registerRoutes(
         resolvedAt: status === "resolved" || status === "false_positive" ? new Date() : undefined,
       } as any);
       if (!updated) return res.status(500).json({ message: "Update failed" });
-      await storage.createAuditLog({ action: "RESOLVE_WATCHLIST_HIT", entity: "watchlist_hit", entityId: req.params.id as string, userId: req.session?.userId, details: JSON.stringify({ status, notes, borrowerId: hit.borrowerId }), ipAddress: req.ip || null } as any);
+      await storage.createAuditLog({ action: "RESOLVE_WATCHLIST_HIT", entity: "watchlist_hit", entityId: req.params.id as string, userId: req.session?.userId ?? null, details: JSON.stringify({ status, notes, borrowerId: hit.borrowerId }), ipAddress: req.ip || null });
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -2726,7 +2733,7 @@ export async function registerRoutes(
 
       req.session.regenerate((err) => {
         if (err) return res.status(500).json({ message: "Session error" });
-        (req.session as any).consumerId = account.id;
+        req.session.consumerId = account.id;
         (req.session as any).consumerNationalId = account.nationalId;
         res.json({ message: "Account verified successfully", verified: true });
       });
@@ -2795,7 +2802,7 @@ export async function registerRoutes(
 
       req.session.regenerate((err) => {
         if (err) return res.status(500).json({ message: "Session error" });
-        (req.session as any).consumerId = account.id;
+        req.session.consumerId = account.id;
         (req.session as any).consumerNationalId = account.nationalId;
         req.session.save((saveErr) => {
           if (saveErr) return res.status(500).json({ message: "Session error" });
@@ -2895,7 +2902,7 @@ export async function registerRoutes(
 
       req.session.regenerate((err) => {
         if (err) return res.status(500).json({ message: "Session error" });
-        (req.session as any).consumerId = account.id;
+        req.session.consumerId = account.id;
         (req.session as any).consumerNationalId = account.nationalId;
         req.session.save((saveErr) => {
           if (saveErr) return res.status(500).json({ message: "Session error" });
@@ -2908,13 +2915,13 @@ export async function registerRoutes(
   });
 
   app.get("/api/consumer/session", async (req, res) => {
-    if (req.session?.userId && !(req.session as any).consumerId) {
+    if (req.session?.userId && !req.session.consumerId) {
       return res.status(403).json({ authenticated: false, message: "Institution sessions cannot access consumer portal" });
     }
-    if (!(req.session as any).consumerId) {
+    if (!req.session.consumerId) {
       return res.status(401).json({ authenticated: false });
     }
-    const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+    const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, req.session.consumerId)).limit(1);
     if (!account) return res.status(401).json({ authenticated: false });
     res.json({
       authenticated: true,
@@ -3005,7 +3012,7 @@ export async function registerRoutes(
   app.post("/api/consumer/lookup", requireConsumer, consumerLookupLimiter, async (req, res) => {
     try {
       const consumerNationalId = (req.session as any).consumerNationalId;
-      const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      const [consumerAccount] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, req.session.consumerId!)).limit(1);
       if (!consumerAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
       // Note: /api/consumer/lookup is consumer self-access — freeze does NOT block self-view.
       // Freeze enforcement applies only to lender/third-party endpoints (credit inquiries, borrower report).
@@ -3030,7 +3037,7 @@ export async function registerRoutes(
       try {
         altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`);
       } catch {}
-      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score: creditScore } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, creditScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       // Include affordability snapshot (if previously computed) — privacy-safe subset
@@ -3070,7 +3077,7 @@ export async function registerRoutes(
     try {
       const consumerNationalId = (req.session as any).consumerNationalId;
       const [consumerAccount] = await db.select().from(consumerAccounts)
-        .where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+        .where(eq(consumerAccounts.id, req.session.consumerId!)).limit(1);
       if (!consumerAccount) return res.status(401).json({ message: "Session expired. Please log in again." });
 
       const borrowerResult = await db.select().from(borrowers).where(
@@ -3229,7 +3236,7 @@ export async function registerRoutes(
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
-      const { score: creditScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score: creditScore } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
 
       function scoreGrade(s: number): { label: string; color: string } {
         if (s >= 750) return { label: "Excellent", color: C_GREEN };
@@ -6343,7 +6350,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const writtenOffCount = accounts.filter(a => a.status === "written_off").length;
       const restructuredCount = accounts.filter(a => a.status === "restructured").length;
 
-      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score: creditScore, reasonCodes, factors: scoreFactors } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, creditScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       let xdsBureauData: any = null;
@@ -14886,7 +14893,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       );
 
       const { score: traditionalScore } = calculateCreditScore(
-        accounts, inquiries.length, judgments, borrower.isPep || false, altData
+        accounts, countScorableInquiries(inquiries), judgments, borrower.isPep || false, altData
       );
       storage.recordConsumerScoreHistory(borrower.nationalId || borrower.ghanaCardNumber || borrower.passportNumber || '', borrower.id, traditionalScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
@@ -15518,7 +15525,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/consumer/export-my-data", requireConsumer, consumerExportLimiter, async (req, res) => {
     try {
-      const consumerId = (req.session as any).consumerId;
+      const consumerId = req.session.consumerId;
       const consumerNationalId = (req.session as any).consumerNationalId;
       if (!consumerId || !consumerNationalId) return res.status(401).json({ message: "Consumer session required" });
 
@@ -15780,7 +15787,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const accounts = await db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId));
       const judgmentsList = await db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId));
       const cheques = await db.select().from(dishonouredCheques).where(eq(dishonouredCheques.borrowerId, borrowerId));
-      const scoreResult = calculateCreditScore(accounts, 0, judgmentsList, borrower.isPep || false, []);
+      // Automated decisions MUST run on the same score the borrower is shown —
+      // load real inquiries and alternative data instead of 0 / [].
+      const decisionInquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
+      const decisionAltData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
+      const scoreResult = calculateCreditScore(accounts, countScorableInquiries(decisionInquiries), judgmentsList, borrower.isPep || false, decisionAltData);
       const score = scoreResult.score;
       storage.getBorrower(borrowerId)
         .then(b => { const id = b?.nationalId || b?.ghanaCardNumber || b?.passportNumber; if (id) return storage.recordConsumerScoreHistory(id, borrowerId, score); })
@@ -18475,7 +18486,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
       const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
       const inquiries = await storage.getCreditInquiriesByBorrower(borrowerId);
-      const scoreResult = (calculateCreditScore as any)(borrower, accounts, inquiries.filter(i => !(i as any).isSoftPull));
+      const judgments = await storage.getCourtJudgmentsByBorrower(borrowerId);
+      const altData = await db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
+      // Soft pull uses the SAME scoring inputs as the full report — a soft pull
+      // must never itself lower the score, so its own record is excluded via
+      // countScorableInquiries (soft pulls filtered out there too).
+      const scoreResult = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? false, altData);
       const trendSummary = await storage.getBorrowerTrendSummary(borrowerId);
 
       const hardInquiriesLast6Mo = inquiries.filter(i => {
@@ -18567,7 +18583,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/consumer/monitoring-prefs", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerId as string;
+      const consumerAccountId = req.session.consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const prefs = await storage.getConsumerMonitoringPrefs(consumerAccountId);
       res.json(prefs ?? null);
@@ -18576,7 +18592,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.put("/api/consumer/monitoring-prefs", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerId as string;
+      const consumerAccountId = req.session.consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const parsed = insertConsumerMonitoringPrefsSchema.safeParse({ ...req.body, consumerAccountId });
       if (!parsed.success) return res.status(400).json({ message: "Validation error", errors: parsed.error.errors });
@@ -18587,7 +18603,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.get("/api/consumer/monitoring-alerts", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerId as string;
+      const consumerAccountId = req.session.consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const limit = parseInt(String(req.query.limit || "50"));
       const alerts = await storage.getConsumerMonitoringAlerts(consumerAccountId, limit);
@@ -18597,7 +18613,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/consumer/monitoring-alerts/:id/read", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerId as string;
+      const consumerAccountId = req.session.consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const ok = await storage.markConsumerMonitoringAlertRead(req.params.id as string, consumerAccountId);
       res.json({ success: ok });
@@ -18606,7 +18622,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/consumer/monitoring-alerts/mark-all-read", requireConsumer, async (req, res) => {
     try {
-      const consumerAccountId = (req.session as any).consumerId as string;
+      const consumerAccountId = req.session.consumerId as string;
       if (!consumerAccountId) return res.status(401).json({ message: "Consumer session required" });
       const count = await storage.markAllConsumerMonitoringAlertsRead(consumerAccountId);
       res.json({ marked: count });
@@ -18630,16 +18646,16 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ─── Credit Freeze Convenience Aliases ────────────────────────────────────
   app.post("/api/consumer/freeze", requireConsumer, async (req, res) => {
     try {
-      await db.update(consumerAccounts).set({ creditFrozen: true }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
-      await storage.createAuditLog({ action: "CONSUMER_CREDIT_FREEZE_ON", entity: "consumer_account", entityId: (req.session as any).consumerId, details: "Consumer enabled credit freeze", ipAddress: req.ip || null, userId: null, organizationId: null });
+      await db.update(consumerAccounts).set({ creditFrozen: true }).where(eq(consumerAccounts.id, req.session.consumerId!));
+      await storage.createAuditLog({ action: "CONSUMER_CREDIT_FREEZE_ON", entity: "consumer_account", entityId: req.session.consumerId, details: "Consumer enabled credit freeze", ipAddress: req.ip || null, userId: null, organizationId: null });
       res.json({ frozen: true });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.post("/api/consumer/unfreeze", requireConsumer, async (req, res) => {
     try {
-      await db.update(consumerAccounts).set({ creditFrozen: false }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
-      await storage.createAuditLog({ action: "CONSUMER_CREDIT_FREEZE_OFF", entity: "consumer_account", entityId: (req.session as any).consumerId, details: "Consumer disabled credit freeze", ipAddress: req.ip || null, userId: null, organizationId: null });
+      await db.update(consumerAccounts).set({ creditFrozen: false }).where(eq(consumerAccounts.id, req.session.consumerId!));
+      await storage.createAuditLog({ action: "CONSUMER_CREDIT_FREEZE_OFF", entity: "consumer_account", entityId: req.session.consumerId, details: "Consumer disabled credit freeze", ipAddress: req.ip || null, userId: null, organizationId: null });
       res.json({ frozen: false });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -18780,7 +18796,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ─── Credit Freeze ─────────────────────────────────────────────────────────
   app.get("/api/consumer/credit-freeze", requireConsumer, async (req, res) => {
     try {
-      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, (req.session as any).consumerId)).limit(1);
+      const [account] = await db.select().from(consumerAccounts).where(eq(consumerAccounts.id, req.session.consumerId!)).limit(1);
       if (!account) return res.status(401).json({ message: "Session expired" });
       res.json({ frozen: account.creditFrozen ?? false });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
@@ -18790,11 +18806,11 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const { frozen } = req.body;
       if (typeof frozen !== "boolean") return res.status(400).json({ message: "frozen must be boolean" });
-      await db.update(consumerAccounts).set({ creditFrozen: frozen }).where(eq(consumerAccounts.id, (req.session as any).consumerId));
+      await db.update(consumerAccounts).set({ creditFrozen: frozen }).where(eq(consumerAccounts.id, req.session.consumerId!));
       await storage.createAuditLog({
         action: frozen ? "CONSUMER_CREDIT_FREEZE_ON" : "CONSUMER_CREDIT_FREEZE_OFF",
         entity: "consumer_account",
-        entityId: (req.session as any).consumerId,
+        entityId: req.session.consumerId,
         details: `Consumer ${frozen ? "enabled" : "disabled"} credit freeze`,
         ipAddress: req.ip || null,
         userId: null,
@@ -18813,7 +18829,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         return res.status(400).json({ message: "Push endpoint URL is not permitted" });
       }
       if (!keys?.p256dh || !keys?.auth) return res.status(400).json({ message: "keys.p256dh and keys.auth are required for Web Push" });
-      const consumerId = (req.session as any).consumerId as string;
+      const consumerId = req.session.consumerId as string;
       // Upsert into subscriptions table (unique on endpoint)
       await db.execute(sql`
         INSERT INTO consumer_push_subscriptions (consumer_account_id, endpoint, keys)
@@ -18828,14 +18844,14 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     try {
       const { endpoint } = req.body as { endpoint?: string };
       if (!endpoint) return res.status(400).json({ message: "endpoint is required" });
-      await db.delete(consumerPushSubscriptions).where(and(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId), eq(consumerPushSubscriptions.endpoint, endpoint)));
+      await db.delete(consumerPushSubscriptions).where(and(eq(consumerPushSubscriptions.consumerAccountId, req.session.consumerId!), eq(consumerPushSubscriptions.endpoint, endpoint)));
       res.json({ subscribed: false });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/consumer/push-status", requireConsumer, async (req, res) => {
     try {
-      const subs = await db.select({ endpoint: consumerPushSubscriptions.endpoint }).from(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.consumerAccountId, (req.session as any).consumerId)).limit(10);
+      const subs = await db.select({ endpoint: consumerPushSubscriptions.endpoint }).from(consumerPushSubscriptions).where(eq(consumerPushSubscriptions.consumerAccountId, req.session.consumerId!)).limit(10);
       res.json({ subscribed: subs.length > 0, deviceCount: subs.length, vapidPublicKey: getVapidPublicKey() });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
@@ -18854,7 +18870,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
-      const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const tips: { id: string; title: string; detail: string; estimatedImpact: "high" | "medium" | "low"; icon: string }[] = [];
@@ -18922,7 +18938,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
-      const { score } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, score).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const offers: { id: string; lender: string; product: string; maxAmount: string; currency: string; rateFrom: string; term: string; likelihood: "high" | "medium" | "low"; badge?: string }[] = [];
@@ -18969,7 +18985,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const judgments = await storage.getCourtJudgmentsByBorrower(borrower.id);
       let altData: any[] = [];
       try { altData = await db.select().from(alternativeData).where(sql`borrower_id::text = ${borrower.id}`); } catch {}
-      const { score: baseScore } = calculateCreditScore(accounts, inquiries.length, judgments, borrower.isPep ?? undefined, altData);
+      const { score: baseScore } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, baseScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
       const { action } = req.body as { action: string };

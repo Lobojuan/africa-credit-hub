@@ -33,6 +33,7 @@ import {
   type Dispute, type InsertDispute,
   type Notification, type InsertNotification,
   type CourtJudgment, type InsertCourtJudgment,
+  type AlternativeData,
   type ConsentRecord, type InsertConsentRecord,
   type PaymentHistory, type InsertPaymentHistory,
   type Institution, type InsertInstitution,
@@ -229,6 +230,7 @@ export interface IStorage {
   getUsersByRole(...roles: string[]): Promise<User[]>;
 
   getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]>;
+  getAlternativeDataByBorrower(borrowerId: string): Promise<AlternativeData[]>;
   getAllCourtJudgments(organizationId: string | undefined, country: string, recentDays?: number): Promise<CourtJudgment[]>;
   createCourtJudgment(judgment: InsertCourtJudgment): Promise<CourtJudgment>;
 
@@ -1798,6 +1800,10 @@ export class DatabaseStorage implements IStorage {
 
   async getCourtJudgmentsByBorrower(borrowerId: string): Promise<CourtJudgment[]> {
     return db.select().from(courtJudgments).where(eq(courtJudgments.borrowerId, borrowerId)).orderBy(desc(courtJudgments.createdAt));
+  }
+
+  async getAlternativeDataByBorrower(borrowerId: string): Promise<AlternativeData[]> {
+    return db.select().from(alternativeData).where(eq(alternativeData.borrowerId, borrowerId));
   }
 
   async getAllCourtJudgments(organizationId?: string, country?: string, recentDays?: number): Promise<CourtJudgment[]> {
