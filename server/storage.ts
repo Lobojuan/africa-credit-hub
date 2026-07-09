@@ -1250,7 +1250,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCreditAccountsByBorrower(borrowerId: string): Promise<CreditAccount[]> {
-    return db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId)).orderBy(desc(creditAccounts.createdAt));
+    const rows = await db.select().from(creditAccounts).where(eq(creditAccounts.borrowerId, borrowerId)).orderBy(desc(creditAccounts.createdAt));
+    // C2 fix: dedup by accountNumber here, once, so every caller (scoring, affordability,
+    // dashboards, external API, reports) gets the same deduped set. This used to only happen
+    // inline in the credit-report route — every other of the ~25 call sites double-counted a
+    // duplicate tradeline (e.g. the same account re-submitted by two batch uploads).
+    const byAccountNumber = new Map<string, CreditAccount>();
+    for (const row of rows) {
+      const key = (row.accountNumber || "").trim().toLowerCase() || row.id;
+      const existing = byAccountNumber.get(key);
+      if (!existing) {
+        byAccountNumber.set(key, row);
+      } else {
+        const rowDate = row.updatedAt ? new Date(row.updatedAt).getTime() : 0;
+        const existingDate = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        if (rowDate > existingDate) byAccountNumber.set(key, row);
+      }
+    }
+    return [...byAccountNumber.values()];
   }
 
   async getAllCreditAccounts(organizationId?: string, country?: string, limit = 100, offset = 0, recentDays?: number): Promise<CreditAccount[]> {
