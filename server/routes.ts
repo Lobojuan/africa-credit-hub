@@ -1509,7 +1509,7 @@ export async function registerRoutes(
 
       res.status(201).json({ approval, message: "Submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1537,7 +1537,7 @@ export async function registerRoutes(
       });
       res.json({ approval, message: "Update submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1565,7 +1565,7 @@ export async function registerRoutes(
       });
       res.json({ photoUrl });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1584,7 +1584,7 @@ export async function registerRoutes(
       });
       res.json({ idDocumentUrl });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1662,7 +1662,7 @@ export async function registerRoutes(
       });
       res.status(201).json({ approval, message: "Submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1696,7 +1696,7 @@ export async function registerRoutes(
       });
       res.json({ approval, message: "Update submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1771,7 +1771,7 @@ export async function registerRoutes(
       } catch {}
       res.status(201).json(inquiry);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -2452,7 +2452,13 @@ export async function registerRoutes(
       const borrowerId = req.params.id as string;
       const borrower = await storage.getBorrower(req.params.id as string);
       if (!borrower) return res.status(404).json({ message: "Borrower not found" });
-      const parsed = insertAlternativeDataSchema.parse({ ...req.body, borrowerId });
+      const parsed = insertAlternativeDataSchema.extend({
+        totalTransactions: z.number().int().min(0).optional(),
+        onTimePayments: z.number().int().min(0).optional(),
+      }).refine(
+        (d) => (d.onTimePayments ?? 0) <= (d.totalTransactions ?? 0),
+        { message: "onTimePayments cannot exceed totalTransactions", path: ["onTimePayments"] },
+      ).parse({ ...req.body, borrowerId });
       const [created] = await db.insert(alternativeData).values(parsed).returning();
       await storage.createAuditLog({
         action: "CREATE", entity: "alternative_data", entityId: String(created.id), userId: req.session?.userId,
@@ -2461,7 +2467,7 @@ export async function registerRoutes(
       });
       res.status(201).json(created);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3538,7 +3544,7 @@ export async function registerRoutes(
       });
       res.status(201).json(approval);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3638,7 +3644,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3716,7 +3722,7 @@ export async function registerRoutes(
 
       res.status(201).json(dispute);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3743,7 +3749,7 @@ export async function registerRoutes(
       }
       res.json(dispute);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3788,7 +3794,8 @@ export async function registerRoutes(
 
   async function findOrCreateBatchBorrower(
     record: any,
-    orgId?: string
+    orgId?: string,
+    onConflict?: (message: string) => void
   ): Promise<string> {
     const nationalId = (record.nationalId || record.borrowerId || "").trim();
     if (!nationalId) throw new Error("No nationalId or borrowerId to identify borrower");
@@ -3797,34 +3804,40 @@ export async function registerRoutes(
     }
 
     const idType = normaliseIdType(record.idType);
+    // B2 fix: scope matching to the record's own country. An unscoped global match on a
+    // caller-supplied national ID risks a typo'd ID silently matching an unrelated borrower
+    // in a different country (national ID formats collide across jurisdictions).
+    const recordCountry = record.country || undefined;
+    const scopeToCountry = (cond: any) =>
+      recordCountry ? and(cond, eq(borrowers.country, recordCountry)) : cond;
 
     // ── 1. Match by nationalId column ─────────────────────────────────────
     let existing = await db.select({ id: borrowers.id })
       .from(borrowers)
-      .where(eq(borrowers.nationalId, nationalId))
+      .where(scopeToCountry(eq(borrowers.nationalId, nationalId)))
       .limit(1);
 
     // ── 2. Match by type-specific secondary column ─────────────────────────
     if (existing.length === 0) {
       let altRows: { id: string }[] = [];
       if (idType === "PASSPORT") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.passportNumber, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.passportNumber, nationalId))).limit(1);
       } else if (idType === "NRA_TAX_ID" || idType === "NIF" || idType === "NINEA") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.tinNumber, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.tinNumber, nationalId))).limit(1);
       } else if (idType === "ALIEN_REG_CARD") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.alienRegCard, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.alienRegCard, nationalId))).limit(1);
       } else if (idType === "ECOWAS_ID") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.ecowasId, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.ecowasId, nationalId))).limit(1);
       } else if (idType === "BVN") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.bvn, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.bvn, nationalId))).limit(1);
       } else if (idType === "NIN") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.nin, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.nin, nationalId))).limit(1);
       } else if (idType === "DRIVERS_LICENSE") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.driversLicense, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.driversLicense, nationalId))).limit(1);
       } else if (idType === "VOTERS_ID") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.votersId, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.votersId, nationalId))).limit(1);
       } else if (idType === "GHANA_CARD") {
-        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(eq(borrowers.ghanaCardNumber, nationalId)).limit(1);
+        altRows = await db.select({ id: borrowers.id }).from(borrowers).where(scopeToCountry(eq(borrowers.ghanaCardNumber, nationalId))).limit(1);
       }
       if (altRows.length > 0) existing = altRows;
     }
@@ -3839,18 +3852,40 @@ export async function registerRoutes(
     }
 
     // ── 4. Update existing borrower metadata ─────────────────────────────
+    // B2 fix: never silently overwrite an established identity field. Only fill in fields
+    // that are currently blank; when the batch record disagrees with an existing non-blank
+    // value, skip that field and surface it via onConflict for the caller to review instead
+    // of trusting whichever upload happened to run last.
     if (existing.length > 0) {
+      const [current] = await db.select({
+        firstName: borrowers.firstName, lastName: borrowers.lastName, address: borrowers.address,
+        phone: borrowers.phone, dateOfBirth: borrowers.dateOfBirth,
+      }).from(borrowers).where(eq(borrowers.id, existing[0].id)).limit(1);
+
       const updateData: any = {};
+      const conflicts: string[] = [];
+      const maybeUpdate = (field: string, incoming: string | undefined, currentVal: string | null | undefined, apply: () => void) => {
+        if (!incoming) return;
+        if (!currentVal) { apply(); return; }
+        if (currentVal !== incoming) conflicts.push(`${field}: existing "${currentVal}" vs batch "${incoming}"`);
+      };
+
       if (record.borrowerName) {
         const parts = record.borrowerName.split(" ");
-        updateData.firstName = parts[0];
-        updateData.lastName = parts.slice(1).join(" ") || null;
+        const incomingFirst = parts[0];
+        const incomingLast = parts.slice(1).join(" ") || null;
+        maybeUpdate("firstName", incomingFirst, current?.firstName, () => { updateData.firstName = incomingFirst; });
+        maybeUpdate("lastName", incomingLast || undefined, current?.lastName, () => { updateData.lastName = incomingLast; });
       }
-      if (record.address) updateData.address = record.address;
-      if (record.phoneNumber) updateData.phone = record.phoneNumber;
-      if (record.dateOfBirth) updateData.dateOfBirth = record.dateOfBirth;
+      maybeUpdate("address", record.address, current?.address, () => { updateData.address = record.address; });
+      maybeUpdate("phone", record.phoneNumber, current?.phone, () => { updateData.phone = record.phoneNumber; });
+      maybeUpdate("dateOfBirth", record.dateOfBirth, current?.dateOfBirth, () => { updateData.dateOfBirth = record.dateOfBirth; });
+
       if (Object.keys(updateData).length > 0) {
         await db.update(borrowers).set({ ...updateData, updatedAt: new Date() }).where(eq(borrowers.id, existing[0].id));
+      }
+      if (conflicts.length > 0 && onConflict) {
+        onConflict(`Borrower ${existing[0].id} (ID ${nationalId}): identity mismatch, not overwritten — ${conflicts.join("; ")}`);
       }
       return existing[0].id;
     }
@@ -3891,14 +3926,29 @@ export async function registerRoutes(
   ) {
     if (!(results as any).updatedCount) (results as any).updatedCount = 0;
 
+    // B1 fix: lenderInstitution is part of the upsert key and is otherwise free text supplied
+    // by the caller (from the CSV/request body) with no ownership check — a lender could
+    // upload a row claiming to be a *different* institution and overwrite (or fabricate) that
+    // institution's tradeline. Force it to the uploader's own organization name whenever an
+    // organization context exists; only trust caller-supplied text for platform-level uploads
+    // with no organizationId (e.g. a super_admin backfill).
+    if (orgId) {
+      const uploaderOrg = await storage.getOrganization(orgId);
+      if (uploaderOrg?.name) {
+        for (const item of validated) item.data.lenderInstitution = uploaderOrg.name;
+      }
+    }
+
     for (const item of validated) {
       try {
         const raw = item.rawRecord || item.data;
-        const resolvedBorrowerId = await findOrCreateBatchBorrower(raw, orgId);
+        const resolvedBorrowerId = await findOrCreateBatchBorrower(raw, orgId, (msg) => {
+          results.errors.push({ index: item.index, message: msg, type: "identity_conflict" });
+        });
         item.data.borrowerId = resolvedBorrowerId;
       } catch (err: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: `Borrower resolution failed: ${err.message}` });
+        results.errors.push({ index: item.index, message: `Borrower resolution failed: ${safeErrorMessage(err, 400)}` });
         item.data._skip = true;
       }
     }
@@ -3950,7 +4000,7 @@ export async function registerRoutes(
         results.successCount++;
       } catch (innerErr: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
+        results.errors.push({ index: item.index, message: safeErrorMessage(innerErr, 400) });
       }
     }
 
@@ -3961,7 +4011,7 @@ export async function registerRoutes(
         results.successCount++;
       } catch (innerErr: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: innerErr.message || "Update failed" });
+        results.errors.push({ index: item.index, message: safeErrorMessage(innerErr, 400) });
       }
     }
   }
@@ -4014,7 +4064,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: parsed, rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
 
@@ -4046,7 +4096,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4106,7 +4156,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4120,7 +4170,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4238,7 +4288,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+          results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4253,7 +4303,7 @@ export async function registerRoutes(
 
       res.json({ ...results, processedCount });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4327,7 +4377,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4341,7 +4391,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4589,7 +4639,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+          results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4604,7 +4654,7 @@ export async function registerRoutes(
 
       res.json({ ...results, processedCount });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4844,7 +4894,7 @@ export async function registerRoutes(
       });
       res.json({ jobId, totalRecords: records.length, status: "queued" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4870,7 +4920,7 @@ export async function registerRoutes(
       });
       res.json({ jobId, totalRecords: updates.length, status: "queued" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4896,7 +4946,7 @@ export async function registerRoutes(
       });
       res.json({ jobId, totalRecords: updates.length, status: "queued" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5193,7 +5243,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(r), rawRecord: r });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+          results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
 
@@ -5219,7 +5269,7 @@ export async function registerRoutes(
         errors: results.errors,
       });
     } catch (e: any) {
-      return res.status(500).json({ message: e.message || "Upload failed" });
+      return res.status(500).json({ message: safeErrorMessage(e, 500) || "Upload failed" });
     }
   });
 
@@ -5426,7 +5476,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json({ iffType, ...result });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5475,7 +5525,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json({ iffType, ...result });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5531,7 +5581,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           results.successCount++;
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
 
@@ -5544,7 +5594,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5577,7 +5627,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           results.successCount++;
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
 
@@ -5590,7 +5640,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5614,7 +5664,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(created);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5730,7 +5780,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(judgment);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5770,7 +5820,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5785,7 +5835,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6057,7 +6107,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
       res.status(201).json(entry);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6085,7 +6135,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(inst);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6100,7 +6150,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(inst);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6115,7 +6165,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(inst);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6142,7 +6192,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -9552,7 +9602,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const parsed = createApiKeyBodySchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: parsed.error.errors.map(e => e.message).join(", ") });
+        return res.status(400).json({ message: parsed.error.errors.map(e => safeErrorMessage(e, 400)).join(", ") });
       }
       const { institutionId, label, permissions } = parsed.data;
 
@@ -11522,7 +11572,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
       res.status(201).json(org);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -11546,7 +11596,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(org);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -11575,7 +11625,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json({ message: "Organization deleted" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -12285,7 +12335,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "country_settings", entityId: created.id, details: `Created country settings for ${created.countryName}`, ipAddress: req.ip, organizationId: null });
         res.json(created);
       }
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   // ── Audit Logs ──
@@ -12920,7 +12970,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const [created] = await db.insert(retentionPolicies).values(parsed).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "retention_policy", entityId: created.id, details: `Created retention policy for ${created.country} - ${created.entityType}`, ipAddress: req.ip, organizationId: null });
       res.json(created);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.put("/api/platform/retention-policies/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -12946,7 +12996,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const [updated] = await db.update(retentionPolicies).set(updates).where(eq(retentionPolicies.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Policy not found" });
       res.json(updated);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   // ── Activity Feed ──
@@ -12996,7 +13046,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
       res.status(201).json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -13496,7 +13546,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       res.json(result);
     } catch (e: any) {
       routeLogger.error("AI Demo error:", { detail: e });
-      res.status(500).json({ message: e.message || "AI processing failed" });
+      res.status(500).json({ message: safeErrorMessage(e, 500) || "AI processing failed" });
     }
   });
 
@@ -14264,7 +14314,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.end();
     } catch (e: any) {
       if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: safeErrorMessage(e) })}\n\n`);
         res.end();
       } else {
         res.status(500).json({ message: safeErrorMessage(e) });
@@ -14291,7 +14341,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateCreditNarrative(req.params.borrowerId as string, provider, language);
       res.json(result);
     } catch (e: any) {
-      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      if (e.message === "Borrower not found") return res.status(404).json({ message: safeErrorMessage(e, 404) });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -14352,7 +14402,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateLoanRecommendation(req.params.borrowerId as string, parsedAmount, loanType, provider);
       res.json(result);
     } catch (e: any) {
-      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      if (e.message === "Borrower not found") return res.status(404).json({ message: safeErrorMessage(e, 404) });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -14364,7 +14414,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateCreditInsights(req.params.borrowerId as string, provider);
       res.json(result);
     } catch (e: any) {
-      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      if (e.message === "Borrower not found") return res.status(404).json({ message: safeErrorMessage(e, 404) });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -14626,7 +14676,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [created] = await db.insert(dataSharingAgreements).values({ ...parsed, createdBy: req.session.userId }).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "data_sharing_agreement", entityId: created.id, details: `Created SATA agreement: ${created.sourceCountry} → ${created.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.status(201).json(created);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.patch("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -14640,7 +14690,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!updated) return res.status(404).json({ message: "Agreement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "data_sharing_agreement", entityId: updated.id, details: `Updated SATA agreement status to ${updated.status}: ${updated.sourceCountry} → ${updated.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.delete("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -14840,7 +14890,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [created] = await db.insert(papssSettlements).values({ ...parsed, initiatedBy: req.session.userId }).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "papss_settlement", entityId: created.id, details: `PAPSS settlement: ${created.senderInstitution} (${created.senderCountry}) → ${created.receiverInstitution} (${created.receiverCountry}), ${created.senderCurrency} ${created.senderAmount}`, ipAddress: req.ip, organizationId: null });
       res.status(201).json(created);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.patch("/api/papss/settlements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -14854,7 +14904,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!updated) return res.status(404).json({ message: "Settlement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "papss_settlement", entityId: updated.id, details: `Updated PAPSS settlement status to ${updated.status}`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   await seedCountrySettings();
@@ -19084,7 +19134,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   function handleGatewayError(res: Response, err: unknown) {
     if (err instanceof CrossProductError) {
-      return res.status(403).json({ error: err.code, message: err.message });
+      return res.status(403).json({ error: err.code, message: safeErrorMessage(err, 403) });
     }
     return res.status(500).json({ error: "internal", message: safeErrorMessage(err) });
   }

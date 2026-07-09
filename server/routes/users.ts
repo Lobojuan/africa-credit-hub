@@ -71,7 +71,7 @@ router.post("/api/users", requireRole("admin", "super_admin"), async (req, res) 
     });
     res.status(201).json(stripPassword(user));
   } catch (e: any) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ message: safeErrorMessage(e, 400) });
   }
 });
 
@@ -141,7 +141,7 @@ router.patch("/api/users/:id", requireRole("admin", "super_admin"), async (req, 
     });
     res.json(stripPassword(user));
   } catch (e: any) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ message: safeErrorMessage(e, 400) });
   }
 });
 
@@ -177,7 +177,7 @@ router.delete("/api/users/:id", requireRole("admin", "super_admin"), async (req,
     });
     res.json({ message: "User deleted" });
   } catch (e: any) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ message: safeErrorMessage(e, 400) });
   }
 });
 

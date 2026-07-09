@@ -511,9 +511,13 @@ const SALARY_KEYWORDS = /\b(salary|payroll|wages|stipend|monthly\s*pay|net\s*pay
 const GOVT_KEYWORDS = /\b(govt|government|grant|benefit|pension|nhif|nssf|tin)\b/i;
 const REMITTANCE_KEYWORDS = /\b(remit|western\s*union|moneygram|wise|world\s*remit)\b/i;
 const RENTAL_KEYWORDS = /\b(rent\s*(received|income))\b/i;
+// A2: credits that are loan proceeds or savings/deposit withdrawals are not income — counting
+// them inflates apparent income for exactly the borrowers who are cycling debt to make ends
+// meet (the most distressed profiles show the biggest apparent "income" under the old logic).
+const NON_INCOME_KEYWORDS = /\b(loan\s*(disbursement|payout|proceeds)|facility\s*disbursement|savings?\s*withdrawal|withdrawal\s*from\s*savings|susu\s*payout|fixed\s*deposit\s*(maturity|withdrawal)|deposit\s*maturity)\b/i;
 
-export function classifyIncome(txns: NormalisedTxn[], currency: string): IncomeSourceCandidate[] {
-  const credits = txns.filter(t => t.direction === "credit");
+export function classifyIncome(txns: NormalisedTxn[], currency: string, periodDays: number = 90): IncomeSourceCandidate[] {
+  const credits = txns.filter(t => t.direction === "credit" && !NON_INCOME_KEYWORDS.test(`${t.counterparty || ""} ${t.narration || ""}`));
   if (credits.length === 0) return [];
 
   // Group by counterparty to detect recurrence
@@ -525,7 +529,10 @@ export function classifyIncome(txns: NormalisedTxn[], currency: string): IncomeS
     groups.set(key, arr);
   }
 
-  const monthsSpan = Math.max(1, monthSpan(credits));
+  // A1: use the actual observation-window length (shared with categoriseExpenses) rather than
+  // the span between the first and last transaction, which systematically undercounts by one
+  // period (N monthly salaries span N-1 gaps) and can disagree with the expense-side denominator.
+  const monthsSpan = Math.max(1, periodDays / 30);
   const candidates: IncomeSourceCandidate[] = [];
 
   for (const [key, arr] of groups.entries()) {
@@ -582,9 +589,10 @@ const EXPENSE_RULES: Array<{ category: ExpenseCandidate["category"]; pattern: Re
   { category: "transfers_out", pattern: /\b(transfer|p2p|send\s*money)\b/i },
 ];
 
-export async function categoriseExpenses(txns: NormalisedTxn[], currency: string, useLlmFallback: boolean = false): Promise<ExpenseCandidate[]> {
+export async function categoriseExpenses(txns: NormalisedTxn[], currency: string, useLlmFallback: boolean = false, periodDays: number = 90): Promise<ExpenseCandidate[]> {
   const debits = txns.filter(t => t.direction === "debit");
-  const monthsSpan = Math.max(1, monthSpan(debits));
+  // A1: same shared periodDays/30 denominator as classifyIncome — see comment there.
+  const monthsSpan = Math.max(1, periodDays / 30);
   const buckets: Record<string, { total: number; count: number; details: string[] }> = {};
 
   const unknown: NormalisedTxn[] = [];
@@ -823,11 +831,11 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
   }
 
   // 2. Classify income
-  let incomeSources = classifyIncome(txns, currency);
+  let incomeSources = classifyIncome(txns, currency, periodDays);
   let grossIncomeMonthly = incomeSources.reduce((s, i) => s + i.amountMonthly, 0);
 
   // 3. Categorise expenses
-  let expenses = await categoriseExpenses(txns, currency, opts.useLlmFallback);
+  let expenses = await categoriseExpenses(txns, currency, opts.useLlmFallback, periodDays);
   // 4. Existing debt servicing — from credit accounts + debt_servicing expense bucket.
   //    IMPORTANT: exclude debt_servicing from totalExpensesMonthly to avoid double-counting.
   //    disposableIncome = income - livingExpenses - debtService (three distinct buckets).
@@ -966,9 +974,12 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
     return created;
   });
 
-  // 9. Verified-income write-back: applies to any trusted source (open_banking, bank_statement_pdf with
-  //    medium+ confidence, hybrid) where the income is materially different from the self-declared value.
-  const trustedSources = new Set<typeof dataSource>(["open_banking", "bank_statement_pdf", "hybrid"]);
+  // 9. Verified-income write-back: only for sources backed by a bank API feed (open_banking,
+  //    hybrid). A3: bank_statement_pdf is deliberately excluded — it's an LLM-parsed upload the
+  //    borrower controls and can fabricate, so it must never silently overwrite the income of
+  //    record. PDF-derived income still feeds this assessment's own DTI calculation above; it
+  //    just doesn't get persisted back onto the borrower as a trusted fact.
+  const trustedSources = new Set<typeof dataSource>(["open_banking", "hybrid"]);
   const hasEnoughTransactions = txns.length >= 5; // At least 5 txns — single paycheque is unreliable
   if (trustedSources.has(dataSource) && confidenceLabel !== "low" && grossIncomeMonthly > 0 && hasEnoughTransactions) {
     const declared = parseFloat(borrower.monthlyIncome || "0");
@@ -986,13 +997,6 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
 }
 
 // ==================== HELPERS ====================
-
-function monthSpan(txns: NormalisedTxn[]): number {
-  if (txns.length < 2) return 1;
-  const sorted = [...txns].sort((a, b) => a.date.getTime() - b.date.getTime());
-  const days = (sorted[sorted.length - 1].date.getTime() - sorted[0].date.getTime()) / 86400000;
-  return Math.max(1, days / 30);
-}
 
 function round2(n: number): number { return Math.round(n * 100) / 100; }
 function round4(n: number): number { return Math.round(n * 10000) / 10000; }

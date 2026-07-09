@@ -40,6 +40,7 @@ import {
   getCountryFilter,
   enforceCountryScopeForNonSuperAdmin,
   logCrossCountryAccess,
+  safeErrorMessage,
 } from "./middleware";
 import { storage, GLOBAL_SCOPE } from "../storage";
 import { COUNTRY_REGISTRY } from "../country-mode";
@@ -204,7 +205,7 @@ lotoAdminRouter.get("/kpi", ...gate, async (req, res) => {
     });
   } catch (err) {
     console.error("[loto-admin] kpi failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -254,7 +255,7 @@ lotoAdminRouter.get("/heatmap", ...gate, async (req, res) => {
     res.json({ countryCode: country, windowDays: 30, districts });
   } catch (err) {
     console.error("[loto-admin] heatmap failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -337,7 +338,7 @@ lotoAdminRouter.get("/compliance-scorecard", ...gate, async (req, res) => {
     res.json({ countryCode: country, merchants: out });
   } catch (err) {
     console.error("[loto-admin] compliance failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -421,7 +422,7 @@ lotoAdminRouter.get("/merchants/credit-status", ...gate, async (req, res) => {
     res.json({ countryCode: country, merchants: out });
   } catch (err) {
     console.error("[loto-admin] credit-status failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -474,7 +475,7 @@ lotoAdminRouter.post("/merchants/:id/resync", ...gate, async (req, res) => {
       return res.status(400).json({ message: err.message });
     }
     console.error("[loto-admin] merchant resync failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -496,7 +497,7 @@ lotoAdminRouter.get("/fraud-flags", ...gate, async (req, res) => {
     res.json({ countryCode: country, status: useStatus, flags });
   } catch (err) {
     console.error("[loto-admin] fraud-flags failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -508,7 +509,7 @@ lotoAdminRouter.post("/fraud-flags/scan", ...gate, async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error("[loto-admin] scan failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -566,7 +567,7 @@ lotoAdminRouter.post("/fraud-flags/:id/triage", ...gate, async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error("[loto-admin] triage failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -618,7 +619,7 @@ lotoAdminRouter.get("/vat-uplift", ...gate, async (req, res) => {
     });
   } catch (err) {
     console.error("[loto-admin] vat-uplift failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -735,7 +736,7 @@ lotoAdminRouter.get("/export.csv", ...gate, async (req, res) => {
     res.end();
   } catch (err) {
     console.error("[loto-admin] csv export failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -813,7 +814,7 @@ lotoAdminRouter.get("/export.pdf", ...gate, async (req, res) => {
     doc.end();
   } catch (err) {
     console.error("[loto-admin] pdf export failed", err);
-    if (!res.headersSent) res.status(500).json({ message: (err as Error).message });
+    if (!res.headersSent) res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -830,7 +831,7 @@ lotoAdminRouter.get("/webhooks", ...gate, async (req, res) => {
     res.json({ availableEvents: LOTO_EVENTS, allWebhookEvents: WEBHOOK_EVENTS, subscriptions: lotoSubs });
   } catch (err) {
     console.error("[loto-admin] webhooks list failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -860,7 +861,7 @@ lotoAdminRouter.post("/webhooks", ...gate, async (req, res) => {
     res.status(201).json(created);
   } catch (err) {
     console.error("[loto-admin] webhook create failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -876,7 +877,7 @@ lotoAdminRouter.delete("/webhooks/:id", ...gate, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error("[loto-admin] webhook delete failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -905,7 +906,7 @@ lotoAdminRouter.get("/country-config/fraud-settings", ...gate, async (req, res) 
     res.json({ config, isSuperAdmin, boostActive });
   } catch (err) {
     console.error("[loto-admin] country-config/fraud-settings GET failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -956,7 +957,7 @@ lotoAdminRouter.post("/country-config/boost-scan", ...gate, async (req, res) => 
     res.json({ config: updated, boostUntil: boostUntil.toISOString(), boostIntervalMinutes: BOOST_INTERVAL_MINUTES });
   } catch (err) {
     console.error("[loto-admin] boost-scan failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
@@ -983,7 +984,7 @@ lotoAdminRouter.patch(
       res.json({ config: updated });
     } catch (err) {
       console.error("[loto-admin] country-config/fraud-settings PATCH failed", err);
-      res.status(500).json({ message: (err as Error).message });
+      res.status(500).json({ message: safeErrorMessage(err, 500) });
     }
   },
 );
@@ -1010,7 +1011,7 @@ lotoAdminRouter.get("/audit", ...gate, async (req, res) => {
     res.json({ entries: rows });
   } catch (err) {
     console.error("[loto-admin] audit failed", err);
-    res.status(500).json({ message: (err as Error).message });
+    res.status(500).json({ message: safeErrorMessage(err, 500) });
   }
 });
 
