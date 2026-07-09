@@ -2592,6 +2592,188 @@ export const insertLotoFraudFlagSchema = createInsertSchema(lotoFraudFlags).omit
 export type InsertLotoFraudFlag = z.infer<typeof insertLotoFraudFlagSchema>;
 export type LotoFraudFlag = typeof lotoFraudFlags.$inferSelect;
 
+// ── GTM / CRM Intelligence ──────────────────────────────────────────────────
+//
+// This module owns sales and outreach data for Universal Credit Hub GTM
+// Intelligence. It intentionally references UCH core entities instead of
+// copying regulated borrower/credit PII into sales workflows.
+
+export const gtmCompanyStatusEnum = pgEnum("gtm_company_status", ["target", "qualified", "active_opportunity", "customer", "disqualified", "archived"]);
+export const gtmContactStatusEnum = pgEnum("gtm_contact_status", ["new", "verified", "engaged", "replied", "unsubscribed", "bounced", "do_not_contact"]);
+export const gtmVerificationStatusEnum = pgEnum("gtm_verification_status", ["unknown", "pending", "valid", "invalid", "risky", "do_not_contact"]);
+export const gtmCampaignStatusEnum = pgEnum("gtm_campaign_status", ["draft", "review", "approved", "active", "paused", "completed", "archived"]);
+export const gtmOutreachChannelEnum = pgEnum("gtm_outreach_channel", ["email", "phone", "linkedin", "meeting", "note"]);
+export const gtmOutreachStatusEnum = pgEnum("gtm_outreach_status", ["draft", "needs_review", "approved", "scheduled", "sent", "replied", "bounced", "failed", "cancelled"]);
+export const gtmActivityTypeEnum = pgEnum("gtm_activity_type", ["note", "email", "call", "meeting", "task", "verification", "ai_review", "status_change"]);
+
+export const gtmCompanies = pgTable("gtm_companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  website: text("website"),
+  country: text("country"),
+  region: text("region"),
+  segment: text("segment"),
+  institutionType: text("institution_type"),
+  status: gtmCompanyStatusEnum("status").notNull().default("target"),
+  fitScore: integer("fit_score").default(0),
+  source: text("source"),
+  sourceUrl: text("source_url"),
+  ownerUserId: varchar("owner_user_id").references(() => users.id),
+  linkedOrganizationId: varchar("linked_organization_id").references(() => organizations.id),
+  notes: text("notes"),
+  tags: text("tags").array().default([]),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  nameCountryIdx: uniqueIndex("gtm_companies_name_country_uq").on(table.name, table.country),
+}));
+
+export const gtmContacts = pgTable("gtm_contacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => gtmCompanies.id),
+  fullName: text("full_name").notNull(),
+  title: text("title"),
+  department: text("department"),
+  email: text("email"),
+  phone: text("phone"),
+  linkedinUrl: text("linkedin_url"),
+  country: text("country"),
+  roleCategory: text("role_category"),
+  status: gtmContactStatusEnum("status").notNull().default("new"),
+  emailVerificationStatus: gtmVerificationStatusEnum("email_verification_status").notNull().default("unknown"),
+  phoneVerificationStatus: gtmVerificationStatusEnum("phone_verification_status").notNull().default("unknown"),
+  source: text("source"),
+  sourceUrl: text("source_url"),
+  consentNotes: text("consent_notes"),
+  lastContactedAt: timestamp("last_contacted_at"),
+  ownerUserId: varchar("owner_user_id").references(() => users.id),
+  notes: text("notes"),
+  tags: text("tags").array().default([]),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gtmCampaigns = pgTable("gtm_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  market: text("market"),
+  productFocus: text("product_focus"),
+  status: gtmCampaignStatusEnum("status").notNull().default("draft"),
+  ownerUserId: varchar("owner_user_id").references(() => users.id),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  startsAt: timestamp("starts_at"),
+  endsAt: timestamp("ends_at"),
+  goals: jsonb("goals").$type<Record<string, unknown>>().default({}),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gtmOutreachMessages = pgTable("gtm_outreach_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").references(() => gtmCampaigns.id),
+  companyId: varchar("company_id").references(() => gtmCompanies.id),
+  contactId: varchar("contact_id").references(() => gtmContacts.id),
+  channel: gtmOutreachChannelEnum("channel").notNull().default("email"),
+  status: gtmOutreachStatusEnum("status").notNull().default("draft"),
+  subject: text("subject"),
+  body: text("body"),
+  aiModel: text("ai_model"),
+  promptSummary: text("prompt_summary"),
+  humanApprovedBy: varchar("human_approved_by").references(() => users.id),
+  humanApprovedAt: timestamp("human_approved_at"),
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  providerMessageId: text("provider_message_id"),
+  failureReason: text("failure_reason"),
+  metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+  createdBy: varchar("created_by").references(() => users.id),
+  updatedBy: varchar("updated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gtmSuppressionList = pgTable("gtm_suppression_list", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email"),
+  phone: text("phone"),
+  reason: text("reason").notNull(),
+  source: text("source"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  emailIdx: uniqueIndex("gtm_suppression_email_uq").on(table.email),
+  phoneIdx: uniqueIndex("gtm_suppression_phone_uq").on(table.phone),
+}));
+
+export const gtmActivities = pgTable("gtm_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: gtmActivityTypeEnum("type").notNull().default("note"),
+  companyId: varchar("company_id").references(() => gtmCompanies.id),
+  contactId: varchar("contact_id").references(() => gtmContacts.id),
+  campaignId: varchar("campaign_id").references(() => gtmCampaigns.id),
+  outreachMessageId: varchar("outreach_message_id").references(() => gtmOutreachMessages.id),
+  title: text("title").notNull(),
+  body: text("body"),
+  outcome: text("outcome"),
+  dueAt: timestamp("due_at"),
+  completedAt: timestamp("completed_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const gtmAiPromptLogs = pgTable("gtm_ai_prompt_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purpose: text("purpose").notNull(),
+  model: text("model"),
+  localModel: boolean("local_model").notNull().default(false),
+  inputSummary: text("input_summary"),
+  outputSummary: text("output_summary"),
+  companyId: varchar("company_id").references(() => gtmCompanies.id),
+  contactId: varchar("contact_id").references(() => gtmContacts.id),
+  campaignId: varchar("campaign_id").references(() => gtmCampaigns.id),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertGtmCompanySchema = createInsertSchema(gtmCompanies).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertGtmCompany = z.infer<typeof insertGtmCompanySchema>;
+export type GtmCompany = typeof gtmCompanies.$inferSelect;
+
+export const insertGtmContactSchema = createInsertSchema(gtmContacts).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertGtmContact = z.infer<typeof insertGtmContactSchema>;
+export type GtmContact = typeof gtmContacts.$inferSelect;
+
+export const insertGtmCampaignSchema = createInsertSchema(gtmCampaigns).omit({ id: true, createdAt: true, updatedAt: true, approvedAt: true });
+export type InsertGtmCampaign = z.infer<typeof insertGtmCampaignSchema>;
+export type GtmCampaign = typeof gtmCampaigns.$inferSelect;
+
+export const insertGtmOutreachMessageSchema = createInsertSchema(gtmOutreachMessages).omit({ id: true, createdAt: true, updatedAt: true, humanApprovedAt: true, sentAt: true });
+export type InsertGtmOutreachMessage = z.infer<typeof insertGtmOutreachMessageSchema>;
+export type GtmOutreachMessage = typeof gtmOutreachMessages.$inferSelect;
+
+export const insertGtmSuppressionSchema = createInsertSchema(gtmSuppressionList).omit({ id: true, createdAt: true });
+export type InsertGtmSuppression = z.infer<typeof insertGtmSuppressionSchema>;
+export type GtmSuppression = typeof gtmSuppressionList.$inferSelect;
+
+export const insertGtmActivitySchema = createInsertSchema(gtmActivities).omit({ id: true, createdAt: true });
+export type InsertGtmActivity = z.infer<typeof insertGtmActivitySchema>;
+export type GtmActivity = typeof gtmActivities.$inferSelect;
+
+export const insertGtmAiPromptLogSchema = createInsertSchema(gtmAiPromptLogs).omit({ id: true, createdAt: true });
+export type InsertGtmAiPromptLog = z.infer<typeof insertGtmAiPromptLogSchema>;
+export type GtmAiPromptLog = typeof gtmAiPromptLogs.$inferSelect;
+
 export const playbookPages = pgTable("playbook_pages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   slug: text("slug").notNull().unique(),
@@ -2630,4 +2812,3 @@ export const playbookDownloads = pgTable("playbook_downloads", {
 export const insertPlaybookDownloadSchema = createInsertSchema(playbookDownloads).omit({ id: true, downloadedAt: true });
 export type InsertPlaybookDownload = z.infer<typeof insertPlaybookDownloadSchema>;
 export type PlaybookDownload = typeof playbookDownloads.$inferSelect;
-

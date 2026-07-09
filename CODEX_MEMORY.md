@@ -34,8 +34,10 @@ This file is a compact handoff for future Codex sessions.
 - Machine memory is about 24 GB RAM. `qwen3-coder:30b` is available for stronger local coding help, but close heavy apps if memory gets tight.
 - Ollama models previously installed:
   - `qwen3-coder:30b`
+  - `qwen2.5:7b`
   - `deepseek-r1:14b`
   - `gpt-oss:20b`
+- `kimi-k2.7-code:cloud` is registered in Ollama. After Ollama sign-in, smoke test returned `403 Forbidden` because this model requires an Ollama subscription/upgrade. Treat it as unavailable until subscription access is enabled, and do not treat it as a local token-saving model.
 - Use local models automatically for draft review, summarization, second opinions, and cheap diff review when appropriate. Use Codex for repo edits and verification.
 - Local RAG/project-memory commands now available from any shell:
   - `ai-repo code "question"` reads project memory, file tree, git status/diff, and relevant snippets before asking local AI.
@@ -43,6 +45,26 @@ This file is a compact handoff for future Codex sessions.
   - `ai-code`, `ai-fast`, `ai-deep`, and `ai-model-status` are available in `/Users/uffe/Documents/Codex/bin`.
   - `ai-diff-review` gives a local second opinion on the current git diff.
 - `qwen3-coder:30b` is installed and is now the default local coding model. `qwen2.5-coder:14b` was removed to free disk space.
+
+## CRM/GTM Intelligence Direction
+- The planned CRM/GTM product is Universal Credit Hub GTM Intelligence, a separate module connected to UCH rather than a rewrite of the regulated credit-registry core.
+- Internal assistant concept: Jarvis GTM Command OS, inspired by a local agentic OS pattern. It should combine local memory, Graphify, Codex skills, Ollama routing, and workflow buttons.
+- MVP scope: companies, contacts, lead import, verification, campaigns, AI email drafts, human approval, unsubscribe/suppression, call prep, call notes, and activity history.
+- Autonomous AI cold calling is not MVP. Start with AI call prep, human calls, transcript/notes, and next-action suggestions.
+- Durable spec files:
+  - `docs/CRM_GTM_Intelligence_Spec.md`
+  - `docs/UCH_Jarvis_GTM_Command_OS.md`
+  - `memory/approved-claims.md`
+  - `memory/forbidden-claims.md`
+  - `memory/outreach-compliance.md`
+  - `.codex/skills/uch-crm-gtm/SKILL.md`
+
+## Graphify Status
+- Graphify CLI is installed (`graphify 0.8.39`).
+- Graphify semantic extraction for Markdown memory/docs requires an LLM API key such as `GEMINI_API_KEY`, `MOONSHOT_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `DEEPSEEK_API_KEY`; it does not use local Ollama automatically for docs.
+- `.graphifyignore` is configured for a code-only graph so Graphify can run without API cost. Memory/spec Markdown remains in repo for Codex to read directly.
+- Code-only graph was built on 2026-06-15 with `graphify extract . --no-cluster --no-viz`: 4,140 nodes and 12,842 edges in `graphify-out/graph.json`.
+- Verified Graphify can answer exact GTM code questions with `graphify explain GtmIntelligencePage`, `graphify explain gtmCompanies`, and a GTM schema query.
 
 ## Production Cleanup Bias
 - Do not rewrite the UI globally to fix a single screen.

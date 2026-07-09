@@ -215,6 +215,7 @@ const apiIntegrationItems: NavItem[] = [
 ];
 
 const salesToolsItems: NavItem[] = [
+  { label: "GTM Intelligence", url: "/gtm", icon: Target, testId: "nav-gtm-intelligence", roles: ["super_admin", "admin"] },
   { label: "E&W Africa Regional Overview", url: "/sales/africa-overview-playbook", icon: Globe, testId: "nav-africa-overview-playbook", roles: ["super_admin"] },
   { label: "Ghana Demo Playbook", url: "/sales/ghana-playbook", icon: Presentation, testId: "nav-ghana-playbook", roles: ["super_admin"] },
   { label: "Nigeria Demo Playbook", url: "/sales/nigeria-playbook", icon: Presentation, testId: "nav-nigeria-playbook", roles: ["super_admin"] },

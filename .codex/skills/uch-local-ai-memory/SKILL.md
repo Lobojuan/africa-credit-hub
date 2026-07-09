@@ -15,13 +15,14 @@ Use this skill when the user asks how to make Codex, skills, memory, or local AI
 - Avoid huge pasted guides; summarize and link to local files instead.
 
 ## Local Model Guidance
-- Prefer `qwen2.5-coder:14b` for coding second opinions.
+- Prefer `qwen3-coder:30b` for stronger local coding second opinions when memory headroom is comfortable.
+- Prefer `qwen2.5:7b` for quick summaries, tagging, and lightweight routing.
 - Prefer `deepseek-r1:14b` for reasoning through tricky bugs.
 - Prefer `gpt-oss:20b` only when memory headroom is comfortable.
+- Treat `kimi-k2.7-code:cloud` as unavailable unless Ollama subscription access is active.
 - Use local LLMs for review and planning, then verify with real commands.
 
 ## Maintenance
 - Update memory only when a fact will matter in future sessions.
 - Remove stale notes when production behavior changes.
 - Do not store secrets, passwords, API keys, or tunnel tokens in memory files.
-

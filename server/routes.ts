@@ -23,6 +23,7 @@ import {
 import authRouter from "./routes/auth";
 import usersRouter from "./routes/users";
 import dashboardRouter from "./routes/dashboard";
+import gtmRouter from "./routes/gtm";
 import telcoRouter from "./routes/telco";
 import walletRouter from "./routes/wallet";
 import webauthnRouter from "./routes/webauthn";
@@ -1230,6 +1231,7 @@ export async function registerRoutes(
   app.use(dashboardRouter);
 
   app.use(usersRouter);
+  app.use(gtmRouter);
 
   app.get("/api/borrowers", requireRole("super_admin"), enforceDataSovereignty, async (req, res) => {
     try {

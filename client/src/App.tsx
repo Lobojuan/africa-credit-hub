@@ -178,6 +178,7 @@ const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authorit
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
 const InstitutionAnalyticsPage = lazy(() => import("@/pages/institution-analytics"));
 const InstitutionBrandingPage = lazy(() => import("@/pages/institution-branding"));
+const GtmIntelligencePage = lazy(() => import("@/pages/gtm-intelligence"));
 
 function LazyFallback() {
   return (
@@ -280,6 +281,8 @@ function Router() {
         <Route path="/platform-map" component={PlatformMapPage} />
         <Route path="/institution-analytics" component={InstitutionAnalyticsPage} />
         <Route path="/institution-branding" component={InstitutionBrandingPage} />
+        <Route path="/gtm" component={GtmIntelligencePage} />
+        <Route path="/crm" component={() => <Redirect to="/gtm" />} />
         <Route path="/organizations" component={OrganizationsPage} />
         <Route path="/ghana-docs" component={GhanaDocsPage} />
         <Route path="/sales/ghana-playbook" component={GhanaPlaybookPage} />
