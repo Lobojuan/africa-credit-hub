@@ -25,16 +25,16 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
 import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 import { useTranslation } from "react-i18next";
-import heroImage from "@assets/investor-hero.png";
-import dashboardImage from "@assets/app-dashboard.png";
-import mobileImage from "@assets/app-consumer-portal.png";
-import networkImage from "@assets/app-command-center.png";
-import borrowersImage from "@assets/app-borrowers.png";
-import creditAccountsImage from "@assets/app-credit-accounts.png";
-import auditImage from "@assets/app-audit.png";
-import reportsImage from "@assets/app-reports.png";
-import aiPortfolioImage from "@assets/app-ai-portfolio.png";
-import platformDemoVideo from "@assets/39a45e79-6d03-456d-8d41-f5c491f40a66_1774472320799.mp4";
+const heroImage = "/marketing/investor-hero.png";
+const dashboardImage = "/marketing/app-dashboard.png";
+const mobileImage = "/marketing/app-consumer-portal.png";
+const networkImage = "/marketing/app-command-center.png";
+const borrowersImage = "/marketing/app-borrowers.png";
+const creditAccountsImage = "/marketing/app-credit-accounts.png";
+const auditImage = "/marketing/app-audit.png";
+const reportsImage = "/marketing/app-reports.png";
+const aiPortfolioImage = "/marketing/app-ai-portfolio.png";
+const platformDemoVideo = "/marketing/platform-demo.mp4";
 import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL, supportEmailHref } from "@/lib/platform-config";
 
 function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {

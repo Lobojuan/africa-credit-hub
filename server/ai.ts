@@ -45,15 +45,32 @@ function getProviderForTask(taskType: AITaskType, explicitProvider?: AIProvider)
   return TASK_ROUTING[taskType];
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+// Lazily constructed: the SDKs throw immediately if apiKey is undefined at
+// construction time, which would crash the whole server at import time for
+// any deployment that hasn't configured AI keys. Deferring construction
+// until first use means a missing key only fails the AI request itself,
+// which is already caught and routed to the fallback provider below.
+let _openai: OpenAI | undefined;
+function openaiClient(): OpenAI {
+  if (!_openai) {
+    _openai = new OpenAI({
+      apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
+    });
+  }
+  return _openai;
+}
 
-const anthropic = new Anthropic({
-  apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
-});
+let _anthropic: Anthropic | undefined;
+function anthropicClient(): Anthropic {
+  if (!_anthropic) {
+    _anthropic = new Anthropic({
+      apiKey: process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY,
+      baseURL: process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL,
+    });
+  }
+  return _anthropic;
+}
 
 const MAX_ALLOWED_TOKENS = 4000;
 
@@ -73,7 +90,7 @@ export async function generateAIResponse(
 
   async function callProvider(provider: AIProvider): Promise<string> {
     if (provider === "claude") {
-      const response = await anthropic.messages.create({
+      const response = await anthropicClient().messages.create({
         model: "claude-opus-4-6",
         max_tokens: maxTokens,
         system: systemPrompt,
@@ -81,7 +98,7 @@ export async function generateAIResponse(
       });
       return response.content[0]?.type === "text" ? response.content[0].text : "{}";
     } else {
-      const response = await openai.chat.completions.create({
+      const response = await openaiClient().chat.completions.create({
         model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
@@ -119,7 +136,7 @@ export async function dualAIEnsemble(
   let quantText: string;
   let quantProvider: AIProvider = "openai";
   try {
-    const gptResponse = await openai.chat.completions.create({
+    const gptResponse = await openaiClient().chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: quantPrompt }],
       max_tokens: quantMaxTokens,
@@ -130,7 +147,7 @@ export async function dualAIEnsemble(
   } catch (gptErr: any) {
     console.warn(`[DualAI] GPT-4o quant step failed: ${gptErr.message}, falling back to Claude`);
     quantProvider = "claude";
-    const claudeResponse = await anthropic.messages.create({
+    const claudeResponse = await anthropicClient().messages.create({
       model: "claude-opus-4-6",
       max_tokens: quantMaxTokens,
       messages: [{ role: "user", content: quantPrompt }],
@@ -142,7 +159,7 @@ export async function dualAIEnsemble(
   let complianceText: string;
   let complianceProvider: AIProvider = "claude";
   try {
-    const claudeResponse = await anthropic.messages.create({
+    const claudeResponse = await anthropicClient().messages.create({
       model: "claude-opus-4-6",
       max_tokens: complianceMaxTokens,
       messages: [{ role: "user", content: compliancePrompt }],
@@ -151,7 +168,7 @@ export async function dualAIEnsemble(
   } catch (claudeErr: any) {
     console.warn(`[DualAI] Claude compliance step failed: ${claudeErr.message}, falling back to GPT-4o`);
     complianceProvider = "openai";
-    const gptResponse = await openai.chat.completions.create({
+    const gptResponse = await openaiClient().chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: compliancePrompt }],
       max_tokens: complianceMaxTokens,
@@ -984,7 +1001,7 @@ Extract the core facts, perform any requested calculations, and output a raw bul
 
   let rawFacts: string;
   try {
-    const gptResponse = await openai.chat.completions.create({
+    const gptResponse = await openaiClient().chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: brainPrompt }],
       max_tokens: 1500,
@@ -1006,7 +1023,7 @@ Draft a highly professional, empathetic, and regulatory-compliant response using
 
   async function tryVoiceStream(p: AIProvider): Promise<{ type: "claude"; stream: any } | { type: "openai"; stream: any }> {
     if (p === "claude") {
-      const stream = anthropic.messages.stream({
+      const stream = anthropicClient().messages.stream({
         model: "claude-opus-4-6",
         max_tokens: 2000,
         system: voiceSystemPrompt,
@@ -1014,7 +1031,7 @@ Draft a highly professional, empathetic, and regulatory-compliant response using
       });
       return { type: "claude" as const, stream };
     } else {
-      const stream = await openai.chat.completions.create({
+      const stream = await openaiClient().chat.completions.create({
         model: "gpt-4o",
         messages: [
           { role: "system", content: voiceSystemPrompt },
