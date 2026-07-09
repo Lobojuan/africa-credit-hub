@@ -1509,7 +1509,7 @@ export async function registerRoutes(
 
       res.status(201).json({ approval, message: "Submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1537,7 +1537,7 @@ export async function registerRoutes(
       });
       res.json({ approval, message: "Update submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1565,7 +1565,7 @@ export async function registerRoutes(
       });
       res.json({ photoUrl });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1584,7 +1584,7 @@ export async function registerRoutes(
       });
       res.json({ idDocumentUrl });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1662,7 +1662,7 @@ export async function registerRoutes(
       });
       res.status(201).json({ approval, message: "Submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1696,7 +1696,7 @@ export async function registerRoutes(
       });
       res.json({ approval, message: "Update submitted for maker-checker approval" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -1771,7 +1771,7 @@ export async function registerRoutes(
       } catch {}
       res.status(201).json(inquiry);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -2467,7 +2467,7 @@ export async function registerRoutes(
       });
       res.status(201).json(created);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3544,7 +3544,7 @@ export async function registerRoutes(
       });
       res.status(201).json(approval);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3644,7 +3644,7 @@ export async function registerRoutes(
 
       res.json(updated);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3722,7 +3722,7 @@ export async function registerRoutes(
 
       res.status(201).json(dispute);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3749,7 +3749,7 @@ export async function registerRoutes(
       }
       res.json(dispute);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -3948,7 +3948,7 @@ export async function registerRoutes(
         item.data.borrowerId = resolvedBorrowerId;
       } catch (err: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: `Borrower resolution failed: ${err.message}` });
+        results.errors.push({ index: item.index, message: `Borrower resolution failed: ${safeErrorMessage(err, 400)}` });
         item.data._skip = true;
       }
     }
@@ -4000,7 +4000,7 @@ export async function registerRoutes(
         results.successCount++;
       } catch (innerErr: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: innerErr.message || "Insert failed" });
+        results.errors.push({ index: item.index, message: safeErrorMessage(innerErr, 400) });
       }
     }
 
@@ -4011,7 +4011,7 @@ export async function registerRoutes(
         results.successCount++;
       } catch (innerErr: any) {
         results.errorCount++;
-        results.errors.push({ index: item.index, message: innerErr.message || "Update failed" });
+        results.errors.push({ index: item.index, message: safeErrorMessage(innerErr, 400) });
       }
     }
   }
@@ -4064,7 +4064,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: parsed, rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
 
@@ -4096,7 +4096,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4156,7 +4156,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4170,7 +4170,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4288,7 +4288,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+          results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4303,7 +4303,7 @@ export async function registerRoutes(
 
       res.json({ ...results, processedCount });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4377,7 +4377,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4391,7 +4391,7 @@ export async function registerRoutes(
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4639,7 +4639,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(records[i]), rawRecord: records[i] });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+          results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
       await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
@@ -4654,7 +4654,7 @@ export async function registerRoutes(
 
       res.json({ ...results, processedCount });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4894,7 +4894,7 @@ export async function registerRoutes(
       });
       res.json({ jobId, totalRecords: records.length, status: "queued" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4920,7 +4920,7 @@ export async function registerRoutes(
       });
       res.json({ jobId, totalRecords: updates.length, status: "queued" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -4946,7 +4946,7 @@ export async function registerRoutes(
       });
       res.json({ jobId, totalRecords: updates.length, status: "queued" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5243,7 +5243,7 @@ export async function registerRoutes(
           validated.push({ index: i, data: insertCreditAccountSchema.parse(r), rawRecord: r });
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
+          results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
 
@@ -5269,7 +5269,7 @@ export async function registerRoutes(
         errors: results.errors,
       });
     } catch (e: any) {
-      return res.status(500).json({ message: e.message || "Upload failed" });
+      return res.status(500).json({ message: safeErrorMessage(e, 500) || "Upload failed" });
     }
   });
 
@@ -5476,7 +5476,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json({ iffType, ...result });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5525,7 +5525,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json({ iffType, ...result });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5581,7 +5581,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           results.successCount++;
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
 
@@ -5594,7 +5594,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5627,7 +5627,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
           results.successCount++;
         } catch (err: any) {
           results.errorCount++;
-          results.errors.push({ index: i, message: err.message || "Validation failed" });
+          results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
 
@@ -5640,7 +5640,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
       res.json(results);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5664,7 +5664,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(created);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5780,7 +5780,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(judgment);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5820,7 +5820,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -5835,7 +5835,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6107,7 +6107,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
       res.status(201).json(entry);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6135,7 +6135,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(inst);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6150,7 +6150,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(inst);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6165,7 +6165,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(inst);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -6192,7 +6192,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.status(201).json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -9602,7 +9602,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
     try {
       const parsed = createApiKeyBodySchema.safeParse(req.body);
       if (!parsed.success) {
-        return res.status(400).json({ message: parsed.error.errors.map(e => e.message).join(", ") });
+        return res.status(400).json({ message: parsed.error.errors.map(e => safeErrorMessage(e, 400)).join(", ") });
       }
       const { institutionId, label, permissions } = parsed.data;
 
@@ -11572,7 +11572,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
       res.status(201).json(org);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -11596,7 +11596,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json(org);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -11625,7 +11625,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       });
       res.json({ message: "Organization deleted" });
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -12335,7 +12335,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
         await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "country_settings", entityId: created.id, details: `Created country settings for ${created.countryName}`, ipAddress: req.ip, organizationId: null });
         res.json(created);
       }
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   // ── Audit Logs ──
@@ -12970,7 +12970,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const [created] = await db.insert(retentionPolicies).values(parsed).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "retention_policy", entityId: created.id, details: `Created retention policy for ${created.country} - ${created.entityType}`, ipAddress: req.ip, organizationId: null });
       res.json(created);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.put("/api/platform/retention-policies/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -12996,7 +12996,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const [updated] = await db.update(retentionPolicies).set(updates).where(eq(retentionPolicies.id, req.params.id as string)).returning();
       if (!updated) return res.status(404).json({ message: "Policy not found" });
       res.json(updated);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   // ── Activity Feed ──
@@ -13046,7 +13046,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       }
       res.status(201).json(record);
     } catch (e: any) {
-      res.status(400).json({ message: e.message });
+      res.status(400).json({ message: safeErrorMessage(e, 400) });
     }
   });
 
@@ -13546,7 +13546,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       res.json(result);
     } catch (e: any) {
       routeLogger.error("AI Demo error:", { detail: e });
-      res.status(500).json({ message: e.message || "AI processing failed" });
+      res.status(500).json({ message: safeErrorMessage(e, 500) || "AI processing failed" });
     }
   });
 
@@ -14314,7 +14314,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       res.end();
     } catch (e: any) {
       if (res.headersSent) {
-        res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
+        res.write(`data: ${JSON.stringify({ error: safeErrorMessage(e) })}\n\n`);
         res.end();
       } else {
         res.status(500).json({ message: safeErrorMessage(e) });
@@ -14341,7 +14341,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateCreditNarrative(req.params.borrowerId as string, provider, language);
       res.json(result);
     } catch (e: any) {
-      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      if (e.message === "Borrower not found") return res.status(404).json({ message: safeErrorMessage(e, 404) });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -14402,7 +14402,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateLoanRecommendation(req.params.borrowerId as string, parsedAmount, loanType, provider);
       res.json(result);
     } catch (e: any) {
-      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      if (e.message === "Borrower not found") return res.status(404).json({ message: safeErrorMessage(e, 404) });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -14414,7 +14414,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const result = await generateCreditInsights(req.params.borrowerId as string, provider);
       res.json(result);
     } catch (e: any) {
-      if (e.message === "Borrower not found") return res.status(404).json({ message: e.message });
+      if (e.message === "Borrower not found") return res.status(404).json({ message: safeErrorMessage(e, 404) });
       res.status(500).json({ message: safeErrorMessage(e) });
     }
   });
@@ -14676,7 +14676,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [created] = await db.insert(dataSharingAgreements).values({ ...parsed, createdBy: req.session.userId }).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "data_sharing_agreement", entityId: created.id, details: `Created SATA agreement: ${created.sourceCountry} → ${created.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.status(201).json(created);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.patch("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -14690,7 +14690,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!updated) return res.status(404).json({ message: "Agreement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "data_sharing_agreement", entityId: updated.id, details: `Updated SATA agreement status to ${updated.status}: ${updated.sourceCountry} → ${updated.targetCountry}`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.delete("/api/sata/agreements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -14890,7 +14890,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const [created] = await db.insert(papssSettlements).values({ ...parsed, initiatedBy: req.session.userId }).returning();
       await storage.createAuditLog({ userId: req.session.userId!, action: "CREATE", entity: "papss_settlement", entityId: created.id, details: `PAPSS settlement: ${created.senderInstitution} (${created.senderCountry}) → ${created.receiverInstitution} (${created.receiverCountry}), ${created.senderCurrency} ${created.senderAmount}`, ipAddress: req.ip, organizationId: null });
       res.status(201).json(created);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.patch("/api/papss/settlements/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -14904,7 +14904,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!updated) return res.status(404).json({ message: "Settlement not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "papss_settlement", entityId: updated.id, details: `Updated PAPSS settlement status to ${updated.status}`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(400).json({ message: e.message }); }
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   await seedCountrySettings();
@@ -19134,7 +19134,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   function handleGatewayError(res: Response, err: unknown) {
     if (err instanceof CrossProductError) {
-      return res.status(403).json({ error: err.code, message: err.message });
+      return res.status(403).json({ error: err.code, message: safeErrorMessage(err, 403) });
     }
     return res.status(500).json({ error: "internal", message: safeErrorMessage(err) });
   }

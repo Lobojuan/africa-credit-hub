@@ -15,7 +15,7 @@
 
 import { Router } from "express";
 import { z } from "zod";
-import { requireAuth, requireRole, isPlatformPrivileged } from "./middleware";
+import { requireAuth, requireRole, isPlatformPrivileged, safeErrorMessage } from "./middleware";
 import { storage } from "../storage";
 import { CBN_EXPORT_GENERATORS } from "../cbn-export";
 import { CBK_EXPORT_GENERATORS } from "../cbk-export";
@@ -82,7 +82,7 @@ router.patch("/approvals/:id", requireAuth, requireRole("admin", "regulator"), a
       reviewedBy: currentUserId,
     });
   } catch (e: any) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ message: safeErrorMessage(e, 400) });
   }
 });
 
@@ -208,7 +208,7 @@ router.post("/consent-gate-check", requireAuth, async (req, res) => {
 
     res.json({ allowed: true, isSuperAdmin: false, loanExemption: false, borrowerId, consentId });
   } catch (e: any) {
-    res.status(400).json({ message: e.message });
+    res.status(400).json({ message: safeErrorMessage(e, 400) });
   }
 });
 
@@ -227,7 +227,7 @@ router.get("/export-preview/cbn/:fileType", requireAuth, requireRole("admin", "r
     const { content, filename } = await CBN_EXPORT_GENERATORS[fileType](reportingDate, 1, "0", req.session?.organizationId);
     res.json(buildExportPreviewResponse(content, filename, "CBN", "Nigeria", fileType));
   } catch (e: any) {
-    res.status(500).json({ message: e.message });
+    res.status(500).json({ message: safeErrorMessage(e, 500) });
   }
 });
 
@@ -241,7 +241,7 @@ router.get("/export-preview/cbk/:fileType", requireAuth, requireRole("admin", "r
     const { content, filename } = await CBK_EXPORT_GENERATORS[fileType](reportingDate, 1, "0", req.session?.organizationId);
     res.json(buildExportPreviewResponse(content, filename, "CBK", "Kenya", fileType));
   } catch (e: any) {
-    res.status(500).json({ message: e.message });
+    res.status(500).json({ message: safeErrorMessage(e, 500) });
   }
 });
 

@@ -7,7 +7,7 @@ import { db } from "../db";
 import { eq, desc, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { createLogger } from "../logger";
-import { rateLimitKeyGenerator, requireAuth, requireSuperAdmin } from "./middleware";
+import { rateLimitKeyGenerator, requireAuth, requireSuperAdmin, safeErrorMessage } from "./middleware";
 import rateLimit from "express-rate-limit";
 import crypto from "crypto";
 import { z } from "zod";
@@ -1561,7 +1561,7 @@ export function registerPlatformControlRoutes(app: Express) {
       const { getTearsheetSchedulerStatus } = await import("../tearsheet-scheduler");
       res.json(getTearsheetSchedulerStatus());
     } catch (err: any) {
-      res.status(500).json({ message: err.message });
+      res.status(500).json({ message: safeErrorMessage(err, 500) });
     }
   });
 
@@ -1578,7 +1578,7 @@ export function registerPlatformControlRoutes(app: Express) {
       );
       return res.status(202).json({ ok: true, message: "Tear-sheet generation started in the background." });
     } catch (err: any) {
-      return res.status(500).json({ message: err.message });
+      return res.status(500).json({ message: safeErrorMessage(err, 500) });
     }
   });
 
