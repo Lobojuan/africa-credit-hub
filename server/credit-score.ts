@@ -49,8 +49,19 @@ function effectiveLimit(a: AccountLike): number {
  * Count inquiries that legitimately affect a score: hard pulls only, within the
  * trailing 12 months. Soft pulls must never move the score (that is their defining
  * guarantee) and the score factor is defined as a 12-month window.
- * NOTE: consent-based filtering is a documented follow-up — it requires a data
- * backfill first, since `consent_provided` was not reliably captured historically.
+ *
+ * NOTE (I1): consent-based filtering is still a documented follow-up, but the underlying
+ * write-path bug is now fixed — POST /api/credit-inquiries used to accept `consentProvided`
+ * as arbitrary client input (the requesting lender could just always send `true` with no
+ * verification), which was worse than no field at all. It's now derived server-side from an
+ * actual approved, non-expired ConsentRecord (see hasVerifiedConsent in routes.ts), matching
+ * the same check already enforced for credit-report generation. Going forward, `consentProvided`
+ * is trustworthy. It is NOT yet used as a scoring filter here, because every *historical*
+ * inquiry still has consentProvided=false (the column's default, from before this fix existed)
+ * — turning the filter on today would silently exclude ~all pre-existing inquiries from every
+ * borrower's score at once. That's a real data-migration decision (reconcile or backfill
+ * historical rows, then version the scorecard, e.g. "v1.2") that needs sign-off, not something
+ * to flip unreviewed.
  */
 export function countScorableInquiries(inquiries: InquiryLike[]): number {
   const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;

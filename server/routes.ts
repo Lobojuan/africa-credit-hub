@@ -1718,9 +1718,30 @@ export async function registerRoutes(
     }
   });
 
+  // I1 fix: consentProvided used to come straight from req.body via
+  // insertCreditInquirySchema.parse() — the same lender pulling the report could just always
+  // set consentProvided: true with zero verification, which is worse than not having the field
+  // at all (it looks like a real safeguard but isn't one). This mirrors the same
+  // approved/not-expired/institution-bound check already enforced for credit-report generation
+  // (POST /consent-gate-check) so "consent" means the same verified thing everywhere it's used.
+  async function hasVerifiedConsent(borrowerId: string, organizationId?: string): Promise<boolean> {
+    const records = await storage.getConsentRecordsByBorrower(borrowerId);
+    const now = new Date();
+    return records.some(c => {
+      if (c.status !== "active") return false;
+      const approved = c.loanExemption === true || c.borrowerResponse === "approved";
+      if (!approved) return false;
+      if (c.expiresAt && new Date(c.expiresAt) < now) return false;
+      if (c.organizationId && organizationId && c.organizationId !== organizationId) return false;
+      return true;
+    });
+  }
+
   app.post("/api/credit-inquiries", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const parsed = insertCreditInquirySchema.parse(req.body);
+      const parsed = insertCreditInquirySchema.omit({ consentProvided: true }).parse(req.body);
+      const verifiedConsent = parsed.borrowerId ? await hasVerifiedConsent(parsed.borrowerId, req.session?.organizationId) : false;
+      (parsed as any).consentProvided = verifiedConsent;
       if (parsed.borrowerId && !(await validateBorrowerCountry(parsed.borrowerId, req))) {
         return res.status(403).json({ message: "Data sovereignty violation: cannot create inquiry for borrower in a different country" });
       }
