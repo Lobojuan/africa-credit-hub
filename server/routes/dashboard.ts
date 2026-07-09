@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db } from "../db";
 import { storage, GLOBAL_SCOPE } from "../storage";
-import { creditInquiries, courtJudgments, borrowers, creditAccounts, disputes } from "@shared/schema";
+import { creditInquiries, courtJudgments, borrowers, creditAccounts, disputes, alternativeData } from "@shared/schema";
 import { inArray, sql, and, eq, gte, lte } from "drizzle-orm";
-import { calculateCreditScore } from "../credit-score";
+import { calculateCreditScore, countScorableInquiries } from "../credit-score";
 import { indexByArray } from "../utils/index-utils";
 import { getOrComputeAggregation } from "../utils/aggregation-cache";
 import { buildScoreFingerprint, getOrComputeScore } from "../utils/score-cache";
@@ -309,28 +309,36 @@ router.get("/api/score-band-performance", requireAuth, requireRole("admin", "len
     const allJudgments = borrowerIds.length > 0
       ? await db.select().from(courtJudgments).where(inArray(courtJudgments.borrowerId, borrowerIds))
       : [];
+    const allAltData = borrowerIds.length > 0
+      ? await db.select().from(alternativeData).where(inArray(alternativeData.borrowerId, borrowerIds))
+      : [];
 
     const accountsByBorrower = indexByArray(allAccounts, (account) => account.borrowerId);
     const inquiriesByBorrower = indexByArray(allInquiries, (inquiry) => inquiry.borrowerId);
     const judgmentsByBorrower = indexByArray(allJudgments, (judgment) => judgment.borrowerId);
+    const altDataByBorrower = indexByArray(allAltData, (row) => row.borrowerId);
 
     const borrowerScores = new Map<string, number>();
     for (const b of allBorrowers) {
       const bAccounts = accountsByBorrower.get(b.id) ?? [];
       const bInquiries = inquiriesByBorrower.get(b.id) ?? [];
       const bJudgments = judgmentsByBorrower.get(b.id) ?? [];
+      const bAltData = altDataByBorrower.get(b.id) ?? [];
+      // Score parity: dashboard bands must match the report — include alt data
+      // (and its fingerprint) and the shared hard/12-month inquiry count.
       const scoreFingerprint = buildScoreFingerprint([
         b.isPep ?? false,
         bAccounts.length,
-        bInquiries.length,
+        countScorableInquiries(bInquiries),
         bJudgments.length,
         ...bAccounts.map((account) => `${account.id}:${account.status}:${account.currentBalance}:${account.updatedAt?.getTime?.() ?? ""}`),
         ...bJudgments.map((judgment) => `${judgment.id}:${judgment.status}`),
+        ...bAltData.map((row) => `${row.id}:${row.status}:${row.totalTransactions}:${row.onTimePayments}`),
       ]);
       const scoreResult = await getOrComputeScore(
         b.id,
         scoreFingerprint,
-        () => calculateCreditScore(bAccounts, bInquiries.length, bJudgments, b.isPep ?? false),
+        () => calculateCreditScore(bAccounts, countScorableInquiries(bInquiries), bJudgments, b.isPep ?? false, bAltData),
       );
       borrowerScores.set(b.id, scoreResult.score);
     }

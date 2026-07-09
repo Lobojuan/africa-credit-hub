@@ -1,3 +1,7 @@
+import { createLogger } from "./logger";
+
+const logger = createLogger("sms");
+
 const AT_API_URL = "https://api.africastalking.com/version1/messaging";
 const AT_SANDBOX_URL = "https://api.sandbox.africastalking.com/version1/messaging";
 
@@ -16,13 +20,13 @@ const TWILIO_FROM = process.env.TWILIO_PHONE_NUMBER || "";
 if (TWILIO_SID && TWILIO_AUTH && TWILIO_FROM) {
   smsConfigured = true;
   smsProvider = "twilio";
-  console.log(`[SMS] Twilio configured (SID: ${TWILIO_SID.slice(0, 6)}...)`);
+  logger.info(`[SMS] Twilio configured (SID: ${TWILIO_SID.slice(0, 6)}...)`);
 } else if (AT_USERNAME && AT_API_KEY) {
   smsConfigured = true;
   smsProvider = "africastalking";
-  console.log(`[SMS] Africa's Talking configured (username: ${AT_USERNAME}, sandbox: ${AT_SANDBOX})`);
+  logger.info(`[SMS] Africa's Talking configured (username: ${AT_USERNAME}, sandbox: ${AT_SANDBOX})`);
 } else {
-  console.log("[SMS] No SMS provider configured — set TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_PHONE_NUMBER or AT_USERNAME/AT_API_KEY");
+  logger.info("[SMS] No SMS provider configured — set TWILIO_ACCOUNT_SID/TWILIO_AUTH_TOKEN/TWILIO_PHONE_NUMBER or AT_USERNAME/AT_API_KEY");
 }
 
 async function sendViaTwilio(to: string, message: string): Promise<boolean> {
@@ -47,14 +51,14 @@ async function sendViaTwilio(to: string, message: string): Promise<boolean> {
     const data = await resp.json();
 
     if (resp.ok && (data.status === "queued" || data.status === "sent" || data.status === "accepted")) {
-      console.log(`[SMS][Twilio] Sent to ${to.replace(/(.{4}).+(.{4})/, "$1****$2")} (SID: ${data.sid?.slice(0, 10)}...)`);
+      logger.info(`[SMS][Twilio] Sent to ${to.replace(/(.{4}).+(.{4})/, "$1****$2")} (SID: ${data.sid?.slice(0, 10)}...)`);
       return true;
     }
 
-    console.error(`[SMS][Twilio] Failed for ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}: ${data.message || data.status || resp.status}`);
+    logger.error(`[SMS][Twilio] Failed for ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}: ${data.message || data.status || resp.status}`);
     return false;
   } catch (err: any) {
-    console.error(`[SMS][Twilio] Error:`, err.message);
+    logger.error(`[SMS][Twilio] Error: ${err.message}`);
     return false;
   }
 }
@@ -86,17 +90,17 @@ async function sendViaAT(to: string, message: string): Promise<boolean> {
       const recipients = data.SMSMessageData.Recipients;
       const sent = recipients.filter((r: any) => r.statusCode === 101 || r.status === "Success");
       if (sent.length > 0) {
-        console.log(`[SMS][AT] Sent to ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}`);
+        logger.info(`[SMS][AT] Sent to ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}`);
         return true;
       }
-      console.error(`[SMS][AT] Failed for ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}:`, JSON.stringify(recipients));
+      logger.error(`[SMS][AT] Failed for ${to.replace(/(.{4}).+(.{4})/, "$1****$2")}: ${JSON.stringify(recipients)}`);
       return false;
     }
 
-    console.error(`[SMS][AT] Unexpected response:`, JSON.stringify(data).substring(0, 200));
+    logger.error(`[SMS][AT] Unexpected response: ${JSON.stringify(data).substring(0, 200)}`);
     return false;
   } catch (err: any) {
-    console.error(`[SMS][AT] Error:`, err.message);
+    logger.error(`[SMS][AT] Error: ${err.message}`);
     return false;
   }
 }
@@ -123,7 +127,7 @@ async function attemptSmsSend(to: string, message: string): Promise<boolean> {
     const ok = await sendViaTwilio(to, message);
     if (ok) return true;
     if (AT_USERNAME && AT_API_KEY) {
-      console.log("[SMS] Twilio failed, falling back to Africa's Talking...");
+      logger.info("[SMS] Twilio failed, falling back to Africa's Talking...");
       return sendViaAT(to, message);
     }
     return false;
@@ -133,7 +137,7 @@ async function attemptSmsSend(to: string, message: string): Promise<boolean> {
     const ok = await sendViaAT(to, message);
     if (ok) return true;
     if (TWILIO_SID && TWILIO_AUTH && TWILIO_FROM) {
-      console.log("[SMS] Africa's Talking failed, falling back to Twilio...");
+      logger.info("[SMS] Africa's Talking failed, falling back to Twilio...");
       return sendViaTwilio(to, message);
     }
     return false;
@@ -144,18 +148,18 @@ async function attemptSmsSend(to: string, message: string): Promise<boolean> {
 
 export async function sendSms(to: string, message: string): Promise<boolean> {
   if (!smsConfigured) {
-    console.log(`[SMS][Stub] Would send to ${redactPhone(to)}: "${message.substring(0, 50)}..."`);
+    logger.info(`[SMS][Stub] Would send to ${redactPhone(to)}: "${message.substring(0, 50)}..."`);
     return false;
   }
 
   if (smsSentThisMinute >= MAX_SMS_PER_MINUTE) {
-    console.warn(`[SMS] Rate limit reached (${MAX_SMS_PER_MINUTE}/min) — deferring send to ${redactPhone(to)}`);
+    logger.warn(`[SMS] Rate limit reached (${MAX_SMS_PER_MINUTE}/min) — deferring send to ${redactPhone(to)}`);
     return false;
   }
 
   for (let attempt = 0; attempt < SMS_RETRY_DELAYS.length; attempt++) {
     if (attempt > 0) {
-      console.log(`[SMS] Retry ${attempt}/${SMS_RETRY_DELAYS.length - 1} for ${redactPhone(to)} (waiting ${SMS_RETRY_DELAYS[attempt]}ms)...`);
+      logger.info(`[SMS] Retry ${attempt}/${SMS_RETRY_DELAYS.length - 1} for ${redactPhone(to)} (waiting ${SMS_RETRY_DELAYS[attempt]}ms)...`);
       await smsSleep(SMS_RETRY_DELAYS[attempt]);
     }
     try {
@@ -165,11 +169,11 @@ export async function sendSms(to: string, message: string): Promise<boolean> {
         return true;
       }
     } catch (err: any) {
-      console.error(`[SMS] Attempt ${attempt + 1} error:`, err.message);
+      logger.error(`[SMS] Attempt ${attempt + 1} error: ${err.message}`);
     }
   }
 
-  console.error(`[SMS] All ${SMS_RETRY_DELAYS.length} attempts failed for ${redactPhone(to)}`);
+  logger.error(`[SMS] All ${SMS_RETRY_DELAYS.length} attempts failed for ${redactPhone(to)}`);
   return false;
 }
 

@@ -18,93 +18,93 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-06-06T23:57:53.897Z",
-  "branch": "main",
-  "currentCommit": "5b0eda4",
+  "generatedAt": "2026-07-08T19:06:34.311Z",
+  "branch": "claude/production-check-WFJxR",
+  "currentCommit": "17c299d",
   "commits": [
     {
-      "hash": "5b0eda4b10e850a1ed7d9d75cec98c3baff7794f",
-      "shortHash": "5b0eda4",
-      "date": "2026-06-06",
-      "author": "Uffe J Carlson",
-      "subject": "Revert \"Clean up production landing hero\""
+      "hash": "17c299d964f2b492526c9655f588656404b4ba63",
+      "shortHash": "17c299d",
+      "date": "2026-07-08",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "26e44e18d19d2e5b7cad9635278afdd52c9864f4",
-      "shortHash": "26e44e1",
-      "date": "2026-06-06",
-      "author": "Uffe J Carlson",
-      "subject": "Clean up production landing hero"
+      "hash": "d021366bd10f243f9bb8301093c29f6f23f7f713",
+      "shortHash": "d021366",
+      "date": "2026-07-08",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "f2f789cb1383f5c43589d33b4b4fa72e1d0aba51",
-      "shortHash": "f2f789c",
-      "date": "2026-06-06",
-      "author": "Uffe J Carlson",
-      "subject": "Restore readable landing video format"
+      "hash": "5dbf3f09294a9fb7003459737c2b082aa8606906",
+      "shortHash": "5dbf3f0",
+      "date": "2026-07-08",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "e56e2dba9d2ab66b528cd348345b44a9a4b21825",
-      "shortHash": "e56e2db",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Widen landing intro video card"
+      "hash": "58bf120e3f81bdfa022954e75b69131cd4980c02",
+      "shortHash": "58bf120",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "a5ef440affe04d1368435b962fe92efd4c9e2844",
-      "shortHash": "a5ef440",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Restore landing intro video card"
+      "hash": "742f6c80b15a8b4e12090fba1c1dbce440536ac5",
+      "shortHash": "742f6c8",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "1c362994ef8aa99e881d811e71b06c0eb9f0dbf5",
-      "shortHash": "1c36299",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Force French dashboard hero fallback"
+      "hash": "b5dfba31ace5120162a71d41efeb948a63e766eb",
+      "shortHash": "b5dfba3",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "fix(i18n): translate credit-score-gauge band label (consumer SVG graphic)"
     },
     {
-      "hash": "6588fa9bbe90a19ead77531cdbf84c2cf62fd6c0",
-      "shortHash": "6588fa9",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Refresh service worker cache on deploy"
+      "hash": "b19991c26864fc64d35e1da1bf9b770885030894",
+      "shortHash": "b19991c",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "19107abeb153f3753599dd67bc0258bb5c1fa929",
-      "shortHash": "19107ab",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Translate dashboard credit hero"
+      "hash": "cf061694dd8aa9d1593a82fbbf343c3f30577e4a",
+      "shortHash": "cf06169",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs: log i18n correction + consent-respond internationalization"
     },
     {
-      "hash": "ba9303c8b40b1f2978b6ce22bf4dc70ec4720436",
-      "shortHash": "ba9303c",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Allow public auth shell routes"
+      "hash": "a39abf57a2b6ac7ee794d98a7d0b087712793a41",
+      "shortHash": "a39abf5",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "feat(i18n): internationalize consent-respond page (legal, public-facing)"
     },
     {
-      "hash": "5aa4d8a40ba9dac9dce8cd0f86ff94caccc6b471",
-      "shortHash": "5aa4d8a",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Align watch test scripts"
+      "hash": "fdf3e1886e369710c0986a030c141d7f78c88e8c",
+      "shortHash": "fdf3e18",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs(review): correct i18n finding — dictionaries complete, real gap is 47 hardcoded pages"
     },
     {
-      "hash": "3f9b50e74abf5fe903d8b333e6ef1b4c8cbba541",
-      "shortHash": "3f9b50e",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Expand local security test coverage"
+      "hash": "b1b2e0729b8354cfc69d4a64889af9c5f2560492",
+      "shortHash": "b1b2e07",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
     },
     {
-      "hash": "5ffeb3108fb7642f788832739017b4d3275159b8",
-      "shortHash": "5ffeb31",
-      "date": "2026-06-05",
-      "author": "Uffe J Carlson",
-      "subject": "Split local and integration tests"
+      "hash": "92f596e287cc0ca586b28d35c88465b81c7ba3c5",
+      "shortHash": "92f596e",
+      "date": "2026-07-07",
+      "author": "Claude",
+      "subject": "docs(review): mark F1/C1/I2/F3 fixed, I1 partial — Scorecard v1.1 progress"
     }
   ]
 };

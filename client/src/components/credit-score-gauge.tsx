@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { useTranslation } from "react-i18next";
 import { ScoreFactors } from "@/components/score-factors";
 import { useBrandColors, type BrandColors } from "@/hooks/use-brand-colors";
 
@@ -20,16 +21,17 @@ interface CreditScoreGaugeProps {
   showFactors?: boolean;
 }
 
-function getScoreColor(score: number, brandColors: BrandColors): { main: string; mainDark: string; glow: string; label: string } {
-  if (score >= 750) return { main: "hsl(142 55% 40%)", mainDark: "hsl(142 55% 50%)", glow: "hsl(142 55% 40% / 0.3)", label: "Excellent" };
-  if (score >= 670) return { main: brandColors.accent, mainDark: brandColors.accentLight, glow: brandColors.accentMuted, label: "Good" };
-  if (score >= 580) return { main: brandColors.secondary, mainDark: brandColors.secondaryLight, glow: brandColors.accentGlow, label: "Fair" };
-  if (score >= 450) return { main: "hsl(14 70% 50%)", mainDark: "hsl(14 70% 58%)", glow: "hsl(14 70% 50% / 0.3)", label: "Poor" };
-  return { main: "hsl(0 72% 42%)", mainDark: "hsl(0 72% 52%)", glow: "hsl(0 72% 42% / 0.3)", label: "Very Poor" };
+function getScoreColor(score: number, brandColors: BrandColors): { main: string; mainDark: string; glow: string; bandKey: string } {
+  if (score >= 750) return { main: "hsl(142 55% 40%)", mainDark: "hsl(142 55% 50%)", glow: "hsl(142 55% 40% / 0.3)", bandKey: "excellent" };
+  if (score >= 670) return { main: brandColors.accent, mainDark: brandColors.accentLight, glow: brandColors.accentMuted, bandKey: "good" };
+  if (score >= 580) return { main: brandColors.secondary, mainDark: brandColors.secondaryLight, glow: brandColors.accentGlow, bandKey: "fair" };
+  if (score >= 450) return { main: "hsl(14 70% 50%)", mainDark: "hsl(14 70% 58%)", glow: "hsl(14 70% 50% / 0.3)", bandKey: "poor" };
+  return { main: "hsl(0 72% 42%)", mainDark: "hsl(0 72% 52%)", glow: "hsl(0 72% 42% / 0.3)", bandKey: "veryPoor" };
 }
 
 export function CreditScoreGauge({ score, size = 180, label, testId, factors, showFactors = false }: CreditScoreGaugeProps) {
   const uid = useId();
+  const { t } = useTranslation();
   const brandColors = useBrandColors();
   const gradId = `gauge-grad-${uid}`;
   const glowId = `gauge-glow-${uid}`;
@@ -64,7 +66,8 @@ export function CreditScoreGauge({ score, size = 180, label, testId, factors, sh
   const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
   const scoreColor = getScoreColor(score, brandColors);
   const mainColor = isDark ? scoreColor.mainDark : scoreColor.main;
-  const { glow, label: scoreLabel } = scoreColor;
+  const { glow, bandKey } = scoreColor;
+  const scoreLabel = t(`scoreGuide.${bandKey}`);
   const displayLabel = label || scoreLabel;
   const labelFill = isDark ? "hsl(200 10% 65%)" : "hsl(200 10% 46%)";
   const minMaxFill = isDark ? "hsl(200 10% 55%)" : "hsl(200 10% 46% / 0.5)";

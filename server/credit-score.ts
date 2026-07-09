@@ -2,6 +2,8 @@ import { getServerCountryConfig } from "./country-mode";
 
 export interface AccountLike {
   status: string;
+  accountType?: string | null;
+  originalAmount?: string | null;
   currentBalance?: string | null;
   creditLimit?: string | null;
   currency?: string | null;
@@ -11,6 +13,54 @@ export interface AccountLike {
 
 export interface JudgmentLike {
   status: string;
+}
+
+export interface InquiryLike {
+  isSoftPull?: boolean | null;
+  createdAt?: Date | string | null;
+}
+
+// Revolving facilities are the only account types where a utilization ratio
+// (balance / limit) is a meaningful credit signal. Term loans (personal,
+// mortgage, auto) are drawn in full and paid down, so "utilization" doesn't apply.
+const REVOLVING_TYPE_RX = /overdraft|credit[\s_-]?card|revolving|credit[\s_-]?line/i;
+
+/** Parse a decimal-ish string to a finite non-negative number, else 0. */
+function safeAmount(v: string | null | undefined): number {
+  const n = parseFloat(v ?? "0");
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+/**
+ * Effective credit limit for utilization. Uses an explicit creditLimit when
+ * present; otherwise, for revolving facilities, the original facility amount is
+ * the sanctioned limit. Returns 0 (excluded from utilization) for term loans.
+ */
+function effectiveLimit(a: AccountLike): number {
+  const explicit = safeAmount(a.creditLimit);
+  if (explicit > 0) return explicit;
+  if (a.accountType && REVOLVING_TYPE_RX.test(a.accountType)) {
+    return safeAmount(a.originalAmount);
+  }
+  return 0;
+}
+
+/**
+ * Count inquiries that legitimately affect a score: hard pulls only, within the
+ * trailing 12 months. Soft pulls must never move the score (that is their defining
+ * guarantee) and the score factor is defined as a 12-month window.
+ * NOTE: consent-based filtering is a documented follow-up — it requires a data
+ * backfill first, since `consent_provided` was not reliably captured historically.
+ */
+export function countScorableInquiries(inquiries: InquiryLike[]): number {
+  const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
+  return inquiries.filter(i => {
+    if (i.isSoftPull) return false;
+    if (!i.createdAt) return true; // undated legacy rows: keep counting (conservative)
+    const t = new Date(i.createdAt).getTime();
+    if (!Number.isFinite(t)) return true;
+    return t >= cutoff;
+  }).length;
 }
 
 export interface AlternativeDataLike {
@@ -250,9 +300,9 @@ export function calculateCreditScore(
     weight: 5,
   });
 
-  const totalDebt = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
-  const totalLimits = accounts.reduce((s, a) => s + parseFloat(a.creditLimit || "0"), 0);
-  const accountsWithLimits = accounts.filter(a => parseFloat(a.creditLimit || "0") > 0);
+  const totalDebt = accounts.reduce((s, a) => s + safeAmount(a.currentBalance), 0);
+  const totalLimits = accounts.reduce((s, a) => s + effectiveLimit(a), 0);
+  const accountsWithLimits = accounts.filter(a => effectiveLimit(a) > 0);
 
   let utilizationPenalty = 0;
   let utilizationRatio = 0;
