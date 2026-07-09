@@ -1,8 +1,61 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import { storage, requireCountryScope } from "./storage";
-import { getDefaultCurrencyCode } from "./credit-score";
+import { getDefaultCurrencyCode, calculateCreditScore, countScorableInquiries, type CreditScoreResult } from "./credit-score";
 import { getActiveCountryName } from "./country-mode";
+
+/**
+ * Single source of truth for "what is this borrower's actual credit score" used by every
+ * AI narrative/reasoning function below. Before this existed, analyzeCreditRisk,
+ * generateReportSummary, generateCreditNarrative, generateCreditInsights, and
+ * generateLoanRecommendation each independently summarised raw accounts/disputes and let the
+ * LLM freely invent its own risk number — completely disconnected from calculateCreditScore(),
+ * the same deterministic engine every other surface (dashboard, PDF report, decision engine)
+ * uses. A lender could see one score in the report and a contradictory, hallucinated one in the
+ * "AI Insights" panel, with the AI's number carrying no real methodology behind it at all.
+ *
+ * This mirrors the exact calculateCreditScore(accounts, countScorableInquiries(inquiries),
+ * judgments, isPep, altData) call used everywhere else, so the AI's "actual score" is always
+ * identical to what the borrower's real credit report shows — never a second, competing number.
+ */
+export interface BorrowerScoreContext {
+  scoreResult: CreditScoreResult;
+  accounts: Awaited<ReturnType<typeof storage.getCreditAccountsByBorrower>>;
+  disputes: Awaited<ReturnType<typeof storage.getDisputesByBorrower>>;
+  judgments: Awaited<ReturnType<typeof storage.getCourtJudgmentsByBorrower>>;
+  alternativeData: Awaited<ReturnType<typeof storage.getAlternativeDataByBorrower>>;
+}
+
+export async function getBorrowerScoreContext(borrowerId: string): Promise<BorrowerScoreContext> {
+  const [accounts, disputes, judgments, alternativeData, inquiries] = await Promise.all([
+    storage.getCreditAccountsByBorrower(borrowerId),
+    storage.getDisputesByBorrower(borrowerId),
+    storage.getCourtJudgmentsByBorrower(borrowerId),
+    storage.getAlternativeDataByBorrower(borrowerId),
+    storage.getCreditInquiriesByBorrower(borrowerId),
+  ]);
+  const borrower = await storage.getBorrower(borrowerId);
+  const scoreResult = calculateCreditScore(
+    accounts,
+    countScorableInquiries(inquiries),
+    judgments,
+    borrower?.isPep ?? false,
+    alternativeData,
+  );
+  return { scoreResult, accounts, disputes, judgments, alternativeData };
+}
+
+/** Renders the real score as a hard block of ground-truth text for an LLM prompt. */
+function scoreContextBlock(ctx: BorrowerScoreContext): string {
+  const { score, reasonCodes, factors } = ctx.scoreResult;
+  const factorLines = factors.map(f => `  - ${f.name}: ${f.impact >= 0 ? "+" : ""}${f.impact} pts (weight ${f.weight}%) — ${f.description}`).join("\n");
+  return `ACTUAL COMPUTED CREDIT SCORE (authoritative — this is the real score from the platform's scoring engine, not an estimate): ${score}
+Reason codes: ${reasonCodes.length > 0 ? reasonCodes.join(", ") : "none"}
+Score factors:
+${factorLines || "  (no factors — insufficient data)"}
+Alternative data sources on file: ${ctx.alternativeData.filter(d => d.status === "active").length}
+Court judgments on file: ${ctx.judgments.length}`;
+}
 
 export type AIProvider = "openai" | "claude";
 
@@ -184,8 +237,8 @@ export async function analyzeCreditRisk(borrowerId: string | number, provider?: 
   const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
 
-  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
-  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
+  const ctx = await getBorrowerScoreContext(String(borrowerId));
+  const { accounts, disputes } = ctx;
   const defaultCurrency = getDefaultCurrencyCode();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
@@ -194,6 +247,8 @@ export async function analyzeCreditRisk(borrowerId: string | number, provider?: 
   const openDisputeCount = disputes.filter(d => d.status === "open" || d.status === "under_review").length;
 
   const borrowerProfile = `
+${scoreContextBlock(ctx)}
+
 Borrower: ${borrower.firstName} ${borrower.lastName}
 Type: ${borrower.type || "individual"}
 Country: ${borrower.country || "Unknown"}
@@ -209,11 +264,15 @@ Account Details:
 ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${parseFloat(a.currentBalance || "0").toLocaleString()} | Status: ${a.status} | Opened: ${a.disbursementDate || "Unknown"}`).join("\n")}
   `.trim();
 
-  const systemPrompt = `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). You must respond in valid JSON format with these fields:
+  const systemPrompt = `You are an expert credit risk analyst for the Pan-African Credit Registry. Analyze borrower profiles and provide structured risk assessments. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}).
+
+The ACTUAL COMPUTED CREDIT SCORE given to you is authoritative ground truth from the platform's real scoring engine — it is not something you calculate or estimate. Your riskLevel, riskScore, and narrative MUST be consistent with it: a high actual score (670+) must not be described as high/critical risk, and a low actual score (below 580) must not be described as low risk. Never contradict the actual score. Your job is to explain and contextualize it, and to surface anything the score itself doesn't capture (disputes, PEP status, concentration risk) — not to independently re-derive creditworthiness from scratch.
+
+You must respond in valid JSON format with these fields:
 {
   "riskLevel": "low" | "medium" | "high" | "critical",
-  "riskScore": <number 0-100, higher = more risky>,
-  "summary": "<2-3 sentence executive summary>",
+  "riskScore": <number 0-100, higher = more risky — must correspond sensibly to the actual credit score given>,
+  "summary": "<2-3 sentence executive summary that explicitly references the actual credit score number>",
   "factors": [{"factor": "<name>", "impact": "positive" | "negative" | "neutral", "detail": "<explanation>"}],
   "recommendations": ["<actionable recommendation>"],
   "regulatoryFlags": ["<any compliance concerns>"]
@@ -229,7 +288,7 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
     console.log(`[AI Router] analyzeCreditRisk completed via fallback (${result.provider})`);
   }
 
-  return parseJSON(result.text, {
+  const parsed = parseJSON(result.text, {
     riskLevel: "medium",
     riskScore: 50,
     summary: "Analysis completed. Please try again if content is incomplete.",
@@ -237,19 +296,29 @@ ${accounts.map(a => `  - ${a.accountType}: ${a.currency || defaultCurrency} ${pa
     recommendations: [],
     regulatoryFlags: [],
   });
+  // Always attach the real, authoritative score alongside the LLM's narrative framing — the
+  // client should never have to trust the LLM's arithmetic for the number that actually
+  // determines creditworthiness.
+  return {
+    ...parsed,
+    actualCreditScore: ctx.scoreResult.score,
+    actualReasonCodes: ctx.scoreResult.reasonCodes,
+  };
 }
 
 export async function generateReportSummary(borrowerId: string, provider?: AIProvider, language?: string) {
   const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
 
-  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
-  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
+  const ctx = await getBorrowerScoreContext(String(borrowerId));
+  const { accounts, disputes } = ctx;
   const defaultCurrency = getDefaultCurrencyCode();
 
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
 
   const reportData = `
+${scoreContextBlock(ctx)}
+
 Borrower: ${borrower.firstName} ${borrower.lastName} (${borrower.type || "individual"})
 Country: ${borrower.country || "Unknown"} | ID: ${borrower.nationalId || "N/A"}
 Employment: ${borrower.occupation || "Unknown"} | Income: ${borrower.monthlyIncome || "Not reported"}
@@ -265,7 +334,7 @@ Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").
   const targetLang = langNames[language || "en"] || "English";
   const langInstruction = targetLang !== "English" ? ` You MUST write the entire summary in ${targetLang}. Every word, heading, and sentence must be in ${targetLang} — do not use English at all.` : "";
 
-  const systemPrompt = `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.${langInstruction}`;
+  const systemPrompt = `You are a credit report summarizer for the Pan-African Credit Registry. All monetary amounts are in ${defaultCurrency} (${defaultCurrency === "GHS" ? "Ghana Cedis" : defaultCurrency}). Generate clear, professional, plain-language summaries of credit reports suitable for non-technical readers such as bank officers and regulators. The ACTUAL COMPUTED CREDIT SCORE given to you is authoritative — state it explicitly and accurately in your summary; never invent or estimate a different number. Include key highlights, concerns, and an overall assessment. Keep it concise but comprehensive (3-5 paragraphs). Use professional financial language. Always reference amounts in ${defaultCurrency}.${langInstruction}`;
   const userPrompt = `Generate a plain-language credit report summary${targetLang !== "English" ? ` in ${targetLang}` : ""}:\n\n${reportData}`;
 
   const result = await generateAIResponse(systemPrompt, userPrompt, "narrative", {
@@ -280,6 +349,7 @@ Disputes: ${disputes.length} total, ${disputes.filter(d => d.status === "open").
   return {
     summary: result.text,
     borrowerName: `${borrower.firstName} ${borrower.lastName}`,
+    actualCreditScore: ctx.scoreResult.score,
     generatedAt: new Date().toISOString(),
   };
 }
@@ -1110,17 +1180,30 @@ export function parseJSON(raw: string, fallback: Record<string, unknown> = {}) {
   try { return JSON.parse(content); } catch { return { ...fallback, rawText: raw }; }
 }
 
+// Maps the real numeric score to the same tier vocabulary the narrative prompt uses, so we can
+// verify (and if needed correct) the LLM's own "creditworthiness" tier rather than trust it blind.
+function scoreToCreditworthinessTier(score: number): "Excellent" | "Good" | "Fair" | "Below Average" | "Poor" {
+  if (score >= 750) return "Excellent";
+  if (score >= 670) return "Good";
+  if (score >= 580) return "Fair";
+  if (score >= 500) return "Below Average";
+  return "Poor";
+}
+
 export async function generateCreditNarrative(borrowerId: string | number, provider?: AIProvider, language?: string) {
   const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
-  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
-  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
+  const ctx = await getBorrowerScoreContext(String(borrowerId));
+  const { accounts, disputes } = ctx;
   const defaultCurrency = getDefaultCurrencyCode();
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
   const delinquentCount = accounts.filter(a => a.status === "delinquent" || a.status === "default").length;
   const name = borrower.type === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
+  const expectedTier = scoreToCreditworthinessTier(ctx.scoreResult.score);
 
   const profile = `
+${scoreContextBlock(ctx)}
+
 Borrower: ${name} (${borrower.type || "individual"})
 Country: ${borrower.country || "Unknown"} | National ID: ${borrower.nationalId || "N/A"}
 Employment: ${borrower.occupation || "Unknown"} | Monthly Income: ${borrower.monthlyIncome || "Not reported"}
@@ -1139,7 +1222,9 @@ ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} —
   const targetLang = langNames[language || "en"] || "English";
   const langInstruction = targetLang !== "English" ? ` You MUST write the entire narrative, strengths, risks, and recommendations in ${targetLang}. Every word must be in ${targetLang} — do not use English at all.` : "";
 
-  const systemPrompt = `You are a senior credit analyst writing a narrative credit report for a loan committee at an African bank. Write a professional, readable narrative (not bullet points) that a bank executive would present to their board. Cover: overall credit standing, repayment behavior, risk factors, any red flags, and a final recommendation. Use ${defaultCurrency} for all amounts. Write 4-6 paragraphs. Be specific — reference actual account types, amounts, and status. End with a clear creditworthiness assessment: Excellent, Good, Fair, Below Average, or Poor.${langInstruction} Respond in JSON:
+  const systemPrompt = `You are a senior credit analyst writing a narrative credit report for a loan committee at an African bank. Write a professional, readable narrative (not bullet points) that a bank executive would present to their board. Cover: overall credit standing, repayment behavior, risk factors, any red flags, and a final recommendation. Use ${defaultCurrency} for all amounts. Write 4-6 paragraphs. Be specific — reference actual account types, amounts, and status, AND the actual computed credit score given to you.
+
+The ACTUAL COMPUTED CREDIT SCORE is authoritative ground truth — your creditworthiness rating MUST correspond to it: Excellent (750+), Good (670-749), Fair (580-669), Below Average (500-579), Poor (below 500). Do not independently judge creditworthiness from the account details alone if it would contradict the actual score's tier.${langInstruction} Respond in JSON:
 {
   "narrative": "<the full narrative text>",
   "creditworthiness": "Excellent" | "Good" | "Fair" | "Below Average" | "Poor",
@@ -1149,7 +1234,16 @@ ${disputes.length > 0 ? disputes.map(d => `  - ${d.disputeType}: ${d.status} —
 }`;
 
   const raw = await callAI(systemPrompt, `Write a credit narrative for this borrower${targetLang !== "English" ? ` in ${targetLang}` : ""}:\n\n${profile}`, provider, 2500, 0.3, "narrative");
-  return { ...parseJSON(raw, { creditworthiness: "Fair" }), borrowerName: name, generatedAt: new Date().toISOString() };
+  const parsed = parseJSON(raw, { creditworthiness: expectedTier });
+  return {
+    ...parsed,
+    // Never let a model slip-up publish a tier that contradicts the real score — the narrative
+    // text can still be nuanced, but the headline rating is guaranteed correct.
+    creditworthiness: expectedTier,
+    actualCreditScore: ctx.scoreResult.score,
+    borrowerName: name,
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 export async function detectAnomalies(provider?: AIProvider, orgId?: string, country?: string) {
@@ -1356,14 +1450,32 @@ ${data.borrowerProfiles.sort((a, b) => b.totalBalance - a.totalBalance).slice(0,
 export async function generateLoanRecommendation(borrowerId: string | number, loanAmount: number, loanType: string, provider?: AIProvider) {
   const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
-  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
-  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
+  const ctx = await getBorrowerScoreContext(String(borrowerId));
+  const { accounts, disputes, judgments } = ctx;
   const defaultCurrency = getDefaultCurrencyCode();
   const totalBalance = accounts.reduce((s, a) => s + parseFloat(a.currentBalance || "0"), 0);
   const totalOriginal = accounts.reduce((s, a) => s + parseFloat(a.originalAmount || "0"), 0);
   const name = borrower.type === "corporate" ? (borrower.companyName || "Unknown") : `${borrower.firstName} ${borrower.lastName}`;
+  const activeJudgments = judgments.filter(j => (j as any).status === "active");
+
+  // Real affordability assessment (A1-A5 fixed the math behind this), if one exists on file —
+  // grounds the decision in actual measured disposable income/DTI instead of the crude
+  // balance/annual-income ratio this function used to compute inline.
+  const affordability = await storage.getLatestAffordabilityAssessment(String(borrowerId));
+  const affordabilityBlock = affordability
+    ? `AFFORDABILITY ASSESSMENT ON FILE (${(affordability as any).dataSource}, confidence: ${(affordability as any).confidenceLabel}):
+  Gross Monthly Income: ${defaultCurrency} ${Number((affordability as any).grossIncomeMonthly).toLocaleString()}
+  Disposable Monthly Income: ${defaultCurrency} ${Number((affordability as any).disposableIncomeMonthly).toLocaleString()}
+  Existing Debt Service: ${defaultCurrency} ${Number((affordability as any).existingDebtServiceMonthly).toLocaleString()}/mo
+  Debt-to-Income Ratio: ${(Number((affordability as any).debtToIncomeRatio) * 100).toFixed(1)}%
+  Max Recommended New Monthly Repayment: ${defaultCurrency} ${Number((affordability as any).maxRecommendedMonthlyRepayment).toLocaleString()}
+  Max Recommended New Credit: ${defaultCurrency} ${Number((affordability as any).maxRecommendedNewCredit).toLocaleString()}
+  Affordability Rating: ${(affordability as any).affordabilityRating}`
+    : "AFFORDABILITY ASSESSMENT: none on file — no verified income/expense data available for this borrower.";
 
   const profile = `
+${scoreContextBlock(ctx)}
+
 LOAN APPLICATION:
 Requested Amount: ${defaultCurrency} ${loanAmount.toLocaleString()}
 Loan Type: ${loanType}
@@ -1372,8 +1484,10 @@ APPLICANT PROFILE:
 Name: ${name} (${borrower.type || "individual"})
 Country: ${borrower.country || "Unknown"}
 Employment: ${borrower.occupation || "Unknown"}
-Monthly Income: ${borrower.monthlyIncome || "Not reported"}
+Monthly Income (self-declared): ${borrower.monthlyIncome || "Not reported"}
 PEP Status: ${borrower.isPep ? "Yes" : "No"}
+
+${affordabilityBlock}
 
 EXISTING CREDIT OBLIGATIONS:
 Total Accounts: ${accounts.length}
@@ -1390,15 +1504,23 @@ ${accounts.map(a => `  ${a.accountType} at ${a.lenderInstitution || "N/A"}: ${a.
 DISPUTE HISTORY:
 ${disputes.length > 0 ? disputes.map(d => `  ${d.disputeType}: ${d.status}`).join("\n") : "  Clean — no disputes"}
 
-DEBT-TO-INCOME: ${borrower.monthlyIncome ? `${((totalBalance / (parseFloat(borrower.monthlyIncome) * 12)) * 100).toFixed(1)}% of annual income` : "Cannot calculate — income not reported"}
+COURT JUDGMENTS: ${activeJudgments.length} active (${judgments.length} total on record)
+${judgments.length > 0 ? judgments.map(j => `  ${(j as any).caseType || "Judgment"}: ${(j as any).status}`).join("\n") : "  None on record"}
   `.trim();
 
-  const systemPrompt = `You are a senior credit decisioning AI for the Pan-African Credit Registry. Based on the applicant's full credit profile and existing obligations, provide a loan approval recommendation. Be rigorous but fair. Consider African lending context — mobile money history, informal employment, and thin-file borrowers. Use ${defaultCurrency}. Respond in JSON:
+  const systemPrompt = `You are a senior credit decisioning assistant for the Pan-African Credit Registry, producing a recommendation for a human loan officer's final decision — you do not make the final call. Based on the applicant's full credit profile and existing obligations, provide a loan approval recommendation. Be rigorous but fair. Consider African lending context — mobile money history, informal employment, and thin-file borrowers. Use ${defaultCurrency}.
+
+The ACTUAL COMPUTED CREDIT SCORE and AFFORDABILITY ASSESSMENT given to you are authoritative ground truth from the platform's real scoring/affordability engines — they are not estimates for you to second-guess. Your decision MUST be consistent with them:
+- A score below 500, an active court judgment, or a requested amount exceeding "Max Recommended New Credit" is a strong signal toward decline or approve_with_conditions — do not recommend a clean "approve" against that combination without explicit justification in your reasoning.
+- A score of 750+ with no active judgments and disposable income comfortably covering the new repayment is a strong signal toward approve — do not recommend "decline" against that combination without explicit justification.
+- If no affordability assessment is on file, say so explicitly in your reasoning as a data gap, and weight that as a reason for approve_with_conditions (e.g. require income verification) rather than an outright approve.
+
+Respond in JSON:
 {
   "decision": "approve" | "approve_with_conditions" | "decline",
   "confidence": <0-100>,
-  "reasoning": "<3-4 paragraph detailed explanation of the decision>",
-  "riskScore": <0-100, higher = riskier>,
+  "reasoning": "<3-4 paragraph detailed explanation of the decision, explicitly referencing the actual credit score and affordability figures given>",
+  "riskScore": <0-100, higher = riskier — must correspond sensibly to the actual credit score given>,
   "conditions": ["<condition if approve_with_conditions>"],
   "suggestedTerms": {
     "maxAmount": "<recommended max loan amount>",
@@ -1415,16 +1537,25 @@ DEBT-TO-INCOME: ${borrower.monthlyIncome ? `${((totalBalance / (parseFloat(borro
 }`;
 
   const raw = await callAI(systemPrompt, `Evaluate this loan application:\n\n${profile}`, provider, 2500, 0.3, "credit_risk");
-  return { ...parseJSON(raw, { decision: "decline", confidence: 0 }), borrowerName: name, requestedAmount: loanAmount, loanType, generatedAt: new Date().toISOString() };
+  const parsed = parseJSON(raw, { decision: "decline", confidence: 0 });
+  return {
+    ...parsed,
+    borrowerName: name,
+    requestedAmount: loanAmount,
+    loanType,
+    actualCreditScore: ctx.scoreResult.score,
+    actualReasonCodes: ctx.scoreResult.reasonCodes,
+    hasAffordabilityAssessment: !!affordability,
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 export async function generateCreditInsights(borrowerId: string | number, provider?: AIProvider) {
   const borrower = await storage.getBorrower(String(borrowerId));
   if (!borrower) throw new Error("Borrower not found");
 
-  const accounts = await storage.getCreditAccountsByBorrower(String(borrowerId));
-  const disputes = await storage.getDisputesByBorrower(String(borrowerId));
-  const judgments = await storage.getCourtJudgmentsByBorrower(String(borrowerId));
+  const ctx = await getBorrowerScoreContext(String(borrowerId));
+  const { accounts, disputes, judgments } = ctx;
   const defaultCurrency = getDefaultCurrencyCode();
   const countryName = getActiveCountryName();
 
@@ -1439,6 +1570,8 @@ export async function generateCreditInsights(borrowerId: string | number, provid
   const openDisputes = disputes.filter(d => d.status === "open" || d.status === "under_review");
 
   const profile = `
+${scoreContextBlock(ctx)}
+
 BORROWER PROFILE
 Name: ${name}
 Type: ${isIndividual ? "Individual / Consumer" : "Corporate / Business"}
@@ -1465,8 +1598,10 @@ ${judgments.map(j => `  - ${(j as any).caseType || "Court Judgment"}: ${(j as an
 
   const systemPrompt = `You are a senior credit bureau trainer at the Pan-African Credit Registry. Your job is to help staff, lenders, and financial institution users understand credit reports by providing clear, section-by-section explanations tailored to the actual data of the specific borrower they are viewing.
 
+The ACTUAL COMPUTED CREDIT SCORE given to you is authoritative ground truth. For the creditScore section specifically, you MUST state that exact number — never invent, estimate, or round a different figure. Every other section must also stay consistent with it.
+
 For each of the 6 sections below, provide:
-- "headline": A one-line summary (e.g. "Score of 645 — Fair standing with 2 delinquent accounts")
+- "headline": A one-line summary. For creditScore, this MUST be in the format "Score of <the actual number> — <tier> standing" using the exact actual score given.
 - "what": 1-2 sentences explaining what this section measures in general (educational, jargon-free)
 - "finding": 2-3 sentences describing what the actual data shows for THIS specific borrower — be precise, reference real numbers
 - "watchFor": 1-2 sentences on key things lenders or analysts should pay attention to
@@ -1494,8 +1629,43 @@ Respond ONLY in valid JSON:
   const raw = await callAI(systemPrompt, `Generate section-by-section credit report insights for this borrower:\n\n${profile}`, provider, 3000, 0.3, "narrative");
   const parsed = parseJSON(raw, {});
 
+  // This "Credit Score" section renders open-by-default on the borrower page, directly beside
+  // the real score gauge. Never let an LLM slip-up show a different number there: force the
+  // headline to the real score regardless of what came back. For the finding text, if it
+  // mentions a different plausible-score-range number (300-850) than the real one, the model
+  // has hallucinated a contradictory figure — discard that text entirely rather than risk a
+  // reader seeing "actual score is 800" in the headline right above "...a poor score of 430..."
+  // in the finding. If it simply doesn't mention the score at all, prepend it instead of
+  // discarding, since the rest of that prose is still probably fine.
+  const tier = scoreToCreditworthinessTier(ctx.scoreResult.score);
+  const realScoreLine = `The borrower's actual credit score is ${ctx.scoreResult.score} (${tier} standing).`;
+  const existingCreditScoreSection = (parsed as any).creditScore || {};
+  const existingFinding = String(existingCreditScoreSection.finding || "");
+  // Only flag numbers adjacent to the word "score" — a bare 3-digit number elsewhere in the
+  // finding (an account balance, a days-in-arrears count) isn't a hallucinated score and
+  // shouldn't cause otherwise-fine prose to be discarded.
+  const scoreAdjacentMatches = [...existingFinding.matchAll(/\bscored?\s*(?:of|is|:)?\s*([3-8]\d{2})\b|\b([3-8]\d{2})\s*(?:point\s*)?score\b/gi)];
+  const mentionedScoreLikeNumbers = scoreAdjacentMatches.map(m => Number(m[1] || m[2]));
+  const containsContradictoryScore = mentionedScoreLikeNumbers.some(n => n !== ctx.scoreResult.score);
+  const findingHasRealScore = existingFinding.includes(String(ctx.scoreResult.score));
+  let correctedFinding: string;
+  if (containsContradictoryScore) {
+    correctedFinding = `${realScoreLine} (An earlier AI-generated draft of this section referenced a different figure and was corrected.)`;
+  } else if (findingHasRealScore) {
+    correctedFinding = existingFinding;
+  } else {
+    correctedFinding = `${realScoreLine} ${existingFinding}`.trim();
+  }
+  const correctedCreditScore = {
+    ...existingCreditScoreSection,
+    headline: `Score of ${ctx.scoreResult.score} — ${tier} standing`,
+    finding: correctedFinding,
+  };
+
   return {
     ...parsed,
+    creditScore: correctedCreditScore,
+    actualCreditScore: ctx.scoreResult.score,
     borrowerName: name,
     generatedAt: new Date().toISOString(),
   };
