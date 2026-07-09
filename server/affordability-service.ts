@@ -465,6 +465,39 @@ function mulberry32(a: number) {
  * Parse a PDF bank statement buffer into normalised transactions using LLM extraction.
  * Falls back gracefully if AI is unavailable or PDF text extraction fails.
  */
+/**
+ * A5: extract the first top-level JSON object from LLM output by tracking brace depth (and
+ * skipping string contents) instead of a single greedy regex. `/\{[\s\S]*\}/` matches from the
+ * first `{` to the LAST `}` anywhere in the text — any trailing prose after the real JSON that
+ * happens to contain a `}` (e.g. "...found 12 transactions in this statement}") extends the
+ * match into garbage that fails JSON.parse, silently discarding the whole statement. Returns
+ * null if no balanced object is found.
+ */
+function extractJsonObject(text: string): string | null {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null; // unbalanced — truncated model output, not a false negative to paper over
+}
+
+// A5: reject amounts no real single bank transaction would plausibly reach — a hallucinated
+// figure (e.g. a misplaced decimal or a stray extra digit) shouldn't silently skew income/DTI.
+const MAX_PLAUSIBLE_TXN_AMOUNT = 1_000_000_000;
+
 export async function parseBankStatementPdf(pdfBuffer: Buffer, currency: string = "GHS"): Promise<NormalisedTxn[]> {
   let text = "";
   try {
@@ -483,14 +516,14 @@ Amounts are positive numbers.`;
   const userPrompt = `Currency: ${currency}\nStatement text (truncated):\n${text}\n\nReturn JSON only.`;
   try {
     const ai = await generateAIResponse(systemPrompt, userPrompt, "narrative", { temperature: 0.1, maxTokens: 3000 });
-    const match = ai.text.match(/\{[\s\S]*\}/);
-    if (!match) return [];
-    const parsed = JSON.parse(match[0]);
+    const jsonText = extractJsonObject(ai.text);
+    if (!jsonText) return [];
+    const parsed = JSON.parse(jsonText);
     const out: NormalisedTxn[] = [];
     for (const t of parsed.transactions || []) {
       const d = new Date(t.date);
       const amt = Number(t.amount);
-      if (isNaN(d.getTime()) || !isFinite(amt) || amt <= 0) continue;
+      if (isNaN(d.getTime()) || !isFinite(amt) || amt <= 0 || amt > MAX_PLAUSIBLE_TXN_AMOUNT) continue;
       out.push({
         date: d, amount: amt, currency,
         direction: t.direction === "credit" ? "credit" : "debit",
@@ -503,6 +536,60 @@ Amounts are positive numbers.`;
     console.warn(`[Affordability] LLM PDF parse failed: ${err.message}`);
     return [];
   }
+}
+
+// ==================== CURRENCY NORMALISATION (A4) ====================
+//
+// Real bank-feed transactions (Mono/Stitch/Okra) can be individually tagged with a currency
+// that differs from the account's overall currency — e.g. a USD wire landing in a NGN account.
+// classifyIncome/categoriseExpenses used to sum t.amount directly regardless of t.currency,
+// which silently added USD amounts to NGN amounts as if they were the same unit. All rates are
+// stored relative to USD in both directions (baseCurrency=X,target=USD and the inverse), so any
+// pair converts via at most one USD hop.
+
+export type ExchangeRateLike = { baseCurrency: string; targetCurrency: string; rate: string | number };
+
+function buildRateLookup(rates: ExchangeRateLike[]): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const r of rates) {
+    const rate = Number(r.rate);
+    if (Number.isFinite(rate) && rate > 0) m.set(`${r.baseCurrency}->${r.targetCurrency}`, rate);
+  }
+  return m;
+}
+
+/** Convert `amount` from `from` to `to` using at most one USD hop. Returns null if no path exists. */
+function convertAmount(amount: number, from: string, to: string, rateMap: Map<string, number>): number | null {
+  if (from === to) return amount;
+  const direct = rateMap.get(`${from}->${to}`);
+  if (direct) return amount * direct;
+  const inverse = rateMap.get(`${to}->${from}`);
+  if (inverse) return amount / inverse;
+  if (from !== "USD" && to !== "USD") {
+    const viaUsd = convertAmount(amount, from, "USD", rateMap);
+    if (viaUsd == null) return null;
+    return convertAmount(viaUsd, "USD", to, rateMap);
+  }
+  return null;
+}
+
+/**
+ * Normalise every transaction's amount into `targetCurrency`. Transactions whose currency can't
+ * be converted (no rate path available) are dropped rather than summed as if same-currency —
+ * undercounting is safer than fabricating a number for money that was never actually measured
+ * in the target currency.
+ */
+export function normaliseTxnCurrency(txns: NormalisedTxn[], targetCurrency: string, rates: ExchangeRateLike[]): NormalisedTxn[] {
+  const rateMap = buildRateLookup(rates);
+  const out: NormalisedTxn[] = [];
+  for (const t of txns) {
+    const txnCurrency = t.currency || targetCurrency;
+    if (txnCurrency === targetCurrency) { out.push(t); continue; }
+    const converted = convertAmount(t.amount, txnCurrency, targetCurrency, rateMap);
+    if (converted == null) continue; // no FX path — exclude rather than misreport
+    out.push({ ...t, amount: converted, currency: targetCurrency });
+  }
+  return out;
 }
 
 // ==================== INCOME CLASSIFIER ====================
@@ -828,6 +915,18 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
         }
       }
     }
+  }
+
+  // A4: normalise every transaction into the assessment currency before summing anything —
+  // otherwise a USD wire in an NGN account gets added to NGN salary as if they were the same
+  // unit. Transactions with no available FX path are dropped rather than misreported.
+  const currenciesPresent = new Set(txns.map(t => t.currency || currency));
+  if (currenciesPresent.size > 1 || !currenciesPresent.has(currency)) {
+    const rates = await storage.getExchangeRates();
+    const before = txns.length;
+    txns = normaliseTxnCurrency(txns, currency, rates);
+    const dropped = before - txns.length;
+    if (dropped > 0) notes.push(`${dropped} transaction(s) excluded — no exchange rate available to convert to ${currency}.`);
   }
 
   // 2. Classify income
