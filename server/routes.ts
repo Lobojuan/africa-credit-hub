@@ -458,6 +458,13 @@ function calculateNextRun(frequency: string, dayOfWeek: number, dayOfMonth: numb
   return next;
 }
 
+// ── P1 write-endpoint validation schemas (2026-07 review, fix-first list) ──
+// Decimal money string matching the `decimal("...", { precision: 15, scale: 2 })`
+// columns these routes write to: up to 13 integer digits, up to 2 decimal places.
+const moneyAmountSchema = z.string().regex(/^\d{1,13}(\.\d{1,2})?$/, "Must be a decimal amount with at most 2 decimal places")
+  .refine((v) => Number(v) > 0, "Amount must be greater than 0");
+const moneyAmountPaySchema = z.object({ paidAmount: moneyAmountSchema });
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -2651,11 +2658,18 @@ export async function registerRoutes(
 
   app.post("/api/consumer/register", consumerAuthLimiter, async (req, res) => {
     try {
-      const { nationalId, phone, email, password, dateOfBirth, fullName, country, consentGiven } = req.body;
-      if (!nationalId || nationalId.length < 6) return res.status(400).json({ message: "National ID must be at least 6 characters" });
-      if (!phone || phone.length < 8) return res.status(400).json({ message: "Valid phone number is required" });
-      if (!password || password.length < 8) return res.status(400).json({ message: "Password must be at least 8 characters" });
-      if (!dateOfBirth) return res.status(400).json({ message: "Date of birth is required" });
+      const parsedBody = z.object({
+        nationalId: z.string().trim().min(6).max(50),
+        phone: z.string().regex(/^\+?\d{7,15}$/, "Phone must be 7-15 digits, optionally prefixed with +"),
+        email: z.string().trim().email().max(255).optional(),
+        password: z.string().min(8).max(128),
+        dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be YYYY-MM-DD"),
+        fullName: z.string().trim().max(200).optional(),
+        country: z.string().trim().max(100).optional(),
+        consentGiven: z.boolean().optional(),
+      }).safeParse(req.body);
+      if (!parsedBody.success) return res.status(400).json({ message: parsedBody.error.errors[0]?.message || "Invalid registration details" });
+      const { nationalId, phone, email, password, dateOfBirth, fullName, country, consentGiven } = parsedBody.data;
 
       const existing = await db.select().from(consumerAccounts).where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
       if (existing.length > 0) return res.status(409).json({ message: "An account with this ID already exists. Please log in instead." });
@@ -6249,10 +6263,15 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/credit-reports/generate", creditReportLimiter, requireAuth, async (req, res) => {
     try {
-      const { borrowerId, purpose, includeAI = true, includeXds = false, consentId } = req.body;
-      if (!borrowerId || !purpose) {
-        return res.status(400).json({ message: "borrowerId and purpose are required" });
-      }
+      const parsedBody = z.object({
+        borrowerId: z.string().uuid(),
+        purpose: z.enum(["new_credit", "review", "portfolio_monitoring", "collection", "regulatory", "other"]),
+        includeAI: z.boolean().default(true),
+        includeXds: z.boolean().default(false),
+        consentId: z.string().uuid().optional(),
+      }).safeParse(req.body);
+      if (!parsedBody.success) return res.status(400).json({ message: "borrowerId and purpose are required", errors: parsedBody.error.errors });
+      const { borrowerId, purpose, includeAI, includeXds, consentId } = parsedBody.data;
 
       const userRole = req.session?.userRole;
       const isSuperAdmin = isPlatformPrivileged(userRole);
@@ -12592,16 +12611,18 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
   app.patch("/api/platform/settlement-accounts/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
       const id = req.params["id"] as string;
-      const allowed = ["accountLabel", "method", "bankName", "bankBranch", "accountNumber", "accountName", "swiftCode", "momoProvider", "momoNumber", "momoName", "currency", "isDefault", "isActive"];
-      const updates: any = {};
-      for (const key of allowed) {
-        if (req.body[key] !== undefined) updates[key] = req.body[key];
-      }
-      updates.updatedAt = new Date();
-      const [updated] = await db.update(settlementAccounts).set(updates).where(eq(settlementAccounts.id, id)).returning();
+      const updates = insertSettlementAccountSchema.pick({
+        accountLabel: true, method: true, bankName: true, bankBranch: true, accountNumber: true,
+        accountName: true, swiftCode: true, momoProvider: true, momoNumber: true, momoName: true,
+        currency: true, isDefault: true, isActive: true,
+      }).partial().parse(req.body);
+      const [updated] = await db.update(settlementAccounts).set({ ...updates, updatedAt: new Date() }).where(eq(settlementAccounts.id, id)).returning();
       if (!updated) return res.status(404).json({ message: "Account not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Invalid settlement account fields", errors: e.errors });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
   });
 
   app.delete("/api/platform/settlement-accounts/:id", requireAuth, requireSuperAdmin, async (req, res) => {
@@ -12868,13 +12889,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.put("/api/platform/pricing-tiers/:id", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { unitPriceCents, isActive } = req.body;
-      if (unitPriceCents !== undefined && (typeof unitPriceCents !== "number" || unitPriceCents < 0)) {
-        return res.status(400).json({ message: "unitPriceCents must be a non-negative number" });
-      }
-      if (isActive !== undefined && typeof isActive !== "boolean") {
-        return res.status(400).json({ message: "isActive must be a boolean" });
-      }
+      const { unitPriceCents, isActive } = z.object({
+        unitPriceCents: z.number().int().min(0).max(100_000_000).optional(),
+        isActive: z.boolean().optional(),
+      }).parse(req.body);
       const updates: any = {};
       if (unitPriceCents !== undefined) updates.unitPriceCents = unitPriceCents;
       if (isActive !== undefined) updates.isActive = isActive;
@@ -12882,7 +12900,10 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       if (!updated) return res.status(404).json({ message: "Tier not found" });
       await storage.createAuditLog({ userId: req.session.userId!, action: "UPDATE", entity: "pricing_tier", entityId: updated.id, details: `Updated pricing tier "${updated.name}"`, ipAddress: req.ip, organizationId: null });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Invalid pricing tier fields", errors: e.errors });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
   });
 
   // ── Retention Policies ──
@@ -13119,8 +13140,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/stripe/checkout", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { orgId, tier } = req.body;
-      if (!orgId || !tier) return res.status(400).json({ message: "orgId and tier required" });
+      const parsed = z.object({
+        orgId: z.string().uuid(),
+        tier: z.enum(["standard", "professional", "enterprise"]),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ message: "Invalid orgId/tier", errors: parsed.error.errors });
+      const { orgId, tier } = parsed.data;
 
       const org = await storage.getOrganization(orgId);
       if (!org) return res.status(404).json({ message: "Organization not found" });
@@ -13171,13 +13196,15 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/payments/initiate", requireAuth, async (req, res) => {
     try {
-      const { plan, method, phone, provider } = req.body;
-      if (!plan || !method) return res.status(400).json({ message: "Plan and payment method required" });
-
-      const validPlans = ["standard", "professional", "enterprise"];
-      const validMethods = ["stripe", "bank_transfer", "flutterwave", "mpesa", "mobile_money"];
-      if (!validPlans.includes(plan)) return res.status(400).json({ message: "Invalid plan" });
-      if (!validMethods.includes(method)) return res.status(400).json({ message: "Invalid payment method" });
+      const paymentInitiateSchema = z.object({
+        plan: z.enum(["standard", "professional", "enterprise"]),
+        method: z.enum(["stripe", "bank_transfer", "flutterwave", "mpesa", "mobile_money"]),
+        phone: z.string().regex(/^\+?\d{7,15}$/, "Phone must be 7-15 digits, optionally prefixed with +").optional(),
+        provider: z.enum(["mtn", "airtel", "orange"]).optional(),
+      });
+      const parsedBody = paymentInitiateSchema.safeParse(req.body);
+      if (!parsedBody.success) return res.status(400).json({ message: "Invalid payment request", errors: parsedBody.error.errors });
+      const { plan, method, phone, provider } = parsedBody.data;
 
       const orgId = req.session.organizationId;
       if (!orgId) return res.status(400).json({ message: "No organization associated with this account" });
@@ -16773,14 +16800,20 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/loan-applications/:id/disburse", requireRole("admin", "super_admin"), async (req, res) => {
     try {
+      const { reference } = z.object({
+        reference: z.string().trim().min(1).max(100).optional(),
+      }).parse(req.body ?? {});
       const updated = await storage.updateLoanApplication(req.params.id as string, {
         status: "disbursed",
         disbursedAt: new Date(),
-        disbursementReference: req.body.reference || `DISB-${Date.now()}`,
+        disbursementReference: reference || `DISB-${Date.now()}`,
       });
       if (!updated) return res.status(404).json({ message: "Not found" });
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Invalid reference", errors: e.errors });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
   });
 
   app.get("/api/loan-applications/:id/schedule", requireAuth, async (req, res) => {
@@ -16827,9 +16860,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.patch("/api/loan-repayments/:id/pay", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const updated = await storage.markInstallmentPaid(req.params.id as string, req.body.paidAmount);
+      const { paidAmount } = moneyAmountPaySchema.parse(req.body);
+      const updated = await storage.markInstallmentPaid(req.params.id as string, paidAmount);
       res.json(updated);
-    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+    } catch (e: any) {
+      if (e instanceof z.ZodError) return res.status(400).json({ message: "Invalid paidAmount", errors: e.errors });
+      res.status(500).json({ message: safeErrorMessage(e) });
+    }
   });
 
   // ===========================================================================
@@ -18284,10 +18321,12 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
 
   app.post("/api/borrowers/merge", requireRole("admin", "super_admin"), async (req, res) => {
     try {
-      const { primaryId, duplicateIds } = req.body as { primaryId: string; duplicateIds: string[] };
-      if (!primaryId || !Array.isArray(duplicateIds) || duplicateIds.length === 0) {
-        return res.status(400).json({ message: "primaryId and at least one duplicateId required" });
-      }
+      const parsedBody = z.object({
+        primaryId: z.string().uuid(),
+        duplicateIds: z.array(z.string().uuid()).min(1).max(50),
+      }).safeParse(req.body);
+      if (!parsedBody.success) return res.status(400).json({ message: "primaryId and at least one duplicateId (valid UUIDs, max 50) required", errors: parsedBody.error.errors });
+      const { primaryId, duplicateIds } = parsedBody.data;
       if (duplicateIds.includes(primaryId)) {
         return res.status(400).json({ message: "primaryId cannot be in duplicateIds" });
       }
@@ -18988,7 +19027,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const { score: baseScore } = calculateCreditScore(accounts, countScorableInquiries(inquiries), judgments, borrower.isPep ?? undefined, altData);
       storage.recordConsumerScoreHistory(consumerNationalId, borrower.id, baseScore).catch(err => routeLogger.warn('[ScoreHistory]', { detail: err }));
 
-      const { action } = req.body as { action: string };
+      const actionSchema = z.enum([
+        "pay_all_arrears", "close_old_account", "reduce_utilisation_30",
+        "new_loan", "no_late_payments_6mo", "settle_default",
+      ]);
+      const parsedAction = actionSchema.safeParse(req.body?.action);
+      if (!parsedAction.success) return res.status(400).json({ message: "Invalid action", errors: parsedAction.error.errors });
+      const action = parsedAction.data;
       let simulatedScore = baseScore;
       let explanation = "";
 
