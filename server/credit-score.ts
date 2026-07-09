@@ -49,8 +49,19 @@ function effectiveLimit(a: AccountLike): number {
  * Count inquiries that legitimately affect a score: hard pulls only, within the
  * trailing 12 months. Soft pulls must never move the score (that is their defining
  * guarantee) and the score factor is defined as a 12-month window.
- * NOTE: consent-based filtering is a documented follow-up — it requires a data
- * backfill first, since `consent_provided` was not reliably captured historically.
+ *
+ * NOTE (I1): consent-based filtering is still a documented follow-up, but the underlying
+ * write-path bug is now fixed — POST /api/credit-inquiries used to accept `consentProvided`
+ * as arbitrary client input (the requesting lender could just always send `true` with no
+ * verification), which was worse than no field at all. It's now derived server-side from an
+ * actual approved, non-expired ConsentRecord (see hasVerifiedConsent in routes.ts), matching
+ * the same check already enforced for credit-report generation. Going forward, `consentProvided`
+ * is trustworthy. It is NOT yet used as a scoring filter here, because every *historical*
+ * inquiry still has consentProvided=false (the column's default, from before this fix existed)
+ * — turning the filter on today would silently exclude ~all pre-existing inquiries from every
+ * borrower's score at once. That's a real data-migration decision (reconcile or backfill
+ * historical rows, then version the scorecard, e.g. "v1.2") that needs sign-off, not something
+ * to flip unreviewed.
  */
 export function countScorableInquiries(inquiries: InquiryLike[]): number {
   const cutoff = Date.now() - 365 * 24 * 60 * 60 * 1000;
@@ -104,25 +115,17 @@ export function calculateCreditScore(
   const reasonCodes: string[] = [];
   const factors: ScoreFactor[] = [];
 
-  const validAccounts = rawAccounts.filter(a => a.status != null && a.status !== undefined);
-  const invalidRatio = rawAccounts.length > 0 ? (rawAccounts.length - validAccounts.length) / rawAccounts.length : 0;
-
-  if (invalidRatio > 0.5) {
-    return {
-      score: 300,
-      reasonCodes: ["INVALID_INPUT"],
-      factors: [{
-        name: "Data Quality",
-        impact: 0,
-        maxImpact: 500,
-        direction: "negative" as const,
-        description: `Over 50% of account records have invalid or missing status fields (${rawAccounts.length - validAccounts.length} of ${rawAccounts.length})`,
-        weight: 100,
-      }],
-    };
-  }
-
-  const accounts = validAccounts.map(a => ({
+  // F4 fix: accounts with missing/invalid status used to be silently dropped from both the
+  // numerator and denominator of the payment-history ratio below (≤50% invalid), which
+  // actually *raised* the score by pretending those accounts didn't exist — while crossing the
+  // 50% line flipped to a hard floor of 300 that discarded every other factor (utilization,
+  // NDIA, alt-data). A borrower could move from a good score to 300 by adding one more
+  // corrupted row, or improve their score by having some records go missing. Invalid-status
+  // accounts now stay in the denominator (they count as "not positive", same as a status this
+  // scoring model doesn't otherwise recognise) so bad data quality degrades the score smoothly
+  // and proportionally instead of as a cliff-edge special case.
+  const invalidCount = rawAccounts.filter(a => a.status == null).length;
+  const accounts = rawAccounts.map(a => ({
     ...a,
     currentBalance: a.currentBalance ? String(Math.max(0, parseFloat(a.currentBalance) || 0)) : a.currentBalance,
     amountOverdue: a.amountOverdue ? String(Math.max(0, parseFloat(a.amountOverdue) || 0)) : a.amountOverdue,
@@ -194,6 +197,18 @@ export function calculateCreditScore(
     description: `${Math.round(onTimeRatio * 100)}% of accounts in good standing (${positiveAccounts} of ${accounts.length})`,
     weight: 35,
   });
+
+  if (invalidCount > 0) {
+    reasonCodes.push("DATA_QUALITY_ISSUE");
+    factors.push({
+      name: "Data Quality",
+      impact: 0,
+      maxImpact: 0,
+      direction: "negative",
+      description: `${invalidCount} of ${accounts.length} account record${invalidCount > 1 ? "s have" : " has"} missing/invalid status and count against Payment History above rather than being excluded`,
+      weight: 0,
+    });
+  }
 
   let ndiaPenalty = 0;
   let ndia90PlusCount = 0;

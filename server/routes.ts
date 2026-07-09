@@ -1718,9 +1718,30 @@ export async function registerRoutes(
     }
   });
 
+  // I1 fix: consentProvided used to come straight from req.body via
+  // insertCreditInquirySchema.parse() — the same lender pulling the report could just always
+  // set consentProvided: true with zero verification, which is worse than not having the field
+  // at all (it looks like a real safeguard but isn't one). This mirrors the same
+  // approved/not-expired/institution-bound check already enforced for credit-report generation
+  // (POST /consent-gate-check) so "consent" means the same verified thing everywhere it's used.
+  async function hasVerifiedConsent(borrowerId: string, organizationId?: string): Promise<boolean> {
+    const records = await storage.getConsentRecordsByBorrower(borrowerId);
+    const now = new Date();
+    return records.some(c => {
+      if (c.status !== "active") return false;
+      const approved = c.loanExemption === true || c.borrowerResponse === "approved";
+      if (!approved) return false;
+      if (c.expiresAt && new Date(c.expiresAt) < now) return false;
+      if (c.organizationId && organizationId && c.organizationId !== organizationId) return false;
+      return true;
+    });
+  }
+
   app.post("/api/credit-inquiries", requireRole("admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
-      const parsed = insertCreditInquirySchema.parse(req.body);
+      const parsed = insertCreditInquirySchema.omit({ consentProvided: true }).parse(req.body);
+      const verifiedConsent = parsed.borrowerId ? await hasVerifiedConsent(parsed.borrowerId, req.session?.organizationId) : false;
+      (parsed as any).consentProvided = verifiedConsent;
       if (parsed.borrowerId && !(await validateBorrowerCountry(parsed.borrowerId, req))) {
         return res.status(403).json({ message: "Data sovereignty violation: cannot create inquiry for borrower in a different country" });
       }
@@ -3609,6 +3630,18 @@ export async function registerRoutes(
             } else if (updated.entityType === "credit_account") {
               await storage.updateCreditAccount(updated.entityId, payload);
             }
+          } else if (updated.action === "UPDATE" && updated.entityType === "credit_account_batch_update") {
+            // B3: applies the batch of existing-account updates that were staged (not written)
+            // at upload time — see batchInsertCreditAccounts. payload is an array of
+            // { id, data, index }, not a single-entity object like the other branches.
+            const items: Array<{ id: string; data: any; index: number }> = Array.isArray(payload) ? payload : [];
+            for (const item of items) {
+              try {
+                await storage.updateCreditAccount(item.id, item.data);
+              } catch (rowErr: any) {
+                routeLogger.error(`[Batch approval] Failed to apply update for account ${item.id}:`, { detail: rowErr });
+              }
+            }
           } else if (updated.action === "DELETE" && updated.entityType === "borrower" && updated.entityId) {
             const erasureResult = await cascadeDeleteBorrower(updated.entityId);
             await storage.createAuditLog({
@@ -3922,7 +3955,8 @@ export async function registerRoutes(
   async function batchInsertCreditAccounts(
     validated: Array<{ index: number; data: any; rawRecord?: any }>,
     results: { successCount: number; errorCount: number; updatedCount?: number; rejectedCount?: number; errors: Array<{ index: number; message: string; type?: string }> },
-    orgId?: string
+    orgId?: string,
+    approvalCtx?: { requestedBy: string; country: string }
   ) {
     if (!(results as any).updatedCount) (results as any).updatedCount = 0;
 
@@ -4004,14 +4038,42 @@ export async function registerRoutes(
       }
     }
 
-    for (const item of toUpdate) {
+    // B3 fix: a single-account PATCH to an existing credit account requires maker-checker
+    // approval (see PATCH /api/credit-accounts/:id) — it never writes directly, it submits a
+    // pendingApproval. Batch upload's update path used to write straight to the table with no
+    // review at all, which meant anyone wanting to bypass maker-checker for an existing
+    // tradeline could just resubmit it via batch upload instead of the single-record endpoint.
+    // Route batch *updates* through one pendingApproval covering the whole batch (row-by-row
+    // approval isn't practical at real bank-upload volume); new tradelines (the toInsert loop
+    // above) still write immediately, matching that this is specifically about protecting
+    // existing history from being silently overwritten, not gating first-time furnishing.
+    if (toUpdate.length > 0 && approvalCtx) {
       try {
-        await db.update(creditAccounts).set({ ...item.data, updatedAt: new Date() }).where(eq(creditAccounts.id, item.id));
-        (results as any).updatedCount!++;
-        results.successCount++;
-      } catch (innerErr: any) {
-        results.errorCount++;
-        results.errors.push({ index: item.index, message: safeErrorMessage(innerErr, 400) });
+        const approval = await storage.createPendingApproval({
+          entityType: "credit_account_batch_update",
+          action: "UPDATE",
+          payload: JSON.stringify(toUpdate),
+          requestedBy: approvalCtx.requestedBy,
+          organizationId: orgId,
+          country: approvalCtx.country,
+        });
+        (results as any).pendingApprovalId = approval.id;
+        (results as any).pendingUpdateCount = toUpdate.length;
+        for (const item of toUpdate) {
+          results.errors.push({ index: item.index, message: `Update to existing account submitted for maker-checker approval (batch ${approval.id})`, type: "pending_approval" });
+        }
+      } catch (approvalErr: any) {
+        results.errorCount += toUpdate.length;
+        for (const item of toUpdate) {
+          results.errors.push({ index: item.index, message: `Could not submit for approval: ${safeErrorMessage(approvalErr, 400)}` });
+        }
+      }
+    } else if (toUpdate.length > 0) {
+      // No approval context available (e.g. a caller that hasn't been updated to pass one) —
+      // fail closed rather than silently writing unreviewed updates to existing tradelines.
+      results.errorCount += toUpdate.length;
+      for (const item of toUpdate) {
+        results.errors.push({ index: item.index, message: "Update to an existing account requires maker-checker approval and could not be submitted (missing approval context)" });
       }
     }
   }
@@ -4022,7 +4084,14 @@ export async function registerRoutes(
     if (!id || String(id).trim().length === 0) return false;
     const s = String(id).trim();
     if (s.length < 5) return false;
-    if (/^(BOG|BATCH|LB|IFF|XBRL|UNKNOWN|N\/A|NA|NONE|NULL|GHOST)-?\d*/i.test(s)) return false;
+    // B4 fix: anchored at both ends and the digit run bounded to a small placeholder-shaped
+    // count. The old pattern (`^(...)-?\d*`, no end anchor, unbounded digits) matched ANY real
+    // ID that merely started with one of these tokens — e.g. a real Liberian ID "LB19850315F0021"
+    // or a real Namibian-style ID "NA202501234567" both started with "LB"/"NA" and were rejected
+    // as synthetic. This now only rejects the exact placeholder shape (bare word, or
+    // word-dash-fewdigits, matching how this codebase actually generates placeholders — see
+    // `LB-${instType}-${i}` a few hundred lines below), not real long IDs that share a prefix.
+    if (/^(BOG|BATCH|LB|IFF|XBRL|UNKNOWN|N\/A|NA|NONE|NULL|GHOST)(-\d{1,6})?$/i.test(s)) return false;
     return true;
   }
 
@@ -4068,7 +4137,10 @@ export async function registerRoutes(
         }
       }
 
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, req.session?.userId ? {
+        requestedBy: req.session.userId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_batch_update"),
+      } : undefined);
 
       const batchMeta = JSON.stringify({
         totalRecords: results.totalSubmitted,
@@ -4159,7 +4231,10 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, req.session?.userId ? {
+        requestedBy: req.session.userId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_batch_update"),
+      } : undefined);
 
       const xbrlMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
@@ -4291,7 +4366,10 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, req.session?.userId ? {
+        requestedBy: req.session.userId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_batch_update"),
+      } : undefined);
 
       const processedCount = results.successCount;
       const bogMeta = JSON.stringify({ totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
@@ -4380,7 +4458,10 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: safeErrorMessage(err, 400) });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, req.session?.userId ? {
+        requestedBy: req.session.userId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_batch_update"),
+      } : undefined);
 
       const csvMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
@@ -4642,7 +4723,10 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: `[ERROR] ${safeErrorMessage(err, 400)}`, type: "error" });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, req.session?.userId ? {
+        requestedBy: req.session.userId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_batch_update"),
+      } : undefined);
 
       const processedCount = results.successCount;
       const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: (results as any).updatedCount, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
@@ -5247,7 +5331,10 @@ export async function registerRoutes(
         }
       }
 
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, req.session?.userId ? {
+        requestedBy: req.session.userId,
+        country: requireWriteCountry(getCountryFilter(req), "createPendingApproval:credit_account_batch_update"),
+      } : undefined);
 
       const meta = JSON.stringify({ country, lenderInstitution: lender, ...results, errors: results.errors.slice(0, 100) });
       await storage.createAuditLog({
@@ -6376,21 +6463,9 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const user = await storage.getUser(req.session?.userId!);
       const serialNumber = `CR-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
 
-      const rawAccounts = await storage.getCreditAccountsByBorrower(borrowerId);
-      // Deduplicate by accountNumber — keep the most recently updated record per unique account number
-      const accountMap = new Map<string, typeof rawAccounts[0]>();
-      for (const acct of rawAccounts) {
-        const key = (acct.accountNumber || "").trim().toLowerCase() || acct.id;
-        const existing = accountMap.get(key);
-        if (!existing) {
-          accountMap.set(key, acct);
-        } else {
-          const acctDate = acct.updatedAt ? new Date(acct.updatedAt).getTime() : 0;
-          const existDate = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-          if (acctDate > existDate) accountMap.set(key, acct);
-        }
-      }
-      const accounts = [...accountMap.values()];
+      // C2: dedup by accountNumber now happens inside storage.getCreditAccountsByBorrower
+      // itself, so every caller gets the same deduped set — no need to repeat it here.
+      const accounts = await storage.getCreditAccountsByBorrower(borrowerId);
       // Use the shared enrichment helper — it joins each inquiry with the
       // inquiring lender's organization id (and registered name / country /
       // segment) so Section 8 can highlight competing-lender pulls the same
