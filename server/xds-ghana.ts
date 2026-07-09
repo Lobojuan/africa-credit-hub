@@ -330,5 +330,19 @@ export async function queryXdsGhana(input: XdsQueryInput): Promise<XdsEnquiryRes
       };
     }
   }
+  // C4: never serve deterministic FAKE bureau data for a real enquiry in production. Without
+  // this gate, a production deployment that simply forgot to configure XDS_GHANA_API_URL/KEY
+  // would silently return fabricated bureau data tagged only source:"sandbox" instead of failing
+  // loudly — the fabricated data is realistic enough to be mistaken for a real hit downstream.
+  if (process.env.NODE_ENV === "production") {
+    return {
+      found: false,
+      source: "live",
+      xdsRef: `ERR-${Date.now()}`,
+      enquiryDate: new Date().toISOString(),
+      permissiblePurpose: input.permissiblePurpose,
+      error: "XDS Ghana is not configured for this environment (XDS_GHANA_API_URL/XDS_GHANA_API_KEY missing). Sandbox data is disabled in production.",
+    };
+  }
   return sandboxResponse(input);
 }

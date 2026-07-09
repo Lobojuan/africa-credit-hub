@@ -336,16 +336,24 @@ export function calculateCreditScore(
   });
 
   let altDataBonus = 0;
+  // Minimum-evidence rule (F2): a source needs at least 3 recorded transactions before its
+  // on-time ratio contributes — a single favourable transaction shouldn't swing the score.
+  const MIN_ALT_DATA_TRANSACTIONS = 3;
   const activeAltData = alternativeData.filter(d => d.status === "active");
-  if (activeAltData.length > 0) {
+  // Clamp onTimePayments to [0, totalTransactions] here too: bad/inconsistent source data must
+  // never push a row's ratio above 1.0 (unbounded ratio → unbounded bonus).
+  const qualifyingAltData = activeAltData
+    .map(d => ({ ...d, totalTransactions: Math.max(0, d.totalTransactions || 0), onTimePayments: Math.min(Math.max(0, d.onTimePayments || 0), Math.max(0, d.totalTransactions || 0)) }))
+    .filter(d => d.totalTransactions >= MIN_ALT_DATA_TRANSACTIONS);
+  if (qualifyingAltData.length > 0) {
     let totalAltTxns = 0;
     let totalAltOnTime = 0;
-    for (const d of activeAltData) {
-      totalAltTxns += d.totalTransactions || 0;
-      totalAltOnTime += d.onTimePayments || 0;
+    for (const d of qualifyingAltData) {
+      totalAltTxns += d.totalTransactions;
+      totalAltOnTime += d.onTimePayments;
     }
     const altOnTimeRatio = totalAltTxns > 0 ? totalAltOnTime / totalAltTxns : 0;
-    altDataBonus = Math.round(altOnTimeRatio * 30 * Math.min(activeAltData.length, 3));
+    altDataBonus = Math.round(altOnTimeRatio * 30 * Math.min(qualifyingAltData.length, 3));
 
     const sourceLabels: Record<string, string> = {
       mobile_money: "Mobile Money",
@@ -355,13 +363,13 @@ export function calculateCreditScore(
       insurance: "Insurance",
       merchant: "Merchant Data",
     };
-    const sources = activeAltData.map(d => sourceLabels[d.source] || d.source).join(", ");
+    const sources = qualifyingAltData.map(d => sourceLabels[d.source] || d.source).join(", ");
     factors.push({
       name: "Alternative Data",
       impact: altDataBonus,
       maxImpact: 90,
       direction: altDataBonus >= 20 ? "positive" : altDataBonus >= 10 ? "neutral" : "positive",
-      description: `${activeAltData.length} source${activeAltData.length > 1 ? "s" : ""} (${sources}), ${Math.round(altOnTimeRatio * 100)}% on-time from ${totalAltTxns} transactions`,
+      description: `${qualifyingAltData.length} source${qualifyingAltData.length > 1 ? "s" : ""} (${sources}), ${Math.round(altOnTimeRatio * 100)}% on-time from ${totalAltTxns} transactions`,
       weight: 5,
     });
 
