@@ -1,3 +1,4 @@
+import { randomBytes } from "crypto";
 import { db, pool } from "./db";
 import { users, borrowers, creditAccounts, creditInquiries, auditLogs } from "@shared/schema";
 import { count } from "drizzle-orm";
@@ -23,7 +24,7 @@ export async function seedDatabase() {
     }
   }
   const seedPassword = process.env.SEED_ADMIN_PASSWORD || (() => {
-    const generated = require("crypto").randomBytes(12).toString("hex");
+    const generated = randomBytes(12).toString("hex");
     console.warn(`[Seed] SEED_ADMIN_PASSWORD not set. Generated one-time password: ${generated} — set SEED_ADMIN_PASSWORD env var to fix.`);
     return generated;
   })();
