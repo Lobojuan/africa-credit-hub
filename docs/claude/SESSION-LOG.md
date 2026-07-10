@@ -106,12 +106,60 @@
   - **All Scorecard v1.1 HIGH+CRITICAL findings are now fixed**: F1, I1(partial — consent filter
     still needs data backfill), I2, C1, F2, B1, B2, A1, A2, A3.
 
+## 2026-07-10 (later) — de-Replit-ified the codebase; user now has a local Claude Code session
+- User set up Claude Code locally on their Mac (`~/africa-credit-hub-recover`, working push access
+  confirmed) — that session should be the primary place for future work; this sandbox's push is
+  still blocked (see CRITICAL note above) and its outbound network is blocked for tunnels/hosting
+  platforms entirely (tested api.render.com, api.railway.app, api.vercel.com, api.fly.io — all
+  identical `403 CONNECT tunnel failed` as the tunnel providers). Local session confirmed capable
+  of tunneling (found and fixed a real bug in the process: a stale unrelated process from a
+  different old project squatting on the dev port, serving stale content and causing the blank
+  page the user saw through the tunnel).
+- Removed Replit platform coupling now that the project no longer runs there:
+  - Deleted `.replit`, `.replitignore`, `replit.nix` (dead platform config)
+  - Deleted `client/replit_integrations/audio/` — confirmed unused (no imports anywhere), was a
+    scaffolded voice-chat utility that was never wired into any page
+  - `server/index.ts`: dev-mode CSP `frameAncestors` no longer allowlists `*.replit.dev/.app`,
+    `*.repl.co`; added `import "./env"` as the first import to load `.env` via dotenv (see below)
+  - `server/routes.ts`: consent-notification base-URL fallback host changed from
+    `universalcredithub.replit.app` to the real production domain
+  - `server/routes/platform-control.ts`: `current-instance` deployment-URL detection no longer
+    reads `REPLIT_DEV_DOMAIN`/`REPL_SLUG` (uses `CANONICAL_URL`); new-client onboarding
+    instructions no longer say "fork this Replit project" (says clone + deploy to hosting platform
+    of choice). Left the GitHub-repo-management admin feature (`ReplitConnectors` SDK) in place —
+    it already degrades gracefully (try/catch → clear 500 "Ensure GitHub is connected" error) when
+    Replit's connector broker isn't available, and replacing it with a real GitHub App is a bigger
+    project than this cleanup pass.
+  - Added `server/env.ts` (dotenv bootstrap, imported first in `server/index.ts`) so `.env` loads
+    automatically — this is the actual fix for the "had to manually export every env var" pain
+    point hit repeatedly this session. New `dotenv` dependency.
+  - `.env.example`: corrected the AI section — was documented as "auto-provisioned by Replit AI
+    Integrations, do not set manually," which is no longer true; now documents
+    `AI_INTEGRATIONS_OPENAI_API_KEY`/`AI_INTEGRATIONS_ANTHROPIC_API_KEY` as normal required/optional
+    vars.
+  - `README.md`, `CLAUDE.md`: removed/updated Replit-specific deployment guidance and the
+    "Replit Fix Files" protocol section (dead — there's no live Replit project to sync fixes to
+    anymore).
+  - Left `replit.md` in place (110-line project-context doc, real content, predates CLAUDE.md) —
+    didn't want to delete/merge it into CLAUDE.md without the user's sign-off on which parts to
+    keep; flagged for them instead.
+  - Verified: `tsc` clean, 672 non-DB tests pass (same baseline, no regressions), full production
+    build succeeds (`npm run build`, confirmed with placeholder assets standing in for the
+    still-untracked `attached_assets/` — a separate, pre-existing gap, not something this pass
+    touched).
+
 ## PENDING (next session picks up here)
 1. Verify push access from a fresh sandbox session before relying on it — if still blocked, go
-   straight to the patch-paste method above rather than re-diagnosing from scratch.
+   straight to the patch-paste method above rather than re-diagnosing from scratch. User's local
+   Claude Code session (`~/africa-credit-hub-recover`) has working push access and should be
+   preferred for new work going forward.
 2. Remaining scoring: I1 consent-filter data backfill; MEDIUM items F4/A4/A5/B3/B4/C2/C4 (see
    REVIEW-2026-07.md Part B) if there's appetite to keep going deeper.
 3. Ecobank remaining: OpenAPI spec, NDPR consent endpoint
 4. i18n: finish 7 remaining high-value public pages per docs/claude/I18N-TRACKER.md recipe (consent-respond + credit-score-gauge DONE)
 5. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
 6. User's PAT is in this session's history — recommend ROTATING it (it cannot be used from these sessions anyway)
+7. `attached_assets/` is gitignored and was never tracked in git — real production images/video are
+   missing from every clone made from GitHub. If the user still has the originals (their Replit
+   export, or wherever they came from), they should be added via Git LFS or a proper asset host,
+   not committed raw into git history.

@@ -1,3 +1,4 @@
+import "./env";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import pgSession from "connect-pg-simple";
@@ -158,9 +159,7 @@ app.use(helmet({
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: isProductionBoot
-        ? ["'none'"]
-        : ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.repl.co"],
+      frameAncestors: isProductionBoot ? ["'none'"] : ["'self'"],
       ...(isProductionBoot ? { upgradeInsecureRequests: [] } : {}),
     },
   },

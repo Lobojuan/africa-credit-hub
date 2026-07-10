@@ -923,11 +923,7 @@ export function registerPlatformControlRoutes(app: Express) {
       const platformName = process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub";
       const country = process.env.COUNTRY_MODE || "Ghana";
       const currency = process.env.DEFAULT_CURRENCY || "GHS";
-      const deploymentUrl = process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.REPL_SLUG
-          ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-          : "";
+      const deploymentUrl = process.env.CANONICAL_URL || "";
 
       let borrowerCount = 0, orgCount = 0, userCount = 0;
       try {
@@ -991,8 +987,8 @@ export function registerPlatformControlRoutes(app: Express) {
     };
 
     return res.json({ config, instructions: [
-      "1. Fork this Replit project for the new client",
-      "2. Set each environment variable above in the forked project's Secrets",
+      "1. Clone this repository for the new client's isolated deployment",
+      "2. Set each environment variable above as secrets in the hosting platform for the new deployment",
       "3. Update database connection string to a new isolated PostgreSQL instance",
       "4. Deploy and verify the /health endpoint",
       "5. Register the deployment in this control center",

@@ -10,7 +10,7 @@ try:
         ["npm", "run", "check"],
         capture_output=True,
         text=True,
-        cwd="/home/user/africa-credit-hub",
+        cwd="/Users/uffe/africa-credit-hub-recover",
         timeout=120,
     )
     out = r.stdout + r.stderr

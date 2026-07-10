@@ -31,8 +31,7 @@ When the user pastes an error message, stack trace, or build failure:
 1. Identify the file and root cause.
 2. Fix it directly in the codebase.
 3. Run `npm run check` to confirm no TypeScript regressions.
-4. Provide a Replit paste script if the fix also needs to go into the user's live Replit environment.
-5. Commit + push to `main`.
+4. Commit + push to `main`.
 
 ---
 
@@ -61,19 +60,9 @@ When the user pastes an error message, stack trace, or build failure:
 
 ---
 
-## Replit Fix Files
-
-When changes need to go to the user's live Replit project (not just this repo):
-- Generate a single bash script at `/tmp/replit-fixes.sh`.
-- Use Python `str.replace()` for surgical edits and `cat > file << 'EOF'` for full rewrites.
-- Always test the script by running it against the local clone first.
-- Send the file to the user with `SendUserFile`.
-
----
-
 ## Standing Instructions
 
 - **I am always the code partner for this project.** The user does not need to re-explain the codebase.
 - Run `npm run check` after any TypeScript file edit, before reporting a task as done.
-- When producing Replit scripts, always include an idempotency check so re-running is safe.
 - Ghana playbook is at `exports/ghana-demo-playbook.md` — update it whenever the user has a new client meeting.
+- This project no longer runs on Replit — it's a standard Node/Express + Vite app deployable to any Node host with PostgreSQL. `.env` is loaded automatically via `server/env.ts` (dotenv); copy `.env.example` to `.env` for local development.

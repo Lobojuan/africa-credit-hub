@@ -18,10 +18,31 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-08T19:06:34.311Z",
+  "generatedAt": "2026-07-10T21:45:49.584Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "17c299d",
+  "currentCommit": "0e73640",
   "commits": [
+    {
+      "hash": "0e736407222774c4fd70bf925fe822d791cf0117",
+      "shortHash": "0e73640",
+      "date": "2026-07-10",
+      "author": "Uffe J Carlson",
+      "subject": "fix(scoring): close A1-A3 affordability income-inflation trio"
+    },
+    {
+      "hash": "68766f5172e0e1596b5c6aabd97666479d0d6a07",
+      "shortHash": "68766f5",
+      "date": "2026-07-10",
+      "author": "Uffe J Carlson",
+      "subject": "fix(scoring): close 3 HIGH-severity batch/alt-data exploits (B1, B2, F2)"
+    },
+    {
+      "hash": "c616a951e379eb37f251823301837c976ee4d06e",
+      "shortHash": "c616a95",
+      "date": "2026-07-08",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
     {
       "hash": "17c299d964f2b492526c9655f588656404b4ba63",
       "shortHash": "17c299d",
@@ -84,27 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "feat(i18n): internationalize consent-respond page (legal, public-facing)"
-    },
-    {
-      "hash": "fdf3e1886e369710c0986a030c141d7f78c88e8c",
-      "shortHash": "fdf3e18",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "docs(review): correct i18n finding — dictionaries complete, real gap is 47 hardcoded pages"
-    },
-    {
-      "hash": "b1b2e0729b8354cfc69d4a64889af9c5f2560492",
-      "shortHash": "b1b2e07",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "chore: refresh generated version history"
-    },
-    {
-      "hash": "92f596e287cc0ca586b28d35c88465b81c7ba3c5",
-      "shortHash": "92f596e",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "docs(review): mark F1/C1/I2/F3 fixed, I1 partial — Scorecard v1.1 progress"
     }
   ]
 };
