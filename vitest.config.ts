@@ -11,7 +11,7 @@ export default defineConfig({
       "client/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
     exclude: ["node_modules", "dist", "server/__tests__/cross-product-gateway.test.ts"],
-    setupFiles: ["./client/src/test-setup.ts"],
+    setupFiles: ["./server/__tests__/unit-env.ts", "./client/src/test-setup.ts"],
   },
   resolve: {
     alias: {

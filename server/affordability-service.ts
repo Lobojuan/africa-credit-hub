@@ -511,9 +511,18 @@ const SALARY_KEYWORDS = /\b(salary|payroll|wages|stipend|monthly\s*pay|net\s*pay
 const GOVT_KEYWORDS = /\b(govt|government|grant|benefit|pension|nhif|nssf|tin)\b/i;
 const REMITTANCE_KEYWORDS = /\b(remit|western\s*union|moneygram|wise|world\s*remit)\b/i;
 const RENTAL_KEYWORDS = /\b(rent\s*(received|income))\b/i;
+// Loan disbursements and savings withdrawals are money the borrower already had or owes —
+// not new income. A borrower cycling digital loans to stay afloat would otherwise show
+// RISING "income" precisely when they're most distressed.
+const NOT_INCOME_CATEGORIES = new Set(["loan_disbursement", "savings_withdrawal"]);
+const NOT_INCOME_KEYWORDS = /\b(loan\s*disburs(e|ement)|savings?\s*withdrawal)\b/i;
 
-export function classifyIncome(txns: NormalisedTxn[], currency: string): IncomeSourceCandidate[] {
-  const credits = txns.filter(t => t.direction === "credit");
+export function classifyIncome(txns: NormalisedTxn[], currency: string, periodMonths: number): IncomeSourceCandidate[] {
+  const credits = txns.filter(t =>
+    t.direction === "credit" &&
+    !(t.category && NOT_INCOME_CATEGORIES.has(t.category)) &&
+    !NOT_INCOME_KEYWORDS.test(`${t.counterparty || ""} ${t.narration || ""}`)
+  );
   if (credits.length === 0) return [];
 
   // Group by counterparty to detect recurrence
@@ -525,7 +534,10 @@ export function classifyIncome(txns: NormalisedTxn[], currency: string): IncomeS
     groups.set(key, arr);
   }
 
-  const monthsSpan = Math.max(1, monthSpan(credits));
+  // Normalized by the SAME period used for expenses (the full statement span), not each
+  // group's own first-to-last gap — 3 monthly salary credits span only 2 inter-payment
+  // months, which previously overstated income by a N/(N-1) factor (e.g. x1.5 for N=3).
+  const monthsSpan = periodMonths;
   const candidates: IncomeSourceCandidate[] = [];
 
   for (const [key, arr] of groups.entries()) {
@@ -582,9 +594,12 @@ const EXPENSE_RULES: Array<{ category: ExpenseCandidate["category"]; pattern: Re
   { category: "transfers_out", pattern: /\b(transfer|p2p|send\s*money)\b/i },
 ];
 
-export async function categoriseExpenses(txns: NormalisedTxn[], currency: string, useLlmFallback: boolean = false): Promise<ExpenseCandidate[]> {
+export async function categoriseExpenses(txns: NormalisedTxn[], currency: string, periodMonths: number, useLlmFallback: boolean = false): Promise<ExpenseCandidate[]> {
   const debits = txns.filter(t => t.direction === "debit");
-  const monthsSpan = Math.max(1, monthSpan(debits));
+  // Same shared period as classifyIncome — see comment there. Previously this used the
+  // debits-only span while income used the credits-only span, so income and expenses were
+  // normalized against two different, mismatched denominators before being subtracted.
+  const monthsSpan = periodMonths;
   const buckets: Record<string, { total: number; count: number; details: string[] }> = {};
 
   const unknown: NormalisedTxn[] = [];
@@ -666,7 +681,10 @@ function momoToNormalised(txns: MomoTransaction[]): NormalisedTxn[] {
     direction: credits.includes(t.transactionType) ? "credit" : "debit",
     counterparty: t.counterpartyName || t.counterpartyMsisdn,
     narration: t.narration || t.transactionType,
-    category: t.category,
+    // Preserve the raw MoMo transaction type (not t.category, a different taxonomy) so
+    // classifyIncome can reliably exclude loan disbursements / savings withdrawals below,
+    // even when a real narration string is present and wouldn't keyword-match otherwise.
+    category: t.transactionType,
   }));
 }
 
@@ -822,12 +840,14 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
     }
   }
 
-  // 2. Classify income
-  let incomeSources = classifyIncome(txns, currency);
+  // 2. Classify income — periodMonths is shared with expense categorisation below so both
+  //    sides of disposableIncome are measured against the same observation window.
+  const periodMonths = Math.max(1, computePeriodMonths(txns));
+  let incomeSources = classifyIncome(txns, currency, periodMonths);
   let grossIncomeMonthly = incomeSources.reduce((s, i) => s + i.amountMonthly, 0);
 
   // 3. Categorise expenses
-  let expenses = await categoriseExpenses(txns, currency, opts.useLlmFallback);
+  let expenses = await categoriseExpenses(txns, currency, periodMonths, opts.useLlmFallback);
   // 4. Existing debt servicing — from credit accounts + debt_servicing expense bucket.
   //    IMPORTANT: exclude debt_servicing from totalExpensesMonthly to avoid double-counting.
   //    disposableIncome = income - livingExpenses - debtService (three distinct buckets).
@@ -966,9 +986,13 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
     return created;
   });
 
-  // 9. Verified-income write-back: applies to any trusted source (open_banking, bank_statement_pdf with
-  //    medium+ confidence, hybrid) where the income is materially different from the self-declared value.
-  const trustedSources = new Set<typeof dataSource>(["open_banking", "bank_statement_pdf", "hybrid"]);
+  // 9. Verified-income write-back: applies only to sources that can't be trivially fabricated by
+  //    the borrower — a bank-API feed (open_banking) or open_banking+MoMo (hybrid). Deliberately
+  //    EXCLUDES bank_statement_pdf: it's a user-uploaded, LLM-parsed PDF — a fabricated statement
+  //    would previously write a permanent, inflated income onto the borrower record and feed
+  //    directly into decision DTI. PDF-derived assessments are still computed and stored (audit
+  //    trail, visible to underwriters) — they just don't silently become the borrower's income of record.
+  const trustedSources = new Set<typeof dataSource>(["open_banking", "hybrid"]);
   const hasEnoughTransactions = txns.length >= 5; // At least 5 txns — single paycheque is unreliable
   if (trustedSources.has(dataSource) && confidenceLabel !== "low" && grossIncomeMonthly > 0 && hasEnoughTransactions) {
     const declared = parseFloat(borrower.monthlyIncome || "0");
@@ -987,7 +1011,10 @@ export async function computeAffordability(borrower: Borrower, opts: ComputeOpts
 
 // ==================== HELPERS ====================
 
-function monthSpan(txns: NormalisedTxn[]): number {
+// Single shared observation period for both income and expense normalization — computed
+// over ALL transactions (credits + debits), not a direction-specific subset, so the two
+// sides of disposableIncome = income - expenses are measured against the same denominator.
+function computePeriodMonths(txns: NormalisedTxn[]): number {
   if (txns.length < 2) return 1;
   const sorted = [...txns].sort((a, b) => a.date.getTime() - b.date.getTime());
   const days = (sorted[sorted.length - 1].date.getTime() - sorted[0].date.getTime()) / 86400000;

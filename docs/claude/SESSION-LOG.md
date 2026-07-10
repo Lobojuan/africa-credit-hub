@@ -75,12 +75,42 @@
   "noreply@anthropic.com"` — set this early in any session that will commit, since it doesn't persist
   across the container resets described above.
 
+## 2026-07-10 — push finally landed (via patch-paste, not the sandbox); A1-A3 fixed
+- RESOLVED (for this session): direct git/MCP push from the Claude Code sandbox is still blocked
+  (`403 Permission ... denied` / `403 Resource not accessible by integration`), and even the
+  session's dedicated git proxy died mid-session (stale hardcoded `pushurl` in `.git/config`,
+  fixed by removing the override so git falls through to the normal, working proxy path — that
+  part alone doesn't grant write access, it just gets you a real GitHub response instead of a
+  dead connection). What actually worked: generating a plain `git diff`/patch as TEXT (not a
+  file attachment — file downloads via the chat client were unreliable for this user across many
+  attempts) and having the user paste it directly into Terminal on their own Mac, which has real
+  push access (proven: they merged PR #7 through it). `git apply --check` → `git apply` → commit
+  → push. For small diffs (<50KB) this is far more reliable than file bundles — no download step,
+  no path-guessing, just copy/paste into a heredoc. Prefer this method first next time push is
+  blocked; fall back to bundles only for very large diffs.
+- Fixed A1/A2/A3 (affordability-service.ts), the last of the HIGH-severity scoring findings:
+  - A1: classifyIncome/categoriseExpenses previously computed separate, mismatched spans
+    (credits-only vs debits-only first-to-last-transaction gaps) — N periodic payments span only
+    N-1 intervals, overstating income by N/(N-1) (e.g. x1.5 for 3 salary credits). Now both share
+    one `periodMonths` computed over the full transaction set.
+  - A2: loan_disbursement/savings_withdrawal credits excluded from income candidates (category +
+    keyword match); momoToNormalised now preserves the real MoMo transactionType so this is
+    reliable even when narration text doesn't literally say "loan".
+  - A3: removed `bank_statement_pdf` from the verified-income write-back trustedSources — a
+    fabricated PDF can no longer permanently overwrite borrower.monthlyIncome. open_banking/hybrid
+    remain trusted (not user-fabricable the way an uploaded PDF is).
+  - +5 regression tests (new server/__tests__/affordability-service.test.ts). Also wired the
+    previously-orphaned server/__tests__/unit-env.ts into vitest.config.ts setupFiles (was never
+    referenced anywhere; needed to stub AI_INTEGRATIONS_OPENAI_API_KEY so importing
+    affordability-service.ts in tests doesn't crash on OpenAI client construction).
+  - **All Scorecard v1.1 HIGH+CRITICAL findings are now fixed**: F1, I1(partial — consent filter
+    still needs data backfill), I2, C1, F2, B1, B2, A1, A2, A3.
+
 ## PENDING (next session picks up here)
-1. PUSH EVERYTHING FIRST, before any other work — retry immediately on session start, see the
-   CRITICAL note above. Do not accumulate more than a few unpushed commits before verifying push
-   actually works, given the container-reset risk documented above.
-2. Continue Scorecard v1.1: A1-A3 (affordability income inflation trio) — F1/F3/C1/I2/I1(partial)/F2/B1/B2
-   all DONE (this session + 8f3c4b9)
+1. Verify push access from a fresh sandbox session before relying on it — if still blocked, go
+   straight to the patch-paste method above rather than re-diagnosing from scratch.
+2. Remaining scoring: I1 consent-filter data backfill; MEDIUM items F4/A4/A5/B3/B4/C2/C4 (see
+   REVIEW-2026-07.md Part B) if there's appetite to keep going deeper.
 3. Ecobank remaining: OpenAPI spec, NDPR consent endpoint
 4. i18n: finish 7 remaining high-value public pages per docs/claude/I18N-TRACKER.md recipe (consent-respond + credit-score-gauge DONE)
 5. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
