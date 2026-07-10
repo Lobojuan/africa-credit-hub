@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-10T21:45:49.584Z",
+  "generatedAt": "2026-07-10T21:46:08.916Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "0e73640",
+  "currentCommit": "8909581",
   "commits": [
+    {
+      "hash": "8909581df1847e2c0b6af0413330e2e6b6996877",
+      "shortHash": "8909581",
+      "date": "2026-07-10",
+      "author": "Uffe J Carlson",
+      "subject": "chore: remove Replit platform coupling, add proper .env loading"
+    },
     {
       "hash": "0e736407222774c4fd70bf925fe822d791cf0117",
       "shortHash": "0e73640",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "docs: log i18n correction + consent-respond internationalization"
-    },
-    {
-      "hash": "a39abf57a2b6ac7ee794d98a7d0b087712793a41",
-      "shortHash": "a39abf5",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "feat(i18n): internationalize consent-respond page (legal, public-facing)"
     }
   ]
 };
