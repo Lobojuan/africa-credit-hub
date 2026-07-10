@@ -27,9 +27,9 @@ Status legend: OPEN / FIXED(date) / FALSE-POSITIVE
 | I1 | HIGH | All inquiries penalize score — no consent/soft/12-mo filter | PARTIAL 2026-07-07 (8f3c4b9 — soft+12mo filtered via countScorableInquiries; consent filter still pending data backfill) |
 | I2 | HIGH | Soft-pull endpoint 500s — shifted args hidden by as-any | FIXED 2026-07-07 (8f3c4b9) |
 | C1 | HIGH | Different scores per surface; decisions run ~100pts high | FIXED 2026-07-07 (8f3c4b9 — altData on all surfaces, shared inquiry count) |
-| F2 | HIGH | Empty alt-data rows grant +64 boost | OPEN |
-| B1 | HIGH | Cross-lender tradeline tampering via batch upload | OPEN |
-| B2 | HIGH | Batch identity overwrite via global nationalId match | OPEN |
+| F2 | HIGH | Empty alt-data rows grant +64 boost | FIXED 2026-07-09 (two bonus paths in credit-score.ts both had the gap — thin-file path had the literal 0.8 default described, with-accounts path had no minimum-sample floor at all; MIN_ALT_TXNS_PER_SOURCE=5 added to both; +2 regression tests) |
+| B1 | HIGH | Cross-lender tradeline tampering via batch upload | FIXED 2026-07-09 (resolveTrustedLenderInstitution — "lender" role sessions can no longer set arbitrary lenderInstitution text; forced to their own org name. "admin" role retains free-text for legitimate multi-institution regulatory uploads) |
+| B2 | HIGH | Batch identity overwrite via global nationalId match | FIXED 2026-07-09 (findOrCreateBatchBorrower: primary nationalId match now scoped by country when known; name/address/phone/DOB no longer blindly overwritten — conflicting values reject the row as IDENTITY_CONFLICT for manual review instead of silently rewriting someone else's identity) |
 | A1-A3 | HIGH | Affordability income inflation trio | OPEN |
 | F3 | MEDIUM | creditLimit NaN zeroes utilization | FIXED 2026-07-07 (8f3c4b9 — safeAmount guard) |
 | F4,A4,A5,B3,B4,C2,C4 | MEDIUM | See review Part B | OPEN |

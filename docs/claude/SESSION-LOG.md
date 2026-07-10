@@ -39,10 +39,49 @@
 - DONE: consent-respond.tsx (legal, public) fully internationalized — new `consentRespond` namespace in en/fr/pt/es, ~35 strings, 0 hardcoded left, tsc clean (fr enforced). Commit a39abf5.
 - Tracker + proven per-page recipe: docs/claude/I18N-TRACKER.md. Remaining high-value public pages queued: country-selection, consumer-portal, collections, loan-origination, collateral-registry, telco-lending, papps-settlements.
 
+## 2026-07-09 — i18n on consent-respond page + gauge; push blocked all session; CRITICAL environment lesson
+- i18n: consent-respond.tsx fully internationalized (en/fr/pt/es, ~35 strings, new `consentRespond`
+  namespace). credit-score-gauge.tsx SVG band label now t()'d (`scoreGuide.<band>`).
+- Corrected the review's i18n coverage claim: dictionaries are essentially complete (en~2904 leaf
+  strings, fr 100% typeof-enforced, pt/es/ar/sw/zh-CN/zh-TW 96–117%). Real gap is 47/128 pages never
+  calling useTranslation — a per-page extraction problem, not a translation problem.
+- Fixed B1 (cross-lender tradeline tampering — lenderInstitution now forced to the caller's own org
+  for "lender" role sessions, via new resolveTrustedLenderInstitution()), B2 (batch identity
+  overwrite — nationalId match now scoped by country when known, conflicting identity fields reject
+  the row as IDENTITY_CONFLICT instead of silently overwriting), and F2 (alt-data bonus gaming — TWO
+  separate bonus code paths in credit-score.ts both lacked a minimum-sample-size floor; the thin-file
+  path genuinely had the literal "assume 80% on-time" default the original review described, exactly
+  reproducing the claimed 600→664 exploit; the with-accounts path had no floor at all, allowing 3
+  fabricated 1-transaction sources to claim the full +90 bonus. MIN_ALT_TXNS_PER_SOURCE=5 added to
+  both). +3 regression tests, tsc clean.
+- **CRITICAL — had to redo this work once already.** Mid-session the container was reclaimed/restarted
+  between conversation turns and came back with the repo reset to an earlier commit — every local
+  commit made after that point (including a first pass at these same B1/B2/F2 fixes, plus a 66-commit
+  authorship-normalization rebase) was silently gone: not in `git log --all`, not in `git fsck
+  --unreachable`, nothing. **Local commits in this environment are not durable — only a successful
+  push makes work survive a session boundary.** Do not treat "committed" as "safe" here.
+- Push attempted repeatedly all session via 3 independent paths (git proxy, MCP push_files, MCP
+  create_or_update_file) — all fail. Error signature evolved during the session: started as `403
+  Resource not accessible by integration` (GitHub App not installed — user confirmed via GitHub
+  Developer Settings screenshot), then after user connected the GitHub integration in Claude's own
+  Connectors settings, became `403 Permission ... denied to Lobojuan` (repo-level denial, connector
+  scope is read/identity-only, not Contents:write), then the dedicated git proxy port itself started
+  refusing connections entirely. Root cause across all three: this session's credential was minted at
+  session start and does not pick up permission changes made mid-session, compounded by the container
+  reset above. **Next session should retry the push FIRST, before doing any other work**, given a
+  fresh credential — if it still fails, the GitHub App/connector permissions need re-verification from
+  scratch (screenshots of the exact failure are in this conversation's history if needed).
+- Git commit identity for this repo should be `git config user.name "Claude"` / `user.email
+  "noreply@anthropic.com"` — set this early in any session that will commit, since it doesn't persist
+  across the container resets described above.
+
 ## PENDING (next session picks up here)
-1. PUSH EVERYTHING (branch claude/production-check-WFJxR + brain repo) — GitHub App enabled 2026-07-07, fresh session should have credentials
-2. Continue Scorecard v1.1: F2 (alt-data empty boost), B1/B2 (batch tampering), A1-A3 (affordability). F1/F3/C1/I2 DONE (8f3c4b9); I1 partial (consent backfill pending)
+1. PUSH EVERYTHING FIRST, before any other work — retry immediately on session start, see the
+   CRITICAL note above. Do not accumulate more than a few unpushed commits before verifying push
+   actually works, given the container-reset risk documented above.
+2. Continue Scorecard v1.1: A1-A3 (affordability income inflation trio) — F1/F3/C1/I2/I1(partial)/F2/B1/B2
+   all DONE (this session + 8f3c4b9)
 3. Ecobank remaining: OpenAPI spec, NDPR consent endpoint
-4. i18n: finish 7 remaining high-value public pages per docs/claude/I18N-TRACKER.md recipe (consent-respond DONE)
+4. i18n: finish 7 remaining high-value public pages per docs/claude/I18N-TRACKER.md recipe (consent-respond + credit-score-gauge DONE)
 5. CVM: repo creation + Phase 1 verification → Phase 2 AI engine
-5. User's PAT is in this session's history — recommend ROTATING it (it cannot be used from these sessions anyway)
+6. User's PAT is in this session's history — recommend ROTATING it (it cannot be used from these sessions anyway)

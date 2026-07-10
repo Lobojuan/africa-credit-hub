@@ -3783,11 +3783,16 @@ export async function registerRoutes(
     }
 
     const idType = normaliseIdType(record.idType);
+    const recordCountry = record.country && record.country !== "Unknown" ? record.country : undefined;
 
-    // ── 1. Match by nationalId column ─────────────────────────────────────
+    // ── 1. Match by nationalId column (scoped by country when known, since
+    //      national ID formats collide across countries — e.g. an 8-digit
+    //      Ghana Card number is not the same namespace as a Kenyan ID) ──────
     let existing = await db.select({ id: borrowers.id })
       .from(borrowers)
-      .where(eq(borrowers.nationalId, nationalId))
+      .where(recordCountry
+        ? and(eq(borrowers.nationalId, nationalId), eq(borrowers.country, recordCountry))
+        : eq(borrowers.nationalId, nationalId))
       .limit(1);
 
     // ── 2. Match by type-specific secondary column ─────────────────────────
@@ -3824,19 +3829,51 @@ export async function registerRoutes(
       if (byPk.length > 0) return byPk[0].id;
     }
 
-    // ── 4. Update existing borrower metadata ─────────────────────────────
+    // ── 4. Reconcile existing borrower metadata — fill in blanks, but never
+    //      silently overwrite a conflicting identity field. A typo'd ID
+    //      colliding with a real person must not rewrite their name/DOB.
     if (existing.length > 0) {
+      const [current] = await db.select({
+        firstName: borrowers.firstName,
+        lastName: borrowers.lastName,
+        address: borrowers.address,
+        phone: borrowers.phone,
+        dateOfBirth: borrowers.dateOfBirth,
+      }).from(borrowers).where(eq(borrowers.id, existing[0].id)).limit(1);
+
       const updateData: any = {};
-      if (record.borrowerName) {
-        const parts = record.borrowerName.split(" ");
-        updateData.firstName = parts[0];
-        updateData.lastName = parts.slice(1).join(" ") || null;
+      const conflicts: string[] = [];
+      const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
+
+      const incomingName = (record.borrowerName || "").trim();
+      if (incomingName) {
+        const existingFullName = [current?.firstName, current?.lastName].filter(Boolean).join(" ").trim();
+        if (!existingFullName) {
+          const parts = incomingName.split(" ");
+          updateData.firstName = parts[0];
+          updateData.lastName = parts.slice(1).join(" ") || null;
+        } else if (norm(existingFullName) !== norm(incomingName)) {
+          conflicts.push(`name ("${existingFullName}" on file vs "${incomingName}" submitted)`);
+        }
       }
-      if (record.address) updateData.address = record.address;
-      if (record.phoneNumber) updateData.phone = record.phoneNumber;
-      if (record.dateOfBirth) updateData.dateOfBirth = record.dateOfBirth;
+
+      const reconcile = (field: "address" | "phone" | "dateOfBirth", incoming: unknown, label: string) => {
+        if (!incoming) return;
+        const existingVal = current?.[field];
+        if (!existingVal) { updateData[field] = incoming; return; }
+        if (norm(existingVal) !== norm(incoming)) {
+          conflicts.push(`${label} ("${existingVal}" on file vs "${incoming}" submitted)`);
+        }
+      };
+      reconcile("address", record.address, "address");
+      reconcile("phone", record.phoneNumber, "phone");
+      reconcile("dateOfBirth", record.dateOfBirth, "date of birth");
+
       if (Object.keys(updateData).length > 0) {
         await db.update(borrowers).set({ ...updateData, updatedAt: new Date() }).where(eq(borrowers.id, existing[0].id));
+      }
+      if (conflicts.length > 0) {
+        throw new Error(`IDENTITY_CONFLICT: borrower ${nationalId} on file has different ${conflicts.join(", ")} — record rejected for manual review, not auto-applied`);
       }
       return existing[0].id;
     }
@@ -3870,12 +3907,32 @@ export async function registerRoutes(
     return created.id;
   }
 
+  // A "lender" session represents exactly one institution — the free-text
+  // lenderInstitution field must never be trusted from that session, or one
+  // lender can address (and overwrite) another lender's tradelines by simply
+  // typing their name. Trusted-only for "admin"/regulator sessions doing
+  // legitimate multi-institution bulk submissions on others' behalf.
+  async function resolveTrustedLenderInstitution(session: { userRole?: string; organizationId?: string } | undefined): Promise<string | null> {
+    if (session?.userRole !== "lender") return null;
+    if (!session.organizationId) {
+      throw new Error("Lender session has no organization on record — cannot determine lender institution");
+    }
+    const [org] = await db.select({ name: organizations.name }).from(organizations).where(eq(organizations.id, session.organizationId)).limit(1);
+    if (!org) throw new Error("Lender organization not found");
+    return org.name;
+  }
+
   async function batchInsertCreditAccounts(
     validated: Array<{ index: number; data: any; rawRecord?: any }>,
     results: { successCount: number; errorCount: number; updatedCount?: number; rejectedCount?: number; errors: Array<{ index: number; message: string; type?: string }> },
-    orgId?: string
+    orgId?: string,
+    trustedLenderInstitution?: string | null
   ) {
     if (!(results as any).updatedCount) (results as any).updatedCount = 0;
+
+    if (trustedLenderInstitution) {
+      for (const item of validated) item.data.lenderInstitution = trustedLenderInstitution;
+    }
 
     for (const item of validated) {
       try {
@@ -3883,8 +3940,13 @@ export async function registerRoutes(
         const resolvedBorrowerId = await findOrCreateBatchBorrower(raw, orgId);
         item.data.borrowerId = resolvedBorrowerId;
       } catch (err: any) {
+        const isIdentityConflict = typeof err.message === "string" && err.message.startsWith("IDENTITY_CONFLICT:");
         results.errorCount++;
-        results.errors.push({ index: item.index, message: `Borrower resolution failed: ${err.message}` });
+        results.errors.push({
+          index: item.index,
+          message: isIdentityConflict ? err.message : `Borrower resolution failed: ${err.message}`,
+          type: isIdentityConflict ? "identity_conflict" : undefined,
+        });
         item.data._skip = true;
       }
     }
@@ -4004,7 +4066,7 @@ export async function registerRoutes(
         }
       }
 
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, await resolveTrustedLenderInstitution(req.session));
 
       const batchMeta = JSON.stringify({
         totalRecords: results.totalSubmitted,
@@ -4095,7 +4157,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, await resolveTrustedLenderInstitution(req.session));
 
       const xbrlMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
@@ -4227,7 +4289,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, await resolveTrustedLenderInstitution(req.session));
 
       const processedCount = results.successCount;
       const bogMeta = JSON.stringify({ totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
@@ -4316,7 +4378,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: err.message || "Validation failed" });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, await resolveTrustedLenderInstitution(req.session));
 
       const csvMeta = JSON.stringify({ totalRecords: results.totalSubmitted, successCount: results.successCount, updatedCount: (results as any).updatedCount || 0, errorCount: results.errorCount, errors: results.errors.slice(0, 50) });
       await storage.createAuditLog({
@@ -4578,7 +4640,7 @@ export async function registerRoutes(
           results.errors.push({ index: i, message: `[ERROR] ${err.message || "Validation failed"}`, type: "error" });
         }
       }
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, await resolveTrustedLenderInstitution(req.session));
 
       const processedCount = results.successCount;
       const lbMeta = JSON.stringify({ institutionType: instType, lenderInstitution: lender, totalSubmitted: results.totalSubmitted, processedCount, successCount: results.successCount, updatedCount: (results as any).updatedCount, rejectedCount: results.rejectedCount, errorCount: results.errorCount, errors: results.errors.slice(0, 100) });
@@ -5183,7 +5245,7 @@ export async function registerRoutes(
         }
       }
 
-      await batchInsertCreditAccounts(validated, results, req.session?.organizationId);
+      await batchInsertCreditAccounts(validated, results, req.session?.organizationId, await resolveTrustedLenderInstitution(req.session));
 
       const meta = JSON.stringify({ country, lenderInstitution: lender, ...results, errors: results.errors.slice(0, 100) });
       await storage.createAuditLog({

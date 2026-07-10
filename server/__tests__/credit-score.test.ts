@@ -8,6 +8,15 @@ describe("calculateCreditScore", () => {
     expect(result.reasonCodes).toContain("THIN_FILE_LIMITED_HISTORY");
   });
 
+  it("does not boost thin-file score from zero-transaction alt-data sources (F2)", () => {
+    const altData = [
+      { source: "mobile_money", totalTransactions: 0, onTimePayments: 0, latePayments: 0, status: "active" },
+      { source: "utility", totalTransactions: 0, onTimePayments: 0, latePayments: 0, status: "active" },
+    ];
+    const result = calculateCreditScore([], 0, [], false, altData);
+    expect(result.score).toBe(600);
+  });
+
   it("returns high score for all current accounts, no inquiries", () => {
     const accounts = [
       { status: "current", currentBalance: "5000" },
@@ -105,6 +114,19 @@ describe("calculateCreditScore", () => {
     ];
     const result = calculateCreditScore(accounts, 0, [], false, altData);
     expect(result.reasonCodes).toContain("STRONG_ALTERNATIVE_DATA");
+  });
+
+  it("ignores alt-data sources with a fabricated single-transaction history (F2)", () => {
+    const accounts = [{ status: "current", currentBalance: "5000" }];
+    const altData = [
+      { source: "mobile_money", totalTransactions: 1, onTimePayments: 1, latePayments: 0, status: "active" },
+      { source: "utility", totalTransactions: 1, onTimePayments: 1, latePayments: 0, status: "active" },
+      { source: "rent", totalTransactions: 1, onTimePayments: 1, latePayments: 0, status: "active" },
+    ];
+    const withThinAlt = calculateCreditScore(accounts, 0, [], false, altData);
+    const withoutAlt = calculateCreditScore(accounts, 0, [], false, []);
+    expect(withThinAlt.score).toBe(withoutAlt.score);
+    expect(withThinAlt.factors.some(f => f.name === "Alternative Data")).toBe(false);
   });
 
   it("ignores inactive alternative data", () => {

@@ -140,8 +140,12 @@ export function calculateCreditScore(
     });
 
     // Financial inclusion: boost thin-file score using alternative data sources
-    // (mobile money, utility payments, telco data) — critical for unbanked borrowers
-    const activeAltData = alternativeData.filter(d => d.status === "active");
+    // (mobile money, utility payments, telco data) — critical for unbanked borrowers.
+    // A source needs a minimum transaction count to be statistically meaningful —
+    // without this floor, a lender can post {source, totalTransactions: 0} and the old
+    // "assume 80% on-time" default handed a thin-file borrower a free 600→664 boost.
+    const MIN_ALT_TXNS_PER_SOURCE = 5;
+    const activeAltData = alternativeData.filter(d => d.status === "active" && (d.totalTransactions || 0) >= MIN_ALT_TXNS_PER_SOURCE);
     if (activeAltData.length > 0) {
       let totalAltTxns = 0;
       let totalAltOnTime = 0;
@@ -149,8 +153,7 @@ export function calculateCreditScore(
         totalAltTxns += (d.totalTransactions || 0);
         totalAltOnTime += (d.onTimePayments || 0);
       }
-      // When no transaction counts are present, assume an 80% on-time rate as a conservative default
-      const altOnTimeRatio = totalAltTxns > 0 ? totalAltOnTime / totalAltTxns : 0.8;
+      const altOnTimeRatio = totalAltTxns > 0 ? totalAltOnTime / totalAltTxns : 0;
       // Thin-file alt-data boost: up to +80 pts for excellent mobile money / utility signals
       const altBonus = Math.round(altOnTimeRatio * 40 * Math.min(activeAltData.length, 2));
       const sourceLabels: Record<string, string> = {
@@ -336,7 +339,11 @@ export function calculateCreditScore(
   });
 
   let altDataBonus = 0;
-  const activeAltData = alternativeData.filter(d => d.status === "active");
+  // A source with only a handful of transactions is not statistically meaningful —
+  // without this floor, a lender can post {source, totalTransactions: 1, onTimePayments: 1}
+  // three times and claim the full +90 alt-data bonus off fabricated single-transaction "history".
+  const MIN_ALT_TXNS_PER_SOURCE = 5;
+  const activeAltData = alternativeData.filter(d => d.status === "active" && (d.totalTransactions || 0) >= MIN_ALT_TXNS_PER_SOURCE);
   if (activeAltData.length > 0) {
     let totalAltTxns = 0;
     let totalAltOnTime = 0;
