@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `17c299d`
-**Branch:** `claude/production-check-WFJxR`
-**Generated:** 2026-07-08T19:06:34.311Z
+**Current Commit:** `530e5d4`
+**Branch:** `main`
+**Generated:** 2026-07-11T19:29:36.623Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,15 +12,15 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
-| 2026-07-08 | `17c299d` | chore: refresh generated version history | Claude |
-| 2026-07-08 | `d021366` | chore: refresh generated version history | Claude |
-| 2026-07-08 | `5dbf3f0` | chore: refresh generated version history | Claude |
-| 2026-07-07 | `58bf120` | chore: refresh generated version history | Claude |
-| 2026-07-07 | `742f6c8` | chore: refresh generated version history | Claude |
-| 2026-07-07 | `b5dfba3` | fix(i18n): translate credit-score-gauge band label (consumer SVG graphic) | Claude |
-| 2026-07-07 | `b19991c` | chore: refresh generated version history | Claude |
-| 2026-07-07 | `cf06169` | docs: log i18n correction + consent-respond internationalization | Claude |
-| 2026-07-07 | `a39abf5` | feat(i18n): internationalize consent-respond page (legal, public-facing) | Claude |
-| 2026-07-07 | `fdf3e18` | docs(review): correct i18n finding — dictionaries complete, real gap is 47 hardcoded pages | Claude |
-| 2026-07-07 | `b1b2e07` | chore: refresh generated version history | Claude |
-| 2026-07-07 | `92f596e` | docs(review): mark F1/C1/I2/F3 fixed, I1 partial — Scorecard v1.1 progress | Claude |
+| 2026-07-09 | `530e5d4` | Merge pull request #7 from Lobojuan/fix/ground-ai-reasoning-in-real-score | Uffe J Carlson |
+| 2026-07-09 | `129253a` | Ground all AI credit-reasoning functions in the real computed score | Uffe J Carlson |
+| 2026-07-09 | `d7f9a98` | Merge pull request #6 from Lobojuan/fix/remaining-scoring-and-integrity-issues | Uffe J Carlson |
+| 2026-07-09 | `052b5cb` | Fix I1 write-path (unverified self-declared consent); update known-issues doc | Uffe J Carlson |
+| 2026-07-09 | `a68a062` | Fix A4, A5: multi-currency FX conversion, robust LLM JSON extraction | Uffe J Carlson |
+| 2026-07-09 | `c938596` | Fix B4, F4, C2, B3: ID validation, score cliff, dedup, batch maker-checker | Uffe J Carlson |
+| 2026-07-09 | `fc508f0` | Merge pull request #5 from Lobojuan/fix/scoring-integrity-and-hygiene | Uffe J Carlson |
+| 2026-07-09 | `8ac0248` | Sweep raw error-message leaks to safeErrorMessage (P2) | Uffe J Carlson |
+| 2026-07-09 | `3ca28da` | Repo hygiene: remove 5 orphan server files and 4 tracked source zips | Uffe J Carlson |
+| 2026-07-09 | `268a2a0` | Fix remaining scoring-integrity issues: F2, B1, B2, A1-A3, C4 | Uffe J Carlson |
+| 2026-07-09 | `8daefd6` | Merge pull request #4 from Lobojuan/fix/land-p1-validation-on-main | Uffe J Carlson |
+| 2026-07-09 | `7a25f1e` | Merge remote-tracking branch 'origin/integrate/recovered-july7-8-review' | Uffe J Carlson |
