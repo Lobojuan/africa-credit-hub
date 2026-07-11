@@ -250,9 +250,12 @@ describe("CSV export — Content-Type and headers", () => {
     await loginAs(ag, { ...DGI_OFFICER_CI, userCountry: SAFE_COUNTRY });
     const res = await ag.get(`/api/loto/admin/export.csv?country=${SAFE_COUNTRY}&view=compliance`);
     expect(res.status).toBe(200);
-    const firstLine = res.text.split("\n")[0];
-    expect(firstLine).toContain("merchant_id");
-    expect(firstLine).toContain("score");
+    const lines = res.text.split("\n");
+    // Row 0 is a "# © ... Confidential. Exported by: ..." audit watermark on every export
+    // (regulatory traceability); the real CSV header is row 1.
+    expect(lines[0]).toContain("Confidential");
+    expect(lines[1]).toContain("merchant_id");
+    expect(lines[1]).toContain("score");
   });
 
   it("GET /export.csv fraud response starts with expected CSV header row", async () => {
@@ -260,8 +263,9 @@ describe("CSV export — Content-Type and headers", () => {
     await loginAs(ag, { ...DGI_OFFICER_CI, userCountry: SAFE_COUNTRY });
     const res = await ag.get(`/api/loto/admin/export.csv?country=${SAFE_COUNTRY}&view=fraud`);
     expect(res.status).toBe(200);
-    const firstLine = res.text.split("\n")[0];
-    expect(firstLine).toContain("rule_code");
-    expect(firstLine).toContain("severity");
+    const lines = res.text.split("\n");
+    expect(lines[0]).toContain("Confidential");
+    expect(lines[1]).toContain("rule_code");
+    expect(lines[1]).toContain("severity");
   });
 });

@@ -3,14 +3,19 @@
 UCH TypeScript health check — asyncRewake Stop hook.
 Exits 0 (silent) when clean. Exits 2 with JSON systemMessage when errors exist.
 """
-import subprocess, json, sys
+import subprocess, json, sys, os
+
+# Repo root, derived from this file's own location — a hardcoded absolute path here
+# is wrong in any environment other than the one it was written in (this file is
+# shared across a cloud sandbox and local Mac checkouts with different paths).
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 try:
     r = subprocess.run(
         ["npm", "run", "check"],
         capture_output=True,
         text=True,
-        cwd="/home/user/africa-credit-hub",
+        cwd=REPO_ROOT,
         timeout=120,
     )
     out = r.stdout + r.stderr

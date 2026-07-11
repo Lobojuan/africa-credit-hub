@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-11T19:29:36.623Z",
+  "generatedAt": "2026-07-11T20:01:59.445Z",
   "branch": "main",
-  "currentCommit": "530e5d4",
+  "currentCommit": "2cd0799",
   "commits": [
+    {
+      "hash": "2cd0799f6652138ea0039f9d790e1aed63858d5c",
+      "shortHash": "2cd0799",
+      "date": "2026-07-11",
+      "author": "Uffe J Carlson",
+      "subject": "fix: load .env via dotenv (server never read it, silently ignoring all local config)"
+    },
     {
       "hash": "530e5d488521a834f1371f7d4e607ad408632ac7",
       "shortHash": "530e5d4",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-09",
       "author": "Uffe J Carlson",
       "subject": "Merge pull request #4 from Lobojuan/fix/land-p1-validation-on-main"
-    },
-    {
-      "hash": "7a25f1eab2a438539d55de62351eb91ad464bfbe",
-      "shortHash": "7a25f1e",
-      "date": "2026-07-09",
-      "author": "Uffe J Carlson",
-      "subject": "Merge remote-tracking branch 'origin/integrate/recovered-july7-8-review'"
     }
   ]
 };

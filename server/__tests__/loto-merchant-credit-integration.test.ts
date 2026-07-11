@@ -96,10 +96,14 @@ vi.mock("drizzle-orm", () => ({
   and: (...args: unknown[]) => ({ type: "and", args }),
 }));
 
-// Mock isPlatformPrivileged from middleware
+// Mock isPlatformPrivileged + getCountryFilter from middleware. getCountryFilter must be
+// present — the route calls it unconditionally for the country-scope guard, and an
+// incomplete vi.mock factory replaces the whole module, silently turning the omitted
+// export into undefined and crashing every non-owner/non-admin request with a 500.
 vi.mock("../routes/middleware", () => ({
   isPlatformPrivileged: (role: string) =>
     role === "super_admin" || role === "platform_owner",
+  getCountryFilter: () => undefined,
 }));
 
 // Mock loto-credit-pipeline (buildMerchantAltData, purgeMerchantAltData)

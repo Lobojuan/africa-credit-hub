@@ -10,6 +10,7 @@ vite.config.ts.*
 *.zip
 *.enc
 e2e/.auth/
+playwright/.auth/
 e2e/test-results-artifacts/
 e2e/report/
 test-results/

@@ -25,8 +25,12 @@ const SA_FILE = path.join(__dirname, "../playwright/.auth/super_admin.json");
 const LENDER_FILE = path.join(__dirname, "../playwright/.auth/lender.json");
 
 setup("save super_admin session state", async ({ page }) => {
+  // Resolved server-side to a real seeded user's id/role/org (by username) rather than a
+  // fabricated userId — a synthetic id passes this call but fails downstream at any route
+  // that loads the real user record (e.g. /api/auth/me), which the client treats as
+  // unauthenticated and redirects to /login.
   const res = await page.request.post("/api/test/set-session", {
-    data: { userId: "e2e-global-sa", userRole: "super_admin" },
+    data: { username: "platform_admin" },
   });
   expect(res.ok()).toBeTruthy();
   // Navigate to a guarded page to materialise the session cookie
@@ -37,7 +41,7 @@ setup("save super_admin session state", async ({ page }) => {
 
 setup("save lender session state", async ({ page }) => {
   const res = await page.request.post("/api/test/set-session", {
-    data: { userId: "e2e-global-lender", userRole: "lender" },
+    data: { username: "lender_demo" },
   });
   expect(res.ok()).toBeTruthy();
   await page.goto("/dashboard");

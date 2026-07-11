@@ -425,6 +425,19 @@ export async function ensureDemoUsers() {
         organizationId: demoOrg.id,
         allowedProducts: ["loto"],
       },
+      {
+        // "lender" role was declared in the type above but never actually seeded —
+        // no demo/test account existed for it (found via full e2e audit).
+        username: "lender_demo",
+        password: "Lender2026!",
+        fullName: "Demo Bank Lender",
+        email: "lender@demo-bank.test",
+        role: "lender",
+        status: "active",
+        institution: "Demo Bank Ltd",
+        organizationId: demoOrg.id,
+        allowedProducts: ["credit"],
+      },
     ];
 
     for (const u of demoUsers) {

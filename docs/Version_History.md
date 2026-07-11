@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `530e5d4`
+**Current Commit:** `2cd0799`
 **Branch:** `main`
-**Generated:** 2026-07-11T19:29:36.623Z
+**Generated:** 2026-07-11T20:01:59.445Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-11 | `2cd0799` | fix: load .env via dotenv (server never read it, silently ignoring all local config) | Uffe J Carlson |
 | 2026-07-09 | `530e5d4` | Merge pull request #7 from Lobojuan/fix/ground-ai-reasoning-in-real-score | Uffe J Carlson |
 | 2026-07-09 | `129253a` | Ground all AI credit-reasoning functions in the real computed score | Uffe J Carlson |
 | 2026-07-09 | `d7f9a98` | Merge pull request #6 from Lobojuan/fix/remaining-scoring-and-integrity-issues | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-09 | `3ca28da` | Repo hygiene: remove 5 orphan server files and 4 tracked source zips | Uffe J Carlson |
 | 2026-07-09 | `268a2a0` | Fix remaining scoring-integrity issues: F2, B1, B2, A1-A3, C4 | Uffe J Carlson |
 | 2026-07-09 | `8daefd6` | Merge pull request #4 from Lobojuan/fix/land-p1-validation-on-main | Uffe J Carlson |
-| 2026-07-09 | `7a25f1e` | Merge remote-tracking branch 'origin/integrate/recovered-july7-8-review' | Uffe J Carlson |

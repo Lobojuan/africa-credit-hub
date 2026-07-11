@@ -543,10 +543,25 @@ export async function registerRoutes(
     process.env.NODE_ENV !== "production" &&
     process.env.PRODUCTION_MODE !== "true"
   ) {
-    app.post("/api/test/set-session", (req, res) => {
+    app.post("/api/test/set-session", async (req, res) => {
       const ip = req.ip ?? "";
       if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
         return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
+      }
+      // Optional `username`: resolve a real seeded user's id/role/org server-side instead of
+      // trusting a caller-supplied userId. A synthetic, non-existent userId passes this
+      // endpoint fine but silently fails downstream at any route that loads the real user
+      // record (e.g. /api/auth/me) — this closes that gap for e2e fixtures that want a real,
+      // working session rather than a raw session-shape bypass.
+      if (typeof req.body?.username === "string") {
+        const user = await storage.getUserByUsername(req.body.username);
+        if (!user) return res.status(404).json({ message: "Unknown username for test session" });
+        Object.assign(req.session, {
+          userId: user.id,
+          userRole: user.role,
+          organizationId: user.organizationId ?? undefined,
+        });
+        return res.json({ ok: true });
       }
       Object.assign(req.session, req.body);
       res.json({ ok: true });

@@ -21,15 +21,18 @@ test.describe("Public API — health", () => {
 // ─── Login page ───────────────────────────────────────────────────────────────
 
 test.describe("Public pages — login", () => {
-  test("login page renders at /", async ({ page }) => {
-    await page.goto("/");
+  // "/" is the public marketing/investor landing page (CreditLandingPage, App.tsx),
+  // not the login page — the login chooser lives at /login. This block predates that
+  // landing page and was never updated after it shipped.
+  test("login page renders at /login", async ({ page }) => {
+    await page.goto("/login");
     await expect(
       page.locator('[data-testid="page-login"]'),
     ).toBeVisible({ timeout: 15000 });
   });
 
   test("login page has institution login button", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await expect(
       page.locator('[data-testid="button-login-institution"]'),
@@ -37,7 +40,7 @@ test.describe("Public pages — login", () => {
   });
 
   test("login page has consumer login button", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await expect(
       page.locator('[data-testid="button-login-consumer"]'),
@@ -45,7 +48,7 @@ test.describe("Public pages — login", () => {
   });
 
   test("login page title text is present", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await expect(
       page.locator('[data-testid="text-login-title"]'),
@@ -55,12 +58,15 @@ test.describe("Public pages — login", () => {
   test("institution login form renders after clicking institution button", async ({
     page,
   }) => {
-    await page.goto("/");
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="button-login-institution"]', {
       timeout: 15000,
     });
+    // One click on the card switches straight to the institution login form —
+    // "button-sign-in-institution" is decorative markup nested inside the same
+    // clickable card (not a separate step), so a second click on it targets an
+    // element that's already gone from the DOM once the mode switch has happened.
     await page.click('[data-testid="button-login-institution"]');
-    await page.click('[data-testid="button-sign-in-institution"]');
     await expect(
       page.locator('[data-testid="form-login"]'),
     ).toBeVisible({ timeout: 10000 });
