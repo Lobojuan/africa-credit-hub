@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-11T20:01:59.445Z",
+  "generatedAt": "2026-07-11T20:57:38.983Z",
   "branch": "main",
-  "currentCommit": "2cd0799",
+  "currentCommit": "42d101a",
   "commits": [
+    {
+      "hash": "42d101ac5cb540dd91d4c909b7ccf886e6d74177",
+      "shortHash": "42d101a",
+      "date": "2026-07-11",
+      "author": "Uffe J Carlson",
+      "subject": "fix: e2e/test-session/seed audit fixes (routes.ts, seed.ts, e2e, tests, gitignore, hooks)"
+    },
     {
       "hash": "2cd0799f6652138ea0039f9d790e1aed63858d5c",
       "shortHash": "2cd0799",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-09",
       "author": "Uffe J Carlson",
       "subject": "Fix remaining scoring-integrity issues: F2, B1, B2, A1-A3, C4"
-    },
-    {
-      "hash": "8daefd6412eefa606255fb813659676bb7b9e485",
-      "shortHash": "8daefd6",
-      "date": "2026-07-09",
-      "author": "Uffe J Carlson",
-      "subject": "Merge pull request #4 from Lobojuan/fix/land-p1-validation-on-main"
     }
   ]
 };
