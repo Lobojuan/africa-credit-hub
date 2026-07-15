@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-11T20:57:38.983Z",
+  "generatedAt": "2026-07-15T09:43:10.895Z",
   "branch": "main",
-  "currentCommit": "42d101a",
+  "currentCommit": "e388af7",
   "commits": [
+    {
+      "hash": "e388af70fdea24a0a6d7aa31c576eb4000f1578f",
+      "shortHash": "e388af7",
+      "date": "2026-07-14",
+      "author": "Uffe J Carlson",
+      "subject": "fix: load .env in server/db.ts directly (standalone scripts importing db.ts never got DATABASE_URL loaded)"
+    },
     {
       "hash": "42d101ac5cb540dd91d4c909b7ccf886e6d74177",
       "shortHash": "42d101a",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-09",
       "author": "Uffe J Carlson",
       "subject": "Repo hygiene: remove 5 orphan server files and 4 tracked source zips"
-    },
-    {
-      "hash": "268a2a0eb99f3e70f3bee3a71cbf1986a100ff53",
-      "shortHash": "268a2a0",
-      "date": "2026-07-09",
-      "author": "Uffe J Carlson",
-      "subject": "Fix remaining scoring-integrity issues: F2, B1, B2, A1-A3, C4"
     }
   ]
 };

@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `42d101a`
+**Current Commit:** `e388af7`
 **Branch:** `main`
-**Generated:** 2026-07-11T20:57:38.983Z
+**Generated:** 2026-07-15T09:43:10.895Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-14 | `e388af7` | fix: load .env in server/db.ts directly (standalone scripts importing db.ts never got DATABASE_URL loaded) | Uffe J Carlson |
 | 2026-07-11 | `42d101a` | fix: e2e/test-session/seed audit fixes (routes.ts, seed.ts, e2e, tests, gitignore, hooks) | Uffe J Carlson |
 | 2026-07-11 | `2cd0799` | fix: load .env via dotenv (server never read it, silently ignoring all local config) | Uffe J Carlson |
 | 2026-07-09 | `530e5d4` | Merge pull request #7 from Lobojuan/fix/ground-ai-reasoning-in-real-score | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-09 | `fc508f0` | Merge pull request #5 from Lobojuan/fix/scoring-integrity-and-hygiene | Uffe J Carlson |
 | 2026-07-09 | `8ac0248` | Sweep raw error-message leaks to safeErrorMessage (P2) | Uffe J Carlson |
 | 2026-07-09 | `3ca28da` | Repo hygiene: remove 5 orphan server files and 4 tracked source zips | Uffe J Carlson |
-| 2026-07-09 | `268a2a0` | Fix remaining scoring-integrity issues: F2, B1, B2, A1-A3, C4 | Uffe J Carlson |
