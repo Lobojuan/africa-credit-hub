@@ -58,13 +58,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: [oauth-regression]
     if: failure()
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+      ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
     steps:
       - name: Send Slack alert
-        if: ${{ secrets.SLACK_WEBHOOK_URL != '' }}
+        if: env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v2
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {
@@ -81,16 +87,16 @@ jobs:
             }
 
       - name: Send email alert (Slack not configured)
-        if: ${{ secrets.SLACK_WEBHOOK_URL == '' && secrets.ALERT_EMAIL_TO != '' && secrets.SMTP_SERVER != '' && secrets.SMTP_USERNAME != '' && secrets.SMTP_PASSWORD != '' }}
+        if: env.SLACK_WEBHOOK_URL == '' && env.ALERT_EMAIL_TO != '' && env.SMTP_SERVER != '' && env.SMTP_USERNAME != '' && env.SMTP_PASSWORD != ''
         uses: dawidd6/action-send-mail@v3
         with:
-          server_address: ${{ secrets.SMTP_SERVER }}
+          server_address: ${{ env.SMTP_SERVER }}
           server_port: ${{ secrets.SMTP_PORT || 587 }}
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
+          username: ${{ env.SMTP_USERNAME }}
+          password: ${{ env.SMTP_PASSWORD }}
           subject: "CI failure — OAuth Login Regression Tests (${{ github.repository }})"
-          to: ${{ secrets.ALERT_EMAIL_TO }}
-          from: "GitHub Actions <${{ secrets.SMTP_USERNAME }}>"
+          to: ${{ env.ALERT_EMAIL_TO }}
+          from: "GitHub Actions <${{ env.SMTP_USERNAME }}>"
           body: |
             CI failure — OAuth Login Regression Tests
 

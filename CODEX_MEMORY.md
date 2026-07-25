@@ -25,10 +25,19 @@ This file is a compact handoff for future Codex sessions.
 2. Read affected files with `rg`, `sed`, or `nl`.
 3. Make the smallest viable edit.
 4. Run the right verification:
+   - Local baseline: `npm run validate:local` (TypeScript, unit tests, and Playwright discovery; does not rewrite generated files).
    - TypeScript/code: `npm run check`
    - Unit tests when relevant: `npm run test:unit`
    - Frontend behavior: run local app and inspect in browser
 5. Summarize what changed and what was verified.
+
+## July 2026 Release-Baseline Work
+- User explicitly requested small, verified commits pushed after each completed update. Follow that request for this workstream unless it is later changed.
+- Current CI baseline work is in progress. Canonical E2E workflow is `.github/workflows/e2e.yml`; obsolete duplicate workflows were removed because they referenced invalid secret conditions, a nonexistent `authenticated` Playwright project, and missing specs.
+- `npm run validate:local` passed after the CI cleanup: TypeScript passed, 332 unit tests passed with 1 skipped, and Playwright discovered 403 tests in 16 files.
+- Full database-backed Vitest and browser E2E execution still require PostgreSQL and CI/browser runtime. Do not claim a green remote CI run until the current checkpoint is pushed and GitHub Actions succeeds.
+- The current SRS/UAT/README are documentation debt: create SRS v3 from actual product domains, retain v2.8 documents as historic baseline, and make traceability/evidence executable rather than self-reported.
+- Confirmed first remediation order: CI and canonical commands; SRS v3/traceability; critical E2E coverage for collections and consent; confirmed correctness fixes; then new banking-product work.
 
 ## Local AI Setup Notes
 - Machine memory is about 24 GB RAM. `qwen3-coder:30b` is available for stronger local coding help, but close heavy apps if memory gets tight.

@@ -34,6 +34,25 @@ defaults:
 
 jobs:
   # ──────────────────────────────────────────────────────────────────────────
+  # 0. Fast quality gate — must pass before browser jobs are considered green
+  # ──────────────────────────────────────────────────────────────────────────
+  quality:
+    name: "Quality / TypeScript and Unit Tests"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run test:e2e:list
+
+  # ──────────────────────────────────────────────────────────────────────────
   # 1. Unauthenticated specs — public pages, redirect guards
   # ──────────────────────────────────────────────────────────────────────────
   e2e-unauthenticated:
@@ -371,7 +390,10 @@ jobs:
   e2e-all-pass:
     name: "E2E / All Specs Passed"
     runs-on: ubuntu-latest
+    env:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     needs:
+      - quality
       - e2e-unauthenticated
       - e2e-authenticated-chromium
       - e2e-authenticated-firefox
@@ -383,11 +405,13 @@ jobs:
       - name: Check all E2E jobs passed
         run: |
           echo "unauthenticated:         ${{ needs.e2e-unauthenticated.result }}"
+          echo "quality:                 ${{ needs.quality.result }}"
           echo "authenticated-chromium:  ${{ needs.e2e-authenticated-chromium.result }}"
           echo "authenticated-firefox:   ${{ needs.e2e-authenticated-firefox.result }}"
           echo "oauth-smoke:             ${{ needs.e2e-oauth-smoke.result }}"
           echo "loto-admin:              ${{ needs.e2e-loto-admin.result }}"
           results=(
+            "${{ needs.quality.result }}"
             "${{ needs.e2e-unauthenticated.result }}"
             "${{ needs.e2e-authenticated-chromium.result }}"
             "${{ needs.e2e-authenticated-firefox.result }}"
@@ -403,10 +427,10 @@ jobs:
           echo "All E2E jobs passed."
 
       - name: Notify on failure (Slack)
-        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v2
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {
