@@ -2,12 +2,19 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } from "@/lib/platform-config";
-import pt from "./i18n-pt";
-import ar from "./i18n-ar";
-import sw from "./i18n-sw";
-import es from "./i18n-es";
-import zhCN from "./i18n-zh-cn";
-import zhTW from "./i18n-zh-tw";
+
+// English and French are immediately available for the primary UCH markets.
+// The other full catalogues are loaded only when the user selects them; eagerly
+// importing all eight translations added more than 1 MB of source to the
+// application entry bundle.
+const languageLoaders = {
+  pt: () => import("./i18n-pt"),
+  ar: () => import("./i18n-ar"),
+  sw: () => import("./i18n-sw"),
+  es: () => import("./i18n-es"),
+  "zh-CN": () => import("./i18n-zh-cn"),
+  "zh-TW": () => import("./i18n-zh-tw"),
+} as const;
 
 const CO = PLATFORM_COMPANY_NAME;
 const CO_AUTHOR = PLATFORM_ADMIN_NAME;
@@ -6816,12 +6823,6 @@ i18n
     resources: {
       en: { translation: en },
       fr: { translation: fr },
-      pt: { translation: pt },
-      ar: { translation: ar },
-      sw: { translation: sw },
-      es: { translation: es },
-      "zh-CN": { translation: zhCN },
-      "zh-TW": { translation: zhTW },
     },
     fallbackLng: "en",
     interpolation: {
@@ -6832,5 +6833,18 @@ i18n
       caches: ["localStorage"],
     },
   });
+
+export async function changeAppLanguage(language: string) {
+  const loader = languageLoaders[language as keyof typeof languageLoaders];
+  if (loader && !i18n.hasResourceBundle(language, "translation")) {
+    const module = await loader();
+    i18n.addResourceBundle(language, "translation", module.default, true, true);
+  }
+
+  await i18n.changeLanguage(language);
+}
+
+// Restore a previously selected optional language after the detector initializes.
+void changeAppLanguage(i18n.language);
 
 export default i18n;

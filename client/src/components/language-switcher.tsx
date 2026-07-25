@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { isGhanaMode } from "@/lib/country-mode";
+import { changeAppLanguage } from "@/lib/i18n";
 
 const ALL_LANGS = ["en", "fr", "pt", "ar", "sw", "es", "zh-CN", "zh-TW"] as const;
 const GHANA_LANGS = ["en", "fr"] as const;
@@ -32,8 +33,8 @@ export function LanguageSwitcher() {
   return (
     <Select
       value={resolveLanguage(i18n.language)}
-      onValueChange={(lang) => {
-        i18n.changeLanguage(lang);
+      onValueChange={async (lang) => {
+        await changeAppLanguage(lang);
         document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
       }}
     >
