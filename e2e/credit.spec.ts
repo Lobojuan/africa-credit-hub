@@ -3,8 +3,15 @@ import { test, expect } from "@playwright/test";
 let e2eBorrowerId: string;
 
 test.beforeAll(async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+  // Create the fixture with a real seeded user. Reusing Chromium's serialized
+  // storage state here made the Firefox project depend on cross-browser cookie
+  // handling and produced a 403 before the suite could start.
+  const ctx = await browser.newContext();
   const pg = await ctx.newPage();
+  const session = await pg.request.post("/api/test/set-session", {
+    data: { username: "platform_admin" },
+  });
+  expect(session.ok()).toBeTruthy();
   const resp = await pg.request.post("/api/borrowers", {
     data: {
       firstName: "E2E",

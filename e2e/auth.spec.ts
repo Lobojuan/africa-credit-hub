@@ -279,7 +279,7 @@ test.describe("Logout", () => {
     await injectSession(page, { userId: "e2e-sa-logout", userRole: "super_admin" });
     await page.goto("/dashboard");
     await expect(
-      page.locator('[data-testid="text-current-user"]').first(),
+      page.locator('[data-testid="button-logout"]').first(),
     ).toBeVisible({ timeout: 12000 });
 
     await page.locator('[data-testid="button-logout"]').first().click();

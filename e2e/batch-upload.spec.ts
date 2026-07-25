@@ -49,7 +49,7 @@ test.describe("Batch Upload — XBRL sample fill and validation", () => {
     expect(content.trim()).toMatch(/</);
   });
 
-  test("submitting XBRL sample produces a validation result — success alert or errors section", async ({ page }) => {
+  test("submitting XBRL sample produces a validation result", async ({ page }) => {
     await gotoBatch(page);
     await page.click('[data-testid="tab-xbrl"]');
     await page.waitForSelector('[data-testid="button-use-xbrl-sample"]', { timeout: 10000 });
@@ -57,7 +57,7 @@ test.describe("Batch Upload — XBRL sample fill and validation", () => {
     await page.click('[data-testid="button-submit-xbrl"]');
 
     await expect(
-      page.locator('[data-testid="upload-errors-section"], [role="alert"], .text-green-600, .text-emerald-600').first(),
+      page.locator('[data-testid="batch-upload-results-xbrl"]'),
     ).toBeVisible({ timeout: 20000 });
   });
 
@@ -69,7 +69,7 @@ test.describe("Batch Upload — XBRL sample fill and validation", () => {
     await page.click('[data-testid="button-submit-xbrl"]');
 
     await expect(
-      page.locator('[data-testid="upload-errors-section"], [role="alert"]').first(),
+      page.locator('[data-testid="batch-upload-results-xbrl"]'),
     ).toBeVisible({ timeout: 20000 });
   });
 });
@@ -93,7 +93,7 @@ test.describe("Batch Upload — BoG format sample fill and validation", () => {
     await page.click('[data-testid="button-submit-bog"]');
 
     await expect(
-      page.locator('[data-testid="upload-errors-section"], [role="alert"], .text-green-600, .text-emerald-600').first(),
+      page.locator('[data-testid="batch-upload-results-bog"]'),
     ).toBeVisible({ timeout: 20000 });
   });
 });

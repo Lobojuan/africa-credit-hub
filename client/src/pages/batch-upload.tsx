@@ -747,7 +747,7 @@ export default function BatchUploadPage() {
     const hasUpdated = (result.updatedCount ?? 0) > 0;
     const colCount = [true, true, hasUpdated, hasRejected, true].filter(Boolean).length;
     return (
-      <Card>
+      <Card data-testid={`batch-upload-results${testIdPrefix}`}>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <h3 className="font-semibold text-sm">{t('batchUpload.uploadResults')}</h3>
@@ -786,7 +786,7 @@ export default function BatchUploadPage() {
             </div>
           </div>
           {result.errors.length > 0 && (
-            <div className="overflow-auto max-h-48">
+            <div className="overflow-auto max-h-48" data-testid={`upload-errors-section${testIdPrefix}`}>
               <Table>
                 <TableHeader>
                   <TableRow>
