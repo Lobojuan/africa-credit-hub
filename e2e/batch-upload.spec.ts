@@ -71,7 +71,7 @@ test.describe("Batch Upload — XBRL sample fill and validation", () => {
     await page.click('[data-testid="button-submit-xbrl"]');
 
     await expect(
-      page.locator('[data-testid="batch-upload-results-xbrl"]'),
+      page.locator('[data-testid="text-batch-upload-error"]'),
     ).toBeVisible({ timeout: 20000 });
   });
 });

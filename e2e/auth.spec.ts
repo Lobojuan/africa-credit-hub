@@ -286,7 +286,7 @@ test.describe("Role-level access via set-session", () => {
 
 test.describe("Logout", () => {
   test("logout clears session and re-guards /dashboard", async ({ page }) => {
-    await injectSession(page, { userId: "e2e-sa-logout", userRole: "super_admin" });
+    await injectSession(page, { username: "platform_admin" });
     await page.goto("/dashboard");
     await expect(
       page.locator('[data-testid="button-logout"]').first(),

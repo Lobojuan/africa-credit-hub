@@ -4,8 +4,12 @@ let e2eConsumerId: string;
 let e2eConsumerNationalId: string;
 
 test.beforeAll(async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+  const ctx = await browser.newContext();
   const pg = await ctx.newPage();
+  const session = await pg.request.post("/api/test/set-session", {
+    data: { username: "platform_admin" },
+  });
+  expect(session.ok()).toBeTruthy();
 
   const nationalId = `GH-CONSUMER-E2E-${Date.now()}`;
   const bResp = await pg.request.post("/api/borrowers", {

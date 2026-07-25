@@ -259,6 +259,7 @@ export default function BatchUploadPage() {
   const [lbcrsLenderName, setLbcrsLenderName] = useState("");
   const [uploadTab, setUploadTab] = useState("csv");
   const [result, setResult] = useState<BatchResult | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [csvValidation, setCsvValidation] = useState<ValidationRow[] | null>(null);
   const [jsonValidation, setJsonValidation] = useState<ValidationRow[] | null>(null);
   const [dragOver, setDragOver] = useState<string | null>(null);
@@ -305,6 +306,7 @@ export default function BatchUploadPage() {
     },
     onSuccess: (data) => {
       setResult(data);
+      setUploadError(null);
       setJsonValidation(null);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
@@ -315,6 +317,7 @@ export default function BatchUploadPage() {
       });
     },
     onError: (e: Error) => {
+      setUploadError(e.message);
       toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
     },
   });
@@ -347,6 +350,7 @@ export default function BatchUploadPage() {
     },
     onSuccess: (data) => {
       setResult(data);
+      setUploadError(null);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
@@ -356,6 +360,7 @@ export default function BatchUploadPage() {
       });
     },
     onError: (e: Error) => {
+      setUploadError(e.message);
       toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
     },
   });
@@ -367,6 +372,7 @@ export default function BatchUploadPage() {
     },
     onSuccess: (data) => {
       setResult(data);
+      setUploadError(null);
       queryClient.invalidateQueries({ queryKey: ["/api/credit-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/batch-upload/history"] });
@@ -376,6 +382,7 @@ export default function BatchUploadPage() {
       });
     },
     onError: (e: Error) => {
+      setUploadError(e.message);
       toast({ title: t('batchUpload.uploadFailed'), description: e.message, variant: "destructive" });
     },
   });
@@ -548,12 +555,14 @@ export default function BatchUploadPage() {
   const handleXbrlSubmit = () => {
     if (!xbrlInput.trim()) return;
     setResult(null);
+    setUploadError(null);
     xbrlUploadMutation.mutate(xbrlInput);
   };
 
   const handleBogSubmit = () => {
     if (!bogInput.trim()) return;
     setResult(null);
+    setUploadError(null);
     bogUploadMutation.mutate(bogInput);
   };
 
@@ -1028,6 +1037,11 @@ export default function BatchUploadPage() {
                 >
                   {xbrlUploadMutation.isPending ? t('batchUpload.processing') : t('batchUpload.submitXbrl')}
                 </Button>
+                {uploadError && (
+                  <p className="text-sm text-destructive" role="alert" data-testid="text-batch-upload-error">
+                    {uploadError}
+                  </p>
+                )}
               </CardContent>
             </Card>
 

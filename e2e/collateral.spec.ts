@@ -4,8 +4,12 @@ let e2eColId: string;
 let e2eAssetId: string;
 
 test.beforeAll(async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+  const ctx = await browser.newContext();
   const pg = await ctx.newPage();
+  const session = await pg.request.post("/api/test/set-session", {
+    data: { username: "platform_admin" },
+  });
+  expect(session.ok()).toBeTruthy();
   e2eAssetId = `VIN-SUITE-${Date.now()}`;
   const resp = await pg.request.post("/api/collateral", {
     data: {
