@@ -29,7 +29,6 @@ async function loginAs(
   await page.goto("/login");
   await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
   await page.click('[data-testid="button-login-institution"]');
-  await page.click('[data-testid="button-sign-in-institution"]');
   await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
   await page.fill('[data-testid="input-username"]', username);
   await page.fill('[data-testid="input-password"]', password);
@@ -153,7 +152,6 @@ test.describe("Login — wrong credentials", () => {
     await page.goto("/login");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-institution"]');
-    await page.click('[data-testid="button-sign-in-institution"]');
     await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
     await page.fill('[data-testid="input-username"]', "credit_admin");
     await page.fill('[data-testid="input-password"]', "absolutely-wrong-password-xyz");
