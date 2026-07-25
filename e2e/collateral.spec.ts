@@ -7,7 +7,9 @@ test.beforeAll(async ({ browser }) => {
   const ctx = await browser.newContext();
   const pg = await ctx.newPage();
   const session = await pg.request.post("/api/test/set-session", {
-    data: { username: "platform_admin" },
+    // Collateral filings require an owning financial institution. The seeded
+    // lender account supplies that ownership; a platform super-admin does not.
+    data: { username: "lender_demo" },
   });
   expect(session.ok()).toBeTruthy();
   e2eAssetId = `VIN-SUITE-${Date.now()}`;

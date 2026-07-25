@@ -106,6 +106,7 @@ test.describe("Batch Upload — API protection", () => {
     // fresh context to test the actual unauthenticated API boundary.
     const context = await browser.newContext();
     try {
+      await context.clearCookies();
       const r = await context.request.post("/api/batch-upload/xbrl", { data: { xml: "" } });
       expect([401, 403]).toContain(r.status());
     } finally {

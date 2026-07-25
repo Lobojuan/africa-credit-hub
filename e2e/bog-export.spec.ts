@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const SA = { userId: "e2e-bog-sa", userRole: "super_admin" };
+// BoG exports create immutable audit records, which require a real user ID.
+const SA = { username: "platform_admin" };
 const REG = { userId: "e2e-bog-reg", userRole: "regulator" };
 
 async function session(page: import("@playwright/test").Page, s = SA) {
