@@ -22,7 +22,7 @@ export default function ProductChooserPage() {
   const brand = PLATFORM_COMPANY_NAME;
 
   const accessibleIds = useMemo(() => {
-    const list = getAccessibleProducts(user?.role);
+    const list = getAccessibleProducts(user?.role, (user as any)?.allowedProducts);
     return new Set(list.map((p) => p.id));
   }, [user?.role]);
 

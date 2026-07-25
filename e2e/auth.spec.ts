@@ -27,6 +27,7 @@ async function loginAs(
 ) {
   await page.context().clearCookies();
   await page.goto("/login");
+  await page.evaluate(() => localStorage.clear());
   await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
   await page.click('[data-testid="button-login-institution"]');
   await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });

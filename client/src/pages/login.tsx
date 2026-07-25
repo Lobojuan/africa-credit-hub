@@ -132,7 +132,7 @@ export default function LoginPage() {
       toast({ title: t('login.success') });
       sessionStorage.setItem("passkey_prompt", "1");
       if (window.location.pathname === "/login") {
-        window.location.replace("/choose-product");
+        window.location.replace("/choose-workspace");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');

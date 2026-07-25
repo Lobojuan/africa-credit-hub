@@ -49,6 +49,7 @@ import NotFound from "@/pages/not-found";
 import { ProductSwitcher } from "@/components/product-switcher";
 import { WorkspaceThemeProvider } from "@/components/workspace-theme-provider";
 import { CrossProductInbox } from "@/components/cross-product-inbox";
+import { workspaceForPath, workspacesForRole } from "@/lib/workspaces";
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
 const MasterLandingPage = lazy(() => import("@/pages/master-landing"));
@@ -528,6 +529,19 @@ function AuthenticatedApp() {
 
   if (accountSuspended) {
     return <SuspendedScreen orgName={user?.organization?.name} onLogout={logout} />;
+  }
+
+  // Product restrictions are an authorization boundary, not just a sidebar
+  // preference. Block direct navigation to a workspace the current user has
+  // not been granted, then let the workspace chooser send them to an allowed
+  // landing page.
+  const requestedWorkspace = workspaceForPath(currentPath);
+  const isPublicVerificationPath = currentPath.startsWith("/verify/") || currentPath.startsWith("/loto/draws/verify/");
+  const allowedWorkspaceIds = new Set(
+    workspacesForRole(user?.role, (user as any)?.allowedProducts).map((workspace) => workspace.id),
+  );
+  if (requestedWorkspace && !isPublicVerificationPath && !allowedWorkspaceIds.has(requestedWorkspace)) {
+    return doRedirect("/choose-workspace");
   }
 
   const orgStatus = user?.organization?.status;
