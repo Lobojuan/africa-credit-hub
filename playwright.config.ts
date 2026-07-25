@@ -16,6 +16,11 @@ export default defineConfig({
   testDir: "./e2e",
   timeout: 40000,
   retries: 1,
+  // A broken prerequisite (for example, login) can cascade into hundreds of
+  // dependent failures. In CI, stop after a small, independent evidence set so
+  // a failed run produces an actionable trace in minutes instead of consuming
+  // the entire 60-minute job allowance. Local runs retain full-suite behavior.
+  maxFailures: process.env.CI ? 3 : undefined,
   use: {
     // CI uses port 5001 (isolated); local dev reuses the existing server on 5000
     // (which is already started with ENABLE_E2E_TEST_AUTH=true by dev-server.sh).
