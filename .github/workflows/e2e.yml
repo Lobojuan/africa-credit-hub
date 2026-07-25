@@ -185,10 +185,10 @@ jobs:
           retention-days: 14
 
   # ──────────────────────────────────────────────────────────────────────────
-  # 2b. Authenticated specs — Firefox (cross-browser coverage)
+  # 2b. Authenticated specs — Firefox + WebKit (cross-browser coverage)
   # ──────────────────────────────────────────────────────────────────────────
   e2e-authenticated-firefox:
-    name: "E2E / Authenticated (Firefox)"
+    name: "E2E / Authenticated (Firefox + WebKit)"
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -234,19 +234,20 @@ jobs:
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          # Auth setup uses Desktop Chrome before this Firefox project begins,
-          # so this job needs both browser engines in its cache.
-          key: playwright-chromium-firefox-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+          # Auth setup uses Desktop Chrome; this job also validates Firefox and
+          # WebKit (the closest CI approximation to Safari).
+          key: playwright-chromium-firefox-webkit-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium firefox
+        run: npx playwright install --with-deps chromium firefox webkit
       - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium firefox
+        run: npx playwright install-deps chromium firefox webkit
       - run: npm run db:push
       - run: npx playwright test --project=authenticated-firefox
+      - run: npx playwright test --project=authenticated-webkit
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-report-authenticated-firefox
+          name: e2e-report-authenticated-cross-browser
           path: |
             e2e/report/
             e2e/test-results-artifacts/

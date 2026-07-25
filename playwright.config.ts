@@ -99,6 +99,24 @@ export default defineConfig({
       ],
     },
 
+    // ── 4b. Authenticated WebKit — Safari-engine regression subset ──────────
+    // WebKit is the closest CI coverage available for Safari. A real Safari
+    // UAT remains required before a public Safari compatibility claim.
+    {
+      name: "authenticated-webkit",
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Safari"],
+        storageState: "playwright/.auth/super_admin.json",
+      },
+      testMatch: [
+        /auth\.spec\.ts/,
+        /credit\.spec\.ts/,
+        /regulatory\.spec\.ts/,
+        /reports-drilldown\.spec\.ts/,
+      ],
+    },
+
     // ── 5. OAuth smoke — isolated project with mocked OAuth env vars ─────────
     // Intentionally separate so the loto-admin CI job does not need OAuth secrets.
     {
