@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `e388af7`
+**Current Commit:** `3cf2cd6`
 **Branch:** `main`
-**Generated:** 2026-07-15T09:43:10.895Z
+**Generated:** 2026-07-25T17:04:57.822Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,15 +12,15 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
-| 2026-07-14 | `e388af7` | fix: load .env in server/db.ts directly (standalone scripts importing db.ts never got DATABASE_URL loaded) | Uffe J Carlson |
-| 2026-07-11 | `42d101a` | fix: e2e/test-session/seed audit fixes (routes.ts, seed.ts, e2e, tests, gitignore, hooks) | Uffe J Carlson |
-| 2026-07-11 | `2cd0799` | fix: load .env via dotenv (server never read it, silently ignoring all local config) | Uffe J Carlson |
-| 2026-07-09 | `530e5d4` | Merge pull request #7 from Lobojuan/fix/ground-ai-reasoning-in-real-score | Uffe J Carlson |
-| 2026-07-09 | `129253a` | Ground all AI credit-reasoning functions in the real computed score | Uffe J Carlson |
-| 2026-07-09 | `d7f9a98` | Merge pull request #6 from Lobojuan/fix/remaining-scoring-and-integrity-issues | Uffe J Carlson |
-| 2026-07-09 | `052b5cb` | Fix I1 write-path (unverified self-declared consent); update known-issues doc | Uffe J Carlson |
-| 2026-07-09 | `a68a062` | Fix A4, A5: multi-currency FX conversion, robust LLM JSON extraction | Uffe J Carlson |
-| 2026-07-09 | `c938596` | Fix B4, F4, C2, B3: ID validation, score cliff, dedup, batch maker-checker | Uffe J Carlson |
-| 2026-07-09 | `fc508f0` | Merge pull request #5 from Lobojuan/fix/scoring-integrity-and-hygiene | Uffe J Carlson |
-| 2026-07-09 | `8ac0248` | Sweep raw error-message leaks to safeErrorMessage (P2) | Uffe J Carlson |
-| 2026-07-09 | `3ca28da` | Repo hygiene: remove 5 orphan server files and 4 tracked source zips | Uffe J Carlson |
+| 2026-07-25 | `3cf2cd6` | fix: use valid portal login controls | Uffe J Carlson |
+| 2026-07-25 | `4f2a7e5` | test: remove stale consumer portal login click | Uffe J Carlson |
+| 2026-07-25 | `5ad4c75` | test: remove stale MFA login portal clicks | Uffe J Carlson |
+| 2026-07-25 | `b2a7b55` | test: align login E2E flow with portal selector | Uffe J Carlson |
+| 2026-07-25 | `8d28bd8` | docs: add v3 SRS review and UAT sign-off baseline | Uffe J Carlson |
+| 2026-07-25 | `5be274b` | test: allow guarded E2E mutations and current login route | Uffe J Carlson |
+| 2026-07-25 | `e42e50c` | test: isolate authenticated E2E session states | Uffe J Carlson |
+| 2026-07-25 | `11c7791` | test: mark synthetic E2E sessions consistently | Uffe J Carlson |
+| 2026-07-25 | `16a5287` | test: skip fingerprint audit for synthetic E2E sessions | Uffe J Carlson |
+| 2026-07-25 | `fed609d` | test: align Loto E2E routes and auth isolation | Uffe J Carlson |
+| 2026-07-25 | `87ebe6f` | fix: allow guarded E2E session fixture through CSRF | Uffe J Carlson |
+| 2026-07-25 | `50f1d15` | fix: install shared auth browser in Firefox E2E job | Uffe J Carlson |
