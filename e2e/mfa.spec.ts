@@ -53,7 +53,6 @@ test.describe("MFA — login page elements", () => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-institution"]');
-    await page.click('[data-testid="button-sign-in-institution"]');
     await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
     await expect(page.locator('[data-testid="button-passkey-login"]')).toBeVisible({ timeout: 8000 });
   });
@@ -168,7 +167,6 @@ test.describe("MFA — login challenge UI", () => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-institution"]');
-    await page.click('[data-testid="button-sign-in-institution"]');
     await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
     await page.fill('[data-testid="input-username"]', "admin");
     await page.fill('[data-testid="input-password"]', ADMIN_PW);
