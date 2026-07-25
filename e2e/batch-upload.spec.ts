@@ -101,8 +101,15 @@ test.describe("Batch Upload — BoG format sample fill and validation", () => {
 });
 
 test.describe("Batch Upload — API protection", () => {
-  test("POST /api/batch-upload returns 401 without auth", async ({ page }) => {
-    const r = await page.request.post("/api/batch-upload", { data: { format: "xbrl", payload: "" } });
-    expect([401, 403]).toContain(r.status());
+  test("POST /api/batch-upload/xbrl returns 401 without auth", async ({ browser }) => {
+    // This project normally loads a saved authenticated storage state. Use a
+    // fresh context to test the actual unauthenticated API boundary.
+    const context = await browser.newContext();
+    try {
+      const r = await context.request.post("/api/batch-upload/xbrl", { data: { xml: "" } });
+      expect([401, 403]).toContain(r.status());
+    } finally {
+      await context.close();
+    }
   });
 });

@@ -561,7 +561,14 @@ export async function registerRoutes(
           userRole: user.role,
           organizationId: user.organizationId ?? undefined,
         });
-        return res.json({ ok: true });
+        // Test fixtures make a protected request immediately after this one.
+        // Explicitly persist the session first so that behavior is identical
+        // across Chromium, Firefox, and WebKit instead of depending on an
+        // asynchronous store write winning a race.
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ message: "Failed to save test session" });
+          res.json({ ok: true });
+        });
       }
       Object.assign(req.session, {
         ...req.body,
@@ -571,7 +578,10 @@ export async function registerRoutes(
         // behind explicit non-production E2E mode.
         _testRole: req.body?._testRole ?? req.body?.userRole,
       });
-      res.json({ ok: true });
+      req.session.save((err) => {
+        if (err) return res.status(500).json({ message: "Failed to save test session" });
+        res.json({ ok: true });
+      });
     });
 
     app.get("/api/test/get-session", (req, res) => {

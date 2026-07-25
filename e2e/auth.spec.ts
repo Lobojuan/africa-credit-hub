@@ -296,7 +296,11 @@ test.describe("Logout", () => {
 
     // Logout returns to the public landing page. A fresh browser navigation is
     // the security boundary: the protected workspace must be guarded again.
-    await page.goto("/dashboard");
+    // The redirect itself is expected; Chromium and Firefox surface it as a
+    // different aborted-navigation error, so assert the final login UI below.
+    await page.goto("/dashboard", { waitUntil: "commit" }).catch((error) => {
+      if (!/ERR_ABORTED|NS_ERROR_FAILURE|NS_BINDING_ABORTED/.test(String(error))) throw error;
+    });
     await expect(
       page
         .locator('[data-testid="page-login"], [data-testid="button-login-institution"]')

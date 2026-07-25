@@ -19,7 +19,7 @@ test.beforeAll(async ({ browser }) => {
       assetLocalIdentifier: e2eAssetId,
       estimatedValue: "50000",
       currency: "GHS",
-      country: "Ghana",
+      countryCode: "Ghana",
       description: "E2E suite test vehicle",
     },
   });

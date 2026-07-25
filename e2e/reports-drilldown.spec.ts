@@ -212,21 +212,21 @@ test.describe("Reports — Portfolio by Account Type drill-down", () => {
 // ─── Reports API ──────────────────────────────────────────────────────────────
 
 test.describe("Reports — API endpoints", () => {
-  test("GET /api/reports/portfolio returns 200 with array data for super_admin", async ({
+  test("GET portfolio export returns a CSV response for super_admin", async ({
     page,
   }) => {
-    await setSession(page, SUPER_ADMIN_SESSION);
-    const resp = await page.request.get("/api/reports/portfolio");
+    // The export writes an audit log, so use a real seeded account rather than
+    // a synthetic role-only fixture whose user ID cannot satisfy that FK.
+    await setSession(page, { username: "platform_admin" });
+    const resp = await page.request.get("/api/reports/export?format=csv&type=portfolio");
     expect(resp.status()).toBe(200);
-    const body = await resp.json();
-    expect(
-      Array.isArray(body) || Array.isArray(body?.data) || typeof body === "object",
-    ).toBe(true);
+    expect(resp.headers()["content-type"]).toContain("application/octet-stream");
+    expect(resp.headers()["x-export-encrypted"]).toBe("true");
   });
 
-  test("GET /api/reports/portfolio returns 401 without auth", async ({ page }) => {
+  test("GET portfolio export returns 401 without auth", async ({ page }) => {
     await page.context().clearCookies();
-    const resp = await page.request.get("/api/reports/portfolio");
+    const resp = await page.request.get("/api/reports/export?format=csv&type=portfolio");
     expect([401, 403]).toContain(resp.status());
   });
 });
