@@ -75,6 +75,7 @@ test.describe("Reports — page structure", () => {
   });
 
   test("reports page is blocked without auth", async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto("/reports");
     await expect(
       page.locator('[data-testid="page-login"], [data-testid="button-login-institution"]').first(),
@@ -224,6 +225,7 @@ test.describe("Reports — API endpoints", () => {
   });
 
   test("GET /api/reports/portfolio returns 401 without auth", async ({ page }) => {
+    await page.context().clearCookies();
     const resp = await page.request.get("/api/reports/portfolio");
     expect([401, 403]).toContain(resp.status());
   });

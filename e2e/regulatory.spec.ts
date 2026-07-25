@@ -80,6 +80,7 @@ test.describe("Regulatory Dashboard — KPI strip", () => {
   test("regulatory dashboard is blocked for unauthenticated users", async ({
     page,
   }) => {
+    await page.context().clearCookies();
     await page.goto("/regulatory-dashboard");
     await expect(
       page.locator('[data-testid="page-login"], [data-testid="button-login-institution"]').first(),
@@ -290,6 +291,7 @@ test.describe("Regulatory Dashboard — API", () => {
   test("GET /api/regulatory/dashboard returns 401 without auth", async ({
     page,
   }) => {
+    await page.context().clearCookies();
     const resp = await page.request.get("/api/regulatory/dashboard");
     expect([401, 403]).toContain(resp.status());
   });

@@ -85,7 +85,7 @@ export function deviceFingerprintMiddleware(req: Request, res: Response, next: N
   }
 
   res.on("finish", () => {
-    if (!req.session?.userId) return;
+    if (!req.session?.userId || isSyntheticE2ETestSession(req)) return;
     const lastAudit: number = req.session[SESSION_FP_LAST_AUDIT_KEY] || 0;
     const now = Date.now();
     const shouldHeartbeat = now - lastAudit >= FP_HEARTBEAT_MS;

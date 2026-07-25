@@ -25,6 +25,7 @@ async function loginAs(
   username: string,
   password: string,
 ) {
+  await page.context().clearCookies();
   await page.goto("/");
   await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
   await page.click('[data-testid="button-login-institution"]');
@@ -148,6 +149,7 @@ test.describe("Login — wrong credentials", () => {
   test("wrong password shows error and user stays unauthenticated", async ({
     page,
   }) => {
+    await page.context().clearCookies();
     await page.goto("/");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-institution"]');
@@ -261,6 +263,7 @@ test.describe("Role-level access via set-session", () => {
   });
 
   test("unauthenticated /dashboard redirects to login", async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto("/dashboard");
     await expect(
       page
