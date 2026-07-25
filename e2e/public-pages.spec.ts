@@ -62,10 +62,7 @@ test.describe("Public pages — login", () => {
     await page.waitForSelector('[data-testid="button-login-institution"]', {
       timeout: 15000,
     });
-    // One click on the card switches straight to the institution login form —
-    // "button-sign-in-institution" is decorative markup nested inside the same
-    // clickable card (not a separate step), so a second click on it targets an
-    // element that's already gone from the DOM once the mode switch has happened.
+    // The primary institution CTA switches straight to the login form.
     await page.click('[data-testid="button-login-institution"]');
     await expect(
       page.locator('[data-testid="form-login"]'),

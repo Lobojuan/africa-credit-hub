@@ -296,18 +296,14 @@ export default function LoginPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-[820px] w-full mx-auto">
-              <button
-                type="button"
-                aria-label={t('login.institutionAriaLabel')}
-                className="login-card-hover rounded-2xl p-7 cursor-pointer relative overflow-hidden text-left"
+              <div
+                className="login-card-hover rounded-2xl p-7 relative overflow-hidden text-left"
                 style={{
                   background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
                   border: "1px solid hsl(215 30% 90%)",
                   boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.06), 0 2px 8px -2px rgba(0, 0, 0, 0.03)",
                   backdropFilter: "blur(20px)",
                 }}
-                onClick={() => { setMode("institution"); setError(""); setConsumerError(""); }}
-                data-testid="button-login-institution"
               >
                 <div className="absolute top-0 right-0 w-48 h-48 opacity-[0.04]"
                   style={{ background: "radial-gradient(circle at top right, hsl(215 60% 50%), transparent 70%)" }} />
@@ -334,12 +330,14 @@ export default function LoginPage() {
                 </div>
 
                 <button
+                  type="button"
                   className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all"
                   style={{
                     background: "linear-gradient(135deg, hsl(215 55% 50%) 0%, hsl(215 50% 40%) 100%)",
                     boxShadow: "0 4px 16px -4px hsla(215, 55%, 45%, 0.35)",
                   }}
-                  data-testid="button-sign-in-institution"
+                  onClick={() => { setMode("institution"); setError(""); setConsumerError(""); }}
+                  data-testid="button-login-institution"
                 >
                   {t('login.signInAsInstitution')}
                   <ArrowRight className="w-4 h-4" />
@@ -353,20 +351,16 @@ export default function LoginPage() {
                     {t('login.registerInstitution')} <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
-              </button>
+              </div>
 
-              <button
-                type="button"
-                aria-label={t('login.consumerAriaLabel')}
-                className="login-card-hover rounded-2xl p-7 cursor-pointer relative overflow-hidden text-left"
+              <div
+                className="login-card-hover rounded-2xl p-7 relative overflow-hidden text-left"
                 style={{
                   background: "linear-gradient(145deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%)",
                   border: "1px solid hsl(260 25% 90%)",
                   boxShadow: "0 8px 32px -8px rgba(0, 0, 0, 0.06), 0 2px 8px -2px rgba(0, 0, 0, 0.03)",
                   backdropFilter: "blur(20px)",
                 }}
-                onClick={() => { setMode("consumer"); setError(""); setConsumerError(""); }}
-                data-testid="button-login-consumer"
               >
                 <div className="absolute top-0 right-0 w-48 h-48 opacity-[0.04]"
                   style={{ background: "radial-gradient(circle at top right, hsl(265 50% 55%), transparent 70%)" }} />
@@ -393,12 +387,14 @@ export default function LoginPage() {
                 </div>
 
                 <button
+                  type="button"
                   className="w-full h-12 rounded-xl font-semibold text-sm text-white flex items-center justify-center gap-2 transition-all"
                   style={{
                     background: "linear-gradient(135deg, hsl(265 50% 55%) 0%, hsl(265 45% 42%) 100%)",
                     boxShadow: "0 4px 16px -4px hsla(265, 50%, 45%, 0.35)",
                   }}
-                  data-testid="button-check-my-credit"
+                  onClick={() => { setMode("consumer"); setError(""); setConsumerError(""); }}
+                  data-testid="button-login-consumer"
                 >
                   {t('login.checkMyCredit')}
                   <ArrowRight className="w-4 h-4" />
@@ -412,7 +408,7 @@ export default function LoginPage() {
                     {t('login.createFreeAccount')} <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
-              </button>
+              </div>
             </div>
           </div>
         )}
