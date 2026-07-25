@@ -335,7 +335,6 @@ test.describe("Main app — consumer login path", () => {
     await page.goto("/");
     await page.waitForSelector('[data-testid="button-login-consumer"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-consumer"]');
-    await page.click('[data-testid="button-check-my-credit"]');
     await expect(page.locator('[data-testid="form-consumer-login"]')).toBeVisible({ timeout: 10000 });
   });
 });
