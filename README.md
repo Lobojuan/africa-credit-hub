@@ -276,6 +276,8 @@ The platform is designed for deployment on Replit with built-in PostgreSQL, TLS,
 | Data Dictionary | `docs/Data_Dictionary.md` | Database administrators |
 | Deployment Guide | `docs/Deployment_Guide.md` | DevOps engineers |
 | Version History | `docs/Version_History.md` | Operators, release reviewers |
+| Current SRS Review Baseline | `docs/SRS_V3_REVIEW.md` | Product, compliance and delivery stakeholders |
+| UAT v3 Sign-off Template | `docs/UAT_V3_SIGNOFF_TEMPLATE.md` | Business testers and release approvers |
 
 ---
 
