@@ -96,7 +96,7 @@ test.describe("Login smoke — all 8 demo accounts", () => {
     await assertAuthenticated(page);
     // platform_owner may see a workspace chooser or land on a multi-workspace dashboard
     // Assert either: workspace chooser dialog OR all workspace menu items visible
-    const chooser = page.locator('[data-testid="page-workspace-chooser"], [data-testid="dialog-workspace-chooser"]');
+    const chooser = page.locator('[data-testid="text-welcome"], [data-testid="card-workspace-credit"]');
     const multiWorkspace = page.locator(
       '[data-testid="menuitem-workspace-credit"], [data-testid="menuitem-workspace-collateral"]',
     );

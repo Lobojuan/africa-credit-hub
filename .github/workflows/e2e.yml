@@ -87,6 +87,7 @@ jobs:
       NODE_ENV: development
       PORT: 5001
       ENABLE_E2E_TEST_AUTH: "true"
+      VITE_COUNTRY_MODE: ghana
 
     steps:
       - uses: actions/checkout@v4
@@ -152,6 +153,7 @@ jobs:
       NODE_ENV: development
       PORT: 5001
       ENABLE_E2E_TEST_AUTH: "true"
+      VITE_COUNTRY_MODE: ghana
 
     steps:
       - uses: actions/checkout@v4
@@ -217,6 +219,7 @@ jobs:
       NODE_ENV: development
       PORT: 5001
       ENABLE_E2E_TEST_AUTH: "true"
+      VITE_COUNTRY_MODE: ghana
 
     steps:
       - uses: actions/checkout@v4
