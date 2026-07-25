@@ -245,6 +245,22 @@ export function requireRole(...roles: string[]) {
   };
 }
 
+/**
+ * Enforce a user's explicit product grant at the API boundary. Roles decide
+ * what a user may do within a product; allowedProducts decides which products
+ * they may enter at all. An absent restriction remains backwards-compatible
+ * full access for existing users.
+ */
+export function requireProductAccess(product: "credit" | "collateral" | "loto") {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const allowedProducts = req.session?.allowedProducts;
+    if (Array.isArray(allowedProducts) && allowedProducts.length > 0 && !allowedProducts.includes(product)) {
+      return res.status(403).json({ message: `Access to the ${product} workspace is not permitted for this user` });
+    }
+    next();
+  };
+}
+
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction) {
   if (!isPlatformPrivileged(req.session?.userRole)) {
     return res.status(403).json({ message: "Super admin access required" });

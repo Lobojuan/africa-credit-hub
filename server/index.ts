@@ -214,6 +214,8 @@ declare module "express-session" {
     userRole: string;
     userDivision: string;
     organizationId: string;
+    /** Per-user product restriction copied from the authenticated user record. */
+    allowedProducts?: string[];
     userCountry: string;
     lastActivity: number;
     mfaPendingUserId: string;

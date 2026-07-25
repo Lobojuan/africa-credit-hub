@@ -114,6 +114,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       if (err) return res.status(500).json({ message: "Session error" });
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
@@ -271,6 +272,7 @@ router.post("/api/auth/mfa/login", async (req, res) => {
       if (err) return res.status(500).json({ message: "Session error" });
       req.session.userId = user.id;
       req.session.userRole = user.role;
+      req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
@@ -557,6 +559,7 @@ router.get("/api/auto-login", async (req, res) => {
     if (err) return res.status(500).send("Session error.");
     req.session.userId          = user.id;
     req.session.userRole        = user.role;
+    req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
     req.session.lastActivity    = Date.now();
     // platform_owner / super_admin see all countries — clear any country lock
     delete req.session.viewingCountry;

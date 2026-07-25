@@ -13,7 +13,7 @@ const routeLogger = createLogger("routes");
 import {
   loginLimiter, apiLimiter, writeLimiter, registrationLimiter, batchLimiter, smartApiLimiter,
   aiLimiter, creditReportLimiter, ussdLimiter, rateLimitKeyGenerator,
-  stripPassword, requireAuth, requireRole, requireSuperAdmin, requireConsumer,
+  stripPassword, requireAuth, requireRole, requireSuperAdmin, requireConsumer, requireProductAccess,
   enforceDataSovereignty, idempotencyMiddleware,
   getOrgScope, getCountryFilter, logCrossCountryAccess,
   enforceCountryScopeForNonSuperAdmin, requireWriteCountry,
@@ -1331,8 +1331,11 @@ export async function registerRoutes(
   app.use(telcoRouter);
   app.use(walletRouter);
   app.use(webauthnRouter);
-  app.use("/api/loto/admin", lotoAdminRouter);
-  app.use("/api/loto", requireAuth, lotoMerchantCreditRouter);
+  // Dedicated Loto APIs enforce the server-side product grant in addition to
+  // their existing role and consent checks. Public Loto/USSD routes remain
+  // mounted separately below.
+  app.use("/api/loto/admin", requireAuth, requireProductAccess("loto"), lotoAdminRouter);
+  app.use("/api/loto", requireAuth, requireProductAccess("loto"), lotoMerchantCreditRouter);
   app.use("/api/loto", lotoFiscalRouter);
   app.use("/api/regulatory", regulatoryControlsRouter);
   registerPlatformControlRoutes(app);

@@ -208,6 +208,16 @@ test.describe("Workspace restriction", () => {
     expect(creditCount + collateralCount).toBe(0);
   });
 
+  test("credit-only session is blocked from the Loto API", async ({ page }) => {
+    await injectSession(page, {
+      userId: "e2e-credit-only",
+      userRole: "super_admin",
+      allowedProducts: ["credit"],
+    });
+    const response = await page.request.get("/api/loto/admin/kpi");
+    expect(response.status()).toBe(403);
+  });
+
   test("registry_admin (regulator) can access /regulatory-dashboard", async ({
     page,
   }) => {
