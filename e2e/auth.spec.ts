@@ -284,11 +284,10 @@ test.describe("Logout", () => {
 
     await page.locator('[data-testid="button-logout"]').first().click();
 
-    await expect(
-      page
-        .locator('[data-testid="page-login"], [data-testid="button-login-institution"]')
-        .first(),
-    ).toBeVisible({ timeout: 10000 });
+    // Logout returns to the public landing page. Verify the security boundary
+    // directly instead of coupling this test to a particular public route.
+    const me = await page.request.get("/api/auth/me");
+    expect(me.status()).toBe(401);
 
     // Post-logout: navigating to /dashboard must redirect again
     await page.goto("/dashboard");

@@ -524,7 +524,8 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    return doRedirect("/choose-workspace");
+    const availableWorkspaces = workspacesForRole(user?.role, (user as any)?.allowedProducts);
+    return doRedirect(availableWorkspaces.length === 1 ? availableWorkspaces[0].landing : "/choose-workspace");
   }
 
   if (accountSuspended) {
