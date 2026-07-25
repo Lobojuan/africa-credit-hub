@@ -11,36 +11,17 @@ test.beforeAll(async ({ browser }) => {
   });
   expect(session.ok()).toBeTruthy();
 
-  const nationalId = `GH-CONSUMER-E2E-${Date.now()}`;
-  const bResp = await pg.request.post("/api/borrowers", {
-    data: {
-      firstName: "E2E",
-      lastName: "ConsumerPortalTest",
-      nationalId,
-      type: "individual",
-      country: "Ghana",
-      email: `e2e-consumer-${Date.now()}@test.invalid`,
-    },
-  });
-  expect(bResp.status()).toBe(201);
-  const borrower = await bResp.json() as { id: string };
-  e2eConsumerId = borrower.id;
-  e2eConsumerNationalId = nationalId;
-
-  const aResp = await pg.request.post("/api/credit-accounts", {
-    data: {
-      borrowerId: e2eConsumerId,
-      lender: "E2E Consumer Bank",
-      accountNumber: `ACC-CONSUMER-${Date.now()}`,
-      accountType: "personal_loan",
-      originalAmount: "20000",
-      currentBalance: "18000",
-      currency: "GHS",
-      status: "active",
-      openingDate: new Date().toISOString().split("T")[0],
-    },
-  });
-  expect([200, 201]).toContain(aResp.status());
+  // Borrower and account writes follow maker-checker approval, so they do not
+  // return a usable credit-file ID synchronously. Reuse a deterministic seeded
+  // borrower with a real credit file instead of treating a pending approval as
+  // a created borrower.
+  const borrowersResp = await pg.request.get("/api/borrowers?limit=5");
+  expect(borrowersResp.status()).toBe(200);
+  const body = await borrowersResp.json() as { data?: Array<{ id: string; nationalId?: string; ghanaCardNumber?: string }> };
+  const borrower = body.data?.find((candidate) => candidate.nationalId || candidate.ghanaCardNumber);
+  expect(borrower).toBeTruthy();
+  e2eConsumerId = borrower!.id;
+  e2eConsumerNationalId = borrower!.nationalId || borrower!.ghanaCardNumber!;
 
   await ctx.close();
 });

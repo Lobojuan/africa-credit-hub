@@ -15,7 +15,6 @@ test.beforeAll(async ({ browser }) => {
   e2eAssetId = `VIN-SUITE-${Date.now()}`;
   const resp = await pg.request.post("/api/collateral", {
     data: {
-      borrowerId: "GH-E2E-COL-001",
       borrowerName: "E2E Collateral Suite Borrower",
       collateralType: "vehicle",
       assetLocalIdentifier: e2eAssetId,

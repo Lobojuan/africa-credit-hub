@@ -95,9 +95,17 @@ test.describe("BoG CRB Export — download flow", () => {
     expect(resp.status()).toBeLessThan(500);
   });
 
-  test("API /api/bog-export returns 401 without auth", async ({ page }) => {
-    const today = new Date().toISOString().split("T")[0];
-    const resp = await page.request.get(`/api/bog-export?date=${today}`);
-    expect([401, 403]).toContain(resp.status());
+  test("API /api/bog-export returns 401 without auth", async ({ browser }) => {
+    // The authenticated project injects saved storage into every context.
+    // Explicitly clear it before checking the real API boundary.
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const today = new Date().toISOString().split("T")[0];
+      const resp = await context.request.get(`/api/bog-export?date=${today}`);
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 });
