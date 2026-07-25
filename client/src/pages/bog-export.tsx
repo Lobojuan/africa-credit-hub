@@ -294,12 +294,11 @@ export default function BogExportPage() {
         </div>
       </div>
 
-      {exportHistory.length > 0 && (
-        <Card data-testid="card-export-history">
+      <Card data-testid="card-export-history">
           <CardHeader>
             <div className="flex items-center justify-between">
               <h3 className="text-base font-semibold">Session Export History</h3>
-              <Button
+              {exportHistory.length > 0 && <Button
                 variant="ghost" size="sm"
                 onClick={() => {
                   setExportHistory([]);
@@ -308,11 +307,15 @@ export default function BogExportPage() {
                 data-testid="button-clear-history"
               >
                 Clear
-              </Button>
+              </Button>}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            {exportHistory.length === 0 ? (
+              <p className="text-sm text-muted-foreground" data-testid="text-export-history-empty">
+                No exports have been generated in this session.
+              </p>
+            ) : <div className="space-y-2">
               {exportHistory.map((entry, i) => (
                 <div key={i}
                   className="flex items-center justify-between p-3 rounded-lg bg-muted/40 text-sm"
@@ -328,10 +331,9 @@ export default function BogExportPage() {
                   </span>
                 </div>
               ))}
-            </div>
+            </div>}
           </CardContent>
         </Card>
-      )}
     </div>
   );
 }

@@ -228,6 +228,10 @@ router.post("/api/auth/logout", (req, res) => {
         action: "LOGOUT", entity: "system", userId,
         details: "User logged out",
         ipAddress: req.ip || null,
+      }).catch((auditError) => {
+        // A completed logout must not be reversed or crash the request path if
+        // the optional audit write is unavailable.
+        authLogger.error("Logout audit logging failed", auditError);
       });
     }
     res.json({ message: "Logged out" });

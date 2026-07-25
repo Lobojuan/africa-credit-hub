@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
-const SA = { userId: "e2e-batch-sa", userRole: "super_admin" };
+// Uploads produce an audit record, so use a real seeded account rather than a
+// synthetic E2E identity that cannot satisfy the audit-log user foreign key.
+const SA = { username: "platform_admin" };
 
 async function session(page: import("@playwright/test").Page, s = SA) {
   const r = await page.request.post("/api/test/set-session", { data: s });
