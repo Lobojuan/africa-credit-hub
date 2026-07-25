@@ -231,11 +231,13 @@ jobs:
         id: pw-cache
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-firefox-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
+          # Auth setup uses Desktop Chrome before this Firefox project begins,
+          # so this job needs both browser engines in its cache.
+          key: playwright-chromium-firefox-${{ runner.os }}-${{ steps.pw-ver.outputs.version }}
       - if: steps.pw-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps firefox
+        run: npx playwright install --with-deps chromium firefox
       - if: steps.pw-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps firefox
+        run: npx playwright install-deps chromium firefox
       - run: npm run db:push
       - run: npx playwright test --project=authenticated-firefox
       - if: failure()
