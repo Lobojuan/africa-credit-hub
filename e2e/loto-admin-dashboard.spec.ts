@@ -56,6 +56,7 @@ test.describe("DGI Dashboard — access control", () => {
   });
 
   test("unauthenticated access is blocked — redirects or 401", async ({ page }) => {
+    await page.context().clearCookies();
     await page.goto("/admin/loto-fiscal");
     await page.waitForTimeout(2000);
     const url = page.url();
@@ -216,6 +217,7 @@ test.describe("DGI Dashboard — KPI API", () => {
   });
 
   test("GET /api/loto/admin/kpi returns 401 without auth", async ({ page }) => {
+    await page.context().clearCookies();
     const resp = await page.request.get("/api/loto/admin/kpi");
     expect([401, 403]).toContain(resp.status());
   });
@@ -228,15 +230,16 @@ test.describe("DGI Dashboard — KPI API", () => {
     expect(typeof body).toBe("object");
   });
 
-  test("GET /api/loto/admin/messaging/recent returns 200 for super_admin", async ({ page }) => {
+  test("GET /api/loto/admin/messaging/messages returns 200 for super_admin", async ({ page }) => {
     await setSession(page, SA_SESSION);
-    const resp = await page.request.get("/api/loto/admin/messaging/recent");
+    const resp = await page.request.get("/api/loto/admin/messaging/messages");
     expect(resp.status()).toBe(200);
     const body = await resp.json();
-    expect(Array.isArray(body) || typeof body === "object").toBe(true);
+    expect(Array.isArray(body.messages)).toBe(true);
   });
 
   test("GET /api/loto/admin/messaging/stats blocked for unauthenticated", async ({ page }) => {
+    await page.context().clearCookies();
     const resp = await page.request.get("/api/loto/admin/messaging/stats");
     expect([401, 403]).toContain(resp.status());
   });
@@ -278,23 +281,19 @@ test.describe("DGI Dashboard — USSD gateway endpoint", () => {
 // ─── Fraud triage actions ─────────────────────────────────────────────────────
 
 test.describe("DGI Dashboard — Fraud triage (API)", () => {
-  test("fraud queue API returns 200 with array for dgi_officer", async ({ page }) => {
+  test("fraud flags API returns 200 with array for dgi_officer", async ({ page }) => {
     await setSession(page, DGI_SESSION);
-    const resp = await page.request.get("/api/loto/admin/fraud/queue");
-    expect([200, 404]).toContain(resp.status());
-    if (resp.status() === 200) {
-      const body = await resp.json();
-      expect(Array.isArray(body) || Array.isArray(body?.flags)).toBe(true);
-    }
+    const resp = await page.request.get("/api/loto/admin/fraud-flags");
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(Array.isArray(body.flags)).toBe(true);
   });
 
   test("compliance scorecard API returns structured data", async ({ page }) => {
     await setSession(page, DGI_SESSION);
-    const resp = await page.request.get("/api/loto/admin/compliance");
-    expect([200, 404]).toContain(resp.status());
-    if (resp.status() === 200) {
-      const body = await resp.json();
-      expect(typeof body === "object").toBe(true);
-    }
+    const resp = await page.request.get("/api/loto/admin/compliance-scorecard");
+    expect(resp.status()).toBe(200);
+    const body = await resp.json();
+    expect(Array.isArray(body.merchants)).toBe(true);
   });
 });
