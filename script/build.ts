@@ -187,24 +187,6 @@ async function buildAll() {
     }
   }
 
-  // Remove dev-only directories that bloat the deployment image.
-  // These run AFTER all compilation is done so nothing is broken.
-  console.log("pruning dev-only dirs to reduce deployment image size...");
-  const devOnlyPaths = [
-    // Playwright browser binaries downloaded by the testing skill (~630 MB)
-    ".cache/ms-playwright",
-    // Agent state/session logs (~263 MB)
-    ".local/state",
-    // Playwright npm packages (removed from package.json but may still be on disk)
-    "node_modules/@playwright",
-    "node_modules/playwright",
-    "node_modules/playwright-core",
-    "node_modules/happy-dom",
-  ];
-  for (const p of devOnlyPaths) {
-    await rm(p, { recursive: true, force: true });
-  }
-  console.log("done pruning.");
 }
 
 buildAll().catch((err) => {
