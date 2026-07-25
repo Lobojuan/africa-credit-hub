@@ -29,8 +29,17 @@ function writeAuditLog(data: Parameters<typeof storage.createAuditLog>[0]): void
   });
 }
 
+function isSyntheticE2ETestSession(req: Request): boolean {
+  return (
+    process.env.ENABLE_E2E_TEST_AUTH === "true" &&
+    process.env.NODE_ENV !== "production" &&
+    process.env.PRODUCTION_MODE !== "true" &&
+    Boolean(req.session?._testRole)
+  );
+}
+
 export function deviceFingerprintMiddleware(req: Request, res: Response, next: NextFunction) {
-  if (!req.session?.userId) return next();
+  if (!req.session?.userId || isSyntheticE2ETestSession(req)) return next();
 
   const sessionId = req.sessionID || "";
   const fp = computeFingerprint(req, sessionId);
