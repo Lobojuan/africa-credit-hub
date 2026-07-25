@@ -26,7 +26,7 @@ async function loginAs(
   password: string,
 ) {
   await page.context().clearCookies();
-  await page.goto("/");
+  await page.goto("/login");
   await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
   await page.click('[data-testid="button-login-institution"]');
   await page.click('[data-testid="button-sign-in-institution"]');
@@ -150,7 +150,7 @@ test.describe("Login — wrong credentials", () => {
     page,
   }) => {
     await page.context().clearCookies();
-    await page.goto("/");
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-institution"]');
     await page.click('[data-testid="button-sign-in-institution"]');
