@@ -308,6 +308,15 @@ app.get("/api/auth/csrf-token", (req, res) => {
 
 app.use((req, res, next) => {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+  // The E2E-only session fixture must be able to replace the shared authenticated
+  // Playwright state. It is registered only when this same triple guard holds in
+  // routes.ts, so this exemption cannot be active in a production process.
+  if (
+    req.path === "/api/test/set-session" &&
+    process.env.ENABLE_E2E_TEST_AUTH === "true" &&
+    process.env.NODE_ENV !== "production" &&
+    process.env.PRODUCTION_MODE !== "true"
+  ) return next();
   if (req.path === "/api/stripe/webhook") return next();
   if (req.path.startsWith("/api/external/")) return next();
   if (req.path === "/api/auth/login") return next();
