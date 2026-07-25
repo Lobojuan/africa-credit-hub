@@ -563,7 +563,14 @@ export async function registerRoutes(
         });
         return res.json({ ok: true });
       }
-      Object.assign(req.session, req.body);
+      Object.assign(req.session, {
+        ...req.body,
+        // Synthetic fixtures normally supply userId + userRole. Mark them so
+        // /api/auth/me does not attempt to look up a deliberately non-existent
+        // database user. The entire endpoint is already local-only and guarded
+        // behind explicit non-production E2E mode.
+        _testRole: req.body?._testRole ?? req.body?.userRole,
+      });
       res.json({ ok: true });
     });
 
