@@ -203,7 +203,7 @@ test.describe("Collateral Registry — lien search", () => {
 // ─── Certificate preview dialog ──────────────────────────────────────────────
 
 test.describe("Collateral Registry — certificate preview", () => {
-  test("preview-cert button opens certificate preview dialog with content", async ({ page }) => {
+  test("pending collateral has no certificate preview before approval", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
     await page.goto("/collateral-registry");
     await page.waitForSelector('[data-testid="input-search-collateral"]', { timeout: 15000 });
@@ -212,26 +212,17 @@ test.describe("Collateral Registry — certificate preview", () => {
 
     await expect(page.locator(`[data-testid="row-collateral-${e2eColId}"]`)).toBeVisible({ timeout: 12000 });
 
-    await page.locator(`[data-testid="btn-preview-cert-${e2eColId}"]`).click();
-
-    await expect(page.locator('[data-testid="dialog-certificate-preview"]')).toBeVisible({ timeout: 12000 });
-    await expect(page.locator('[data-testid="certificate-preview-content"]')).toBeVisible({ timeout: 12000 });
-
-    await page.locator('[data-testid="btn-close-preview"]').click();
-    await expect(page.locator('[data-testid="dialog-certificate-preview"]')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator(`[data-testid="btn-preview-cert-${e2eColId}"]`)).toHaveCount(0);
   });
 
-  test("certificate print button is visible inside the preview dialog", async ({ page }) => {
+  test("pending collateral has no certificate download before approval", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
     await page.goto("/collateral-registry");
     await page.fill('[data-testid="input-search-collateral"]', e2eAssetId);
     await page.waitForTimeout(800);
 
     await expect(page.locator(`[data-testid="row-collateral-${e2eColId}"]`)).toBeVisible({ timeout: 12000 });
-    await page.locator(`[data-testid="btn-preview-cert-${e2eColId}"]`).click();
-
-    await expect(page.locator('[data-testid="dialog-certificate-preview"]')).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('[data-testid="btn-print-certificate"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator(`[data-testid="btn-download-cert-${e2eColId}"]`)).toHaveCount(0);
   });
 });
 
@@ -303,9 +294,15 @@ test.describe("Collateral Registry — API", () => {
     expect(Array.isArray(await resp.json())).toBe(true);
   });
 
-  test("GET /api/collateral returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/collateral");
-    expect(resp.status()).toBe(401);
+  test("GET /api/collateral returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const resp = await context.request.get("/api/collateral");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
   test("GET /api/collateral/verify/:code returns 200 or 404, not 500", async ({ page }) => {

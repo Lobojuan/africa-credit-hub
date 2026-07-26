@@ -12,7 +12,7 @@ test.beforeAll(async ({ browser }) => {
     data: { username: "platform_admin" },
   });
   expect(session.ok()).toBeTruthy();
-  const resp = await pg.request.get("/api/borrowers?limit=5");
+  const resp = await pg.request.get("/api/borrowers?country=Ghana&limit=5");
   expect(resp.status()).toBe(200);
   const body = await resp.json() as { data?: Array<{ id: string }> };
   expect(body.data?.[0]).toBeTruthy();
@@ -30,7 +30,7 @@ async function setSession(
 
 const ADMIN_SESSION = { userId: "e2e-credit-admin", userRole: "admin" };
 const SUPER_ADMIN_SESSION = { username: "platform_admin" };
-const LENDER_SESSION = { userId: "e2e-credit-lender", userRole: "lender" };
+const LENDER_SESSION = { username: "lender_demo" };
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
@@ -117,6 +117,7 @@ test.describe("Credit Bureau — Borrowers", () => {
   test("borrowers API returns 401 without auth", async ({ browser }) => {
     const context = await browser.newContext();
     try {
+      await context.clearCookies();
       const resp = await context.request.get("/api/borrowers");
       expect([401, 403]).toContain(resp.status());
     } finally {
@@ -165,6 +166,7 @@ test.describe("Credit Bureau — Credit Accounts page structure", () => {
   test("credit accounts API returns 401 without auth", async ({ browser }) => {
     const context = await browser.newContext();
     try {
+      await context.clearCookies();
       const resp = await context.request.get("/api/credit-accounts");
       expect([401, 403]).toContain(resp.status());
     } finally {
@@ -431,7 +433,9 @@ test.describe("Credit Bureau — Dispute filing lifecycle", () => {
 
 test.describe("Credit Bureau — Account CRUD lifecycle", () => {
   test("create credit account submits a maker-checker approval", async ({ page }) => {
-    await setSession(page, ADMIN_SESSION);
+    // Credit-account submissions need an institutional country and organisation
+    // scope, so use the seeded lender rather than a synthetic role-only session.
+    await setSession(page, LENDER_SESSION);
 
     const createResp = await page.request.post("/api/credit-accounts", {
       data: {

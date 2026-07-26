@@ -251,7 +251,9 @@ test.describe("Role-level access via set-session", () => {
   });
 
   test("regulator accesses /regulatory-dashboard", async ({ page }) => {
-    await injectSession(page, { userId: "e2e-reg", userRole: "regulator" });
+    // Use the seeded regulator so the dashboard has the organisation and
+    // country context that its data queries require.
+    await injectSession(page, { username: "registry_admin" });
     await page.goto("/regulatory-dashboard");
     await expect(
       page.locator('[data-testid="text-reg-dashboard-title"]'),
