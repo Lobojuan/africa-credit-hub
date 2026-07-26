@@ -29,7 +29,7 @@ test.beforeAll(async ({ browser }) => {
   await ctx.close();
 });
 
-const LENDER_SESSION = { userId: "e2e-col-lender", userRole: "lender" };
+const LENDER_SESSION = { username: "lender_demo" };
 const SA_SESSION = { userId: "e2e-col-sa", userRole: "super_admin" };
 const REG_SESSION = { userId: "e2e-col-reg", userRole: "regulator" };
 

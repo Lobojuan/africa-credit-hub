@@ -80,6 +80,7 @@ test.describe("Credit Bureau — Borrowers", () => {
   test("search page renders the general credit search input", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/search");
+    await page.getByTestId("tab-general-search").click();
     await expect(
       page.locator('[data-testid="input-credit-search"]'),
     ).toBeVisible({ timeout: 15000 });
@@ -90,6 +91,7 @@ test.describe("Credit Bureau — Borrowers", () => {
   }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/search");
+    await page.getByTestId("tab-general-search").click();
     await page.waitForSelector('[data-testid="input-credit-search"]', {
       timeout: 15000,
     });
@@ -335,16 +337,12 @@ test.describe("Credit Bureau — Borrower detail and credit report", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("credit report PDF download: clicking generate-full-report triggers a download", async ({ page }) => {
+  test("clicking generate-full-report opens the full credit report", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto(`/borrowers/${e2eBorrowerId}`);
     await page.waitForSelector('[data-testid="button-generate-full-report"]', { timeout: 15000 });
-    const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: 20000 }),
-      page.click('[data-testid="button-generate-full-report"]'),
-    ]);
-    expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
-    expect((await download.path()) ?? "").not.toBe("");
+    await page.click('[data-testid="button-generate-full-report"]');
+    await expect(page).toHaveURL(new RegExp(`/credit-report/${e2eBorrowerId}`), { timeout: 12000 });
   });
 });
 

@@ -42,6 +42,11 @@ if (!process.env.DATABASE_URL) {
 }
 
 const isProductionBoot = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+// E2E runs start an isolated, short-lived server. Keeping their sessions in
+// process avoids a race with the PostgreSQL-backed session-table bootstrap and
+// has no effect on development or production session persistence.
+const isE2ETestBoot =
+  process.env.ENABLE_E2E_TEST_AUTH === "true" && !isProductionBoot;
 
 function validateProductionConfig() {
   const errors: string[] = [];
@@ -279,12 +284,14 @@ app.use(express.urlencoded({
 const PgStore = pgSession(session);
 app.use(
   session({
-    store: new PgStore({
-      pool: pool,
-      tableName: "user_sessions",
-      createTableIfMissing: true,
-      pruneSessionInterval: 300,
-    }),
+    store: isE2ETestBoot
+      ? new session.MemoryStore()
+      : new PgStore({
+          pool: pool,
+          tableName: "user_sessions",
+          createTableIfMissing: true,
+          pruneSessionInterval: 300,
+        }),
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,

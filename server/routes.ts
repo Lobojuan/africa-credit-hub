@@ -570,6 +570,39 @@ export async function registerRoutes(
           res.json({ ok: true });
         });
       }
+      // Consumer portal routes intentionally require a real consumer-account
+      // record, not merely a shaped session. Create or reuse an isolated
+      // verified account for E2E fixtures so they exercise that same contract.
+      if (typeof req.body?.consumerNationalId === "string") {
+        const nationalId = req.body.consumerNationalId;
+        let [consumer] = await db.select().from(consumerAccounts)
+          .where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
+        if (!consumer) {
+          [consumer] = await db.insert(consumerAccounts).values({
+            nationalId,
+            phone: `+233${crypto.randomInt(200000000, 999999999)}`,
+            passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10),
+            dateOfBirth: "1990-01-01",
+            fullName: "E2E Consumer",
+            country: "Ghana",
+            consentGiven: true,
+            verified: true,
+          }).returning();
+        }
+        Object.assign(req.session, {
+          ...req.body,
+          userId: null,
+          userRole: null,
+          organizationId: null,
+          consumerId: consumer.id,
+          consumerNationalId: nationalId,
+          _testRole: undefined,
+        });
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ message: "Failed to save test consumer session" });
+          res.json({ ok: true, consumerId: consumer.id });
+        });
+      }
       Object.assign(req.session, {
         ...req.body,
         // Synthetic fixtures normally supply userId + userRole. Mark them so
