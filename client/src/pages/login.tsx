@@ -843,7 +843,7 @@ export default function LoginPage() {
                   border: "1px solid hsl(215 25% 88%)",
                   color: "hsl(215 25% 30%)",
                 }}
-                onClick={() => window.location.href = "/api/consumer/auth/google?from=/dashboard"}
+                onClick={() => window.location.href = "/api/auth/google?from=/dashboard"}
                 data-testid="button-google-login-institutional"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -862,7 +862,7 @@ export default function LoginPage() {
                   border: "1px solid hsl(215 25% 88%)",
                   color: "hsl(215 25% 30%)",
                 }}
-                onClick={() => window.location.href = "/api/auth/microsoft?returnTo=/dashboard"}
+                onClick={() => window.location.href = "/api/auth/microsoft?from=/dashboard"}
                 data-testid="button-microsoft-login"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">

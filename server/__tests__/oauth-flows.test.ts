@@ -16,8 +16,8 @@
  *   Google OAuth — new consumer auto-registration + session
  *   Google OAuth — existing consumer found by googleId
  *   Google OAuth — existing consumer found by email (link flow)
- *   Google OAuth — admin/institutional user login
- *   Google OAuth — suspended admin is skipped, falls through to consumer
+ *   Google OAuth — dedicated institutional staff login
+ *   Google OAuth — consumer and institutional paths cannot cross
  *   Apple stub    — 503 with descriptive message
  *   Microsoft SSO — no credentials → 503
  *   Microsoft SSO — initiate redirect
@@ -438,7 +438,32 @@ describe("Google OAuth — happy paths", () => {
     }
   });
 
-  it("logs in admin/institutional user and redirects to /dashboard", async () => {
+  it("keeps consumer Google OAuth in the consumer portal even when an employee has the same email", async () => {
+    const consumerId = crypto.randomUUID();
+    const { app, deps, prevEnv } = await makeApp(
+      {
+        findUserByEmail: vi.fn(async () => ({
+          id: crypto.randomUUID(), role: "admin", organizationId: null, status: "active", email: "admin@bank.com",
+        })),
+        findConsumerByGoogleId: vi.fn(async () => ({
+          id: consumerId, nationalId: "CONSUMER-001", email: "admin@bank.com", googleId: "gsub-admin", authProvider: "google", fullName: "Consumer",
+        })),
+        touchConsumerLastLogin: vi.fn(async () => {}),
+      },
+      GOOGLE_ENV
+    );
+    try {
+      vi.stubGlobal("fetch", mockFetch({ googleToken: { access_token: "tok" }, googleUserinfo: { id: "gsub-admin", email: "admin@bank.com" } }));
+      const state = "state-consumer-separation";
+      const cookie = await setSession(app, { googleOAuthState: state, googleOAuthReturnTo: "/my-credit" });
+      const res = await request(app).get(`/api/consumer/auth/google/callback?code=c&state=${state}`).set("Cookie", cookie);
+      expect(res.headers.location).toBe("/my-credit");
+      expect(deps.findUserByEmail).not.toHaveBeenCalled();
+      expect(deps.findConsumerByGoogleId).toHaveBeenCalledOnce();
+    } finally { await restoreEnv(prevEnv); }
+  });
+
+  it("logs in a pre-provisioned institutional user and redirects to /dashboard", async () => {
     const adminId = crypto.randomUUID();
     const { app, deps, prevEnv } = await makeApp(
       {
@@ -461,9 +486,9 @@ describe("Google OAuth — happy paths", () => {
         })
       );
       const state = "state-admin";
-      const cookie = await setSession(app, { googleOAuthState: state, googleOAuthReturnTo: "/my-credit" });
+      const cookie = await setSession(app, { institutionalGoogleOAuthState: state, institutionalGoogleOAuthReturnTo: "/dashboard" });
       const res = await request(app)
-        .get(`/api/consumer/auth/google/callback?code=admin-code&state=${state}`)
+        .get(`/api/auth/google/callback?code=admin-code&state=${state}`)
         .set("Cookie", cookie);
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe("/dashboard");
@@ -477,9 +502,9 @@ describe("Google OAuth — happy paths", () => {
     }
   });
 
-  it("platform_owner admin redirects to /command-center", async () => {
+  it("platform_owner institutional Google login redirects to /command-center", async () => {
     const ownerId = crypto.randomUUID();
-    const { app, prevEnv } = await makeApp(
+    const { app, deps, prevEnv } = await makeApp(
       {
         findUserByEmail: vi.fn(async () => ({
           id: ownerId,
@@ -500,9 +525,9 @@ describe("Google OAuth — happy paths", () => {
         })
       );
       const state = "state-owner";
-      const cookie = await setSession(app, { googleOAuthState: state });
+      const cookie = await setSession(app, { institutionalGoogleOAuthState: state });
       const res = await request(app)
-        .get(`/api/consumer/auth/google/callback?code=oc&state=${state}`)
+        .get(`/api/auth/google/callback?code=oc&state=${state}`)
         .set("Cookie", cookie);
       expect(res.status).toBe(302);
       expect(res.headers.location).toBe("/command-center");
@@ -511,8 +536,7 @@ describe("Google OAuth — happy paths", () => {
     }
   });
 
-  it("suspended admin is skipped and falls through to consumer path", async () => {
-    const consumerId = crypto.randomUUID();
+  it("rejects a suspended institutional identity without creating a consumer session", async () => {
     const { app, deps, prevEnv } = await makeApp(
       {
         findUserByEmail: vi.fn(async () => ({
@@ -522,13 +546,6 @@ describe("Google OAuth — happy paths", () => {
           status: "suspended",
           email: "suspended@bank.com",
         })),
-        findConsumerByGoogleId: vi.fn(async () => null),
-        findConsumerByEmail: vi.fn(async () => null),
-        createGoogleConsumer: vi.fn(async (d) => ({
-          id: consumerId,
-          nationalId: d.nationalId,
-        })),
-        touchConsumerLastLogin: vi.fn(async () => {}),
       },
       GOOGLE_ENV
     );
@@ -541,15 +558,13 @@ describe("Google OAuth — happy paths", () => {
         })
       );
       const state = "state-sus";
-      const cookie = await setSession(app, { googleOAuthState: state });
+      const cookie = await setSession(app, { institutionalGoogleOAuthState: state });
       const res = await request(app)
-        .get(`/api/consumer/auth/google/callback?code=sc&state=${state}`)
+        .get(`/api/auth/google/callback?code=sc&state=${state}`)
         .set("Cookie", cookie);
       expect(res.status).toBe(302);
-      // Should not have gone to /dashboard (admin path)
-      expect(res.headers.location).not.toBe("/dashboard");
-      // Falls through to consumer path
-      expect(deps.findConsumerByGoogleId).toHaveBeenCalled();
+      expect(res.headers.location).toContain("error=not_authorized");
+      expect(deps.findConsumerByGoogleId).not.toHaveBeenCalled();
     } finally {
       await restoreEnv(prevEnv);
     }
@@ -729,15 +744,11 @@ describe("Microsoft SSO — happy paths", () => {
     }
   });
 
-  it("logs in consumer via Microsoft and sets consumerId in session", async () => {
-    const consumerId = crypto.randomUUID();
-    const { app, prevEnv } = await makeApp(
+  it("rejects a consumer-only Microsoft identity from the institutional SSO route", async () => {
+    const { app, deps, prevEnv } = await makeApp(
       {
         findMsUserByEmail: vi.fn(async () => null),
-        findMsConsumerByEmail: vi.fn(async () => ({
-          id: consumerId,
-          nationalId: "NID-MS-001",
-        })),
+        findMsConsumerByEmail: vi.fn(async () => ({ id: crypto.randomUUID(), nationalId: "NID-MS-001" })),
       },
       MS_ENV
     );
@@ -755,11 +766,8 @@ describe("Microsoft SSO — happy paths", () => {
         .get(`/api/auth/microsoft/callback?code=msc2&state=${state}`)
         .set("Cookie", cookie);
       expect(res.status).toBe(302);
-      expect(res.headers.location).toBe("/my-credit");
-
-      const newCookie = (res.headers["set-cookie"] as string[] | string | undefined) ?? [];
-      const sessionData = await getSession(app, Array.isArray(newCookie) ? newCookie[0] : newCookie);
-      expect(sessionData.consumerId).toBe(consumerId);
+      expect(res.headers.location).toContain("error=no_account");
+      expect((deps.findMsConsumerByEmail as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
     } finally {
       await restoreEnv(prevEnv);
     }
