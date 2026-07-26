@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T22:10:43.794Z",
+  "generatedAt": "2026-07-26T22:24:27.134Z",
   "branch": "main",
-  "currentCommit": "15f341d",
+  "currentCommit": "61201a5",
   "commits": [
+    {
+      "hash": "61201a571db3dee08aa9fa59d858f99361734f5d",
+      "shortHash": "61201a5",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add transaction resolution desk"
+    },
     {
       "hash": "15f341d8220cc260b7ac9e93fd8d967085ea1438",
       "shortHash": "15f341d",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "security: add staff reset and invitation tokens"
-    },
-    {
-      "hash": "a714bc52224fbfd401aa75fcd1b9d636db9f1482",
-      "shortHash": "a714bc5",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "security: separate institutional SSO from consumer login"
     }
   ]
 };

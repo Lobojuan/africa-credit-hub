@@ -2413,7 +2413,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const isSuper = isPlatformPrivileged(req.session?.userRole);
       const orgId = isSuper ? undefined : req.session?.organizationId;
@@ -2463,7 +2463,7 @@ export async function registerRoutes(
     return { ok: true };
   };
 
-  app.post("/api/compliance/watchlist-hits/:id/resolve", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.post("/api/compliance/watchlist-hits/:id/resolve", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const { status, notes } = req.body || {};
       if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
@@ -2490,7 +2490,7 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.post("/api/compliance/fraud-alerts/:id/resolve", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.post("/api/compliance/fraud-alerts/:id/resolve", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const { status, notes } = req.body || {};
       if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
@@ -2518,7 +2518,7 @@ export async function registerRoutes(
   });
 
   // Assign a fraud alert to a reviewer (assignment workflow)
-  app.post("/api/compliance/fraud-alerts/:id/assign", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.post("/api/compliance/fraud-alerts/:id/assign", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const { assigneeUserId } = req.body || {};
       if (!assigneeUserId || typeof assigneeUserId !== "string") {
@@ -2549,6 +2549,82 @@ export async function registerRoutes(
       } as any);
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Real-time transaction fraud screening ───────────────────────────────
+  // This endpoint is designed for a bank core/channel integration. The action
+  // is advisory: UCH records the risk decision and opens a human-review alert;
+  // it never settles, blocks, or reverses funds by itself.
+  const transactionFraudScreenSchema = z.object({
+    borrowerId: z.string().uuid(),
+    transactionReference: z.string().trim().min(4).max(200),
+    channel: z.string().trim().min(1).max(80),
+    amount: z.coerce.number().positive().max(999999999999),
+    currency: z.string().trim().length(3),
+    newBeneficiary: z.boolean().default(false),
+    deviceChanged: z.boolean().default(false),
+    unusualLocation: z.boolean().default(false),
+    failedAttempts: z.coerce.number().int().min(0).max(100).default(0),
+  });
+
+  app.get("/api/transaction-fraud-events", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT tfe.*, b.first_name, b.last_name, b.company_name
+        FROM transaction_fraud_events tfe JOIN borrowers b ON b.id = tfe.borrower_id
+        WHERE ($1::text IS NULL OR tfe.organization_id = $1) AND ($2::text IS NULL OR tfe.country = $2)
+        ORDER BY tfe.created_at DESC LIMIT 200
+      `, [orgId, country]);
+      res.json({ events: result.rows });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/transaction-fraud-events/screen", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const input = transactionFraudScreenSchema.parse(req.body);
+      const acl = await ensureBorrowerAccess(req, input.borrowerId);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const borrower = acl.borrower;
+      const signals: string[] = [];
+      let riskScore = 0;
+      if (input.amount >= 100000) { riskScore += 35; signals.push("High-value transaction"); }
+      else if (input.amount >= 25000) { riskScore += 15; signals.push("Elevated transaction value"); }
+      if (input.newBeneficiary) { riskScore += 20; signals.push("New beneficiary"); }
+      if (input.deviceChanged) { riskScore += 20; signals.push("New or changed device"); }
+      if (input.unusualLocation) { riskScore += 25; signals.push("Unusual location"); }
+      if (input.failedAttempts >= 5) { riskScore += 35; signals.push(`${input.failedAttempts} failed attempts`); }
+      else if (input.failedAttempts >= 3) { riskScore += 15; signals.push(`${input.failedAttempts} failed attempts`); }
+      riskScore = Math.min(100, riskScore);
+      const action = riskScore >= 60 ? "hold_for_review" : riskScore >= 30 ? "step_up_authentication" : "allow";
+      const eventResult = await pool.query(`
+        INSERT INTO transaction_fraud_events
+          (borrower_id, transaction_reference, channel, amount, currency, new_beneficiary, device_changed, unusual_location, failed_attempts, risk_score, action, signals, organization_id, country)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14)
+        ON CONFLICT (organization_id, transaction_reference) DO UPDATE SET risk_score=EXCLUDED.risk_score, action=EXCLUDED.action, signals=EXCLUDED.signals, created_at=NOW()
+        RETURNING *
+      `, [input.borrowerId, input.transactionReference, input.channel, input.amount, input.currency.toUpperCase(), input.newBeneficiary, input.deviceChanged, input.unusualLocation, input.failedAttempts, riskScore, action, JSON.stringify(signals), borrower.organizationId ?? null, borrower.country]);
+      const event = eventResult.rows[0];
+      let alertId: string | null = null;
+      if (action === "hold_for_review") {
+        const existing = await pool.query(`SELECT id FROM fraud_alerts WHERE organization_id IS NOT DISTINCT FROM $1 AND rule_code=$2 LIMIT 1`, [borrower.organizationId ?? null, `TXN_${input.transactionReference}`]);
+        if (existing.rows[0]) alertId = existing.rows[0].id;
+        else {
+          const alert = await db.insert(fraudAlerts).values({
+            borrowerId: input.borrowerId, organizationId: borrower.organizationId ?? null,
+            ruleCode: `TXN_${input.transactionReference}`,
+            ruleDescription: `Transaction held for human fraud review: ${signals.join(", ") || "risk threshold exceeded"}`,
+            severity: riskScore >= 80 ? "critical" : "high",
+            evidence: JSON.stringify({ transactionReference: input.transactionReference, channel: input.channel, amount: input.amount, currency: input.currency.toUpperCase(), riskScore, signals, eventId: event.id }),
+          }).returning({ id: fraudAlerts.id });
+          alertId = alert[0]?.id ?? null;
+        }
+      }
+      await storage.createAuditLog({ action: "SCREEN_TRANSACTION_FRAUD", entity: "transaction_fraud_event", entityId: event.id, userId: req.session?.userId, details: JSON.stringify({ transactionReference: input.transactionReference, riskScore, action, signals, alertId }), ipAddress: req.ip || null });
+      res.status(201).json({ event, decision: { riskScore, action, signals, humanReviewAlertId: alertId } });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {

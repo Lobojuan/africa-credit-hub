@@ -666,6 +666,7 @@ export const verificationResultEnum = pgEnum("verification_result", ["passed", "
 export const watchlistSourceEnum = pgEnum("watchlist_source", ["sanctions_un", "sanctions_ofac", "sanctions_eu", "pep", "adverse_media", "internal_block"]);
 export const fraudSeverityEnum = pgEnum("fraud_severity", ["low", "medium", "high", "critical"]);
 export const fraudReviewStatusEnum = pgEnum("fraud_review_status", ["open", "investigating", "resolved", "false_positive", "escalated"]);
+export const transactionFraudActionEnum = pgEnum("transaction_fraud_action", ["allow", "step_up_authentication", "hold_for_review"]);
 
 export const identityVerifications = pgTable("identity_verifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -715,6 +716,30 @@ export const fraudAlerts = pgTable("fraud_alerts", {
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
 });
+
+// Captures a bank-core or channel screening decision. It does not initiate or
+// reverse a payment; any high-risk decision is escalated to fraud_alerts for a
+// human reviewer.
+export const transactionFraudEvents = pgTable("transaction_fraud_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  transactionReference: text("transaction_reference").notNull(),
+  channel: text("channel").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  newBeneficiary: boolean("new_beneficiary").notNull().default(false),
+  deviceChanged: boolean("device_changed").notNull().default(false),
+  unusualLocation: boolean("unusual_location").notNull().default(false),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  riskScore: integer("risk_score").notNull(),
+  action: transactionFraudActionEnum("action").notNull(),
+  signals: jsonb("signals").notNull().default(sql`'[]'::jsonb`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("transaction_fraud_events_org_reference_idx").on(table.organizationId, table.transactionReference),
+]);
 
 export const insertIdentityVerificationSchema = createInsertSchema(identityVerifications).omit({ id: true, createdAt: true });
 export const insertWatchlistHitSchema = createInsertSchema(watchlistHits).omit({ id: true, createdAt: true, resolvedAt: true });
