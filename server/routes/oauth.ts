@@ -9,7 +9,7 @@ const logger = createLogger("oauth");
 // ─── Return-path sanitiser ────────────────────────────────────────────────────
 
 const ALLOWED_RETURN_PATHS = [
-  "/my-credit", "/start-trial", "/dashboard",
+  "/my-credit", "/start-trial", "/dashboard", "/today",
   "/solutions", "/pricing", "/ai-demo",
 ];
 
@@ -211,7 +211,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   // ─── Google OAuth — consumer portal ─────────────────────────────────────────
 
   app.get("/api/consumer/auth/google", (req: Request, res: Response) => {
-    const returnTo = sanitizeReturnPath(req.query.from as string);
+    const returnTo = sanitizeReturnPath(req.query.from as string || "/today");
     if (!GOOGLE_CLIENT_ID) {
       return res.status(503).send(
         `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Sign-In</title></head>` +
@@ -385,7 +385,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
 
   app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
     const session = req.session as unknown as Record<string, unknown>;
-    const returnTo = session.institutionalGoogleOAuthReturnTo as string || "/dashboard";
+    const returnTo = session.institutionalGoogleOAuthReturnTo as string || "/today";
     try {
       const { code, state, error: oauthError } = req.query;
       if (oauthError) return res.redirect(`/login?error=${oauthError}`);
@@ -459,7 +459,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   // ─── Microsoft Entra ID — institutional staff only ───────────────────────────
 
   app.get("/api/auth/microsoft", (req: Request, res: Response) => {
-    const returnTo = sanitizeReturnPath(req.query.from as string || "/dashboard");
+    const returnTo = sanitizeReturnPath(req.query.from as string || "/today");
     if (!MICROSOFT_CLIENT_ID) {
       return res.status(503).send(
         `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Microsoft Sign-In</title></head>` +
@@ -488,7 +488,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   });
 
   app.get("/api/auth/microsoft/callback", async (req: Request, res: Response) => {
-    const returnTo = (req.session as unknown as Record<string, unknown>).microsoftOAuthReturnTo as string || "/dashboard";
+    const returnTo = (req.session as unknown as Record<string, unknown>).microsoftOAuthReturnTo as string || "/today";
     try {
       const { code, state } = req.query;
       if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);

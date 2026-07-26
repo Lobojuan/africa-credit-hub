@@ -97,7 +97,7 @@ export default function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       // Explicit redirect — same as password login; don't rely on React re-render alone
       sessionStorage.setItem("passkey_prompt", "1");
-      window.location.replace("/choose-product");
+      window.location.replace("/today");
     } catch (e: any) {
       const msg = e.name === "NotAllowedError"
         ? "Fingerprint prompt was dismissed. Try again or use your password."
@@ -163,7 +163,7 @@ export default function LoginPage() {
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        window.location.replace("/choose-product");
+        window.location.replace("/today");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -846,7 +846,7 @@ export default function LoginPage() {
                   border: "1px solid hsl(215 25% 88%)",
                   color: "hsl(215 25% 30%)",
                 }}
-                onClick={() => window.location.href = "/api/auth/google?from=/dashboard"}
+                onClick={() => window.location.href = "/api/auth/google?from=/today"}
                 data-testid="button-google-login-institutional"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -865,7 +865,7 @@ export default function LoginPage() {
                   border: "1px solid hsl(215 25% 88%)",
                   color: "hsl(215 25% 30%)",
                 }}
-                onClick={() => window.location.href = "/api/auth/microsoft?from=/dashboard"}
+                onClick={() => window.location.href = "/api/auth/microsoft?from=/today"}
                 data-testid="button-microsoft-login"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">

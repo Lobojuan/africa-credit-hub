@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T20:49:41.702Z",
+  "generatedAt": "2026-07-26T20:53:59.580Z",
   "branch": "main",
-  "currentCommit": "719af60",
+  "currentCommit": "eeaa854",
   "commits": [
+    {
+      "hash": "eeaa85456360ceaee68a1f07d656ec032fc1ce73",
+      "shortHash": "eeaa854",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "security: require MFA for invited staff"
+    },
     {
       "hash": "719af60e14a9f01d59d53aef5f75e295088fde45",
       "shortHash": "719af60",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "feat: add role-based Today command centre"
-    },
-    {
-      "hash": "4603fd11f5e47c5686a34f40fdf782a60bfa2021",
-      "shortHash": "4603fd1",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: isolate USSD HMAC from E2E runtime"
     }
   ]
 };
