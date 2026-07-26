@@ -29,7 +29,10 @@ test.beforeAll(async ({ browser }) => {
   await ctx.close();
 });
 
-const LENDER_SESSION = { username: "lender_demo" };
+// lender_demo can submit API filings but is intentionally restricted to the
+// Credit Bureau workspace. Collateral UI coverage uses the dedicated product
+// administrator, which has the required collateral workspace entitlement.
+const LENDER_SESSION = { username: "collateral_admin" };
 const SA_SESSION = { userId: "e2e-col-sa", userRole: "super_admin" };
 const REG_SESSION = { userId: "e2e-col-reg", userRole: "regulator" };
 
@@ -52,7 +55,7 @@ async function gotoCollateral(page: import("@playwright/test").Page, session = L
 // ─── Page renders ─────────────────────────────────────────────────────────────
 
 test.describe("Collateral Registry — page renders", () => {
-  test("page loads for lender and is not /login", async ({ page }) => {
+  test("page loads for collateral administrator and is not /login", async ({ page }) => {
     await gotoCollateral(page, LENDER_SESSION);
     await expect(page).toHaveURL(/\/collateral-registry/);
   });
@@ -291,7 +294,7 @@ test.describe("Collateral Registry — release lifecycle", () => {
 // ─── API endpoints ─────────────────────────────────────────────────────────────
 
 test.describe("Collateral Registry — API", () => {
-  test("GET /api/collateral returns 200 with array for lender", async ({ page }) => {
+  test("GET /api/collateral returns 200 with array for collateral administrator", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
     const resp = await page.request.get("/api/collateral");
     expect(resp.status()).toBe(200);

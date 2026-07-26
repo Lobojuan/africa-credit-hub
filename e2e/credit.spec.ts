@@ -24,6 +24,9 @@ async function setSession(
   page: import("@playwright/test").Page,
   session: Record<string, unknown>,
 ) {
+  // Each worker begins from the same saved auth cookie. Start a distinct test
+  // session before assigning a role so parallel specs cannot mutate it.
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: session });
   expect(res.ok()).toBeTruthy();
 }
@@ -485,6 +488,11 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
   test.beforeAll(async ({ browser }) => {
     const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
     const pg = await ctx.newPage();
+    await ctx.clearCookies();
+    const session = await pg.request.post("/api/test/set-session", {
+      data: { username: "platform_admin" },
+    });
+    expect(session.ok()).toBeTruthy();
     e2eSearchNationalId = `NIN-SEARCH-E2E-${Date.now()}`;
     e2eSearchFirstName = `SearchableE2E${Date.now()}`;
 
