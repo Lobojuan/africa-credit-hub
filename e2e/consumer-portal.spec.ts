@@ -30,6 +30,7 @@ async function setConsumerSession(page: import("@playwright/test").Page, session
   // Authenticated browser projects start with a saved institution cookie. A
   // consumer session must explicitly clear that identity: mixed institution +
   // consumer sessions are correctly rejected by the production API.
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", {
     data: { userId: null, userRole: null, organizationId: null, ...session },
   });
@@ -37,6 +38,7 @@ async function setConsumerSession(page: import("@playwright/test").Page, session
 }
 
 async function setAdminSession(page: import("@playwright/test").Page) {
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: { userId: "e2e-sa", userRole: "super_admin" } });
   expect(res.ok()).toBeTruthy();
 }
@@ -254,11 +256,11 @@ test.describe("Consumer Portal — API protection", () => {
     }
   });
 
-  test("GET /api/consumer/disputes returns 401 without auth", async ({ browser }) => {
+  test("GET /api/consumer/my-disputes returns 401 without auth", async ({ browser }) => {
     const context = await browser.newContext();
     try {
       await context.clearCookies();
-      const resp = await context.request.get("/api/consumer/disputes");
+      const resp = await context.request.get("/api/consumer/my-disputes");
       expect([401, 403]).toContain(resp.status());
     } finally {
       await context.close();
@@ -339,8 +341,9 @@ test.describe("Consumer Portal — SMS OTP dual-channel verification", () => {
 // ─── Main app consumer login path ─────────────────────────────────────────────
 
 test.describe("Main app — consumer login path", () => {
-  test("consumer portal button leads to consumer login form", async ({ page }) => {
-    await page.goto("/");
+  test("consumer login mode opens from the public login page", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="button-login-consumer"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-consumer"]');
     await expect(page.locator('[data-testid="form-consumer-login"]')).toBeVisible({ timeout: 10000 });

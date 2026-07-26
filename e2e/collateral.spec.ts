@@ -34,6 +34,10 @@ const SA_SESSION = { userId: "e2e-col-sa", userRole: "super_admin" };
 const REG_SESSION = { userId: "e2e-col-reg", userRole: "regulator" };
 
 async function setSession(page: import("@playwright/test").Page, session: Record<string, unknown>) {
+  // Authenticated projects start from the same saved cookie. Clearing it first
+  // gives every test its own server-side session and prevents parallel tests
+  // from overwriting each other's role in the E2E memory store.
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: session });
   expect(res.ok()).toBeTruthy();
 }
