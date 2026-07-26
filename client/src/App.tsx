@@ -512,7 +512,7 @@ function AuthenticatedApp() {
     return <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>;
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
+  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -921,7 +921,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
+  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -983,6 +983,11 @@ function App() {
               </AuthProvider>
             </Route>
             <Route path="/my-credit">
+              <Suspense fallback={<LazyFallback />}>
+                <ConsumerPortalPage />
+              </Suspense>
+            </Route>
+            <Route path="/consumer-portal">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
               </Suspense>

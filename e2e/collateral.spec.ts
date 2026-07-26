@@ -63,11 +63,15 @@ test.describe("Collateral Registry — page renders", () => {
     await expect(page).toHaveURL(/\/collateral-registry/);
   });
 
-  test("unauthenticated visit redirects to login", async ({ page }) => {
-    await page.goto("/collateral-registry");
-    await expect(
-      page.locator('[data-testid="page-login"], [data-testid="button-login-institution"]').first(),
-    ).toBeVisible({ timeout: 15000 });
+  test("unauthenticated collateral API access is denied", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const response = await context.request.get("/api/collateral");
+      expect([401, 403]).toContain(response.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -79,15 +83,24 @@ test.describe("Collateral Registry — registration form", () => {
     await page.waitForSelector('[data-testid="btn-register-collateral"]', { timeout: 15000 });
     await page.click('[data-testid="btn-register-collateral"]');
 
-    const requiredFields = [
+    const grantorFields = [
       "input-col-borrower-id",
       "input-col-borrower-name",
+      "select-debtor-type",
+      "select-country",
+      "btn-next-step",
+    ];
+    for (const id of grantorFields) {
+      await expect(page.locator(`[data-testid="${id}"]`)).toBeVisible({ timeout: 8000 });
+    }
+
+    await page.click('[data-testid="btn-next-step"]');
+    const collateralFields = [
       "select-col-type",
       "input-asset-identifier",
       "input-col-value",
-      "btn-submit-collateral",
     ];
-    for (const id of requiredFields) {
+    for (const id of collateralFields) {
       await expect(page.locator(`[data-testid="${id}"]`)).toBeVisible({ timeout: 8000 });
     }
   });

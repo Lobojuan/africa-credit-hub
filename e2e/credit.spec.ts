@@ -3,26 +3,20 @@ import { test, expect } from "@playwright/test";
 let e2eBorrowerId: string;
 
 test.beforeAll(async ({ browser }) => {
-  // Create the fixture with a real seeded user. Reusing Chromium's serialized
-  // storage state here made the Firefox project depend on cross-browser cookie
-  // handling and produced a 403 before the suite could start.
+  // Borrower writes are maker-checker submissions, not immediately-created
+  // records. Reuse a seeded borrower so the suite exercises an actual credit
+  // record consistently across browser projects.
   const ctx = await browser.newContext();
   const pg = await ctx.newPage();
   const session = await pg.request.post("/api/test/set-session", {
     data: { username: "platform_admin" },
   });
   expect(session.ok()).toBeTruthy();
-  const resp = await pg.request.post("/api/borrowers", {
-    data: {
-      firstName: "E2E",
-      lastName: "CreditSuiteTest",
-      nationalId: `E2E-CREDIT-${Date.now()}`,
-      type: "individual",
-      country: "Ghana",
-    },
-  });
-  expect(resp.status()).toBe(201);
-  e2eBorrowerId = (await resp.json()).id;
+  const resp = await pg.request.get("/api/borrowers?limit=5");
+  expect(resp.status()).toBe(200);
+  const body = await resp.json() as { data?: Array<{ id: string }> };
+  expect(body.data?.[0]).toBeTruthy();
+  e2eBorrowerId = body.data![0].id;
   await ctx.close();
 });
 

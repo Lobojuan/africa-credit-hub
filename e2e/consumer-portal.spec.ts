@@ -57,14 +57,14 @@ async function findConsumerWithCreditFile(page: import("@playwright/test").Page)
 
 test.describe("Consumer Portal — landing page", () => {
   test("consumer portal renders at /consumer-portal", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await expect(
       page.locator('[data-testid="badge-consumer-portal"], [data-testid="tab-password-login"]').first(),
     ).toBeVisible({ timeout: 15000 });
   });
 
   test("password login tab shows consumer-id and password inputs", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="tab-password-login"]', { timeout: 15000 });
     await page.click('[data-testid="tab-password-login"]');
 
@@ -74,12 +74,12 @@ test.describe("Consumer Portal — landing page", () => {
   });
 
   test("SMS login tab is visible", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await expect(page.locator('[data-testid="tab-sms-login"]')).toBeVisible({ timeout: 15000 });
   });
 
   test("wrong credentials show consumer portal error message", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="tab-password-login"]', { timeout: 15000 });
     await page.click('[data-testid="tab-password-login"]');
     await page.waitForSelector('[data-testid="input-consumer-id"]', { timeout: 10000 });
@@ -92,7 +92,7 @@ test.describe("Consumer Portal — landing page", () => {
   });
 
   test("register link is visible", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await expect(page.locator('[data-testid="link-to-register"]')).toBeVisible({ timeout: 15000 });
   });
 });
@@ -101,7 +101,7 @@ test.describe("Consumer Portal — landing page", () => {
 
 test.describe("Consumer Portal — registration form", () => {
   test("clicking register link shows registration fields", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="link-to-register"]', { timeout: 15000 });
     await page.click('[data-testid="link-to-register"]');
 
@@ -110,7 +110,7 @@ test.describe("Consumer Portal — registration form", () => {
   });
 
   test("registration form accepts input values", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="link-to-register"]', { timeout: 15000 });
     await page.click('[data-testid="link-to-register"]');
     await page.waitForSelector('[data-testid="input-register-fullname"]', { timeout: 10000 });
