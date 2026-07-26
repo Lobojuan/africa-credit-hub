@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
+const AccountActionPage = lazy(() => import("@/pages/account-action"));
 import NotFound from "@/pages/not-found";
 import { ProductSwitcher } from "@/components/product-switcher";
 import { WorkspaceThemeProvider } from "@/components/workspace-theme-provider";
@@ -973,6 +974,9 @@ function App() {
                 <ConsumerPortalPage />
               </Suspense>
             </Route>
+            <Route path="/forgot-password" component={() => <Suspense fallback={<LazyFallback />}><AccountActionPage /></Suspense>} />
+            <Route path="/reset-password" component={() => <Suspense fallback={<LazyFallback />}><AccountActionPage /></Suspense>} />
+            <Route path="/activate-account" component={() => <Suspense fallback={<LazyFallback />}><AccountActionPage /></Suspense>} />
             <Route path="/login">
               <AuthProvider>
                 <OrgSwitcherProvider>

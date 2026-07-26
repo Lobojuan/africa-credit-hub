@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T19:22:29.431Z",
+  "generatedAt": "2026-07-26T20:11:36.533Z",
   "branch": "main",
-  "currentCommit": "a714bc5",
+  "currentCommit": "b268223",
   "commits": [
+    {
+      "hash": "b268223065b0f2cd609adb62585d953404dbdded",
+      "shortHash": "b268223",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "security: add staff reset and invitation tokens"
+    },
     {
       "hash": "a714bc52224fbfd401aa75fcd1b9d636db9f1482",
       "shortHash": "a714bc5",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: rotate E2E sessions before assigning identities"
-    },
-    {
-      "hash": "4c93ffcd94ee4e71eb4956dc8b67a131c7907041",
-      "shortHash": "4c93ffc",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: use isolated workspace-aware E2E sessions"
     }
   ]
 };

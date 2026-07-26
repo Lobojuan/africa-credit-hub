@@ -646,6 +646,9 @@ export default function LoginPage() {
                         required
                       />
                     </div>
+                    <div className="text-right">
+                      <a href="/forgot-password" className="text-xs font-medium text-blue-700 hover:underline">Forgot your password?</a>
+                    </div>
                   </div>
                   <button
                     type="submit"

@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import * as OTPAuth from "otpauth";
 import crypto from "crypto";
 import { and, eq, gt, isNull } from "drizzle-orm";
-import { db } from "../db";
+import { db, pool } from "../db";
 import { authActionTokens, mfaBackupCodes, users } from "@shared/schema";
 import { storage } from "../storage";
 import { sendStaffInvitationEmail, sendStaffPasswordResetEmail } from "../email";
@@ -76,7 +76,12 @@ router.post("/api/auth/password-reset/confirm", loginLimiter, async (req, res) =
   if (!user || user.status !== "active") return res.status(400).json({ message: "This reset link is invalid or expired." });
   const hash = await bcrypt.hash(newPassword, 12);
   await db.transaction(async (tx) => { await tx.update(users).set({ password: hash, passwordChangedAt: new Date(), mustChangePassword: false, failedLoginAttempts: 0, lockedUntil: null }).where(eq(users.id, user.id)); await tx.update(authActionTokens).set({ usedAt: new Date() }).where(eq(authActionTokens.id, action.id)); });
-  await storage.createAuditLog({ action: "PASSWORD_RESET_COMPLETED", entity: "user", entityId: user.id, userId: user.id, details: "Password reset completed; existing sessions should be revoked", ipAddress: req.ip || null, organizationId: user.organizationId || undefined });
+  try {
+    await pool.query("DELETE FROM user_sessions WHERE sess->>'userId' = $1", [String(user.id)]);
+  } catch (e) {
+    authLogger.error("Could not revoke sessions after password reset", { userId: user.id, detail: (e as Error).message });
+  }
+  await storage.createAuditLog({ action: "PASSWORD_RESET_COMPLETED", entity: "user", entityId: user.id, userId: user.id, details: "Password reset completed; existing sessions revoked", ipAddress: req.ip || null, organizationId: user.organizationId || undefined });
   res.json({ message: "Password reset complete. You can now sign in." });
 });
 
