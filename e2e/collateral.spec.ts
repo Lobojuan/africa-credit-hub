@@ -186,7 +186,7 @@ test.describe("Collateral Registry — lien search", () => {
     expect(await page.locator('[data-testid="input-lien-search-asset"]').inputValue()).toBe(query);
   });
 
-  test("lien search for a known registered asset returns a result row", async ({ page }) => {
+  test("pending collateral is not exposed by the active-lien search", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
     await page.goto("/collateral-registry");
     await page.click('[data-testid="tab-lien-search"]');
@@ -194,9 +194,9 @@ test.describe("Collateral Registry — lien search", () => {
     await page.fill('[data-testid="input-lien-search-asset"]', e2eAssetId);
     await page.click('[data-testid="btn-lien-search"]');
 
-    await expect(
-      page.locator('[data-testid^="row-lien-result-"]').first(),
-    ).toBeVisible({ timeout: 12000 });
+    // New filings remain pending until a registry authority approves them, so
+    // cross-institution search must not reveal this asset yet.
+    await expect(page.locator('[data-testid^="row-lien-result-"]')).toHaveCount(0, { timeout: 12000 });
   });
 });
 

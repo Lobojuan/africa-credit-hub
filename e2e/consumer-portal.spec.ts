@@ -223,7 +223,7 @@ test.describe("Consumer Portal — authenticated (real borrower session)", () =>
 
   test("credit score lookup API returns numeric score for seeded consumer", async ({ page }) => {
     await setConsumerSession(page, { consumerId: e2eConsumerId, consumerNationalId: e2eConsumerNationalId });
-    const resp = await page.request.get(`/api/consumer/credit-score?borrowerId=${e2eConsumerId}`);
+    const resp = await page.request.get("/api/consumer/lookup");
     // 200 = score found; 404 = consumer not scored yet (credit accounts may not be scored immediately)
     // Both are valid. What must not happen: 401 (auth failure) or 500 (crash).
     expect(resp.status()).not.toBe(401);
@@ -243,24 +243,39 @@ test.describe("Consumer Portal — authenticated (real borrower session)", () =>
 // ─── Consumer API protection ──────────────────────────────────────────────────
 
 test.describe("Consumer Portal — API protection", () => {
-  test("GET /api/consumer/credit-score returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/consumer/credit-score");
-    expect([401, 403]).toContain(resp.status());
+  test("GET /api/consumer/lookup returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      const resp = await context.request.get("/api/consumer/lookup");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
-  test("GET /api/consumer/disputes returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/consumer/disputes");
-    expect([401, 403]).toContain(resp.status());
+  test("GET /api/consumer/disputes returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      const resp = await context.request.get("/api/consumer/disputes");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
-  test("POST /api/consumer/credit-freeze returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.post("/api/consumer/credit-freeze");
-    expect([401, 403]).toContain(resp.status());
+  test("POST /api/consumer/credit-freeze returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      const resp = await context.request.post("/api/consumer/credit-freeze");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
   test("consumer credit-score endpoint returns 200 or 404 with valid session", async ({ page }) => {
     await setConsumerSession(page, { consumerId: "e2e-cs-001", consumerNationalId: "GH-E2E-CS-001" });
-    const resp = await page.request.get("/api/consumer/credit-score");
+    const resp = await page.request.get("/api/consumer/lookup");
     expect([200, 404]).toContain(resp.status());
     expect(resp.status()).not.toBe(401);
   });

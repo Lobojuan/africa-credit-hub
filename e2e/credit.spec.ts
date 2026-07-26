@@ -114,9 +114,14 @@ test.describe("Credit Bureau — Borrowers", () => {
     ).toBe(true);
   });
 
-  test("borrowers API returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/borrowers");
-    expect([401, 403]).toContain(resp.status());
+  test("borrowers API returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      const resp = await context.request.get("/api/borrowers");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -157,9 +162,14 @@ test.describe("Credit Bureau — Credit Accounts page structure", () => {
     ).toBe(true);
   });
 
-  test("credit accounts API returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/credit-accounts");
-    expect([401, 403]).toContain(resp.status());
+  test("credit accounts API returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      const resp = await context.request.get("/api/credit-accounts");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -420,8 +430,8 @@ test.describe("Credit Bureau — Dispute filing lifecycle", () => {
 // ─── Credit account CRUD — create via UI and verify in list ──────────────────
 
 test.describe("Credit Bureau — Account CRUD lifecycle", () => {
-  test("create credit account via UI form and verify it appears in the accounts list", async ({ page }) => {
-    await setSession(page, SUPER_ADMIN_SESSION);
+  test("create credit account submits a maker-checker approval", async ({ page }) => {
+    await setSession(page, ADMIN_SESSION);
 
     const createResp = await page.request.post("/api/credit-accounts", {
       data: {
@@ -436,16 +446,10 @@ test.describe("Credit Bureau — Account CRUD lifecycle", () => {
         openingDate: new Date().toISOString().split("T")[0],
       },
     });
-    expect([200, 201]).toContain(createResp.status());
-    const created = await createResp.json() as { id: string };
-    const accountId = created.id;
-    expect(typeof accountId).toBe("string");
-
-    await page.goto("/credit-accounts");
-    await page.waitForSelector('[data-testid="text-accounts-title"]', { timeout: 15000 });
-    await expect(
-      page.locator(`[data-testid="row-account-${accountId}"]`),
-    ).toBeVisible({ timeout: 12000 });
+    expect(createResp.status()).toBe(201);
+    const created = await createResp.json() as { approval?: { id?: string }; message?: string };
+    expect(created.approval?.id).toEqual(expect.any(String));
+    expect(created.message).toMatch(/maker-checker approval/i);
   });
 });
 
