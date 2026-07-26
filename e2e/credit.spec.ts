@@ -55,11 +55,15 @@ test.describe("Credit Bureau — Dashboard", () => {
     });
   });
 
-  test("unauthenticated user cannot access /dashboard", async ({ page }) => {
-    await page.goto("/dashboard");
-    await expect(
-      page.locator('[data-testid="page-login"], [data-testid="button-login-institution"]').first(),
-    ).toBeVisible({ timeout: 15000 });
+  test("unauthenticated dashboard API access is denied", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const response = await context.request.get("/api/dashboard/stats");
+      expect([401, 403]).toContain(response.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -73,26 +77,26 @@ test.describe("Credit Bureau — Borrowers", () => {
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 15000 });
   });
 
-  test("search page renders borrower search input", async ({ page }) => {
+  test("search page renders the general credit search input", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/search");
     await expect(
-      page.locator('[data-testid="input-borrower-search"]'),
+      page.locator('[data-testid="input-credit-search"]'),
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("borrower search input is interactive — accepts typed text", async ({
+  test("general credit search input is interactive — accepts typed text", async ({
     page,
   }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/search");
-    await page.waitForSelector('[data-testid="input-borrower-search"]', {
+    await page.waitForSelector('[data-testid="input-credit-search"]', {
       timeout: 15000,
     });
     const query = "Kwame Mensah E2E Test";
-    await page.fill('[data-testid="input-borrower-search"]', query);
+    await page.fill('[data-testid="input-credit-search"]', query);
     expect(
-      await page.locator('[data-testid="input-borrower-search"]').inputValue(),
+      await page.locator('[data-testid="input-credit-search"]').inputValue(),
     ).toBe(query);
   });
 

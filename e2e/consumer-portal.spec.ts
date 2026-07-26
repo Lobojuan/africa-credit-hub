@@ -27,7 +27,12 @@ test.beforeAll(async ({ browser }) => {
 });
 
 async function setConsumerSession(page: import("@playwright/test").Page, session: Record<string, unknown>) {
-  const res = await page.request.post("/api/test/set-session", { data: session });
+  // Authenticated browser projects start with a saved institution cookie. A
+  // consumer session must explicitly clear that identity: mixed institution +
+  // consumer sessions are correctly rejected by the production API.
+  const res = await page.request.post("/api/test/set-session", {
+    data: { userId: null, userRole: null, organizationId: null, ...session },
+  });
   expect(res.ok()).toBeTruthy();
 }
 
