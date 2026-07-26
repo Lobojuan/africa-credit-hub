@@ -145,7 +145,9 @@ export default defineConfig({
     // CI: always starts its own isolated server on port 5001.
     // Local dev: reuses the existing dev server on port 5000 that is already
     // running with ENABLE_E2E_TEST_AUTH=true via dev-server.sh.
-    command: "ENABLE_E2E_TEST_AUTH=true PORT=5001 npx tsx server/index.ts",
+    // Keep gateway credentials in the launch command as well as `env`: the
+    // shell that starts webServer may otherwise retain parent CI credentials.
+    command: "ENABLE_E2E_TEST_AUTH=true LOTO_USSD_TOKEN=ci-e2e-ussd-token LOTO_USSD_HMAC_SECRET='' PORT=5001 npx tsx server/index.ts",
     url: process.env.CI ? "http://localhost:5001/api/health" : "http://localhost:5000/api/health",
     reuseExistingServer: !process.env.CI,
     timeout: 90000,
