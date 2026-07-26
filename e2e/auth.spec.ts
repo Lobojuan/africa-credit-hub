@@ -2,7 +2,7 @@
  * Auth E2E Suite — login for all 8 demo accounts, role-based Today landing,
  * single-workspace restriction enforcement, and logout.
  *
- * Demo accounts (replit.md):
+ * Demo accounts (seeded local test data):
  *   demo_admin      / TestPass2026!             → all 3 workspaces (platform_owner)
  *   credit_admin    / Credit26                  → credit only
  *   collateral_admin / Collat26                 → collateral only

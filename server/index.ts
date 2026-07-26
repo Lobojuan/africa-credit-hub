@@ -164,9 +164,7 @@ app.use(helmet({
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: isProductionBoot
-        ? ["'none'"]
-        : ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.repl.co"],
+      frameAncestors: isProductionBoot ? ["'none'"] : ["'self'"],
       ...(isProductionBoot ? { upgradeInsecureRequests: [] } : {}),
     },
   },

@@ -516,7 +516,7 @@ if (approval.requestedBy === currentUserId) {
 |---------|---------|---------------|
 | DiceBear (`api.dicebear.com`) | Auto-generated borrower profile avatars | No PII sent to DiceBear — only the borrower ID is used as a seed for avatar generation; no authentication required |
 | Open Exchange Rates (`open.er-api.com`) | Live currency exchange rate fetching | No authentication required; no sensitive data transmitted; only currency codes sent in requests |
-| OpenAI GPT-4o (via Replit AI Integrations) | AI credit risk analysis, report summaries, chatbot assistant, compliance reports | See Section 9.7 for detailed AI data handling controls |
+| OpenAI GPT-4o (via OpenAI-compatible integration) | AI credit risk analysis, report summaries, chatbot assistant, compliance reports | See Section 9.7 for detailed AI data handling controls |
 
 ### 9.7 AI Data Handling — ENT-16 through ENT-21
 
@@ -524,7 +524,7 @@ The system integrates with OpenAI GPT-4o for AI-powered analysis features. The f
 
 | Control | Implementation |
 |---------|---------------|
-| AI Provider | OpenAI GPT-4o via Replit AI Integrations |
+| AI Provider | OpenAI GPT-4o via OpenAI-compatible integration |
 | Configuration | Environment variables: `AI_INTEGRATIONS_OPENAI_API_KEY`, `AI_INTEGRATIONS_OPENAI_BASE_URL` |
 | Data Sent | Borrower data (name, account details, payment history) sent to OpenAI API for analysis; data is used solely for generating the requested analysis |
 | PII Storage by AI | No PII is stored by OpenAI; requests are processed ephemerally per OpenAI's API data usage policy |

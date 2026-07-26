@@ -983,9 +983,9 @@ The four-eye principle is enforced for borrower and credit account changes:
 
 ## 7. Deployment Architecture
 
-### 7.1 Replit Environment
+### 7.1 Managed Cloud Environment
 
-The application is designed for deployment on Replit with autoscale configuration:
+The application is designed for deployment on a managed cloud platform with autoscale configuration:
 
 ```
 Build Command: npm run build
@@ -1729,7 +1729,7 @@ The system integrates OpenAI GPT-4o for four AI-powered features: credit risk an
 
 ### 14.2 Configuration
 
-AI integration uses the Replit AI Integrations framework with the following environment variables:
+AI integration uses an OpenAI-compatible provider with the following environment variables:
 
 | Variable | Purpose |
 |----------|---------|

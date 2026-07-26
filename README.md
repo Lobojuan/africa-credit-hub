@@ -255,7 +255,7 @@ Use `PERF_MONITOR_PAUSED=true`, `AGG_CACHE_PAUSED=true`, or `SCORE_CACHE_PAUSED=
 
 ## Deployment
 
-The platform is designed for deployment on Replit with built-in PostgreSQL, TLS, and health checks. For production:
+The platform supports deployment to a managed cloud environment with PostgreSQL, TLS, and health checks. For production:
 
 1. Set `PRODUCTION_MODE=true` to disable demo data seeding
 2. Set `NODE_ENV=production` for optimised builds

@@ -538,9 +538,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
         value: base,
         source: canonicalConfigured
           ? "CANONICAL_URL env var"
-          : process.env.REPLIT_DOMAINS
-            ? "REPLIT_DOMAINS env var (fallback)"
-            : "hardcoded production default (fallback)",
+          : "hardcoded production default (fallback)",
         configured: canonicalConfigured,
         warning: !canonicalConfigured
           ? "Set CANONICAL_URL=https://universalcredithub.com in production secrets for stable OAuth callbacks."

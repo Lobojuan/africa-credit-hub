@@ -938,9 +938,9 @@ Le principe des quatre yeux est appliqué pour les modifications des emprunteurs
 
 ## 7. Architecture de Déploiement
 
-### 7.1 Environnement Replit
+### 7.1 Environnement managed cloud platform
 
-L'application est conçue pour un déploiement sur Replit avec une configuration d'auto-dimensionnement :
+L'application est conçue pour un déploiement sur managed cloud platform avec une configuration d'auto-dimensionnement :
 
 ```
 Commande de Build : npm run build

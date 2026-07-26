@@ -54,7 +54,7 @@ const E2E_APPLE_CODE = "e2e-apple-code";
 
 // Production callback URLs that must be registered at provider consoles.
 // These are derived from CANONICAL_URL=https://universalcredithub.com (set in
-// playwright.config.ts) and must never regress to localhost or a Replit domain.
+// playwright.config.ts) and must never regress to localhost or an obsolete host.
 const PROD_BASE = "https://universalcredithub.com";
 const GOOGLE_PROD_CALLBACK = `${PROD_BASE}/api/consumer/auth/google/callback`;
 const MICROSOFT_PROD_CALLBACK = `${PROD_BASE}/api/auth/microsoft/callback`;
@@ -97,7 +97,7 @@ test.describe("Google OAuth — smoke tests", () => {
 
     // redirect_uri must be the exact production callback URL.
     // CANONICAL_URL=https://universalcredithub.com is always set by
-    // playwright.config.ts, so a regression to localhost or a Replit domain
+    // playwright.config.ts, so a regression to localhost or an obsolete host
     // will cause this assertion to fail immediately.
     expect(redirectUrl.searchParams.get("redirect_uri")).toBe(GOOGLE_PROD_CALLBACK);
   });
@@ -300,7 +300,7 @@ test.describe("SAML SSO — smoke tests", () => {
 
     // The ACS URL embedded in the SAMLRequest must be the exact production URL.
     // CANONICAL_URL=https://universalcredithub.com is always set by
-    // playwright.config.ts, so a regression to localhost or a Replit domain
+    // playwright.config.ts, so a regression to localhost or an obsolete host
     // will cause this assertion to fail immediately.
     expect(xml).toContain(`AssertionConsumerServiceURL="${SAML_PROD_ACS}"`);
 

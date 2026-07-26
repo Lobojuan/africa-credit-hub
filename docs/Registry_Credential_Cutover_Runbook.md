@@ -84,10 +84,10 @@ Contact the registry authority and request:
 
 Keep both values secure. Do not share them in email or chat without encryption.
 
-### Step 2 — Store credentials as Replit Secrets
+### Step 2 — Store credentials in the deployment secret manager
 
-In the Replit project:
-1. Open the **Secrets** tab (lock icon in the sidebar).
+In the selected deployment environment:
+1. Open its secret-management settings.
 2. Delete (or update) the existing secret for the URL variable (e.g. `GHANA_DVLA_API_URL`). Remove the `http://localhost:5000/…` value.
 3. Set `GHANA_DVLA_API_URL` to the production base URL (e.g. `https://api.dvla.gov.gh`).
 4. Set `GHANA_DVLA_API_KEY` to the production API key issued by the registry.
@@ -139,9 +139,9 @@ Confirm that the authority uses the **client credentials grant** (`grant_type=cl
 
 Keep all values secure. Do not share them in email or chat without encryption.
 
-### Step 2 — Store OAuth credentials as Replit Secrets
+### Step 2 — Store OAuth credentials as managed cloud platform Secrets
 
-In the Replit project:
+In the managed cloud platform project:
 1. Open the **Secrets** tab (lock icon in the sidebar).
 2. Set the registry's `*_API_URL` secret to the production base API URL (e.g. `NIGERIA_FRSC_API_URL` = `https://api.frsc.gov.ng`).
 3. Set the three OAuth secrets for that registry. Using Nigeria FRSC as an example:
@@ -264,11 +264,11 @@ The System Status page will revert to showing **Sandbox** (amber).
 
 ## Security Considerations
 
-- Never commit API keys or OAuth secrets to the codebase. All credentials must be stored as Replit Secrets.
+- Never commit API keys or OAuth secrets to the codebase. All credentials must be stored as managed cloud platform Secrets.
 - In static API key mode, `callLiveRegistry()` sends the key in the `X-Api-Key` header. In OAuth mode, it sends a short-lived bearer token in the `Authorization: Bearer` header. Always use `https://` for both the registry API URL and the OAuth token URL.
 - OAuth tokens are cached in memory (per server process) and refreshed automatically 60 seconds before expiry. A server restart clears the token cache; the first request after restart will perform a fresh token exchange.
-- The OAuth client secret is stored as a Replit Secret and is never logged or exposed in responses.
-- Rotate API keys and OAuth client secrets periodically and whenever team members with access leave. Update the Replit Secret immediately and restart the application.
+- The OAuth client secret is stored as a managed cloud platform Secret and is never logged or exposed in responses.
+- Rotate API keys and OAuth client secrets periodically and whenever team members with access leave. Update the managed cloud platform Secret immediately and restart the application.
 
 ---
 

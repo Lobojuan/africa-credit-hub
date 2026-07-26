@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-This guide provides step-by-step deployment instructions for the Credit Registry System. The application consists of a React frontend served by an Express.js backend, with PostgreSQL as the database. Two deployment scenarios are covered: Replit deployment and general Linux/Docker deployment.
+This guide provides step-by-step deployment instructions for the Credit Registry System. The application consists of a React frontend served by an Express.js backend, with PostgreSQL as the database. It supports managed cloud and general Linux/Docker deployment.
 
 ---
 
@@ -85,7 +85,7 @@ The CDH platform can be deployed at different scales depending on borrower volum
 
 #### 2.2.5 Minimum Quick-Start (Development Only)
 
-For local development, testing, or Replit deployment:
+For local development, testing, or managed cloud platform deployment:
 
 | Resource | Minimum |
 |----------|---------|
@@ -146,7 +146,7 @@ All deployments require 64-bit architecture. ARM64 (aarch64) and x86_64 are both
 | `PORT` | No | Application port (default: 5000) | `5000` |
 | `NODE_ENV` | No | Environment mode (development/production) | `production` |
 | `AI_INTEGRATIONS_OPENAI_API_KEY` | No | OpenAI API key for AI-powered features (credit risk analysis, report summaries, chatbot, compliance reports) | `sk-...` |
-| `AI_INTEGRATIONS_OPENAI_BASE_URL` | No | OpenAI API base URL (provided by Replit AI Integrations) | `https://ai.replit.dev/v1` |
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | No | OpenAI API base URL (provided by OpenAI-compatible integration) | `https://api.openai.com/v1` |
 
 ### 3.1 Generating a Session Secret
 
@@ -162,7 +162,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 The system requires a PostgreSQL database. Options include:
 
-- **Neon** (serverless PostgreSQL, recommended for Replit)
+- **Neon** (serverless PostgreSQL, recommended for managed cloud platform)
 - **Amazon RDS** for production workloads
 - **Self-hosted PostgreSQL** on Linux servers
 - **Docker PostgreSQL** for containerized deployments
@@ -321,11 +321,11 @@ WantedBy=multi-user.target
 
 ---
 
-## 7. Replit-Specific Deployment
+## 7. managed cloud platform-Specific Deployment
 
 ### 7.1 Configuration
 
-The application is pre-configured for Replit deployment. The `.replit` file defines:
+The application is pre-configured for managed cloud platform deployment. The `.managed-cloud` file defines:
 
 - Build command: `npm run build`
 - Run command: `node ./dist/index.cjs`
@@ -333,7 +333,7 @@ The application is pre-configured for Replit deployment. The `.replit` file defi
 
 ### 7.2 Environment Secrets
 
-In Replit, set environment variables via the Secrets tab:
+In managed cloud platform, set environment variables via the Secrets tab:
 1. `DATABASE_URL` - PostgreSQL connection string (Neon recommended)
 2. `SESSION_SECRET` - Random string for session encryption
 
@@ -494,7 +494,7 @@ server {
 For production, always use HTTPS. Options:
 - **Let's Encrypt** with certbot for free SSL certificates
 - **Cloud provider SSL** (AWS ACM, Cloudflare, etc.)
-- **Replit** provides HTTPS automatically
+- **managed cloud platform** provides HTTPS automatically
 
 ---
 

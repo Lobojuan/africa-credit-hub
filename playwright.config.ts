@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Optional executable overrides — set these env vars in the Replit dev
+// Optional executable overrides for constrained local development environments.
 // environment when Playwright's own browser binaries are unavailable.
 // In CI, Playwright installs its own browsers and these are not needed.
 const chromiumExec = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;

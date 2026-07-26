@@ -18,10 +18,38 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T18:26:20.082Z",
+  "generatedAt": "2026-07-26T18:40:15.736Z",
   "branch": "main",
-  "currentCommit": "4603fd1",
+  "currentCommit": "2810540",
   "commits": [
+    {
+      "hash": "2810540381c55404f7637c04c4412d5dd9cb2bf5",
+      "shortHash": "2810540",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "docs: rename local UCH test database"
+    },
+    {
+      "hash": "7d33255556d8358a6e1da6455b13c9368ef59fce",
+      "shortHash": "7d33255",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "docs: record local UCH development runtime"
+    },
+    {
+      "hash": "9d7e8fd1ae3e443f2ce42af5a6e733b3dfae7cba",
+      "shortHash": "9d7e8fd",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "test: pin USSD gateway credentials in E2E server"
+    },
+    {
+      "hash": "6393df3dfd66f89c86f113b7fc7fd3003802a7c2",
+      "shortHash": "6393df3",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add role-based Today command centre"
+    },
     {
       "hash": "4603fd11f5e47c5686a34f40fdf782a60bfa2021",
       "shortHash": "4603fd1",
@@ -77,34 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: align E2E checks with access workflows"
-    },
-    {
-      "hash": "08e8307aaed9328e00354ef62594a57e1190c9df",
-      "shortHash": "08e8307",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: stabilize authenticated E2E sessions"
-    },
-    {
-      "hash": "1adf798edc45854439be14b7f4d36cdf67b7a6fb",
-      "shortHash": "1adf798",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: use active collateral fields and real admin session"
-    },
-    {
-      "hash": "b38b3f3b50a00feac3b32a874d3341576feb9eca",
-      "shortHash": "b38b3f3",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: isolate consumer and search E2E sessions"
-    },
-    {
-      "hash": "94609284f8b780d9d669a3ad346104c85f8993ef",
-      "shortHash": "9460928",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "fix: align portal routes and authenticated E2E flows"
     }
   ]
 };

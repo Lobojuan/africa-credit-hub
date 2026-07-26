@@ -314,7 +314,7 @@ Six rate-limiting tiers protect against abuse:
 
 ### 5.7 Transport & Header Security
 
-- **TLS:** Enforced via deployment platform (Replit / reverse proxy)
+- **TLS:** Enforced via deployment platform (managed cloud platform / reverse proxy)
 - **Helmet.js:** Configures `Content-Security-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, and `Strict-Transport-Security`
 - **CORS:** Restricted to configured origins
 - **Input sanitisation:** DOMPurify applied to user-supplied content

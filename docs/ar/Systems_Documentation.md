@@ -949,9 +949,9 @@ users ──────────────┐
 
 ## 7. بنية النشر
 
-### 7.1 بيئة Replit
+### 7.1 بيئة managed cloud platform
 
-التطبيق مصمم للنشر على Replit مع تكوين التوسع التلقائي:
+التطبيق مصمم للنشر على managed cloud platform مع تكوين التوسع التلقائي:
 
 ```
 Build Command: npm run build

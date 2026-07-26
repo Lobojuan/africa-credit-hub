@@ -6084,7 +6084,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const getBaseUrl = (r: Request) => {
         if (process.env.CANONICAL_URL) return process.env.CANONICAL_URL;
         const protocol = r.headers["x-forwarded-proto"] || r.protocol || "https";
-        const host = r.headers["x-forwarded-host"] || r.headers.host || "universalcredithub.replit.app";
+        const host = r.headers["x-forwarded-host"] || r.headers.host || "universalcredithub.com";
         return `${protocol}://${host}`;
       };
       const baseUrl = getBaseUrl(req);

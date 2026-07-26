@@ -12,13 +12,13 @@
 
 ## 2026-07-07 — code-review cleanup pass
 - Fixed: hardcoded localhost (tearsheet-scheduler), fake 127.0.0.1 audit IP + NaN guard (backup-service), typed helpers replacing as-any casts (distribute-timestamps), 24 session casts removed + 8 guarded non-null assertions (routes), silent notification catch now logged, watchlist audit as-any removed, 200-char cap on structured-search params, sms.ts → structured logger
-- Commit `aec8bac` on `claude/production-check-WFJxR`; patch + apply script also delivered to user for Replit main
+- Commit `aec8bac` on `claude/production-check-WFJxR`; patch + apply script also delivered to user for managed cloud platform main
 - False positive noted: pagination parseInt||1 already NaN-safe
 - Environment lesson: container reset wiped node_modules mid-session → phantom tsc 6.x errors; `npm install` fixed
 
 ## 2026-07-07 (later) — total review complete + memory system live
 - Memory: brain repo Lobojuan/AI-Brain-and-Memory bootstrapped (local commits; push pending GitHub App)
-- Environment shift recorded: Replit RETIRED, Claude Code only, GitHub App = push path (enabled today, takes effect next session)
+- Environment shift recorded: managed cloud platform RETIRED, Claude Code only, GitHub App = push path (enabled today, takes effect next session)
 - Platform sweep: 112 unvalidated write endpoints (10 money/PII P1s), 67 raw error leaks, 10 orphan admin routes, 4 tracked ZIPs, 47 untranslated pages → REVIEW-2026-07.md Part A
 - Scoring deep audit: utilization factor DEAD CODE (no credit_limit column), inquiry penalties unfiltered (no consent/soft/12-mo), soft-pull endpoint always 500s, score differs per surface (decisions ~100pts high), batch tampering vectors, affordability income inflation → REVIEW-2026-07.md Part B
 - Fixed + committed: timing-safe OAuth client_id (e305343)

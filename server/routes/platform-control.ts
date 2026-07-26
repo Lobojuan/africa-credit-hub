@@ -15,10 +15,21 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
-import { ReplitConnectors } from "@replit/connectors-sdk";
 import { getOAuthCallbackBase } from "../base-url";
 
 const logger = createLogger("platform-control");
+
+async function githubApi(pathname: string, init: RequestInit = {}): Promise<globalThis.Response> {
+  const token = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
+  if (!token) {
+    throw new Error("GitHub integration is not configured. Set GITHUB_TOKEN or GITHUB_PAT on the server.");
+  }
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/vnd.github+json");
+  headers.set("Authorization", `Bearer ${token}`);
+  headers.set("X-GitHub-Api-Version", "2022-11-28");
+  return fetch(`https://api.github.com${pathname}`, { ...init, headers });
+}
 
 const MASTER_PASSWORD = process.env.MASTER_CONTROL_PASSWORD ?? "";
 if (!MASTER_PASSWORD) {
@@ -826,9 +837,7 @@ export function registerPlatformControlRoutes(app: Express) {
         value: base,
         source: canonicalConfigured
           ? "CANONICAL_URL env var"
-          : env.REPLIT_DOMAINS
-            ? "REPLIT_DOMAINS env var (fallback)"
-            : "hardcoded production default (fallback)",
+          : "hardcoded production default (fallback)",
         configured: canonicalConfigured,
         warning: !canonicalConfigured
           ? "Set CANONICAL_URL=https://universalcredithub.com in production secrets for stable OAuth callbacks."
@@ -923,11 +932,7 @@ export function registerPlatformControlRoutes(app: Express) {
       const platformName = process.env.PLATFORM_COMPANY_NAME || "Universal Credit Hub";
       const country = process.env.COUNTRY_MODE || "Ghana";
       const currency = process.env.DEFAULT_CURRENCY || "GHS";
-      const deploymentUrl = process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.REPL_SLUG
-          ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-          : "";
+      const deploymentUrl = process.env.CANONICAL_URL || "";
 
       let borrowerCount = 0, orgCount = 0, userCount = 0;
       try {
@@ -991,9 +996,9 @@ export function registerPlatformControlRoutes(app: Express) {
     };
 
     return res.json({ config, instructions: [
-      "1. Fork this Replit project for the new client",
-      "2. Set each environment variable above in the forked project's Secrets",
-      "3. Update database connection string to a new isolated PostgreSQL instance",
+      "1. Create a dedicated Universal Credit Hub repository for the new client",
+      "2. Store each environment variable in the deployment platform's secret manager",
+      "3. Update the database connection string to a new isolated PostgreSQL instance",
       "4. Deploy and verify the /health endpoint",
       "5. Register the deployment in this control center",
     ]});
@@ -1081,12 +1086,10 @@ export function registerPlatformControlRoutes(app: Express) {
   });
 
   // --- GitHub Integration: manage client repos ---
-  const connectors = new ReplitConnectors();
-
   app.get("/api/platform-control/github/repos", requireMasterAuth, async (_req: Request, res: Response) => {
     try {
-      const ghRes = await connectors.proxy("github", "/user/repos?sort=updated&per_page=100&type=owner", { method: "GET" });
-      const repos = await ghRes.json();
+      const ghRes = await githubApi("/user/repos?sort=updated&per_page=100&type=owner", { method: "GET" });
+      const repos = await ghRes.json() as unknown;
       if (!Array.isArray(repos)) return res.json({ repos: [], error: "Unexpected response" });
       const mapped = repos.map((r: Record<string, unknown>) => ({
         fullName: r.full_name, name: r.name, private: r.private,
@@ -1106,7 +1109,7 @@ export function registerPlatformControlRoutes(app: Express) {
       const { name, description, isPrivate, deploymentId } = req.body;
       if (!name) return res.status(400).json({ message: "Repository name required" });
 
-      const ghRes = await connectors.proxy("github", "/user/repos", {
+      const ghRes = await githubApi("/user/repos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1116,7 +1119,7 @@ export function registerPlatformControlRoutes(app: Express) {
           auto_init: true,
         }),
       });
-      const repo = await ghRes.json();
+      const repo = await ghRes.json() as Record<string, unknown>;
       if (repo.errors || repo.message === "Repository creation failed.") {
         return res.status(400).json({ message: repo.message || "Failed to create repo", errors: repo.errors });
       }
@@ -1140,8 +1143,8 @@ export function registerPlatformControlRoutes(app: Express) {
       const { deploymentId, repoFullName } = req.body;
       if (!deploymentId || !repoFullName) return res.status(400).json({ message: "deploymentId and repoFullName required" });
 
-      const ghRes = await connectors.proxy("github", `/repos/${repoFullName}`, { method: "GET" });
-      const repo = await ghRes.json();
+      const ghRes = await githubApi(`/repos/${repoFullName}`, { method: "GET" });
+      const repo = await ghRes.json() as Record<string, unknown>;
       if (repo.message === "Not Found") return res.status(404).json({ message: "Repository not found" });
 
       await db.update(platformDeployments)
@@ -1160,13 +1163,13 @@ export function registerPlatformControlRoutes(app: Express) {
     try {
       const { owner, repo } = req.params;
       const [repoRes, commitsRes, branchesRes] = await Promise.all([
-        connectors.proxy("github", `/repos/${owner}/${repo}`, { method: "GET" }),
-        connectors.proxy("github", `/repos/${owner}/${repo}/commits?per_page=5`, { method: "GET" }),
-        connectors.proxy("github", `/repos/${owner}/${repo}/branches`, { method: "GET" }),
+        githubApi(`/repos/${owner}/${repo}`, { method: "GET" }),
+        githubApi(`/repos/${owner}/${repo}/commits?per_page=5`, { method: "GET" }),
+        githubApi(`/repos/${owner}/${repo}/branches`, { method: "GET" }),
       ]);
-      const repoData = await repoRes.json();
-      const commits = await commitsRes.json();
-      const branches = await branchesRes.json();
+      const repoData = await repoRes.json() as Record<string, unknown>;
+      const commits = await commitsRes.json() as unknown;
+      const branches = await branchesRes.json() as unknown;
 
       return res.json({
         name: repoData.full_name,
