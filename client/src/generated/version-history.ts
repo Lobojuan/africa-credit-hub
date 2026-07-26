@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T20:11:36.533Z",
+  "generatedAt": "2026-07-26T20:13:26.261Z",
   "branch": "main",
-  "currentCommit": "b268223",
+  "currentCommit": "8e1e5db",
   "commits": [
+    {
+      "hash": "8e1e5dbb4740075bb767ece33bdb32f60780c47e",
+      "shortHash": "8e1e5db",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: complete staff account recovery flow"
+    },
     {
       "hash": "b268223065b0f2cd609adb62585d953404dbdded",
       "shortHash": "b268223",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: isolate localhost USSD E2E callbacks"
-    },
-    {
-      "hash": "b556aead94cb42e39fcdd0f36c8b752394d77c25",
-      "shortHash": "b556aea",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: rotate E2E sessions before assigning identities"
     }
   ]
 };

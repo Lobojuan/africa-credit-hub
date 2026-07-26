@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `b268223`
+**Current Commit:** `8e1e5db`
 **Branch:** `main`
-**Generated:** 2026-07-26T20:11:36.533Z
+**Generated:** 2026-07-26T20:13:26.261Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-26 | `8e1e5db` | feat: complete staff account recovery flow | Uffe J Carlson |
 | 2026-07-26 | `b268223` | security: add staff reset and invitation tokens | Uffe J Carlson |
 | 2026-07-26 | `a714bc5` | security: separate institutional SSO from consumer login | Uffe J Carlson |
 | 2026-07-26 | `10a8432` | security: harden authentication recovery | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-26 | `4603fd1` | test: isolate USSD HMAC from E2E runtime | Uffe J Carlson |
 | 2026-07-26 | `4c00ffc` | test: harden E2E runtime contracts | Uffe J Carlson |
 | 2026-07-26 | `63a76dd` | test: isolate localhost USSD E2E callbacks | Uffe J Carlson |
-| 2026-07-26 | `b556aea` | test: rotate E2E sessions before assigning identities | Uffe J Carlson |
