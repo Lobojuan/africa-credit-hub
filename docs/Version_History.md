@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `61201a5`
+**Current Commit:** `74eff1e`
 **Branch:** `main`
-**Generated:** 2026-07-26T22:24:27.134Z
+**Generated:** 2026-07-26T23:17:41.503Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-26 | `74eff1e` | feat: add transaction fraud monitor | Uffe J Carlson |
 | 2026-07-26 | `61201a5` | feat: add transaction resolution desk | Uffe J Carlson |
 | 2026-07-26 | `15f341d` | feat: add forgery review desk | Uffe J Carlson |
 | 2026-07-26 | `52fba2a` | docs: add bank requirements traceability | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-26 | `719af60` | feat: add secure staff invitation action | Uffe J Carlson |
 | 2026-07-26 | `9e0f12f` | docs: refresh version history | Uffe J Carlson |
 | 2026-07-26 | `8e1e5db` | feat: complete staff account recovery flow | Uffe J Carlson |
-| 2026-07-26 | `b268223` | security: add staff reset and invitation tokens | Uffe J Carlson |

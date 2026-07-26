@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T22:24:27.134Z",
+  "generatedAt": "2026-07-26T23:17:41.503Z",
   "branch": "main",
-  "currentCommit": "61201a5",
+  "currentCommit": "74eff1e",
   "commits": [
+    {
+      "hash": "74eff1e6e3516803c837924afe1f67be7dab20f7",
+      "shortHash": "74eff1e",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add transaction fraud monitor"
+    },
     {
       "hash": "61201a571db3dee08aa9fa59d858f99361734f5d",
       "shortHash": "61201a5",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "feat: complete staff account recovery flow"
-    },
-    {
-      "hash": "b268223065b0f2cd609adb62585d953404dbdded",
-      "shortHash": "b268223",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "security: add staff reset and invitation tokens"
     }
   ]
 };

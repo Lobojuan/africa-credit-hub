@@ -3707,6 +3707,47 @@ export async function registerRoutes(
     }
   });
 
+  // An explainable triage view over the tamper-evident audit trail. It flags
+  // review signals only; it deliberately does not label a staff member as
+  // fraudulent or take any employment/access action automatically.
+  app.get("/api/insider-risk-review", requireRole("admin", "regulator", "super_admin"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const country = getCountryFilter(req);
+      const scopedCountry = country === GLOBAL_SCOPE ? null : country || null;
+      const result = await pool.query(`
+        WITH scoped_logs AS (
+          SELECT al.* FROM audit_logs al
+          LEFT JOIN users u ON u.id = al.user_id
+          WHERE al.created_at >= NOW() - INTERVAL '24 hours'
+            AND ($1::text IS NULL OR al.organization_id = $1 OR u.organization_id = $1)
+            AND ($2::text IS NULL OR u.organization_id IS NULL OR EXISTS (SELECT 1 FROM organizations o WHERE o.id = u.organization_id AND o.country = $2))
+        )
+        SELECT sl.user_id, COALESCE(u.full_name, 'System or removed user') AS full_name, u.email, u.role,
+               COUNT(*)::int AS activity_count,
+               COUNT(DISTINCT sl.ip_address)::int AS ip_count,
+               COUNT(*) FILTER (WHERE sl.action ~* '(DELETE|ERASURE|EXPORT|PASSWORD|USER|CHAIN_REPAIR|APPROVE)')::int AS sensitive_count,
+               ARRAY_AGG(DISTINCT sl.action ORDER BY sl.action) AS actions,
+               MAX(sl.created_at) AS last_activity
+        FROM scoped_logs sl LEFT JOIN users u ON u.id = sl.user_id
+        GROUP BY sl.user_id, u.full_name, u.email, u.role
+        HAVING COUNT(*) >= 5 OR COUNT(*) FILTER (WHERE sl.action ~* '(DELETE|ERASURE|EXPORT|PASSWORD|USER|CHAIN_REPAIR|APPROVE)') >= 1 OR COUNT(DISTINCT sl.ip_address) >= 3
+        ORDER BY (COUNT(*) FILTER (WHERE sl.action ~* '(DELETE|ERASURE|EXPORT|PASSWORD|USER|CHAIN_REPAIR|APPROVE)')) DESC, COUNT(*) DESC
+        LIMIT 100
+      `, [orgId, scopedCountry]);
+      const reviewers = result.rows.map((row: any) => {
+        const signals = [
+          Number(row.sensitive_count) > 0 ? `${row.sensitive_count} sensitive action(s)` : null,
+          Number(row.activity_count) >= 20 ? `${row.activity_count} actions in 24 hours` : null,
+          Number(row.ip_count) >= 3 ? `${row.ip_count} source IPs in 24 hours` : null,
+        ].filter(Boolean);
+        const score = Math.min(100, Number(row.sensitive_count) * 30 + Math.min(Number(row.activity_count), 30) + Math.max(0, Number(row.ip_count) - 1) * 10);
+        return { ...row, score, severity: score >= 70 ? "high" : score >= 40 ? "elevated" : "review", signals };
+      });
+      res.json({ generatedAt: new Date().toISOString(), reviewers });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.get("/api/pending-approvals", requireAuth, async (req, res) => {
     try {
       const orgId = getOrgScope(req);

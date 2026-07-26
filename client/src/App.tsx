@@ -126,6 +126,7 @@ const NplEarlyWarningPage = lazy(() => import("@/pages/npl-early-warning"));
 const ForgeryReviewPage = lazy(() => import("@/pages/forgery-review"));
 const TransactionResolutionPage = lazy(() => import("@/pages/transaction-resolution"));
 const TransactionFraudMonitorPage = lazy(() => import("@/pages/transaction-fraud-monitor"));
+const InsiderRiskReviewPage = lazy(() => import("@/pages/insider-risk-review"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
 const CommandCenterSystemPage = lazy(() => import("@/pages/command-center-system"));
 const CommandCenterSettingsPage = lazy(() => import("@/pages/command-center-settings"));
@@ -305,6 +306,7 @@ function Router() {
         <Route path="/forgery-review" component={ForgeryReviewPage} />
         <Route path="/transaction-resolution" component={TransactionResolutionPage} />
         <Route path="/transaction-fraud-monitor" component={TransactionFraudMonitorPage} />
+        <Route path="/insider-risk-review" component={InsiderRiskReviewPage} />
         <Route path="/ai-command-center" component={AICommandCenterPage} />
         <Route path="/command-center" component={() => <Redirect to="/command-center-system" />} />
         <Route path="/command-center-system" component={CommandCenterSystemPage} />

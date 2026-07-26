@@ -137,6 +137,7 @@ const dataManagementItems: NavItem[] = [
 ];
 
 const workflowItems: NavItem[] = [
+  { label: "Insider Risk Review", url: "/insider-risk-review", icon: UserCheck, testId: "nav-insider-risk-review", roles: ["admin", "regulator", "super_admin"] },
   { label: "Transaction Fraud Monitor", url: "/transaction-fraud-monitor", icon: ShieldAlert, testId: "nav-transaction-fraud-monitor", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Transaction Resolution", url: "/transaction-resolution", icon: ArrowRightLeft, testId: "nav-transaction-resolution", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Disputes", tKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
