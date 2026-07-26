@@ -16669,6 +16669,71 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ─── Collections workflow ────────────────────────────────────────────────
+  // ─── NPL Early Warning Desk ──────────────────────────────────────────────
+  // A deterministic queue for facilities already showing repayment stress.
+  // It deliberately uses live account data and the existing collections
+  // assignment workflow instead of creating another disconnected risk store.
+  app.get("/api/npl-early-warning", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT
+          ca.id AS collection_assignment_id,
+          c.id AS credit_account_id,
+          c.borrower_id,
+          c.account_number,
+          c.account_type,
+          c.current_balance,
+          c.amount_overdue,
+          c.currency,
+          c.status AS account_status,
+          c.days_in_arrears,
+          c.restructure_count,
+          c.next_payment_date,
+          b.first_name,
+          b.last_name,
+          b.company_name,
+          b.country
+        FROM credit_accounts c
+        INNER JOIN borrowers b ON b.id = c.borrower_id
+        LEFT JOIN collection_assignments ca
+          ON ca.credit_account_id = c.id AND ca.status IN ('open', 'in_progress', 'promised')
+        WHERE (c.days_in_arrears > 0 OR c.status IN ('delinquent', 'default', 'written_off'))
+          AND ($1::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $1)
+          AND ($2::text IS NULL OR b.country = $2)
+        ORDER BY
+          CASE WHEN c.status IN ('default', 'written_off') OR c.days_in_arrears >= 90 THEN 4
+               WHEN c.days_in_arrears >= 60 THEN 3
+               WHEN c.days_in_arrears >= 30 THEN 2 ELSE 1 END DESC,
+          c.days_in_arrears DESC,
+          c.current_balance DESC
+        LIMIT 100
+      `, [orgId, country]);
+
+      const cases = result.rows.map((row) => {
+        const daysInArrears = Number(row.days_in_arrears || 0);
+        const status = String(row.account_status || "current");
+        const severity = status === "default" || status === "written_off" || daysInArrears >= 90
+          ? "critical"
+          : daysInArrears >= 60 ? "high" : daysInArrears >= 30 ? "elevated" : "watch";
+        const signals = [
+          daysInArrears > 0 ? `${daysInArrears} days past due` : null,
+          status !== "current" ? `Account status: ${status.replace("_", " ")}` : null,
+          Number(row.restructure_count || 0) > 0 ? `${row.restructure_count} restructure(s)` : null,
+        ].filter(Boolean);
+        return {
+          ...row,
+          severity,
+          signals,
+          isAssigned: Boolean(row.collection_assignment_id),
+        };
+      });
+      res.json({ generatedAt: new Date().toISOString(), cases });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.get("/api/collections/assignments", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);

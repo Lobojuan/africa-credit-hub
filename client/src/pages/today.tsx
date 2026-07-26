@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import {
   ArrowRight,
+  AlertTriangle,
   BellRing,
   ClipboardCheck,
   FileCheck2,
@@ -37,7 +38,7 @@ const lenderHome: RoleHome = {
   title: "Focus on the portfolio decisions that need you today.",
   description: "Monitor risk, complete lending work, and move overdue cases forward without hunting through the platform.",
   actions: [
-    { title: "Portfolio risk", description: "Review portfolio signals and accounts needing attention.", href: "/portfolio-intelligence", icon: LineChart },
+    { title: "NPL early warning", description: "Assign repayment-stress signals before they become losses.", href: "/npl-early-warning", icon: AlertTriangle },
     { title: "Credit accounts", description: "Review facilities, repayment status, and borrower exposure.", href: "/credit-accounts", icon: Landmark },
     { title: "Collections", description: "Prioritise overdue cases and recovery assignments.", href: "/collections", icon: ClipboardCheck },
   ],

@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T21:19:00.303Z",
+  "generatedAt": "2026-07-26T21:24:08.600Z",
   "branch": "main",
-  "currentCommit": "c274c7c",
+  "currentCommit": "40417b6",
   "commits": [
+    {
+      "hash": "40417b6133d4f531a1e80653b484d6ca52763aef",
+      "shortHash": "40417b6",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: simplify workspace navigation"
+    },
     {
       "hash": "c274c7ca8fac167299119c82c7feebe81b9ab79b",
       "shortHash": "c274c7c",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "docs: record local UCH development runtime"
-    },
-    {
-      "hash": "9d7e8fd1ae3e443f2ce42af5a6e733b3dfae7cba",
-      "shortHash": "9d7e8fd",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: pin USSD gateway credentials in E2E server"
     }
   ]
 };
