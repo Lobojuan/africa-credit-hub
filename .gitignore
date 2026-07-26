@@ -43,3 +43,6 @@ pnpm-lock.yaml
 pnpm-workspace.yaml
 .git.nosync
 dist.nosync
+node_modules
+node_modules.nosync
+.playwright-cli/

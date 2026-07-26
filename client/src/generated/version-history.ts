@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T21:24:08.600Z",
+  "generatedAt": "2026-07-26T21:39:58.805Z",
   "branch": "main",
-  "currentCommit": "40417b6",
+  "currentCommit": "700ceb2",
   "commits": [
+    {
+      "hash": "700ceb2f0254848ab3231284d363c1ea58f325fd",
+      "shortHash": "700ceb2",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "chore: ignore local sync artifacts"
+    },
+    {
+      "hash": "fad2f6eeeff8d4e8196efa8b585c58fb3a2721bf",
+      "shortHash": "fad2f6e",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add NPL early warning desk"
+    },
     {
       "hash": "40417b6133d4f531a1e80653b484d6ca52763aef",
       "shortHash": "40417b6",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "chore: remove legacy replit integration"
-    },
-    {
-      "hash": "2810540381c55404f7637c04c4412d5dd9cb2bf5",
-      "shortHash": "2810540",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "docs: rename local UCH test database"
-    },
-    {
-      "hash": "7d33255556d8358a6e1da6455b13c9368ef59fce",
-      "shortHash": "7d33255",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "docs: record local UCH development runtime"
     }
   ]
 };

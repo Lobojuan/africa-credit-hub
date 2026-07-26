@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `40417b6`
+**Current Commit:** `700ceb2`
 **Branch:** `main`
-**Generated:** 2026-07-26T21:24:08.600Z
+**Generated:** 2026-07-26T21:39:58.805Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,8 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-26 | `700ceb2` | chore: ignore local sync artifacts | Uffe J Carlson |
+| 2026-07-26 | `fad2f6e` | feat: add NPL early warning desk | Uffe J Carlson |
 | 2026-07-26 | `40417b6` | feat: simplify workspace navigation | Uffe J Carlson |
 | 2026-07-26 | `c274c7c` | feat: unify staff sign-in landing | Uffe J Carlson |
 | 2026-07-26 | `eeaa854` | security: require MFA for invited staff | Uffe J Carlson |
@@ -22,5 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-26 | `a714bc5` | security: separate institutional SSO from consumer login | Uffe J Carlson |
 | 2026-07-26 | `10a8432` | security: harden authentication recovery | Uffe J Carlson |
 | 2026-07-26 | `3ba2ff0` | chore: remove legacy replit integration | Uffe J Carlson |
-| 2026-07-26 | `2810540` | docs: rename local UCH test database | Uffe J Carlson |
-| 2026-07-26 | `7d33255` | docs: record local UCH development runtime | Uffe J Carlson |
