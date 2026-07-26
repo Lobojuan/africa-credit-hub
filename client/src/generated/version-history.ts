@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T18:40:15.736Z",
+  "generatedAt": "2026-07-26T18:59:03.683Z",
   "branch": "main",
-  "currentCommit": "2810540",
+  "currentCommit": "3ba2ff0",
   "commits": [
+    {
+      "hash": "3ba2ff087428d905614dc432ce0fd44376aa318f",
+      "shortHash": "3ba2ff0",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "chore: remove legacy replit integration"
+    },
     {
       "hash": "2810540381c55404f7637c04c4412d5dd9cb2bf5",
       "shortHash": "2810540",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: align E2E coverage with protected workflows"
-    },
-    {
-      "hash": "2ea3161a9de07fd85893cdc07f0c6edd365af2c4",
-      "shortHash": "2ea3161",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: align E2E checks with access workflows"
     }
   ]
 };

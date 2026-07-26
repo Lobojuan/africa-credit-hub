@@ -198,6 +198,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || "";
   const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || "";
   const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || "common";
+  const legacySamlAvailable = process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true";
 
   // ─── Google OAuth — consumer portal ─────────────────────────────────────────
 
@@ -565,7 +566,10 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
           callbackUrl: `${base}/api/auth/saml/callback`,
           metadataUrl: `${base}/api/auth/saml/metadata`,
           registerAt: "Your SAML IdP admin console → Service Provider ACS URL",
-          ready: !!(process.env.SAML_IDP_ENTRY_POINT && process.env.SAML_ISSUER),
+          ready: legacySamlAvailable && !!(process.env.SAML_IDP_ENTRY_POINT && process.env.SAML_ISSUER),
+          warning: legacySamlAvailable
+            ? null
+            : "SAML sign-in is deliberately disabled in production until its legacy parser is replaced with a cryptographically validated implementation.",
         },
       },
       smokeTestChecklist: [

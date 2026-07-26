@@ -103,6 +103,7 @@ warnIfCanonicalUrlMissing();
 logOAuthCallbackUrls();
 
 const app = express();
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.set("etag", false);
 
@@ -271,6 +272,7 @@ app.use(
 
 app.use(express.urlencoded({
   extended: false,
+  parameterLimit: 100,
   verify: (req: any, _res, buf) => {
     // Capture raw body bytes for HMAC verification (e.g. USSD HMAC gate).
     // The JSON verify callback above handles JSON bodies; this handles form-
@@ -282,6 +284,7 @@ app.use(express.urlencoded({
 const PgStore = pgSession(session);
 app.use(
   session({
+    name: "uch.sid",
     store: isE2ETestBoot
       ? new session.MemoryStore()
       : new PgStore({

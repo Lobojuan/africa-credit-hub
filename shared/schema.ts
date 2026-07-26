@@ -927,6 +927,19 @@ export const insertWebauthnCredentialSchema = createInsertSchema(webauthnCredent
 export type InsertWebauthnCredential = z.infer<typeof insertWebauthnCredentialSchema>;
 export type WebauthnCredential = typeof webauthnCredentials.$inferSelect;
 
+// Recovery codes are stored one-way hashed. A database breach must never
+// reveal a usable second-factor recovery code for a bank user.
+export const mfaBackupCodes = pgTable("mfa_backup_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  codeHash: text("code_hash").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("mfa_backup_codes_user_code_unique").on(table.userId, table.codeHash),
+]);
+export type MfaBackupCode = typeof mfaBackupCodes.$inferSelect;
+
 export const blockchainAnchors = pgTable("blockchain_anchors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   merkleRoot: text("merkle_root").notNull(),
@@ -2630,4 +2643,3 @@ export const playbookDownloads = pgTable("playbook_downloads", {
 export const insertPlaybookDownloadSchema = createInsertSchema(playbookDownloads).omit({ id: true, downloadedAt: true });
 export type InsertPlaybookDownload = z.infer<typeof insertPlaybookDownloadSchema>;
 export type PlaybookDownload = typeof playbookDownloads.$inferSelect;
-
