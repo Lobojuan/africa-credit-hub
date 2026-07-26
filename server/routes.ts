@@ -20588,19 +20588,9 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // ussdLimiter runs here to key on sessionId from the already-parsed req.body.
   app.post("/api/loto/ussd/session", ussdLimiter, async (req, res) => {
     try {
-      // CI/local E2E calls run on localhost behind an explicit non-production
-      // test flag. They exercise the USSD state machine without depending on
-      // whichever live aggregator secrets happen to be present in the runner.
-      // All real gateway traffic still requires the configured credentials.
-      const requestIp = req.ip ?? "";
-      const isLocalE2EGatewayRequest =
-        process.env.ENABLE_E2E_TEST_AUTH === "true" &&
-        process.env.NODE_ENV !== "production" &&
-        process.env.PRODUCTION_MODE !== "true" &&
-        (requestIp.includes("127.0.0.1") || requestIp.includes("::1"));
       // ── Token auth (existing) ──────────────────────────────────────────────
       const expected = process.env.LOTO_USSD_TOKEN;
-      if (expected && !isLocalE2EGatewayRequest) {
+      if (expected) {
         const supplied = (req.headers["x-ussd-token"] as string) || "";
         if (supplied !== expected) {
           return res.status(401).type("text/plain").send("END Unauthorized");
@@ -20613,7 +20603,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       // This provides replay protection (5-minute window) in addition to the
       // shared-token auth above. Silently skipped when secret is not set.
       const ussdHmacSecret = process.env.LOTO_USSD_HMAC_SECRET;
-      if (ussdHmacSecret && !isLocalE2EGatewayRequest) {
+      if (ussdHmacSecret) {
         const sig = (req.headers["x-uch-signature"] as string)
           || (req.headers["x-webhook-signature"] as string) || "";
         const ts = (req.headers["x-webhook-timestamp"] as string) || "";

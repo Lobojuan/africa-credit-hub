@@ -151,6 +151,9 @@ export default defineConfig({
     timeout: 90000,
     env: {
       ENABLE_E2E_TEST_AUTH: "true",
+      // E2E calls the USSD gateway with this credential, exercising the same
+      // token gate used by a real aggregator instead of relying on an IP bypass.
+      LOTO_USSD_TOKEN: "ci-e2e-ussd-token",
       PORT: "5001",
       GOOGLE_CLIENT_ID: "mock-google-ci-client-id",
       GOOGLE_CLIENT_SECRET: "mock-google-ci-secret",

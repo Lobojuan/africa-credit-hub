@@ -20,6 +20,12 @@
 
 import { test, expect } from "@playwright/test";
 
+const USSD_HEADERS = { "x-ussd-token": "ci-e2e-ussd-token" };
+
+function postUssd(page: import("@playwright/test").Page, data: Record<string, unknown>) {
+  return page.request.post("/api/loto/ussd/session", { headers: USSD_HEADERS, data });
+}
+
 const DGI_SESSION = {
   userId: "e2e-dgi-test-user",
   userRole: "dgi_officer",
@@ -249,13 +255,11 @@ test.describe("DGI Dashboard — KPI API", () => {
 
 test.describe("DGI Dashboard — USSD gateway endpoint", () => {
   test("POST /api/loto/ussd/session returns CON/END formatted response", async ({ page }) => {
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: {
+    const resp = await postUssd(page, {
         sessionId: "e2e-ussd-sess-001",
         serviceCode: "*384#",
         phoneNumber: "+2250712345678",
         text: "",
-      },
     });
     expect(resp.status()).toBe(200);
     const body = await resp.text();
@@ -264,13 +268,11 @@ test.describe("DGI Dashboard — USSD gateway endpoint", () => {
   });
 
   test("USSD session navigates to second menu on non-empty text", async ({ page }) => {
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: {
+    const resp = await postUssd(page, {
         sessionId: "e2e-ussd-sess-002",
         serviceCode: "*384#",
         phoneNumber: "+2250712345679",
         text: "1",
-      },
     });
     expect(resp.status()).toBe(200);
     const body = await resp.text();

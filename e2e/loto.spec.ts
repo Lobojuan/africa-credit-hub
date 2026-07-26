@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
 
+const USSD_HEADERS = { "x-ussd-token": "ci-e2e-ussd-token" };
+
+function postUssd(page: import("@playwright/test").Page, data: Record<string, unknown>) {
+  return page.request.post("/api/loto/ussd/session", { headers: USSD_HEADERS, data });
+}
+
 async function setSession(
   page: import("@playwright/test").Page,
   session: Record<string, unknown>,
@@ -73,13 +79,11 @@ test.describe("Loto Fiscal — USSD session endpoint", () => {
   test("root menu returns 200 with CON prefix (AT-compatible format)", async ({
     page,
   }) => {
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: {
+    const resp = await postUssd(page, {
         sessionId: "e2e-ussd-root-1",
         serviceCode: "*123#",
         phoneNumber: "+22500000001",
         text: "",
-      },
     });
     expect(resp.status()).toBe(200);
     const body = await resp.text();
@@ -89,13 +93,11 @@ test.describe("Loto Fiscal — USSD session endpoint", () => {
   test("root menu text length is within USSD 182-char display limit", async ({
     page,
   }) => {
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: {
+    const resp = await postUssd(page, {
         sessionId: "e2e-ussd-root-2",
         serviceCode: "*123#",
         phoneNumber: "+22500000002",
         text: "",
-      },
     });
     expect(resp.status()).toBe(200);
     const body = await resp.text();
@@ -108,25 +110,17 @@ test.describe("Loto Fiscal — USSD session endpoint", () => {
   }) => {
     const sessionId = "e2e-ussd-opt1-" + Date.now();
     // First: root menu
-    await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000003", text: "" },
-    });
+    await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000003", text: "" });
     // Second: select option 1
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000003", text: "1" },
-    });
+    const resp = await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000003", text: "1" });
     expect(resp.status()).toBe(200);
     expect(await resp.text()).toMatch(/^(CON|END)/);
   });
 
   test("selecting option 0 (exit) returns END response", async ({ page }) => {
     const sessionId = "e2e-ussd-exit-" + Date.now();
-    await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000004", text: "" },
-    });
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000004", text: "0" },
-    });
+    await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000004", text: "" });
+    const resp = await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000004", text: "0" });
     expect(resp.status()).toBe(200);
     const body = await resp.text();
     // Option 0 is "Exit" — should terminate session
@@ -137,27 +131,23 @@ test.describe("Loto Fiscal — USSD session endpoint", () => {
     page,
   }) => {
     // Use a fresh browser context with no cookies
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: {
+    const resp = await postUssd(page, {
         sessionId: "e2e-ussd-noauth-" + Date.now(),
         serviceCode: "*123#",
         phoneNumber: "+22500000005",
         text: "",
-      },
     });
     // Must NOT return 401 or 403 — USSD endpoints must be auth-bypassed
     expect(resp.status()).toBe(200);
   });
 
   test("USSD endpoint handles French language (language=fr)", async ({ page }) => {
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: {
+    const resp = await postUssd(page, {
         sessionId: "e2e-ussd-fr-" + Date.now(),
         serviceCode: "*123#",
         phoneNumber: "+22500000006",
         text: "",
         language: "fr",
-      },
     });
     expect([200, 400]).toContain(resp.status());
     if (resp.status() === 200) {
@@ -262,12 +252,8 @@ test.describe("Loto Fiscal — draws and tickets API", () => {
 
   test("ticket entry via USSD: check-tickets option returns CON or END", async ({ page }) => {
     const sessionId = `e2e-ussd-tickets-${Date.now()}`;
-    await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000010", text: "" },
-    });
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000010", text: "2" },
-    });
+    await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000010", text: "" });
+    const resp = await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000010", text: "2" });
     expect(resp.status()).toBe(200);
     const body = await resp.text();
     expect(body).toMatch(/^(CON|END)/);
@@ -275,12 +261,8 @@ test.describe("Loto Fiscal — draws and tickets API", () => {
 
   test("USSD draw-results flow: selecting next-draw option returns valid response", async ({ page }) => {
     const sessionId = `e2e-ussd-draw-${Date.now()}`;
-    await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000011", text: "" },
-    });
-    const resp = await page.request.post("/api/loto/ussd/session", {
-      data: { sessionId, serviceCode: "*123#", phoneNumber: "+22500000011", text: "3" },
-    });
+    await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000011", text: "" });
+    const resp = await postUssd(page, { sessionId, serviceCode: "*123#", phoneNumber: "+22500000011", text: "3" });
     expect(resp.status()).toBe(200);
     const body = await resp.text();
     expect(body).toMatch(/^(CON|END)/);

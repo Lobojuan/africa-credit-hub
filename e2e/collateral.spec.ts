@@ -26,6 +26,16 @@ test.beforeAll(async ({ browser }) => {
   });
   expect(resp.status()).toBe(201);
   e2eColId = (await resp.json()).id;
+
+  // Lien search intentionally returns only approved active registrations.
+  // Approve the filing through the real authority route so this suite proves
+  // first-to-file ranking rather than merely asserting an empty state.
+  const approvalSession = await pg.request.post("/api/test/set-session", {
+    data: { username: "platform_admin" },
+  });
+  expect(approvalSession.ok()).toBeTruthy();
+  const approval = await pg.request.post(`/api/collateral/${e2eColId}/approve`);
+  expect(approval.status()).toBe(200);
   await ctx.close();
 });
 
@@ -369,7 +379,7 @@ test.describe("Collateral Registry — lien search priority ranking", () => {
     // Lien result rows should appear for the E2E asset
     await expect(
       page.locator('[data-testid^="row-lien-result-"]').first().or(
-        page.locator('text=No liens found, text=0 registered lien').first()
+        page.getByTestId("lien-search-empty")
       ),
     ).toBeVisible({ timeout: 15000 });
 
@@ -385,8 +395,8 @@ test.describe("Collateral Registry — lien search priority ranking", () => {
 
   test("lien search API returns results with priorityRank field", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
-    const resp = await page.request.get(`/api/collateral/lien-search?assetId=${encodeURIComponent(e2eAssetId)}`);
-    expect([200, 404]).toContain(resp.status());
+    const resp = await page.request.get(`/api/collateral/search?assetIdentifier=${encodeURIComponent(e2eAssetId)}`);
+    expect(resp.status()).toBe(200);
     expect(resp.status()).not.toBe(500);
     if (resp.status() === 200) {
       type LienResult = { priorityRank?: number | string; priority?: number | string; rankOrder?: number | string };

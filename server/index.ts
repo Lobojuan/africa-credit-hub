@@ -690,8 +690,15 @@ process.stderr.write = function (...args: any[]) {
     console.error("[Schema] Constraint migration error (non-fatal):", e.message);
   }
 
-  const { initWebSocket } = await import("./websocket");
-  initWebSocket(httpServer);
+  // Browser E2E uses an in-memory session store by design. The WebSocket
+  // authenticator reads production sessions from PostgreSQL, so starting it
+  // here would generate misleading database errors without testing a real
+  // browser notification flow. Production and normal development still start
+  // the socket server.
+  if (!isE2ETestBoot) {
+    const { initWebSocket } = await import("./websocket");
+    initWebSocket(httpServer);
+  }
 
   app.use("/api/v1", (req, res, next) => {
     req.url = "/api" + req.url;
@@ -846,8 +853,13 @@ process.stderr.write = function (...args: any[]) {
     const { startLotoFraudScheduler } = await import("./loto-fraud-scheduler");
     startLotoFraudScheduler();
 
-    const { startBackupScheduler } = await import("./backup-service");
-    startBackupScheduler();
+    // Backup jobs invoke pg_dump and create audit records. They are not part
+    // of request-level E2E coverage and must not run against an ephemeral CI
+    // database as an accidental background side effect.
+    if (!isE2ETestBoot) {
+      const { startBackupScheduler } = await import("./backup-service");
+      startBackupScheduler();
+    }
 
     const { startTearsheetScheduler } = await import("./tearsheet-scheduler");
     const tearsheetIntervalHours = parseInt(process.env.TEARSHEET_REGEN_INTERVAL_HOURS || "168", 10);

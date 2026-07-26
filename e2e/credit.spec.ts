@@ -443,7 +443,7 @@ test.describe("Credit Bureau — Account CRUD lifecycle", () => {
     const createResp = await page.request.post("/api/credit-accounts", {
       data: {
         borrowerId: e2eBorrowerId,
-        lender: "E2E Test Bank Ghana",
+        lenderInstitution: "E2E Test Bank Ghana",
         accountNumber: `ACC-E2E-${Date.now()}`,
         accountType: "personal_loan",
         originalAmount: "50000",
@@ -481,35 +481,10 @@ test.describe("Credit Bureau — Regulatory Compliance", () => {
 
 // ─── Borrower search by name and NIN ─────────────────────────────────────────
 
-let e2eSearchNationalId: string;
-let e2eSearchFirstName: string;
+const e2eSearchNationalId = "GHA-ID-10001";
+const e2eSearchFirstName = "Kwame";
 
 test.describe("Credit Bureau — Borrower search by name and NIN", () => {
-  test.beforeAll(async ({ browser }) => {
-    const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
-    const pg = await ctx.newPage();
-    await ctx.clearCookies();
-    const session = await pg.request.post("/api/test/set-session", {
-      data: { username: "platform_admin" },
-    });
-    expect(session.ok()).toBeTruthy();
-    e2eSearchNationalId = `NIN-SEARCH-E2E-${Date.now()}`;
-    e2eSearchFirstName = `SearchableE2E${Date.now()}`;
-
-    const r = await pg.request.post("/api/borrowers", {
-      data: {
-        firstName: e2eSearchFirstName,
-        lastName: "SearchSuiteUser",
-        nationalId: e2eSearchNationalId,
-        type: "individual",
-        country: "Ghana",
-        email: `search-e2e-${Date.now()}@test.invalid`,
-      },
-    });
-    expect(r.status()).toBe(201);
-    await ctx.close();
-  });
-
   test("search by NIN returns the seeded borrower", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/borrowers");

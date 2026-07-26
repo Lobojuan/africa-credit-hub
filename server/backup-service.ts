@@ -283,12 +283,15 @@ async function uploadToS3IfConfigured(filepath: string, filename: string): Promi
   }
 }
 
-async function logBackupAudit(userId: string, action: string, details: string) {
+async function logBackupAudit(userId: string | null, action: string, details: string) {
   try {
     await pool.query(
       `INSERT INTO audit_logs (id, user_id, action, entity, details, ip_address, created_at)
        VALUES (gen_random_uuid(), $1, $2, 'backup', $3, 'system', NOW())`,
-      [userId, action, details]
+      // Scheduled jobs are system events, not actions by a fictional user.
+      // audit_logs.user_id is a foreign key, so "system" must be represented
+      // as null rather than a value that cannot exist in users.
+      [userId === "system" ? null : userId, action, details]
     );
   } catch {}
 }
@@ -366,7 +369,7 @@ export async function verifyBackupIntegrity(backupId?: string): Promise<{ valid:
       ageHours: Math.round((Date.now() - new Date(record.createdAt).getTime()) / 3600000),
     };
 
-    await logBackupAudit("system", "BACKUP_VERIFIED", `Integrity check passed: ${record.filename} (${details.sqlLines} SQL lines, ${record.sizeMB}MB)`);
+    await logBackupAudit(null, "BACKUP_VERIFIED", `Integrity check passed: ${record.filename} (${details.sqlLines} SQL lines, ${record.sizeMB}MB)`);
 
     return { valid: true, message: `Backup verified: ${record.filename}`, details };
   } catch (err: any) {

@@ -56,7 +56,10 @@ async function extractSessionFromRequest(req: IncomingMessage): Promise<{ userId
     let sid = rawSid.startsWith("s:") ? rawSid.slice(2).split(".")[0] : rawSid;
 
     const result = await pool.query(
-      `SELECT sess FROM "session" WHERE sid = $1 AND expire > NOW()`,
+      // Keep this aligned with the PostgreSQL session store in index.ts.
+      // The old default "session" table was never used by UCH, which meant
+      // production WebSocket authentication could never recover a login.
+      `SELECT sess FROM "user_sessions" WHERE sid = $1 AND expire > NOW()`,
       [sid]
     );
 
