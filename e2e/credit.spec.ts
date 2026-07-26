@@ -29,7 +29,7 @@ async function setSession(
 }
 
 const ADMIN_SESSION = { userId: "e2e-credit-admin", userRole: "admin" };
-const SUPER_ADMIN_SESSION = { userId: "e2e-credit-sa", userRole: "super_admin" };
+const SUPER_ADMIN_SESSION = { username: "platform_admin" };
 const LENDER_SESSION = { userId: "e2e-credit-lender", userRole: "lender" };
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────

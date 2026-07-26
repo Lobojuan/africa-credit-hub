@@ -120,7 +120,9 @@ test.describe("Collateral Registry — registration form", () => {
     await page.fill('[data-testid="input-col-value"]', "45000");
     await page.fill('[data-testid="input-col-location"]', "Accra, Greater Accra, Ghana");
 
-    expect(await page.locator('[data-testid="input-col-borrower-id"]').inputValue()).toBe("GH-E2E-BORROW-001");
+    // Step 2 replaces the grantor fields; verify the fields that remain in
+    // the active form step rather than querying an intentionally unmounted
+    // step-one input.
     expect(await page.locator('[data-testid="input-asset-identifier"]').inputValue()).toBe(assetId);
     expect(await page.locator('[data-testid="input-col-value"]').inputValue()).toBe("45000");
   });
