@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T20:53:59.580Z",
+  "generatedAt": "2026-07-26T21:19:00.303Z",
   "branch": "main",
-  "currentCommit": "eeaa854",
+  "currentCommit": "c274c7c",
   "commits": [
+    {
+      "hash": "c274c7ca8fac167299119c82c7feebe81b9ab79b",
+      "shortHash": "c274c7c",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: unify staff sign-in landing"
+    },
     {
       "hash": "eeaa85456360ceaee68a1f07d656ec032fc1ce73",
       "shortHash": "eeaa854",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: pin USSD gateway credentials in E2E server"
-    },
-    {
-      "hash": "6393df3dfd66f89c86f113b7fc7fd3003802a7c2",
-      "shortHash": "6393df3",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add role-based Today command centre"
     }
   ]
 };

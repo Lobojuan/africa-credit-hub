@@ -108,6 +108,7 @@ type NavItem = {
 };
 
 const overviewItems: NavItem[] = [
+  { label: "Today", url: "/today", icon: LayoutDashboard, testId: "nav-today", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Dashboard", tKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Platform Metrics", tKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },
 ];
@@ -341,18 +342,12 @@ type SectionConfig = { label: string; items: NavItem[]; productIds?: ProductId[]
 
 const SECTION_ITEMS_MAP: SectionConfig[] = [
   { label: "Overview", items: overviewItems },
-  { label: "Credit Data", items: creditDataItems, productIds: ["credit"] },
-  { label: "Reports & Scoring", items: reportsScoringItems, productIds: ["credit"] },
-  { label: "Data Management", items: dataManagementItems, productIds: ["credit"] },
-  { label: "Workflows", items: workflowItems, productIds: ["credit"] },
-  { label: "Intelligence", items: intelligenceItems, productIds: ["credit"] },
+  { label: "Daily Work", items: [...creditDataItems, ...reportsScoringItems, ...workflowItems], productIds: ["credit"] },
+  { label: "Risk & Control", items: [...dataManagementItems, ...intelligenceItems, ...baseOversightItems, ...crossBorderItems], productIds: ["credit"] },
   { label: "Collateral", items: collateralItems, productIds: ["collateral"] },
-  { label: "Oversight & Compliance", items: [] as NavItem[], productIds: ["credit"] },
-  { label: "Cross-Border", items: crossBorderItems, productIds: ["credit"] },
+  { label: "Loto Fiscal", items: lotoItems, productIds: ["loto"] },
   { label: "Sales Tools", items: salesToolsItems },
-  { label: "Administration", items: adminItems },
-  { label: "API & Integrations", items: apiIntegrationItems },
-  { label: "Infrastructure", items: infrastructureItems },
+  { label: "Platform Administration", items: [...adminItems, ...apiIntegrationItems, ...infrastructureItems] },
   { label: "Help & Resources", items: [] as NavItem[] },
 ];
 
@@ -367,6 +362,7 @@ function getActiveSectionLabel(location: string): string | null {
       return sec.label;
     }
   }
+  if (["/bog-export", "/bsl-export", "/cbk-export", "/cbn-export"].includes(location)) return "Risk & Control";
   return null;
 }
 
@@ -447,6 +443,9 @@ export function AppSidebar() {
   const visibleApiIntegration = isShared ? filterByRole(apiIntegrationItems, role) : [];
   const visibleInfrastructure = isShared ? filterByRole(infrastructureItems, role) : [];
   const visibleHelp = filterByRole(getHelpItems(), role);
+  const visibleDailyWork = [...visibleCreditData, ...visibleReportsScoring, ...visibleWorkflows];
+  const visibleRiskControl = [...visibleDataMgmt, ...visibleIntelligence, ...visibleOversight, ...visibleCrossBorder];
+  const visiblePlatformAdministration = [...visibleAdmin, ...visibleApiIntegration, ...visibleInfrastructure];
   const isSuperAdmin = role === "super_admin" || role === "platform_owner";
   const orgName = (user as any)?.organization?.name;
 
@@ -503,53 +502,21 @@ export function AppSidebar() {
         />
 
         <CollapsibleSection
-          label="Credit Data"
-          tKey="sidebar.creditData"
-          items={visibleCreditData}
-          location={location}
-          icon={Users}
-          isOpen={openSection === "Credit Data"}
-          onToggle={handleToggle}
-        />
-
-        <CollapsibleSection
-          label="Reports & Scoring"
-          tKey="sidebar.reportsScoring"
-          items={visibleReportsScoring}
-          location={location}
-          icon={FileText}
-          isOpen={openSection === "Reports & Scoring"}
-          onToggle={handleToggle}
-        />
-
-        <CollapsibleSection
-          label="Data Management"
-          tKey="sidebar.dataManagement"
-          items={visibleDataMgmt}
-          location={location}
-          icon={Upload}
-          isOpen={openSection === "Data Management"}
-          onToggle={handleToggle}
-        />
-
-        <CollapsibleSection
-          label="Workflows"
-          tKey="sidebar.workflows"
-          items={visibleWorkflows}
+          label="Daily Work"
+          items={visibleDailyWork}
           location={location}
           icon={CheckSquare}
-          isOpen={openSection === "Workflows"}
+          isOpen={openSection === "Daily Work"}
           onToggle={handleToggle}
         />
 
-        {visibleIntelligence.length > 0 && (
+        {visibleRiskControl.length > 0 && (
           <CollapsibleSection
-            label="Intelligence"
-            tKey="sidebar.intelligence"
-            items={visibleIntelligence}
+            label="Risk & Control"
+            items={visibleRiskControl}
             location={location}
-            icon={Sparkles}
-            isOpen={openSection === "Intelligence"}
+            icon={Shield}
+            isOpen={openSection === "Risk & Control"}
             onToggle={handleToggle}
           />
         )}
@@ -578,30 +545,6 @@ export function AppSidebar() {
           />
         )}
 
-        {visibleOversight.length > 0 && (
-          <CollapsibleSection
-            label="Oversight & Compliance"
-            tKey="sidebar.reportsCompliance"
-            items={visibleOversight}
-            location={location}
-            icon={Eye}
-            isOpen={openSection === "Oversight & Compliance"}
-            onToggle={handleToggle}
-          />
-        )}
-
-        {visibleCrossBorder.length > 0 && (
-          <CollapsibleSection
-            label="Cross-Border"
-            tKey="sidebar.crossBorder"
-            items={visibleCrossBorder}
-            location={location}
-            icon={Globe}
-            isOpen={openSection === "Cross-Border"}
-            onToggle={handleToggle}
-          />
-        )}
-
         <div className="mx-3 my-1">
           <div className="h-px bg-sidebar-foreground/10" />
         </div>
@@ -617,38 +560,13 @@ export function AppSidebar() {
           />
         )}
 
-        {visibleAdmin.length > 0 && (
+        {visiblePlatformAdministration.length > 0 && (
           <CollapsibleSection
-            label="Administration"
-            tKey="sidebar.administration"
-            items={visibleAdmin}
+            label="Platform Administration"
+            items={visiblePlatformAdministration}
             location={location}
             icon={Settings}
-            isOpen={openSection === "Administration"}
-            onToggle={handleToggle}
-          />
-        )}
-
-        {visibleApiIntegration.length > 0 && (
-          <CollapsibleSection
-            label="API & Integrations"
-            tKey="sidebar.apiIntegrations"
-            items={visibleApiIntegration}
-            location={location}
-            icon={Plug}
-            isOpen={openSection === "API & Integrations"}
-            onToggle={handleToggle}
-          />
-        )}
-
-        {visibleInfrastructure.length > 0 && (
-          <CollapsibleSection
-            label="Infrastructure"
-            tKey="sidebar.infrastructure"
-            items={visibleInfrastructure}
-            location={location}
-            icon={Activity}
-            isOpen={openSection === "Infrastructure"}
+            isOpen={openSection === "Platform Administration"}
             onToggle={handleToggle}
           />
         )}
