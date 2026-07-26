@@ -548,6 +548,10 @@ export async function registerRoutes(
       if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
         return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
       }
+      // Authenticated Playwright projects start from the same saved cookie.
+      // Always rotate it before assigning a test identity so parallel workers
+      // cannot overwrite one another's server-side session state.
+      const establishIsolatedTestSession = async () => {
       // Optional `username`: resolve a real seeded user's id/role/org server-side instead of
       // trusting a caller-supplied userId. A synthetic, non-existent userId passes this
       // endpoint fine but silently fails downstream at any route that loads the real user
@@ -614,6 +618,15 @@ export async function registerRoutes(
       req.session.save((err) => {
         if (err) return res.status(500).json({ message: "Failed to save test session" });
         res.json({ ok: true });
+      });
+      };
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Failed to initialize isolated test session" });
+        void establishIsolatedTestSession().catch((error) => {
+          console.error("Failed to establish isolated test session", error);
+          if (!res.headersSent) res.status(500).json({ message: "Failed to establish test session" });
+        });
       });
     });
 
