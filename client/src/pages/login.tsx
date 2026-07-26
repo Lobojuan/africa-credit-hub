@@ -132,16 +132,7 @@ export default function LoginPage() {
       toast({ title: t('login.success') });
       sessionStorage.setItem("passkey_prompt", "1");
       if (window.location.pathname === "/login") {
-        const allowedProducts = (result as any)?.allowedProducts as string[] | null | undefined;
-        const singleWorkspaceLanding: Record<string, string> = {
-          credit: "/dashboard",
-          collateral: "/collateral-registry",
-          loto: "/loto-fiscal",
-        };
-        const destination = allowedProducts?.length === 1
-          ? singleWorkspaceLanding[allowedProducts[0]] ?? "/choose-workspace"
-          : "/choose-workspace";
-        window.location.replace(destination);
+        window.location.replace("/today");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');

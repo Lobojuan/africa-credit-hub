@@ -57,8 +57,8 @@ const CreditLandingPage = lazy(() => import("@/pages/credit-landing"));
 const CollateralLandingPage = lazy(() => import("@/pages/collateral-landing"));
 const LotoLandingPage = lazy(() => import("@/pages/loto-landing"));
 const LotoVerifyDrawPage = lazy(() => import("@/pages/loto-verify-draw"));
-const ProductChooserPage = lazy(() => import("@/pages/product-chooser"));
 const ChooseWorkspacePage = lazy(() => import("@/pages/choose-workspace"));
+const TodayPage = lazy(() => import("@/pages/today"));
 const CountrySelectionPage = lazy(() => import("@/pages/country-selection"));
 const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
@@ -331,8 +331,9 @@ function Router() {
             </Suspense>
           )}
         </Route>
-        <Route path="/choose-product" component={ProductChooserPage} />
+        <Route path="/choose-product" component={ChooseWorkspacePage} />
         <Route path="/choose-workspace" component={ChooseWorkspacePage} />
+        <Route path="/today" component={TodayPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -524,8 +525,7 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    const availableWorkspaces = workspacesForRole(user?.role, (user as any)?.allowedProducts);
-    return doRedirect(availableWorkspaces.length === 1 ? availableWorkspaces[0].landing : "/choose-workspace");
+    return doRedirect("/today");
   }
 
   if (accountSuspended) {

@@ -18,93 +18,93 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-25T17:04:57.822Z",
+  "generatedAt": "2026-07-26T18:26:20.082Z",
   "branch": "main",
-  "currentCommit": "3cf2cd6",
+  "currentCommit": "4603fd1",
   "commits": [
     {
-      "hash": "3cf2cd6122f04ea6f06a1866e0125f3bf75208bd",
-      "shortHash": "3cf2cd6",
-      "date": "2026-07-25",
+      "hash": "4603fd11f5e47c5686a34f40fdf782a60bfa2021",
+      "shortHash": "4603fd1",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "fix: use valid portal login controls"
+      "subject": "test: isolate USSD HMAC from E2E runtime"
     },
     {
-      "hash": "4f2a7e5a0d1b3674d14b6dab07ae74918b7d48ef",
-      "shortHash": "4f2a7e5",
-      "date": "2026-07-25",
+      "hash": "4c00ffc92a2eaeb71966fa65fa0eed84202179ff",
+      "shortHash": "4c00ffc",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: remove stale consumer portal login click"
+      "subject": "test: harden E2E runtime contracts"
     },
     {
-      "hash": "5ad4c75005ddab80e223cf8887baaf6d5ec6614e",
-      "shortHash": "5ad4c75",
-      "date": "2026-07-25",
+      "hash": "63a76dd90e69a62aa00ba3e7f9765eacb7a1b6a5",
+      "shortHash": "63a76dd",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: remove stale MFA login portal clicks"
+      "subject": "test: isolate localhost USSD E2E callbacks"
     },
     {
-      "hash": "b2a7b551344a3f0b584bf6e065d21a9c962e83a0",
-      "shortHash": "b2a7b55",
-      "date": "2026-07-25",
+      "hash": "b556aead94cb42e39fcdd0f36c8b752394d77c25",
+      "shortHash": "b556aea",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: align login E2E flow with portal selector"
+      "subject": "test: rotate E2E sessions before assigning identities"
     },
     {
-      "hash": "8d28bd82d254af010d4cfb484638a2cdcaa7cfbc",
-      "shortHash": "8d28bd8",
-      "date": "2026-07-25",
+      "hash": "4c93ffcd94ee4e71eb4956dc8b67a131c7907041",
+      "shortHash": "4c93ffc",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "docs: add v3 SRS review and UAT sign-off baseline"
+      "subject": "test: use isolated workspace-aware E2E sessions"
     },
     {
-      "hash": "5be274bd9ca294c84150f576e2d670580c10c70f",
-      "shortHash": "5be274b",
-      "date": "2026-07-25",
+      "hash": "037e451618b6978b465b0cd037fc9270aa57bc95",
+      "shortHash": "037e451",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: allow guarded E2E mutations and current login route"
+      "subject": "test: isolate E2E sessions and use live consumer routes"
     },
     {
-      "hash": "e42e50c7d27d24bd21382ce57c6a59009ca7cccc",
-      "shortHash": "e42e50c",
-      "date": "2026-07-25",
+      "hash": "0ca7927e22943fe597564019ea258e6dd63554f8",
+      "shortHash": "0ca7927",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: isolate authenticated E2E session states"
+      "subject": "test: align E2E coverage with protected workflows"
     },
     {
-      "hash": "11c77919f8af5e4d88accc18b2e88c93d8349fe9",
-      "shortHash": "11c7791",
-      "date": "2026-07-25",
+      "hash": "2ea3161a9de07fd85893cdc07f0c6edd365af2c4",
+      "shortHash": "2ea3161",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: mark synthetic E2E sessions consistently"
+      "subject": "test: align E2E checks with access workflows"
     },
     {
-      "hash": "16a52875c035d3907f0cd311ec36dacf7d9d1c02",
-      "shortHash": "16a5287",
-      "date": "2026-07-25",
+      "hash": "08e8307aaed9328e00354ef62594a57e1190c9df",
+      "shortHash": "08e8307",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: skip fingerprint audit for synthetic E2E sessions"
+      "subject": "test: stabilize authenticated E2E sessions"
     },
     {
-      "hash": "fed609d3162f8773cdd177045506465625f82bad",
-      "shortHash": "fed609d",
-      "date": "2026-07-25",
+      "hash": "1adf798edc45854439be14b7f4d36cdf67b7a6fb",
+      "shortHash": "1adf798",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "test: align Loto E2E routes and auth isolation"
+      "subject": "test: use active collateral fields and real admin session"
     },
     {
-      "hash": "87ebe6f77a223822340236ab5158a0f98d3f9984",
-      "shortHash": "87ebe6f",
-      "date": "2026-07-25",
+      "hash": "b38b3f3b50a00feac3b32a874d3341576feb9eca",
+      "shortHash": "b38b3f3",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "fix: allow guarded E2E session fixture through CSRF"
+      "subject": "test: isolate consumer and search E2E sessions"
     },
     {
-      "hash": "50f1d1545dc796d0a5d9618432c254e223f7d34e",
-      "shortHash": "50f1d15",
-      "date": "2026-07-25",
+      "hash": "94609284f8b780d9d669a3ad346104c85f8993ef",
+      "shortHash": "9460928",
+      "date": "2026-07-26",
       "author": "Uffe J Carlson",
-      "subject": "fix: install shared auth browser in Firefox E2E job"
+      "subject": "fix: align portal routes and authenticated E2E flows"
     }
   ]
 };

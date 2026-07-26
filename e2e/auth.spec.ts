@@ -1,5 +1,5 @@
 /**
- * Auth E2E Suite — login for all 8 demo accounts, workspace landing,
+ * Auth E2E Suite — login for all 8 demo accounts, role-based Today landing,
  * single-workspace restriction enforcement, and logout.
  *
  * Demo accounts (replit.md):
@@ -14,7 +14,7 @@
  *
  * Each account test asserts:
  *   1. Login succeeds (user-authenticated state visible)
- *   2. Correct workspace is active (text-active-workspace label)
+ *   2. Correct role-based Today view is active (with a workspace available)
  *   3. Single-workspace accounts cannot access other workspaces
  */
 
@@ -89,18 +89,13 @@ test.describe("Login smoke — all 8 demo accounts", () => {
     expect(label?.toLowerCase()).toContain("loto");
   });
 
-  test("demo_admin (platform_owner) sees workspace chooser or multiple workspaces", async ({
+  test("demo_admin (platform_owner) lands on the focused Today command centre", async ({
     page,
   }) => {
     await loginAs(page, "demo_admin", "TestPass2026!");
     await assertAuthenticated(page);
-    // platform_owner may see a workspace chooser or land on a multi-workspace dashboard
-    // Assert either: workspace chooser dialog OR all workspace menu items visible
-    const chooser = page.locator('[data-testid="text-welcome"], [data-testid="card-workspace-credit"]');
-    const multiWorkspace = page.locator(
-      '[data-testid="menuitem-workspace-credit"], [data-testid="menuitem-workspace-collateral"]',
-    );
-    await expect(chooser.or(multiWorkspace).first()).toBeVisible({ timeout: 12000 });
+    await expect(page.locator('[data-testid="today-command-centre"]')).toBeVisible({ timeout: 12000 });
+    await expect(page.locator('[data-testid="text-today-title"]')).toContainText("priorities");
   });
 
   test("admin logs in (SEED_ADMIN_PASSWORD env)", async ({ page }) => {
