@@ -67,6 +67,9 @@ export const users = pgTable("users", {
   knownIps: text("known_ips").array().default([]),
   mfaSecret: text("mfa_secret"),
   mfaEnabled: boolean("mfa_enabled").default(false),
+  // New staff accounts are held at the MFA enrolment gate until their first
+  // authenticator has been verified. Existing accounts remain unaffected.
+  mfaRequired: boolean("mfa_required").default(false),
   // Phone verification gate (consumer onboarding marks this when an SMS/USSD
   // OTP is successfully entered). Used by Loto Fiscal eligibility (Task #283)
   // so only consumers who proved control of a real phone number can win.

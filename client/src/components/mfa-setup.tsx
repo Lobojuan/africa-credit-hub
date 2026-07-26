@@ -14,9 +14,10 @@ interface MfaSetupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mfaEnabled: boolean;
+  forced?: boolean;
 }
 
-export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps) {
+export function MfaSetupDialog({ open, onOpenChange, mfaEnabled, forced = false }: MfaSetupProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [step, setStep] = useState<"idle" | "setup" | "verify">("idle");
@@ -47,7 +48,7 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
     try {
       await apiRequest("POST", "/api/auth/mfa/verify", { code });
       toast({ title: t("mfa.enabledSuccess") });
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       setStep("idle");
       setCode("");
       onOpenChange(false);
@@ -79,14 +80,14 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled }: MfaSetupProps
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { onOpenChange(v); if (!v) { setStep("idle"); setCode(""); } }}>
+    <Dialog open={open} onOpenChange={(v) => { if (forced && !v) return; onOpenChange(v); if (!v) { setStep("idle"); setCode(""); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Shield className="w-5 h-5" />
             {t("mfa.title")}
           </DialogTitle>
-          <DialogDescription className="sr-only">Dialog form content</DialogDescription>
+          <DialogDescription>{forced ? "Multi-factor authentication is required before you can access Universal Credit Hub." : "Protect your staff account with a second sign-in factor."}</DialogDescription>
         </DialogHeader>
 
         {mfaEnabled ? (

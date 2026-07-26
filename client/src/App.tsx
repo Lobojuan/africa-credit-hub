@@ -383,6 +383,7 @@ function AuthenticatedApp() {
   const [passkeyRegistering, setPasskeyRegistering] = useState(false);
   const [passkeyBanner, setPasskeyBanner] = useState(false);
   const [passkeyRegistered, setPasskeyRegistered] = useState(false);
+  const mfaEnrollmentRequired = !!(user && (user as any).mfaRequired && !user.mfaEnabled);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -807,7 +808,7 @@ function AuthenticatedApp() {
           </main>
           <DemoTour />
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
-          <MfaSetupDialog open={mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} />
+          <MfaSetupDialog open={mfaEnrollmentRequired || mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} forced={mfaEnrollmentRequired} />
         </div>
       </div>
       {isMobile && <MobileBottomNav />}

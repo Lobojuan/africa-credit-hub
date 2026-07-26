@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T20:14:58.051Z",
+  "generatedAt": "2026-07-26T20:49:41.702Z",
   "branch": "main",
-  "currentCommit": "9e0f12f",
+  "currentCommit": "719af60",
   "commits": [
+    {
+      "hash": "719af60e14a9f01d59d53aef5f75e295088fde45",
+      "shortHash": "719af60",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add secure staff invitation action"
+    },
     {
       "hash": "9e0f12fc41d2030b0be376c64932ad859b3c38d9",
       "shortHash": "9e0f12f",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: isolate USSD HMAC from E2E runtime"
-    },
-    {
-      "hash": "4c00ffc92a2eaeb71966fa65fa0eed84202179ff",
-      "shortHash": "4c00ffc",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: harden E2E runtime contracts"
     }
   ]
 };

@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `9e0f12f`
+**Current Commit:** `719af60`
 **Branch:** `main`
-**Generated:** 2026-07-26T20:14:58.051Z
+**Generated:** 2026-07-26T20:49:41.702Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-26 | `719af60` | feat: add secure staff invitation action | Uffe J Carlson |
 | 2026-07-26 | `9e0f12f` | docs: refresh version history | Uffe J Carlson |
 | 2026-07-26 | `8e1e5db` | feat: complete staff account recovery flow | Uffe J Carlson |
 | 2026-07-26 | `b268223` | security: add staff reset and invitation tokens | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-26 | `9d7e8fd` | test: pin USSD gateway credentials in E2E server | Uffe J Carlson |
 | 2026-07-26 | `6393df3` | feat: add role-based Today command centre | Uffe J Carlson |
 | 2026-07-26 | `4603fd1` | test: isolate USSD HMAC from E2E runtime | Uffe J Carlson |
-| 2026-07-26 | `4c00ffc` | test: harden E2E runtime contracts | Uffe J Carlson |

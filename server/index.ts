@@ -224,6 +224,7 @@ declare module "express-session" {
     lastActivity: number;
     mfaPendingUserId: string;
     mfaChallengeComplete: boolean;
+    mfaEnrollmentRequired?: boolean;
     viewingCountry: string;
     webauthnChallenge: string;
     webauthnUserId: string;

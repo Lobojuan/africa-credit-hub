@@ -101,7 +101,7 @@ router.post("/api/auth/staff-invitations", requireAuth, requireRole("admin"), as
     if (existingEmail) return res.status(409).json({ message: "An account with that work email already exists." });
     const temporaryHash = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
     const invitedUser = await storage.createUser({ username: username.trim(), password: temporaryHash, fullName: fullName.trim(), email: email.trim().toLowerCase(), role, division: division || null, status: "deactivated", institution: organization.name, organizationId });
-    await db.update(users).set({ mustChangePassword: true }).where(eq(users.id, invitedUser.id));
+    await db.update(users).set({ mustChangePassword: true, mfaRequired: true }).where(eq(users.id, invitedUser.id));
     const rawToken = crypto.randomBytes(32).toString("base64url");
     await db.insert(authActionTokens).values({ userId: invitedUser.id, purpose: "staff_invitation", tokenHash: tokenHash(rawToken), expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000), createdBy: req.session.userId });
     await sendStaffInvitationEmail(invitedUser.email, organization.name, rawToken, publicBaseUrl());
@@ -117,7 +117,7 @@ router.post("/api/auth/staff-invitations/activate", loginLimiter, async (req, re
   if (!action) return res.status(400).json({ message: "This invitation is invalid or expired." });
   const user = await storage.getUser(action.userId);
   if (!user || user.status !== "deactivated") return res.status(400).json({ message: "This invitation is invalid or expired." });
-  await db.transaction(async (tx) => { await tx.update(users).set({ password: await bcrypt.hash(password, 12), status: "active", passwordChangedAt: new Date(), mustChangePassword: false }).where(eq(users.id, user.id)); await tx.update(authActionTokens).set({ usedAt: new Date() }).where(eq(authActionTokens.id, action.id)); });
+  await db.transaction(async (tx) => { await tx.update(users).set({ password: await bcrypt.hash(password, 12), status: "active", passwordChangedAt: new Date(), mustChangePassword: false, mfaRequired: true }).where(eq(users.id, user.id)); await tx.update(authActionTokens).set({ usedAt: new Date() }).where(eq(authActionTokens.id, action.id)); });
   await storage.createAuditLog({ action: "STAFF_INVITATION_ACCEPTED", entity: "user", entityId: user.id, userId: user.id, details: "Staff account activated; MFA enrolment required at first use", ipAddress: req.ip || null, organizationId: user.organizationId || undefined });
   res.json({ message: "Account activated. Sign in and enrol multi-factor authentication." });
 });
@@ -194,6 +194,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
+      req.session.mfaEnrollmentRequired = !!(user.mfaRequired && !user.mfaEnabled);
       req.session.lastActivity = Date.now();
 
       if (isPlatformPrivileged(user.role)) {
@@ -352,6 +353,7 @@ router.post("/api/auth/mfa/login", async (req, res) => {
       req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
+      req.session.mfaEnrollmentRequired = false;
       req.session.lastActivity = Date.now();
       if (isPlatformPrivileged(user.role)) {
         delete req.session.viewingCountry;
@@ -435,7 +437,10 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
       return res.status(401).json({ message: "MFA code already used. Please wait for the next code." });
     }
     usedTotpTokens.set(tokenKey, Date.now() + 90_000);
+    // Keep the policy flag intact: staff invited through UCH must continue to
+    // use MFA after enrolment and therefore cannot disable it later.
     await storage.updateUser(user.id, { mfaEnabled: true } as any);
+    req.session.mfaEnrollmentRequired = false;
     await storage.createAuditLog({
       action: "MFA_ENABLED", entity: "user", entityId: user.id, userId: user.id,
       details: `MFA enabled for ${user.fullName}`,
@@ -457,6 +462,7 @@ router.post("/api/auth/mfa/disable", async (req, res) => {
     }
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.mfaRequired) return res.status(403).json({ message: "MFA is required for this staff account and cannot be disabled." });
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return res.status(401).json({ message: "Incorrect password" });
