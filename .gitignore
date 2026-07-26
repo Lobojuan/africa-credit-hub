@@ -41,3 +41,5 @@ npm-debug.log*
 # Package managers
 pnpm-lock.yaml
 pnpm-workspace.yaml
+.git.nosync
+dist.nosync
