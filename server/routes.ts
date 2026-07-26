@@ -2438,6 +2438,18 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/forgery-review", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const country = getCountryFilter(req) === GLOBAL_SCOPE ? null : getCountryFilter(req) || null;
+      const [identity, consent] = await Promise.all([
+        pool.query(`SELECT iv.id, iv.borrower_id, iv.provider, iv.method, iv.result, iv.confidence_score, iv.error_message, iv.created_at, b.first_name, b.last_name, b.company_name FROM identity_verifications iv JOIN borrowers b ON b.id=iv.borrower_id WHERE iv.result IN ('failed','manual_review','error') AND ($1::text IS NULL OR iv.organization_id=$1) AND ($2::text IS NULL OR b.country=$2) ORDER BY iv.created_at DESC LIMIT 100`, [orgId, country]),
+        pool.query(`SELECT c.id, c.borrower_id, c.granted_to, c.purpose, c.consent_method, c.data_subject_confirmed, c.expires_at, c.created_at, b.first_name, b.last_name, b.company_name FROM consent_records c JOIN borrowers b ON b.id=c.borrower_id WHERE c.status='active' AND (c.data_subject_confirmed=FALSE OR (c.expires_at IS NOT NULL AND c.expires_at <= NOW())) AND ($1::text IS NULL OR c.organization_id=$1) AND ($2::text IS NULL OR b.country=$2) ORDER BY c.created_at DESC LIMIT 100`, [orgId, country]),
+      ]);
+      res.json({ identity: identity.rows, consent: consent.rows });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Helper: verify that the current session may access/modify a compliance record tied to a borrower
   const assertComplianceAccess = async (req: any, borrowerId: string): Promise<{ ok: true } | { ok: false; status: number; message: string }> => {
     const isSuper = req.session?.userRole === "super_admin";
