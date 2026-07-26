@@ -154,6 +154,9 @@ export default defineConfig({
       // E2E calls the USSD gateway with this credential, exercising the same
       // token gate used by a real aggregator instead of relying on an IP bypass.
       LOTO_USSD_TOKEN: "ci-e2e-ussd-token",
+      // Do not inherit a deployment HMAC secret into the deterministic CI
+      // gateway. Production still validates HMAC whenever it is configured.
+      LOTO_USSD_HMAC_SECRET: "",
       PORT: "5001",
       GOOGLE_CLIENT_ID: "mock-google-ci-client-id",
       GOOGLE_CLIENT_SECRET: "mock-google-ci-secret",
