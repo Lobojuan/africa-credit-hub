@@ -940,6 +940,20 @@ export const mfaBackupCodes = pgTable("mfa_backup_codes", {
 ]);
 export type MfaBackupCode = typeof mfaBackupCodes.$inferSelect;
 
+// One-time action tokens are hashed, short-lived, and consumed atomically.
+// They support staff invitations and password recovery without storing a link
+// that could be used after a database disclosure.
+export const authActionTokens = pgTable("auth_action_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  purpose: text("purpose").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const blockchainAnchors = pgTable("blockchain_anchors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   merkleRoot: text("merkle_root").notNull(),

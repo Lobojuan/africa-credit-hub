@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T19:06:20.237Z",
+  "generatedAt": "2026-07-26T19:22:29.431Z",
   "branch": "main",
-  "currentCommit": "10a8432",
+  "currentCommit": "a714bc5",
   "commits": [
+    {
+      "hash": "a714bc52224fbfd401aa75fcd1b9d636db9f1482",
+      "shortHash": "a714bc5",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "security: separate institutional SSO from consumer login"
+    },
     {
       "hash": "10a8432be256ba62926eef2edba4f3d9b5ec9a5c",
       "shortHash": "10a8432",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "test: use isolated workspace-aware E2E sessions"
-    },
-    {
-      "hash": "037e451618b6978b465b0cd037fc9270aa57bc95",
-      "shortHash": "037e451",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "test: isolate E2E sessions and use live consumer routes"
     }
   ]
 };

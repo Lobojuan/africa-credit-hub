@@ -2,12 +2,13 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import * as OTPAuth from "otpauth";
 import crypto from "crypto";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { db } from "../db";
-import { mfaBackupCodes } from "@shared/schema";
+import { authActionTokens, mfaBackupCodes, users } from "@shared/schema";
 import { storage } from "../storage";
+import { sendStaffInvitationEmail, sendStaffPasswordResetEmail } from "../email";
 import { createLogger } from "../logger";
-import { loginLimiter, stripPassword, safeErrorMessage, isPlatformPrivileged } from "./middleware";
+import { loginLimiter, requireAuth, requireRole, stripPassword, safeErrorMessage, isPlatformPrivileged } from "./middleware";
 import { getActiveCountryName } from "../country-mode";
 
 const authLogger = createLogger("auth");
@@ -42,7 +43,79 @@ function isPasswordExpired(user: any): boolean {
   return days > PASSWORD_EXPIRY_DAYS;
 }
 
+const PASSWORD_RULES = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+const tokenHash = (token: string) => crypto.createHash("sha256").update(token).digest("hex");
+const publicBaseUrl = () => (process.env.CANONICAL_URL || "https://universalcredithub.com").replace(/\/$/, "");
+
 const router = Router();
+
+router.post("/api/auth/password-reset/request", loginLimiter, async (req, res) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const reply = { message: "If an active account matches that email, a reset link has been sent." };
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.json(reply);
+  try {
+    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (!user || user.status !== "active") return res.json(reply);
+    const rawToken = crypto.randomBytes(32).toString("base64url");
+    await db.transaction(async (tx) => {
+      await tx.delete(authActionTokens).where(and(eq(authActionTokens.userId, user.id), eq(authActionTokens.purpose, "password_reset"), isNull(authActionTokens.usedAt)));
+      await tx.insert(authActionTokens).values({ userId: user.id, purpose: "password_reset", tokenHash: tokenHash(rawToken), expiresAt: new Date(Date.now() + 30 * 60 * 1000) });
+    });
+    await sendStaffPasswordResetEmail(user.email, rawToken, publicBaseUrl());
+    await storage.createAuditLog({ action: "PASSWORD_RESET_REQUESTED", entity: "user", entityId: user.id, userId: user.id, details: "Password reset requested", ipAddress: req.ip || null, organizationId: user.organizationId || undefined });
+  } catch (e) { authLogger.error("Password reset request failed", { detail: (e as Error).message }); }
+  res.json(reply);
+});
+
+router.post("/api/auth/password-reset/confirm", loginLimiter, async (req, res) => {
+  const { token, newPassword } = req.body || {};
+  if (typeof token !== "string" || typeof newPassword !== "string" || !PASSWORD_RULES.test(newPassword)) return res.status(400).json({ message: "Use a strong password with uppercase, lowercase, number, and special character." });
+  const [action] = await db.select().from(authActionTokens).where(and(eq(authActionTokens.tokenHash, tokenHash(token)), eq(authActionTokens.purpose, "password_reset"), isNull(authActionTokens.usedAt), gt(authActionTokens.expiresAt, new Date()))).limit(1);
+  if (!action) return res.status(400).json({ message: "This reset link is invalid or expired." });
+  const user = await storage.getUser(action.userId);
+  if (!user || user.status !== "active") return res.status(400).json({ message: "This reset link is invalid or expired." });
+  const hash = await bcrypt.hash(newPassword, 12);
+  await db.transaction(async (tx) => { await tx.update(users).set({ password: hash, passwordChangedAt: new Date(), mustChangePassword: false, failedLoginAttempts: 0, lockedUntil: null }).where(eq(users.id, user.id)); await tx.update(authActionTokens).set({ usedAt: new Date() }).where(eq(authActionTokens.id, action.id)); });
+  await storage.createAuditLog({ action: "PASSWORD_RESET_COMPLETED", entity: "user", entityId: user.id, userId: user.id, details: "Password reset completed; existing sessions should be revoked", ipAddress: req.ip || null, organizationId: user.organizationId || undefined });
+  res.json({ message: "Password reset complete. You can now sign in." });
+});
+
+router.post("/api/auth/staff-invitations", requireAuth, requireRole("admin"), async (req, res) => {
+  try {
+    const { fullName, email, username, role = "viewer", division, organizationId: requestedOrgId } = req.body || {};
+    if (![fullName, email, username].every((v) => typeof v === "string" && v.trim())) return res.status(400).json({ message: "Full name, work email, and username are required." });
+    if (!/^[a-zA-Z0-9_.-]{3,}$/.test(username)) return res.status(400).json({ message: "Username must have at least 3 letters, numbers, dots, hyphens, or underscores." });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ message: "A valid work email is required." });
+    if (!["admin", "lender", "regulator", "viewer"].includes(role)) return res.status(400).json({ message: "Invalid staff role." });
+    const organizationId = isPlatformPrivileged(req.session.userRole) ? requestedOrgId : req.session.organizationId;
+    if (!organizationId) return res.status(400).json({ message: "Choose an institution for this invitation." });
+    const organization = await storage.getOrganization(organizationId);
+    if (!organization || organization.status !== "active") return res.status(400).json({ message: "The institution must be active before inviting staff." });
+    if (await storage.getUserByUsername(username)) return res.status(409).json({ message: "That username is already in use." });
+    const [existingEmail] = await db.select({ id: users.id }).from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
+    if (existingEmail) return res.status(409).json({ message: "An account with that work email already exists." });
+    const temporaryHash = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 12);
+    const invitedUser = await storage.createUser({ username: username.trim(), password: temporaryHash, fullName: fullName.trim(), email: email.trim().toLowerCase(), role, division: division || null, status: "deactivated", institution: organization.name, organizationId });
+    await db.update(users).set({ mustChangePassword: true }).where(eq(users.id, invitedUser.id));
+    const rawToken = crypto.randomBytes(32).toString("base64url");
+    await db.insert(authActionTokens).values({ userId: invitedUser.id, purpose: "staff_invitation", tokenHash: tokenHash(rawToken), expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000), createdBy: req.session.userId });
+    await sendStaffInvitationEmail(invitedUser.email, organization.name, rawToken, publicBaseUrl());
+    await storage.createAuditLog({ action: "STAFF_INVITED", entity: "user", entityId: invitedUser.id, userId: req.session.userId, details: `Staff invitation created for role ${role}`, ipAddress: req.ip || null, organizationId });
+    res.status(201).json({ message: "Staff invitation created.", userId: invitedUser.id, expiresAt: new Date(Date.now() + 72 * 60 * 60 * 1000) });
+  } catch (e: any) { authLogger.error("Staff invitation failed", e); res.status(500).json({ message: safeErrorMessage(e) }); }
+});
+
+router.post("/api/auth/staff-invitations/activate", loginLimiter, async (req, res) => {
+  const { token, password } = req.body || {};
+  if (typeof token !== "string" || typeof password !== "string" || !PASSWORD_RULES.test(password)) return res.status(400).json({ message: "Use a strong password with uppercase, lowercase, number, and special character." });
+  const [action] = await db.select().from(authActionTokens).where(and(eq(authActionTokens.tokenHash, tokenHash(token)), eq(authActionTokens.purpose, "staff_invitation"), isNull(authActionTokens.usedAt), gt(authActionTokens.expiresAt, new Date()))).limit(1);
+  if (!action) return res.status(400).json({ message: "This invitation is invalid or expired." });
+  const user = await storage.getUser(action.userId);
+  if (!user || user.status !== "deactivated") return res.status(400).json({ message: "This invitation is invalid or expired." });
+  await db.transaction(async (tx) => { await tx.update(users).set({ password: await bcrypt.hash(password, 12), status: "active", passwordChangedAt: new Date(), mustChangePassword: false }).where(eq(users.id, user.id)); await tx.update(authActionTokens).set({ usedAt: new Date() }).where(eq(authActionTokens.id, action.id)); });
+  await storage.createAuditLog({ action: "STAFF_INVITATION_ACCEPTED", entity: "user", entityId: user.id, userId: user.id, details: "Staff account activated; MFA enrolment required at first use", ipAddress: req.ip || null, organizationId: user.organizationId || undefined });
+  res.json({ message: "Account activated. Sign in and enrol multi-factor authentication." });
+});
 
 router.post("/api/auth/login", loginLimiter, async (req, res) => {
   try {
