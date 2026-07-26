@@ -53,6 +53,13 @@ This file is a compact handoff for future Codex sessions.
   - `ai-diff-review` gives a local second opinion on the current git diff.
 - `qwen3-coder:30b` is installed and is now the default local coding model. `qwen2.5-coder:14b` was removed to free disk space.
 
+## Local Runtime Inventory (2026-07-26)
+- Use the local UCH test database by default for database-backed checks: PostgreSQL 16 is running and `.env` (git-ignored) points `DATABASE_URL` to `africa_credit_hub_test` on localhost. Do not use `uch`, `uch_dev`, or `uch_local` unless the user specifically asks.
+- Redis is running locally and responds to `redis-cli ping`.
+- Ollama is running with `qwen3-coder:30b`, `deepseek-r1:14b`, `gpt-oss:20b`, `qwen2.5:7b`, and `kimi-k2.7-code:cloud`. Use local models for a cheap second opinion; verify all conclusions with repository commands.
+- Installed and authenticated development tools include Git/GitHub CLI, Node/npm/pnpm/yarn/bun, Python/pipx, Docker/Colima, PostgreSQL tools, Redis, Cloudflared, Wrangler, Netlify, Vercel, VS Code, Cursor, Chrome, Safari, and Xcode.
+- PostgreSQL and Redis are active. Docker/Colima is installed but normally stopped; start it only when containerised local E2E work requires it, then stop it when finished.
+
 ## Production Cleanup Bias
 - Do not rewrite the UI globally to fix a single screen.
 - Do not switch theme systems unless asked.
