@@ -16681,6 +16681,86 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ─── Collections workflow ────────────────────────────────────────────────
+  // ─── Transaction complaint resolution ────────────────────────────────────
+  // This is an operational queue, not a payment rail. "Confirmed resolved" is
+  // only selectable after an analyst has obtained the bank-core confirmation.
+  const transactionResolutionCreateSchema = z.object({
+    borrowerId: z.string().uuid(),
+    transactionReference: z.string().trim().min(4).max(200),
+    caseType: z.enum(["failed_transfer", "double_debit", "cash_dispense", "account_freeze"]),
+    channel: z.string().trim().min(1).max(80).default("unknown"),
+    amount: z.coerce.number().nonnegative().optional(),
+    currency: z.string().trim().min(3).max(3).optional(),
+    customerMessage: z.string().trim().max(4000).optional(),
+  });
+  const transactionResolutionUpdateSchema = z.object({
+    status: z.enum(["new", "verifying", "ready_for_core_handoff", "confirmed_resolved", "needs_human", "rejected"]),
+    resolutionNotes: z.string().trim().min(3).max(4000),
+  });
+
+  app.get("/api/transaction-resolution-cases", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT trc.*, b.first_name, b.last_name, b.company_name
+        FROM transaction_resolution_cases trc
+        INNER JOIN borrowers b ON b.id = trc.borrower_id
+        WHERE ($1::text IS NULL OR trc.organization_id = $1)
+          AND ($2::text IS NULL OR trc.country = $2)
+        ORDER BY CASE WHEN trc.sla_deadline < NOW() AND trc.status NOT IN ('confirmed_resolved', 'rejected') THEN 0 ELSE 1 END,
+                 trc.sla_deadline ASC, trc.created_at DESC
+        LIMIT 200
+      `, [orgId, country]);
+      res.json({ cases: result.rows });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/transaction-resolution-cases", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const body = transactionResolutionCreateSchema.parse(req.body);
+      const acl = await ensureBorrowerAccess(req, body.borrowerId);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const borrower = acl.borrower;
+      const result = await pool.query(`
+        INSERT INTO transaction_resolution_cases
+          (borrower_id, transaction_reference, case_type, channel, amount, currency, customer_message, sla_deadline, organization_id, country)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '72 hours', $8, $9)
+        RETURNING *
+      `, [body.borrowerId, body.transactionReference, body.caseType, body.channel, body.amount ?? null, body.currency?.toUpperCase() ?? null, body.customerMessage ?? null, borrower.organizationId ?? null, borrower.country]);
+      const created = result.rows[0];
+      await storage.createAuditLog({
+        action: "CREATE_TRANSACTION_RESOLUTION_CASE", entity: "transaction_resolution_case", entityId: created.id, userId: req.session?.userId,
+        details: `Opened ${body.caseType} case for reference ${body.transactionReference}; core-banking action is not automated.`, ipAddress: req.ip || null,
+      });
+      res.status(201).json(created);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/transaction-resolution-cases/:id", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const body = transactionResolutionUpdateSchema.parse(req.body);
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM transaction_resolution_cases WHERE id = $1 AND ($2::text IS NULL OR organization_id = $2) AND ($3::text IS NULL OR country = $3)`, [req.params.id, orgId, country]);
+      if (!existing.rows[0]) return res.status(404).json({ message: "Resolution case not found" });
+      const result = await pool.query(`
+        UPDATE transaction_resolution_cases
+        SET status = $1, resolution_notes = $2, reviewed_by = $3,
+            resolved_at = CASE WHEN $1 IN ('confirmed_resolved', 'rejected') THEN NOW() ELSE NULL END,
+            updated_at = NOW()
+        WHERE id = $4 RETURNING *
+      `, [body.status, body.resolutionNotes, req.session?.userId || null, req.params.id]);
+      await storage.createAuditLog({
+        action: "UPDATE_TRANSACTION_RESOLUTION_CASE", entity: "transaction_resolution_case", entityId: req.params.id as string, userId: req.session?.userId,
+        details: `Status set to ${body.status}. ${body.resolutionNotes}`, ipAddress: req.ip || null,
+      });
+      res.json(result.rows[0]);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
   // ─── NPL Early Warning Desk ──────────────────────────────────────────────
   // A deterministic queue for facilities already showing repayment stress.
   // It deliberately uses live account data and the existing collections

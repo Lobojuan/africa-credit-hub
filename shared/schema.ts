@@ -37,6 +37,11 @@ export const accountStatusEnum = pgEnum("account_status", ["current", "delinquen
 export const inquiryPurposeEnum = pgEnum("inquiry_purpose", ["new_credit", "review", "collection", "regulatory", "portfolio_monitoring"]);
 export const approvalStatusEnum = pgEnum("approval_status", ["pending", "approved", "rejected"]);
 export const disputeStatusEnum = pgEnum("dispute_status", ["open", "under_review", "resolved", "rejected"]);
+// A bank-operations workflow for electronic-transaction complaints.  These
+// statuses intentionally stop at a core-banking handoff: UCH must never claim
+// that funds moved unless the connected bank system confirms it.
+export const transactionResolutionCaseTypeEnum = pgEnum("transaction_resolution_case_type", ["failed_transfer", "double_debit", "cash_dispense", "account_freeze"]);
+export const transactionResolutionStatusEnum = pgEnum("transaction_resolution_status", ["new", "verifying", "ready_for_core_handoff", "confirmed_resolved", "needs_human", "rejected"]);
 export const judgmentTypeEnum = pgEnum("judgment_type", ["lien", "bankruptcy", "lawsuit", "civil_judgment", "criminal_conviction"]);
 export const judgmentStatusEnum = pgEnum("judgment_status", ["active", "resolved", "appealed"]);
 export const consentStatusEnum = pgEnum("consent_status", ["active", "revoked"]);
@@ -334,6 +339,28 @@ export const disputes = pgTable("disputes", {
   updatedAt: timestamp("updated_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
 });
+
+export const transactionResolutionCases = pgTable("transaction_resolution_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  transactionReference: text("transaction_reference").notNull(),
+  caseType: transactionResolutionCaseTypeEnum("case_type").notNull(),
+  channel: text("channel").notNull().default("unknown"),
+  amount: decimal("amount", { precision: 18, scale: 2 }),
+  currency: text("currency"),
+  customerMessage: text("customer_message"),
+  status: transactionResolutionStatusEnum("status").notNull().default("new"),
+  resolutionNotes: text("resolution_notes"),
+  slaDeadline: timestamp("sla_deadline").notNull(),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("transaction_resolution_cases_org_reference_idx").on(table.organizationId, table.transactionReference),
+]);
 
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

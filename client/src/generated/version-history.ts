@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T21:39:58.805Z",
+  "generatedAt": "2026-07-26T22:10:43.794Z",
   "branch": "main",
-  "currentCommit": "700ceb2",
+  "currentCommit": "15f341d",
   "commits": [
+    {
+      "hash": "15f341d8220cc260b7ac9e93fd8d967085ea1438",
+      "shortHash": "15f341d",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add forgery review desk"
+    },
+    {
+      "hash": "52fba2a46475ffb2ebe589f6b87341fe3478aa65",
+      "shortHash": "52fba2a",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "docs: add bank requirements traceability"
+    },
     {
       "hash": "700ceb2f0254848ab3231284d363c1ea58f325fd",
       "shortHash": "700ceb2",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "security: separate institutional SSO from consumer login"
-    },
-    {
-      "hash": "10a8432be256ba62926eef2edba4f3d9b5ec9a5c",
-      "shortHash": "10a8432",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "security: harden authentication recovery"
-    },
-    {
-      "hash": "3ba2ff087428d905614dc432ce0fd44376aa318f",
-      "shortHash": "3ba2ff0",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "chore: remove legacy replit integration"
     }
   ]
 };

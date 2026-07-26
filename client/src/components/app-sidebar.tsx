@@ -137,6 +137,7 @@ const dataManagementItems: NavItem[] = [
 ];
 
 const workflowItems: NavItem[] = [
+  { label: "Transaction Resolution", url: "/transaction-resolution", icon: ArrowRightLeft, testId: "nav-transaction-resolution", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Disputes", tKey: "sidebar.disputes", url: "/disputes", icon: AlertCircle, testId: "nav-disputes", roles: ["admin", "lender", "regulator", "super_admin"] },
   { label: "Approvals", tKey: "sidebar.pendingApprovals", url: "/approvals", icon: CheckSquare, testId: "nav-pending-approvals", roles: ["admin", "regulator", "super_admin"] },
   { label: "Find Connections", tKey: "sidebar.findConnections", url: "/find-connections", icon: Search, testId: "nav-find-connections", roles: ["admin", "lender", "regulator", "super_admin"] },
