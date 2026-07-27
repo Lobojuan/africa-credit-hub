@@ -76,6 +76,11 @@ test.describe("Loto Fiscal — DGI admin dashboard", () => {
 // ─── USSD session endpoint ────────────────────────────────────────────────────
 
 test.describe("Loto Fiscal — USSD session endpoint", () => {
+  // A mobile-network gateway has no browser session. Keep these callbacks in
+  // an empty context so the gateway contract is tested independently of the
+  // staff-auth storage state used by the dashboard tests in this file.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
   test("root menu returns 200 with CON prefix (AT-compatible format)", async ({
     page,
   }) => {
@@ -184,7 +189,7 @@ test.describe("Loto Fiscal — messaging admin dashboard", () => {
     page,
   }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
-    const resp = await page.request.get("/api/loto/admin/messaging/recent");
+    const resp = await page.request.get("/api/loto/admin/messaging/messages");
     expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(Array.isArray(body) || typeof body === "object").toBe(true);

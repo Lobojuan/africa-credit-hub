@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `df7aa92`
+**Current Commit:** `4898502`
 **Branch:** `main`
-**Generated:** 2026-07-27T14:39:22.906Z
+**Generated:** 2026-07-27T22:37:48.793Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,15 +12,15 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
-| 2026-07-27 | `df7aa92` | feat: add consumer transaction status updates | Uffe J Carlson |
-| 2026-07-27 | `0f4f5a3` | feat: add regtech evidence pack workflow | Uffe J Carlson |
-| 2026-07-27 | `fd65f34` | feat: add funding and prudential radar | Uffe J Carlson |
-| 2026-07-27 | `228aa16` | chore: refresh dependency lockfile | Uffe J Carlson |
-| 2026-07-27 | `df06a26` | chore: update production security dependencies | Uffe J Carlson |
-| 2026-07-26 | `08c352e` | feat: add insider risk review | Uffe J Carlson |
-| 2026-07-26 | `74eff1e` | feat: add transaction fraud monitor | Uffe J Carlson |
-| 2026-07-26 | `61201a5` | feat: add transaction resolution desk | Uffe J Carlson |
-| 2026-07-26 | `15f341d` | feat: add forgery review desk | Uffe J Carlson |
-| 2026-07-26 | `52fba2a` | docs: add bank requirements traceability | Uffe J Carlson |
-| 2026-07-26 | `700ceb2` | chore: ignore local sync artifacts | Uffe J Carlson |
-| 2026-07-26 | `fad2f6e` | feat: add NPL early warning desk | Uffe J Carlson |
+| 2026-07-27 | `4898502` | fix: enforce staff MFA and stabilise regulator coverage | Uffe J Carlson |
+| 2026-07-27 | `c1382de` | feat: add bank operations control centre | Uffe J Carlson |
+| 2026-07-27 | `01025a0` | test: isolate collateral lifecycle coverage | Uffe J Carlson |
+| 2026-07-27 | `68d6566` | test: cover public consumer registration flow | Uffe J Carlson |
+| 2026-07-27 | `e5cfe84` | fix: prevent loan form collateral select crash | Uffe J Carlson |
+| 2026-07-27 | `f158d94` | fix: handle invalid loan application responses | Uffe J Carlson |
+| 2026-07-27 | `e8e9d09` | test: align credit and loan flows with real APIs | Uffe J Carlson |
+| 2026-07-27 | `475b7d8` | test: align collateral regulator access coverage | Uffe J Carlson |
+| 2026-07-27 | `fa25fee` | test: stabilize authenticated UI regression flows | Uffe J Carlson |
+| 2026-07-27 | `2b9616d` | fix: add direct institution login route | Uffe J Carlson |
+| 2026-07-27 | `091b8be` | test: mark mock oauth session as synthetic | Uffe J Carlson |
+| 2026-07-27 | `dce2e1c` | test: isolate local e2e server | Uffe J Carlson |

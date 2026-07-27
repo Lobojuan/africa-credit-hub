@@ -18,93 +18,93 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-27T14:39:22.906Z",
+  "generatedAt": "2026-07-27T22:37:48.793Z",
   "branch": "main",
-  "currentCommit": "df7aa92",
+  "currentCommit": "4898502",
   "commits": [
     {
-      "hash": "df7aa9236dd9196cad57d0307ff661e5c4589767",
-      "shortHash": "df7aa92",
+      "hash": "4898502e5946eb50be4949f52e1cb3a56fb584b5",
+      "shortHash": "4898502",
       "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add consumer transaction status updates"
+      "subject": "fix: enforce staff MFA and stabilise regulator coverage"
     },
     {
-      "hash": "0f4f5a3a0f066e2550d6181440d618663b222449",
-      "shortHash": "0f4f5a3",
+      "hash": "c1382dedb14e771c4fb959edf7a99dcb9e952ced",
+      "shortHash": "c1382de",
       "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add regtech evidence pack workflow"
+      "subject": "feat: add bank operations control centre"
     },
     {
-      "hash": "fd65f34096055b22675aefef507c8f1e0e5991c9",
-      "shortHash": "fd65f34",
+      "hash": "01025a061756101b7a072f1e44b08c8af01811c2",
+      "shortHash": "01025a0",
       "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add funding and prudential radar"
+      "subject": "test: isolate collateral lifecycle coverage"
     },
     {
-      "hash": "228aa1679055468e05397be2270df37a08f8fbff",
-      "shortHash": "228aa16",
+      "hash": "68d6566ecd5bee56bb99c733b171d3bec0a0a219",
+      "shortHash": "68d6566",
       "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "chore: refresh dependency lockfile"
+      "subject": "test: cover public consumer registration flow"
     },
     {
-      "hash": "df06a261ec6f612143ccad943c19ca4ff531859e",
-      "shortHash": "df06a26",
+      "hash": "e5cfe841858d288968419798214f120e8242e5b8",
+      "shortHash": "e5cfe84",
       "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "chore: update production security dependencies"
+      "subject": "fix: prevent loan form collateral select crash"
     },
     {
-      "hash": "08c352eaef09bec11e4c8eb51f914d551c65a586",
-      "shortHash": "08c352e",
-      "date": "2026-07-26",
+      "hash": "f158d944fef838c0ca78c5cc5e1983882ca9a684",
+      "shortHash": "f158d94",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add insider risk review"
+      "subject": "fix: handle invalid loan application responses"
     },
     {
-      "hash": "74eff1e6e3516803c837924afe1f67be7dab20f7",
-      "shortHash": "74eff1e",
-      "date": "2026-07-26",
+      "hash": "e8e9d09175b2b2d131c7f9a35e5fe77275a84710",
+      "shortHash": "e8e9d09",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add transaction fraud monitor"
+      "subject": "test: align credit and loan flows with real APIs"
     },
     {
-      "hash": "61201a571db3dee08aa9fa59d858f99361734f5d",
-      "shortHash": "61201a5",
-      "date": "2026-07-26",
+      "hash": "475b7d83693d4fe33fe545b2a8ec0f9dad4db27b",
+      "shortHash": "475b7d8",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add transaction resolution desk"
+      "subject": "test: align collateral regulator access coverage"
     },
     {
-      "hash": "15f341d8220cc260b7ac9e93fd8d967085ea1438",
-      "shortHash": "15f341d",
-      "date": "2026-07-26",
+      "hash": "fa25fee7c87dbe4c668010f501df928f4a8e5b98",
+      "shortHash": "fa25fee",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add forgery review desk"
+      "subject": "test: stabilize authenticated UI regression flows"
     },
     {
-      "hash": "52fba2a46475ffb2ebe589f6b87341fe3478aa65",
-      "shortHash": "52fba2a",
-      "date": "2026-07-26",
+      "hash": "2b9616d47bf5cafa01c784733c5a8d255c4b09a9",
+      "shortHash": "2b9616d",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "docs: add bank requirements traceability"
+      "subject": "fix: add direct institution login route"
     },
     {
-      "hash": "700ceb2f0254848ab3231284d363c1ea58f325fd",
-      "shortHash": "700ceb2",
-      "date": "2026-07-26",
+      "hash": "091b8be70004ce22cace510938843c90c0314c41",
+      "shortHash": "091b8be",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "chore: ignore local sync artifacts"
+      "subject": "test: mark mock oauth session as synthetic"
     },
     {
-      "hash": "fad2f6eeeff8d4e8196efa8b585c58fb3a2721bf",
-      "shortHash": "fad2f6e",
-      "date": "2026-07-26",
+      "hash": "dce2e1c5288852336bfba7ff36409c1e1bd7e774",
+      "shortHash": "dce2e1c",
+      "date": "2026-07-27",
       "author": "Uffe J Carlson",
-      "subject": "feat: add NPL early warning desk"
+      "subject": "test: isolate local e2e server"
     }
   ]
 };
