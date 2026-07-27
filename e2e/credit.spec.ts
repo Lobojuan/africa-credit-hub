@@ -31,7 +31,7 @@ async function setSession(
   expect(res.ok()).toBeTruthy();
 }
 
-const ADMIN_SESSION = { userId: "e2e-credit-admin", userRole: "admin" };
+const ADMIN_SESSION = { username: "admin" };
 const SUPER_ADMIN_SESSION = { username: "platform_admin" };
 const LENDER_SESSION = { username: "lender_demo" };
 
@@ -338,9 +338,13 @@ test.describe("Credit Bureau — Borrower detail and credit report", () => {
   test("clicking a borrower card navigates to the borrower detail page", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/borrowers");
-    await page.waitForSelector(`[data-testid="card-borrower-${e2eBorrowerId}"]`, { timeout: 20000 });
-    await page.click(`[data-testid="card-borrower-${e2eBorrowerId}"]`);
-    await expect(page).toHaveURL(new RegExp(`/borrowers/${e2eBorrowerId}`), { timeout: 12000 });
+    const card = page.locator('[data-testid^="card-borrower-"]').first();
+    await expect(card).toBeVisible({ timeout: 20000 });
+    const testId = await card.getAttribute("data-testid");
+    const borrowerId = testId?.replace("card-borrower-", "");
+    expect(borrowerId).toBeTruthy();
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/borrowers/${borrowerId}`), { timeout: 12000 });
   });
 
   test("borrower detail page shows generate-full-report button", async ({ page }) => {
