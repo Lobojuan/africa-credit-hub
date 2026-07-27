@@ -14,7 +14,13 @@ import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-c
 type LoginMode = "chooser" | "institution" | "consumer";
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<LoginMode>("chooser");
+  // A direct staff-login link prevents local operators from accidentally
+  // landing in the consumer National-ID form. The chooser remains the default
+  // for public visitors.
+  const [mode, setMode] = useState<LoginMode>(() => {
+    const requestedMode = new URLSearchParams(window.location.search).get("mode");
+    return requestedMode === "institution" ? "institution" : requestedMode === "consumer" ? "consumer" : "chooser";
+  });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

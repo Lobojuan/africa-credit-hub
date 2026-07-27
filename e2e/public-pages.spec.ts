@@ -68,6 +68,12 @@ test.describe("Public pages — login", () => {
       page.locator('[data-testid="form-login"]'),
     ).toBeVisible({ timeout: 10000 });
   });
+
+  test("direct institution login link opens the staff form", async ({ page }) => {
+    await page.goto("/login?mode=institution");
+    await expect(page.locator('[data-testid="form-login"]')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('[data-testid="input-username"]')).toBeVisible();
+  });
 });
 
 // ─── Protected routes redirect unauthenticated users ─────────────────────────
