@@ -354,8 +354,11 @@ test.describe("Main app — consumer login path", () => {
 
 test.describe("Consumer Portal — registration form submission", () => {
   test("registration form fields accept input and submit initiates verification", async ({ page }) => {
-    await page.goto("/consumer-portal");
-    await page.waitForSelector('[data-testid="page-consumer-portal"], [data-testid="tab-register"]', { timeout: 15000 });
+    // Registration is part of the public consumer journey. `/consumer-portal`
+    // is the authenticated workspace and correctly redirects anonymous users
+    // to the institution sign-in screen.
+    await page.goto("/my-credit");
+    await page.waitForSelector('[data-testid="link-to-register"]', { timeout: 15000 });
 
     const regTab = page.locator('[data-testid="link-to-register"], [data-testid="tab-register"]').first();
     if (await regTab.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -374,13 +377,7 @@ test.describe("Consumer Portal — registration form submission", () => {
 
     const countrySelect = page.locator('[data-testid="select-register-country"]');
     if (await countrySelect.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await countrySelect.click();
-      const ghana = page.locator('[role="option"]:has-text("Ghana"), [data-value="Ghana"]').first();
-      if (await ghana.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await ghana.click();
-      } else {
-        await page.keyboard.press("Escape");
-      }
+      await countrySelect.selectOption({ label: "Ghana" });
     }
 
     // Verify fields have values
@@ -388,7 +385,8 @@ test.describe("Consumer Portal — registration form submission", () => {
     expect(await page.locator('[data-testid="input-register-id"]').inputValue()).toMatch(/GH-REG-E2E/);
 
     // Submit — expect verification step or success/error toast (never a crash)
-    const submitBtn = page.locator('button[type="submit"], [data-testid="button-register-submit"]').first();
+    await page.getByRole("checkbox", { name: /I consent to Universal Credit Hub/i }).check();
+    const submitBtn = page.getByRole("button", { name: "Create Account" });
     await submitBtn.waitFor({ timeout: 8000 });
     await submitBtn.click();
 
