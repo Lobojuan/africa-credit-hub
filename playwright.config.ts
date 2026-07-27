@@ -22,9 +22,10 @@ export default defineConfig({
   // the entire 60-minute job allowance. Local runs retain full-suite behavior.
   maxFailures: process.env.CI ? 3 : undefined,
   use: {
-    // CI uses port 5001 (isolated); local dev reuses the existing server on 5000
-    // (which is already started with ENABLE_E2E_TEST_AUTH=true by dev-server.sh).
-    baseURL: process.env.CI ? "http://localhost:5001" : "http://localhost:5000",
+    // E2E must never borrow a developer's browser server or macOS service.
+    // Port 5000 is commonly occupied by AirTunes on macOS, so every standard
+    // run starts the same isolated server on 5001 as CI.
+    baseURL: process.env.E2E_BASE_URL || "http://localhost:5001",
     headless: true,
     ignoreHTTPSErrors: true,
   },
@@ -142,14 +143,14 @@ export default defineConfig({
   ],
 
   webServer: {
-    // CI: always starts its own isolated server on port 5001.
-    // Local dev: reuses the existing dev server on port 5000 that is already
-    // running with ENABLE_E2E_TEST_AUTH=true via dev-server.sh.
+    // Use the same isolated server locally and in CI. Developers who need to
+    // target a separately managed environment must opt in explicitly with
+    // E2E_REUSE_EXISTING_SERVER=true and E2E_BASE_URL.
     // Keep gateway credentials in the launch command as well as `env`: the
     // shell that starts webServer may otherwise retain parent CI credentials.
     command: "ENABLE_E2E_TEST_AUTH=true LOTO_USSD_TOKEN=ci-e2e-ussd-token LOTO_USSD_HMAC_SECRET='' PORT=5001 npx tsx server/index.ts",
-    url: process.env.CI ? "http://localhost:5001/api/health" : "http://localhost:5000/api/health",
-    reuseExistingServer: !process.env.CI,
+    url: "http://localhost:5001/api/health",
+    reuseExistingServer: process.env.E2E_REUSE_EXISTING_SERVER === "true",
     timeout: 90000,
     env: {
       ENABLE_E2E_TEST_AUTH: "true",
