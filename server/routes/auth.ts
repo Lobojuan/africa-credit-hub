@@ -194,7 +194,15 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
-      req.session.mfaEnrollmentRequired = !!(user.mfaRequired && !user.mfaEnabled);
+      // The users table is for staff access to bank, customer, and regulatory
+      // operations. MFA is therefore mandatory for every staff role, including
+      // legacy accounts created before the policy was introduced. Consumer
+      // identities use their dedicated authentication journey.
+      const staffMfaRequired = true;
+      if (staffMfaRequired && !user.mfaRequired) {
+        await storage.updateUser(user.id, { mfaRequired: true } as any);
+      }
+      req.session.mfaEnrollmentRequired = staffMfaRequired && !user.mfaEnabled;
       req.session.lastActivity = Date.now();
 
       if (isPlatformPrivileged(user.role)) {
@@ -228,6 +236,9 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       req.session.save(() => {
         res.json({
           ...stripPassword(user),
+          // AuthProvider caches the successful-login response, so return the
+          // effective policy here instead of waiting for a later /auth/me call.
+          mfaRequired: staffMfaRequired,
           passwordExpired,
           organization,
           viewingCountry,
@@ -661,6 +672,10 @@ router.get("/api/auth/me", async (req, res) => {
   }
   res.json({
     ...userData,
+    // Reflect an MFA enrollment requirement immediately after password login,
+    // even if a legacy account's persisted policy update is still being
+    // observed by another request in the same session.
+    mfaRequired: user.mfaRequired || !!req.session.mfaEnrollmentRequired,
     // Test-only role fixtures must not be obstructed by a real user's pending
     // enrollment state. Production responses always preserve these values.
     ...(bypassSecurityPrompts ? { mfaRequired: false, mfaEnabled: false } : {}),

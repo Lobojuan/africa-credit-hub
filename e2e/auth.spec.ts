@@ -19,14 +19,20 @@ async function injectSession(
 // ─── Live login security ─────────────────────────────────────────────────────
 
 test.describe("Live administrator login", () => {
-  test("admin login requires MFA enrollment before access", async ({ page }) => {
+  test("admin login requires an MFA challenge or enrollment before access", async ({ browser }) => {
     const pw = process.env.SEED_ADMIN_PASSWORD ?? "admin0987";
-    await page.context().clearCookies();
-    await page.goto("/login?mode=institution");
-    await page.fill('[data-testid="input-username"]', "admin");
-    await page.fill('[data-testid="input-password"]', pw);
-    await page.locator('[data-testid="form-login"]').locator('button[type="submit"]').click();
-    await expect(page.locator('[data-testid="text-mfa-setup-title"]')).toBeVisible({ timeout: 18000 });
+    // Do not inherit the authenticated project's saved session or browser
+    // storage: this proves the password entry point itself cannot bypass MFA.
+    const context = await browser.newContext();
+    const response = await context.request.post("/api/auth/login", {
+      data: { username: "admin", password: pw },
+    });
+    expect(response.ok()).toBeTruthy();
+    const result = await response.json() as { requireMfa?: boolean; mfaRequired?: boolean; mfaEnabled?: boolean };
+    // An enrolled account gets the code challenge; a legacy account is forced
+    // into enrollment. Neither branch may silently become a normal login.
+    expect(result.requireMfa || (result.mfaRequired && !result.mfaEnabled)).toBe(true);
+    await context.close();
   });
 });
 
