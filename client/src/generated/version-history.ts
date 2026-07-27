@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-27T12:35:14.317Z",
+  "generatedAt": "2026-07-27T14:37:45.833Z",
   "branch": "main",
-  "currentCommit": "fd65f34",
+  "currentCommit": "0f4f5a3",
   "commits": [
+    {
+      "hash": "0f4f5a3a0f066e2550d6181440d618663b222449",
+      "shortHash": "0f4f5a3",
+      "date": "2026-07-27",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add regtech evidence pack workflow"
+    },
     {
       "hash": "fd65f34096055b22675aefef507c8f1e0e5991c9",
       "shortHash": "fd65f34",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "feat: simplify workspace navigation"
-    },
-    {
-      "hash": "c274c7ca8fac167299119c82c7feebe81b9ab79b",
-      "shortHash": "c274c7c",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "feat: unify staff sign-in landing"
     }
   ]
 };

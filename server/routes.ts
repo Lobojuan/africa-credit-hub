@@ -19384,6 +19384,26 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // ─── Consumer transaction-resolution status ───────────────────────────────
+  // Consumers may only see cases tied to their own verified credit identity.
+  // Do not return internal review notes, staff names, or any bank-core data.
+  app.get("/api/consumer/transaction-resolution-cases", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select({ id: borrowers.id }).from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const result = await pool.query(`
+        SELECT transaction_reference, case_type, channel, amount, currency, status, sla_deadline, created_at, updated_at
+        FROM transaction_resolution_cases
+        WHERE borrower_id=$1 ORDER BY created_at DESC LIMIT 20
+      `, [borrower.id]);
+      res.json(result.rows);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // ─── Consumer My Inquiries ─────────────────────────────────────────────────
   // Returns the borrower's recent credit inquiries with the inquiring
   // organization's identity (id, name, country, type) joined in. The org
