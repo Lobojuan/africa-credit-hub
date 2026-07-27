@@ -2,6 +2,8 @@ import { test, expect } from "@playwright/test";
 
 let e2eColId: string;
 let e2eAssetId: string;
+let pendingColId: string;
+let pendingAssetId: string;
 
 test.beforeAll(async ({ browser }) => {
   const ctx = await browser.newContext();
@@ -12,24 +14,40 @@ test.beforeAll(async ({ browser }) => {
     data: { username: "lender_demo" },
   });
   expect(session.ok()).toBeTruthy();
-  e2eAssetId = `VIN-SUITE-${Date.now()}`;
-  const resp = await pg.request.post("/api/collateral", {
+  // Keep a pending filing for controls that must prove certificates and lien
+  // search are unavailable before registry approval.
+  pendingAssetId = `VIN-PENDING-${Date.now()}`;
+  const pendingResp = await pg.request.post("/api/collateral", {
     data: {
       borrowerName: "E2E Collateral Suite Borrower",
       collateralType: "vehicle",
-      assetLocalIdentifier: e2eAssetId,
+      assetLocalIdentifier: pendingAssetId,
       estimatedValue: "50000",
       currency: "GHS",
       countryCode: "Ghana",
       description: "E2E suite test vehicle",
     },
   });
-  expect(resp.status()).toBe(201);
-  e2eColId = (await resp.json()).id;
+  expect(pendingResp.status()).toBe(201);
+  pendingColId = (await pendingResp.json()).id;
+
+  // A separate approved filing exercises certificate and active-lien flows.
+  e2eAssetId = `VIN-SUITE-${Date.now()}`;
+  const approvedResp = await pg.request.post("/api/collateral", {
+    data: {
+      borrowerName: "E2E Approved Collateral Borrower",
+      collateralType: "vehicle",
+      assetLocalIdentifier: e2eAssetId,
+      estimatedValue: "50000",
+      currency: "GHS",
+      countryCode: "Ghana",
+      description: "E2E suite approved vehicle",
+    },
+  });
+  expect(approvedResp.status()).toBe(201);
+  e2eColId = (await approvedResp.json()).id;
 
   // Lien search intentionally returns only approved active registrations.
-  // Approve the filing through the real authority route so this suite proves
-  // first-to-file ranking rather than merely asserting an empty state.
   const approvalSession = await pg.request.post("/api/test/set-session", {
     data: { username: "platform_admin" },
   });
@@ -209,7 +227,7 @@ test.describe("Collateral Registry — lien search", () => {
     await page.goto("/collateral-registry");
     await page.click('[data-testid="tab-lien-search"]');
     await page.waitForSelector('[data-testid="input-lien-search-asset"]', { timeout: 10000 });
-    await page.fill('[data-testid="input-lien-search-asset"]', e2eAssetId);
+    await page.fill('[data-testid="input-lien-search-asset"]', pendingAssetId);
     await page.click('[data-testid="btn-lien-search"]');
 
     // New filings remain pending until a registry authority approves them, so
@@ -225,22 +243,22 @@ test.describe("Collateral Registry — certificate preview", () => {
     await setSession(page, LENDER_SESSION);
     await page.goto("/collateral-registry");
     await page.waitForSelector('[data-testid="input-search-collateral"]', { timeout: 15000 });
-    await page.fill('[data-testid="input-search-collateral"]', e2eAssetId);
+    await page.fill('[data-testid="input-search-collateral"]', pendingAssetId);
     await page.waitForTimeout(800);
 
-    await expect(page.locator(`[data-testid="row-collateral-${e2eColId}"]`)).toBeVisible({ timeout: 12000 });
+    await expect(page.locator(`[data-testid="row-collateral-${pendingColId}"]`)).toBeVisible({ timeout: 12000 });
 
-    await expect(page.locator(`[data-testid="btn-preview-cert-${e2eColId}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-testid="btn-preview-cert-${pendingColId}"]`)).toHaveCount(0);
   });
 
   test("pending collateral has no certificate download before approval", async ({ page }) => {
     await setSession(page, LENDER_SESSION);
     await page.goto("/collateral-registry");
-    await page.fill('[data-testid="input-search-collateral"]', e2eAssetId);
+    await page.fill('[data-testid="input-search-collateral"]', pendingAssetId);
     await page.waitForTimeout(800);
 
-    await expect(page.locator(`[data-testid="row-collateral-${e2eColId}"]`)).toBeVisible({ timeout: 12000 });
-    await expect(page.locator(`[data-testid="btn-download-cert-${e2eColId}"]`)).toHaveCount(0);
+    await expect(page.locator(`[data-testid="row-collateral-${pendingColId}"]`)).toBeVisible({ timeout: 12000 });
+    await expect(page.locator(`[data-testid="btn-download-cert-${pendingColId}"]`)).toHaveCount(0);
   });
 });
 
@@ -329,8 +347,8 @@ test.describe("Collateral Registry — API", () => {
   });
 
   test("GET /api/collateral/verify/:code returns 200 or 404, not 500", async ({ page }) => {
-    const resp = await page.request.get("/api/collateral/verify/E2E-UNKNOWN-CODE-9999");
-    expect([200, 404]).toContain(resp.status());
+    const resp = await page.request.get("/api/public/collateral/verify/E2E-UNKNOWN-CODE-9999");
+    expect(resp.status()).toBe(200);
     expect(resp.status()).not.toBe(500);
   });
 });
@@ -405,25 +423,23 @@ test.describe("Collateral Registry — lien search priority ranking", () => {
     expect(resp.status()).toBe(200);
     expect(resp.status()).not.toBe(500);
     if (resp.status() === 200) {
-      type LienResult = { priorityRank?: number | string; priority?: number | string; rankOrder?: number | string };
+      type LienResult = { lienPriority?: number | string; priorityRank?: number | string; priority?: number | string; rankOrder?: number | string };
       type LienBody = LienResult[] | { results?: LienResult[] };
       const body = await resp.json() as LienBody;
       const results = Array.isArray(body) ? body : (body as { results?: LienResult[] }).results ?? [];
       if (results.length > 0) {
         const first = results[0];
         // Priority rank field must be present and numeric
-        const rank = first.priorityRank ?? first.priority ?? first.rankOrder;
+        const rank = first.lienPriority ?? first.priorityRank ?? first.priority ?? first.rankOrder;
         expect(typeof rank === "number" || typeof rank === "string").toBe(true);
       }
     }
   });
 
-  test("lender role can run lien search — regulator also can", async ({ page }) => {
+  test("regulator is redirected away from lender lien search", async ({ page }) => {
     await setSession(page, REG_SESSION);
     await page.goto("/collateral-registry");
-    await page.waitForSelector('[data-testid="tab-lien-search"]', { timeout: 15000 });
-    await page.click('[data-testid="tab-lien-search"]');
-    await expect(page.locator('[data-testid="input-lien-search-asset"]')).toBeVisible({ timeout: 8000 });
-    await expect(page.locator('[data-testid="btn-lien-search"]')).toBeVisible({ timeout: 8000 });
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+    await expect(page.locator('[data-testid="tab-lien-search"]')).toHaveCount(0);
   });
 });

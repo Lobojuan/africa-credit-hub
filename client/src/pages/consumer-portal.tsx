@@ -188,7 +188,7 @@ function DisputeFilingDialog({ preset, trigger, onFiled }: DisputeFilingDialogPr
         {submitted ? (
           <div className="text-center py-6 space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-            <p className="font-medium">Dispute Submitted!</p>
+            <p className="font-medium" data-testid="text-dispute-submitted">Dispute Submitted!</p>
             <p className="text-sm text-muted-foreground">Your dispute has been recorded. We will review it within 5 business days and notify you of the outcome.</p>
             <Button onClick={() => setOpen(false)} className="w-full">Close</Button>
           </div>
