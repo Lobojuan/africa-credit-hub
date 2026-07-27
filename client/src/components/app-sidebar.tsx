@@ -61,6 +61,7 @@ import {
   Palette,
   BellRing,
   Radar,
+  ShieldCheck,
   MessageCircle,
 } from "lucide-react";
 import {
@@ -108,6 +109,7 @@ type NavItem = {
 };
 
 const overviewItems: NavItem[] = [
+  { label: "Bank Control Centre", url: "/bank-control-center", icon: ShieldCheck, testId: "nav-bank-control-center", roles: ["super_admin", "admin", "regulator", "lender"] },
   { label: "Today", url: "/today", icon: LayoutDashboard, testId: "nav-today", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Dashboard", tKey: "sidebar.dashboard", url: "/dashboard", icon: LayoutDashboard, testId: "nav-dashboard", roles: ["super_admin", "admin", "regulator", "lender", "viewer"] },
   { label: "Platform Metrics", tKey: "sidebar.platformMetrics", url: "/platform-metrics", icon: Gauge, testId: "nav-platform-metrics", roles: ["admin", "super_admin"] },

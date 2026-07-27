@@ -78,6 +78,7 @@ export default defineConfig({
         /regulatory\.spec\.ts/,
         /consumer-portal\.spec\.ts/,
         /batch-upload\.spec\.ts/,
+        /bank-control-center\.spec\.ts/,
         /bog-export\.spec\.ts/,
         /playbook-index\.spec\.ts/,
       ],
