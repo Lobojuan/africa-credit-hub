@@ -43,8 +43,8 @@ test.beforeAll(async ({ browser }) => {
 // Credit Bureau workspace. Collateral UI coverage uses the dedicated product
 // administrator, which has the required collateral workspace entitlement.
 const LENDER_SESSION = { username: "collateral_admin" };
-const SA_SESSION = { userId: "e2e-col-sa", userRole: "super_admin" };
-const REG_SESSION = { userId: "e2e-col-reg", userRole: "regulator" };
+const SA_SESSION = { username: "platform_admin" };
+const REG_SESSION = { username: "registry_admin" };
 
 async function setSession(page: import("@playwright/test").Page, session: Record<string, unknown>) {
   // Authenticated projects start from the same saved cookie. Clearing it first
@@ -249,17 +249,22 @@ test.describe("Collateral Registry — release lifecycle", () => {
   let releaseColId: string;
 
   test.beforeAll(async ({ browser }) => {
-    const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+    const ctx = await browser.newContext();
     const pg = await ctx.newPage();
+    // A lender owns a filing; the platform authority only reviews/releases it.
+    // Keep this an explicit fresh session so parallel fixtures cannot mutate it.
+    const lenderSession = await pg.request.post("/api/test/set-session", {
+      data: { username: "lender_demo" },
+    });
+    expect(lenderSession.ok()).toBeTruthy();
     const resp = await pg.request.post("/api/collateral", {
       data: {
-        borrowerId: "GH-E2E-RELEASE-001",
         borrowerName: "E2E Release Borrower",
         collateralType: "equipment",
         assetLocalIdentifier: `EQ-RELEASE-${Date.now()}`,
         estimatedValue: "25000",
         currency: "GHS",
-        country: "Ghana",
+        countryCode: "Ghana",
         description: "E2E release lifecycle test",
       },
     });
@@ -278,7 +283,7 @@ test.describe("Collateral Registry — release lifecycle", () => {
 
   test("releasing collateral via API transitions status to released", async ({ page }) => {
     await setSession(page, SA_SESSION);
-    const releaseResp = await page.request.post(`/api/collateral/${releaseColId}/release`, {
+    const releaseResp = await page.request.post(`/api/collateral/${releaseColId}/discharge`, {
       data: { reason: "E2E test release — loan repaid in full" },
     });
     expect([200, 201]).toContain(releaseResp.status());

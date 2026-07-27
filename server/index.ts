@@ -236,6 +236,8 @@ declare module "express-session" {
     consumerNationalId?: string;
     /** Non-production only: e2e test bypass role set via /api/test/set-session */
     _testRole?: string;
+    /** Non-production only: prevents test fixtures from being blocked by account-security prompts. */
+    e2eBypassSecurityPrompts?: boolean;
   }
 }
 

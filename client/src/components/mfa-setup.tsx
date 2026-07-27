@@ -83,7 +83,7 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled, forced = false 
     <Dialog open={open} onOpenChange={(v) => { if (forced && !v) return; onOpenChange(v); if (!v) { setStep("idle"); setCode(""); } }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2" data-testid="text-mfa-setup-title">
             <Shield className="w-5 h-5" />
             {t("mfa.title")}
           </DialogTitle>

@@ -564,6 +564,12 @@ export async function registerRoutes(
           userId: user.id,
           userRole: user.role,
           organizationId: user.organizationId ?? undefined,
+          // A fixture may intentionally use an inactive or expired seeded account
+          // to exercise role-specific UI. Keep that browser session focused on the
+          // requested screen instead of opening a real user's password/MFA prompt.
+          // This flag exists only behind the local, non-production E2E guard above.
+          e2eBypassSecurityPrompts: true,
+          mfaEnrollmentRequired: false,
         });
         // Test fixtures make a protected request immediately after this one.
         // Explicitly persist the session first so that behavior is identical

@@ -644,8 +644,9 @@ router.get("/api/auth/me", async (req, res) => {
   }
 
   const userData = stripPassword(user);
+  const bypassSecurityPrompts = isE2ETestAuth && req.session.e2eBypassSecurityPrompts === true;
 
-  const passwordExpired = isPasswordExpired(user);
+  const passwordExpired = bypassSecurityPrompts ? false : isPasswordExpired(user);
 
   let organization = null;
   if (user.organizationId) {
@@ -658,7 +659,15 @@ router.get("/api/auth/me", async (req, res) => {
   } else {
     viewingCountry = req.session.userCountry || organization?.country || getActiveCountryName() || null;
   }
-  res.json({ ...userData, passwordExpired, organization, viewingCountry });
+  res.json({
+    ...userData,
+    // Test-only role fixtures must not be obstructed by a real user's pending
+    // enrollment state. Production responses always preserve these values.
+    ...(bypassSecurityPrompts ? { mfaRequired: false, mfaEnabled: false } : {}),
+    passwordExpired,
+    organization,
+    viewingCountry,
+  });
 });
 
 // ── Guide-mode auto-login ────────────────────────────────────────────────────

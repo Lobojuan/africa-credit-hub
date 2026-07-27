@@ -1,48 +1,12 @@
 /**
- * Auth E2E Suite — login for all 8 demo accounts, role-based Today landing,
- * single-workspace restriction enforcement, and logout.
+ * Auth E2E Suite — the sole live administrator's sign-in security gate,
+ * retired-account denial, role-based UI, and logout.
  *
- * Demo accounts (seeded local test data):
- *   demo_admin      / TestPass2026!             → all 3 workspaces (platform_owner)
- *   credit_admin    / Credit26                  → credit only
- *   collateral_admin / Collat26                 → collateral only
- *   loto_admin      / Loto2026                  → loto only
- *   admin           / SEED_ADMIN_PASSWORD env   → credit only
- *   owner           / OWNER_ADMIN_PASSWORD env  → all 3 workspaces
- *   johndoe         / SecuredCreditor2026!      → credit + collateral (lender)
- *   registry_admin  / TestPass2026!             → credit (regulator)
- *
- * Each account test asserts:
- *   1. Login succeeds (user-authenticated state visible)
- *   2. Correct role-based Today view is active (with a workspace available)
- *   3. Single-workspace accounts cannot access other workspaces
+ * Role-specific screens use isolated E2E sessions. They never reactivate the
+ * retired accounts that were intentionally removed from normal login access.
  */
 
 import { test, expect } from "@playwright/test";
-
-async function loginAs(
-  page: import("@playwright/test").Page,
-  username: string,
-  password: string,
-) {
-  await page.context().clearCookies();
-  await page.goto("/login");
-  await page.evaluate(() => localStorage.clear());
-  await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
-  await page.click('[data-testid="button-login-institution"]');
-  await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
-  await page.fill('[data-testid="input-username"]', username);
-  await page.fill('[data-testid="input-password"]', password);
-  await page.locator('[data-testid="form-login"]').locator('button[type="submit"]').click();
-  // Wait for redirect away from login page
-  await expect(page).not.toHaveURL(/\/login/, { timeout: 18000 });
-}
-
-async function assertAuthenticated(page: import("@playwright/test").Page) {
-  await expect(
-    page.locator('[data-testid="text-current-user"]').first(),
-  ).toBeVisible({ timeout: 15000 });
-}
 
 async function injectSession(
   page: import("@playwright/test").Page,
@@ -52,89 +16,17 @@ async function injectSession(
   expect(res.ok()).toBeTruthy();
 }
 
-// ─── Login + workspace landing for all 8 demo accounts ───────────────────────
+// ─── Live login security ─────────────────────────────────────────────────────
 
-test.describe("Login smoke — all 8 demo accounts", () => {
-  test("credit_admin logs in and lands in Credit Bureau workspace", async ({
-    page,
-  }) => {
-    await loginAs(page, "credit_admin", "Credit26");
-    await assertAuthenticated(page);
-    // Credit-only account lands directly in credit workspace
-    const workspace = page.locator('[data-testid="text-active-workspace"]');
-    await expect(workspace).toBeVisible({ timeout: 12000 });
-    const label = await workspace.textContent();
-    expect(label?.toLowerCase()).toContain("credit");
-  });
-
-  test("collateral_admin logs in and lands in Collateral Registry workspace", async ({
-    page,
-  }) => {
-    await loginAs(page, "collateral_admin", "Collat26");
-    await assertAuthenticated(page);
-    const workspace = page.locator('[data-testid="text-active-workspace"]');
-    await expect(workspace).toBeVisible({ timeout: 12000 });
-    const label = await workspace.textContent();
-    expect(label?.toLowerCase()).toContain("collateral");
-  });
-
-  test("loto_admin logs in and lands in Loto Fiscal workspace", async ({
-    page,
-  }) => {
-    await loginAs(page, "loto_admin", "Loto2026");
-    await assertAuthenticated(page);
-    const workspace = page.locator('[data-testid="text-active-workspace"]');
-    await expect(workspace).toBeVisible({ timeout: 12000 });
-    const label = await workspace.textContent();
-    expect(label?.toLowerCase()).toContain("loto");
-  });
-
-  test("demo_admin (platform_owner) lands on the focused Today command centre", async ({
-    page,
-  }) => {
-    await loginAs(page, "demo_admin", "TestPass2026!");
-    await assertAuthenticated(page);
-    await expect(page.locator('[data-testid="today-command-centre"]')).toBeVisible({ timeout: 12000 });
-    await expect(page.locator('[data-testid="text-today-title"]')).toContainText("priorities");
-  });
-
-  test("admin logs in (SEED_ADMIN_PASSWORD env)", async ({ page }) => {
+test.describe("Live administrator login", () => {
+  test("admin login requires MFA enrollment before access", async ({ page }) => {
     const pw = process.env.SEED_ADMIN_PASSWORD ?? "admin0987";
-    await loginAs(page, "admin", pw);
-    await assertAuthenticated(page);
-  });
-
-  test("owner logs in (OWNER_ADMIN_PASSWORD env — all workspaces)", async ({
-    page,
-  }) => {
-    const pw = process.env.OWNER_ADMIN_PASSWORD ?? "owner0987";
-    await loginAs(page, "owner", pw);
-    await assertAuthenticated(page);
-    // owner has platform_owner role — can see all workspaces
-    const workspace = page.locator('[data-testid="text-active-workspace"]');
-    await expect(workspace).toBeVisible({ timeout: 12000 });
-  });
-
-  test("johndoe (lender) logs in and lands in Credit Bureau workspace", async ({
-    page,
-  }) => {
-    await loginAs(page, "johndoe", "SecuredCreditor2026!");
-    await assertAuthenticated(page);
-    const workspace = page.locator('[data-testid="text-active-workspace"]');
-    await expect(workspace).toBeVisible({ timeout: 12000 });
-    const label = await workspace.textContent();
-    expect(label?.toLowerCase()).toContain("credit");
-  });
-
-  test("registry_admin (regulator) logs in and lands in Credit Bureau workspace", async ({
-    page,
-  }) => {
-    await loginAs(page, "registry_admin", "TestPass2026!");
-    await assertAuthenticated(page);
-    const workspace = page.locator('[data-testid="text-active-workspace"]');
-    await expect(workspace).toBeVisible({ timeout: 12000 });
-    const label = await workspace.textContent();
-    expect(label?.toLowerCase()).toContain("credit");
+    await page.context().clearCookies();
+    await page.goto("/login?mode=institution");
+    await page.fill('[data-testid="input-username"]', "admin");
+    await page.fill('[data-testid="input-password"]', pw);
+    await page.locator('[data-testid="form-login"]').locator('button[type="submit"]').click();
+    await expect(page.locator('[data-testid="text-mfa-setup-title"]')).toBeVisible({ timeout: 18000 });
   });
 });
 
@@ -149,7 +41,7 @@ test.describe("Login — wrong credentials", () => {
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-institution"]');
     await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
-    await page.fill('[data-testid="input-username"]', "credit_admin");
+    await page.fill('[data-testid="input-username"]', "admin");
     await page.fill('[data-testid="input-password"]', "absolutely-wrong-password-xyz");
     await page.locator('[data-testid="form-login"]').locator('button[type="submit"]').click();
 
@@ -166,42 +58,6 @@ test.describe("Login — wrong credentials", () => {
 // ─── Workspace restriction — single-workspace accounts ───────────────────────
 
 test.describe("Workspace restriction", () => {
-  test("credit_admin cannot navigate to collateral workspace — either redirected or content absent", async ({
-    page,
-  }) => {
-    await loginAs(page, "credit_admin", "Credit26");
-    await assertAuthenticated(page);
-
-    // Navigate to collateral-registry
-    await page.goto("/collateral-registry");
-    await page.waitForTimeout(2500);
-
-    // Either: (a) redirected away from /collateral-registry OR
-    //         (b) stayed but collateral-specific UI doesn't render
-    const url = page.url();
-    if (url.includes("/collateral-registry")) {
-      // If still on the page, the register button and lien search must be absent
-      const registerBtn = await page.locator('[data-testid="btn-register-collateral"]').count();
-      const lienTab = await page.locator('[data-testid="tab-lien-search"]').count();
-      expect(registerBtn + lienTab).toBe(0);
-    }
-    // If redirected — the test passes automatically
-  });
-
-  test("loto_admin workspace switcher does NOT show credit or collateral options", async ({
-    page,
-  }) => {
-    await loginAs(page, "loto_admin", "Loto2026");
-    await assertAuthenticated(page);
-
-    // The workspace switcher for a loto-only account should not list credit/collateral
-    const creditItem = page.locator('[data-testid="menuitem-workspace-credit"]');
-    const collateralItem = page.locator('[data-testid="menuitem-workspace-collateral"]');
-    // Both should be absent from the sidebar for a loto-only account
-    const creditCount = await creditItem.count();
-    const collateralCount = await collateralItem.count();
-    expect(creditCount + collateralCount).toBe(0);
-  });
 
   test("credit-only session is blocked from the Loto API", async ({ page }) => {
     await injectSession(page, {
@@ -213,11 +69,8 @@ test.describe("Workspace restriction", () => {
     expect(response.status()).toBe(403);
   });
 
-  test("registry_admin (regulator) can access /regulatory-dashboard", async ({
-    page,
-  }) => {
-    await loginAs(page, "registry_admin", "TestPass2026!");
-    await assertAuthenticated(page);
+  test("regulator session can access /regulatory-dashboard", async ({ page }) => {
+    await injectSession(page, { username: "registry_admin" });
     await page.goto("/regulatory-dashboard");
     await expect(
       page.locator('[data-testid="text-reg-dashboard-title"]'),
