@@ -513,6 +513,10 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
           if (regenerateErr) return res.redirect("/login?error=session_error");
           req.session.userId = "e2e-ms-admin-test-user";
           req.session.userRole = "admin";
+          // Keep this mock identity out of audit_logs: unlike normal staff
+          // sessions it deliberately has no users-table row, and this marker
+          // is honored only by the non-production E2E guard.
+          req.session._testRole = "admin";
           req.session.lastActivity = Date.now();
           req.session.save((saveErr) => {
             if (saveErr) return res.redirect("/login?error=session_error");
