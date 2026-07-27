@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-27T14:37:45.833Z",
+  "generatedAt": "2026-07-27T14:39:22.906Z",
   "branch": "main",
-  "currentCommit": "0f4f5a3",
+  "currentCommit": "df7aa92",
   "commits": [
+    {
+      "hash": "df7aa9236dd9196cad57d0307ff661e5c4589767",
+      "shortHash": "df7aa92",
+      "date": "2026-07-27",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add consumer transaction status updates"
+    },
     {
       "hash": "0f4f5a3a0f066e2550d6181440d618663b222449",
       "shortHash": "0f4f5a3",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "feat: add NPL early warning desk"
-    },
-    {
-      "hash": "40417b6133d4f531a1e80653b484d6ca52763aef",
-      "shortHash": "40417b6",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "feat: simplify workspace navigation"
     }
   ]
 };

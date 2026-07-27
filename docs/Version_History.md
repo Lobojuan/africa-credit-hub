@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `0f4f5a3`
+**Current Commit:** `df7aa92`
 **Branch:** `main`
-**Generated:** 2026-07-27T14:37:45.833Z
+**Generated:** 2026-07-27T14:39:22.906Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-27 | `df7aa92` | feat: add consumer transaction status updates | Uffe J Carlson |
 | 2026-07-27 | `0f4f5a3` | feat: add regtech evidence pack workflow | Uffe J Carlson |
 | 2026-07-27 | `fd65f34` | feat: add funding and prudential radar | Uffe J Carlson |
 | 2026-07-27 | `228aa16` | chore: refresh dependency lockfile | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-26 | `52fba2a` | docs: add bank requirements traceability | Uffe J Carlson |
 | 2026-07-26 | `700ceb2` | chore: ignore local sync artifacts | Uffe J Carlson |
 | 2026-07-26 | `fad2f6e` | feat: add NPL early warning desk | Uffe J Carlson |
-| 2026-07-26 | `40417b6` | feat: simplify workspace navigation | Uffe J Carlson |
