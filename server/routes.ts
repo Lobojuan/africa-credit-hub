@@ -2723,6 +2723,101 @@ export async function registerRoutes(
     } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
+  // ─── RegTech evidence packs ─────────────────────────────────────────────
+  // This is a filing-control record, not a regulator connection. A recorded
+  // submission reference is evidence supplied by staff and must not be read as
+  // proof that UCH transmitted a filing or that the authority accepted it.
+  const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+  const evidencePackSchema = z.object({
+    title: z.string().trim().min(4).max(160),
+    regulator: z.string().trim().min(2).max(120),
+    directiveReference: z.string().trim().max(160).optional(),
+    reportingPeriodStart: isoDate,
+    reportingPeriodEnd: isoDate,
+    dueDate: isoDate,
+    evidenceReferences: z.array(z.string().trim().min(2).max(300)).min(1).max(30),
+  }).superRefine((data, ctx) => {
+    if (data.reportingPeriodStart > data.reportingPeriodEnd) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reportingPeriodEnd"], message: "Reporting-period end must be on or after its start" });
+  });
+  const evidencePackReviewSchema = z.object({ status: z.enum(["approved", "rejected"]), reviewNotes: z.string().trim().min(3).max(2000) });
+  const evidencePackSubmissionSchema = z.object({ submissionReference: z.string().trim().min(3).max(240) });
+
+  app.get("/api/regulatory-evidence-packs", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT rep.*, preparer.full_name AS prepared_by_name, reviewer.full_name AS reviewed_by_name, recorder.full_name AS submission_recorded_by_name
+        FROM regulatory_evidence_packs rep
+        JOIN users preparer ON preparer.id = rep.prepared_by
+        LEFT JOIN users reviewer ON reviewer.id = rep.reviewed_by
+        LEFT JOIN users recorder ON recorder.id = rep.submission_recorded_by
+        WHERE ($1::text IS NULL OR rep.organization_id=$1) AND ($2::text IS NULL OR rep.country=$2)
+        ORDER BY rep.due_date ASC, rep.created_at DESC LIMIT 200
+      `, [orgId, country]);
+      const today = new Date().toISOString().slice(0, 10);
+      res.json({ packs: result.rows.map(row => ({ ...row, deadlineState: row.status === "submission_recorded" ? "recorded" : row.due_date < today ? "overdue" : row.due_date <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) ? "due_soon" : "scheduled" })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/regulatory-evidence-packs", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const organizationId = getOrgScope(req);
+      const requestedCountry = getCountryFilter(req);
+      if (!organizationId) return res.status(400).json({ message: "Select an institution before preparing an evidence pack" });
+      if (requestedCountry === GLOBAL_SCOPE) return res.status(400).json({ message: "Select a country before preparing an evidence pack" });
+      const country = requireWriteCountry(requestedCountry, "createRegulatoryEvidencePack");
+      const input = evidencePackSchema.parse(req.body);
+      const preparedBy = req.session?.userId;
+      if (!preparedBy) return res.status(401).json({ message: "Not authenticated" });
+      const result = await pool.query(`
+        INSERT INTO regulatory_evidence_packs (organization_id,country,title,regulator,directive_reference,reporting_period_start,reporting_period_end,due_date,evidence_references,prepared_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10) RETURNING *
+      `, [organizationId, country, input.title, input.regulator, input.directiveReference || null, input.reportingPeriodStart, input.reportingPeriodEnd, input.dueDate, JSON.stringify(input.evidenceReferences), preparedBy]);
+      const pack = result.rows[0];
+      await storage.createAuditLog({ action: "PREPARE_REGULATORY_EVIDENCE_PACK", entity: "regulatory_evidence_pack", entityId: pack.id, userId: preparedBy, details: JSON.stringify({ title: input.title, dueDate: input.dueDate, evidenceCount: input.evidenceReferences.length }), ipAddress: req.ip || null, organizationId });
+      res.status(201).json({ pack });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/regulatory-evidence-packs/:id/review", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const reviewerId = req.session?.userId;
+      if (!reviewerId) return res.status(401).json({ message: "Not authenticated" });
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM regulatory_evidence_packs WHERE id=$1 AND ($2::text IS NULL OR organization_id=$2) AND ($3::text IS NULL OR country=$3)`, [req.params.id, orgId, country]);
+      const pack = existing.rows[0];
+      if (!pack) return res.status(404).json({ message: "Evidence pack not found" });
+      if (pack.status !== "ready_for_review") return res.status(409).json({ message: "Only packs ready for review can be reviewed" });
+      if (pack.prepared_by === reviewerId) return res.status(403).json({ message: "Maker-checker control: the preparer cannot review this evidence pack" });
+      const review = evidencePackReviewSchema.parse(req.body);
+      const result = await pool.query(`UPDATE regulatory_evidence_packs SET status=$1, reviewed_by=$2, review_notes=$3, reviewed_at=NOW(), updated_at=NOW() WHERE id=$4 RETURNING *`, [review.status, reviewerId, review.reviewNotes, pack.id]);
+      await storage.createAuditLog({ action: "REVIEW_REGULATORY_EVIDENCE_PACK", entity: "regulatory_evidence_pack", entityId: pack.id, userId: reviewerId, details: JSON.stringify({ title: pack.title, status: review.status }), ipAddress: req.ip || null, organizationId: pack.organization_id });
+      res.json({ pack: result.rows[0] });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/regulatory-evidence-packs/:id/record-submission", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const recorderId = req.session?.userId;
+      if (!recorderId) return res.status(401).json({ message: "Not authenticated" });
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM regulatory_evidence_packs WHERE id=$1 AND ($2::text IS NULL OR organization_id=$2) AND ($3::text IS NULL OR country=$3)`, [req.params.id, orgId, country]);
+      const pack = existing.rows[0];
+      if (!pack) return res.status(404).json({ message: "Evidence pack not found" });
+      if (pack.status !== "approved") return res.status(409).json({ message: "Only an approved evidence pack can have a submission recorded" });
+      const input = evidencePackSubmissionSchema.parse(req.body);
+      const result = await pool.query(`UPDATE regulatory_evidence_packs SET status='submission_recorded', submission_reference=$1, submission_recorded_by=$2, submission_recorded_at=NOW(), updated_at=NOW() WHERE id=$3 RETURNING *`, [input.submissionReference, recorderId, pack.id]);
+      await storage.createAuditLog({ action: "RECORD_REGULATORY_SUBMISSION", entity: "regulatory_evidence_pack", entityId: pack.id, userId: recorderId, details: JSON.stringify({ title: pack.title, submissionReference: input.submissionReference, assertion: "Recorded by staff; no regulator-delivery claim" }), ipAddress: req.ip || null, organizationId: pack.organization_id });
+      res.json({ pack: result.rows[0] });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
       const borrowerId = req.params.id as string;

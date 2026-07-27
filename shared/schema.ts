@@ -670,6 +670,7 @@ export const transactionFraudActionEnum = pgEnum("transaction_fraud_action", ["a
 // A finance/treasury submission is deliberately reviewed by a different user
 // before it can be relied upon in a bank-health view.
 export const prudentialSnapshotStatusEnum = pgEnum("prudential_snapshot_status", ["submitted", "approved", "rejected"]);
+export const regulatoryEvidencePackStatusEnum = pgEnum("regulatory_evidence_pack_status", ["ready_for_review", "approved", "rejected", "submission_recorded"]);
 
 export const identityVerifications = pgTable("identity_verifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -879,6 +880,34 @@ export const usageMetering = pgTable("usage_metering", {
   billingRecordId: varchar("billing_record_id").references(() => billingRecords.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// An evidence pack records the internal control trail around a regulatory
+// filing. "submission_recorded" means a staff member recorded a reference; it
+// never represents an electronic delivery confirmation from a regulator.
+export const regulatoryEvidencePacks = pgTable("regulatory_evidence_packs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  title: text("title").notNull(),
+  regulator: text("regulator").notNull(),
+  directiveReference: text("directive_reference"),
+  reportingPeriodStart: text("reporting_period_start").notNull(),
+  reportingPeriodEnd: text("reporting_period_end").notNull(),
+  dueDate: text("due_date").notNull(),
+  evidenceReferences: jsonb("evidence_references").notNull().default(sql`'[]'::jsonb`),
+  status: regulatoryEvidencePackStatusEnum("status").notNull().default("ready_for_review"),
+  preparedBy: varchar("prepared_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  submissionReference: text("submission_reference"),
+  submissionRecordedBy: varchar("submission_recorded_by").references(() => users.id),
+  submissionRecordedAt: timestamp("submission_recorded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("regulatory_evidence_packs_org_title_period_idx").on(table.organizationId, table.title, table.reportingPeriodEnd),
+]);
 
 export const insertUsageMeteringSchema = createInsertSchema(usageMetering).omit({ id: true, createdAt: true });
 export type InsertUsageMetering = z.infer<typeof insertUsageMeteringSchema>;

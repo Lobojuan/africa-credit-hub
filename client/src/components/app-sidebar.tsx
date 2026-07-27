@@ -175,6 +175,7 @@ const lotoItems: NavItem[] = [
 
 const baseOversightItems: NavItem[] = [
   { label: "Regulatory Dashboard", tKey: "sidebar.regulatoryDashboard", url: "/regulatory-dashboard", icon: BarChart3, testId: "nav-regulatory-dashboard", roles: ["admin", "regulator", "super_admin"] },
+  { label: "RegTech Evidence Packs", url: "/regulatory-evidence-packs", icon: FileCheck, testId: "nav-regulatory-evidence-packs", roles: ["admin", "regulator", "super_admin", "lender"] },
   { label: "Audit Trail", tKey: "sidebar.auditTrail", url: "/audit", icon: Shield, testId: "nav-audit-trail", roles: ["admin", "regulator", "super_admin"] },
   { label: "Regulatory Compliance", tKey: "sidebar.regulatoryCompliance", url: "/regulatory-compliance", icon: Scale, testId: "nav-regulatory-compliance", roles: ["admin", "regulator", "super_admin"] },
 ];

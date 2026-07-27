@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-27T12:31:06.328Z",
+  "generatedAt": "2026-07-27T12:35:14.317Z",
   "branch": "main",
-  "currentCommit": "228aa16",
+  "currentCommit": "fd65f34",
   "commits": [
+    {
+      "hash": "fd65f34096055b22675aefef507c8f1e0e5991c9",
+      "shortHash": "fd65f34",
+      "date": "2026-07-27",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add funding and prudential radar"
+    },
     {
       "hash": "228aa1679055468e05397be2270df37a08f8fbff",
       "shortHash": "228aa16",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "feat: unify staff sign-in landing"
-    },
-    {
-      "hash": "eeaa85456360ceaee68a1f07d656ec032fc1ce73",
-      "shortHash": "eeaa854",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "security: require MFA for invited staff"
     }
   ]
 };
