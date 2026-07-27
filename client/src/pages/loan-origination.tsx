@@ -139,10 +139,10 @@ function NewApplicationDialog({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div>
             <Label>Collateral Type (optional)</Label>
-            <Select value={form.collateralType} onValueChange={v => setForm(f => ({ ...f, collateralType: v }))}>
+            <Select value={form.collateralType || "none"} onValueChange={v => setForm(f => ({ ...f, collateralType: v === "none" ? "" : v }))}>
               <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 <SelectItem value="real_estate">Real Estate</SelectItem>
                 <SelectItem value="vehicle">Vehicle</SelectItem>
                 <SelectItem value="equipment">Equipment</SelectItem>
