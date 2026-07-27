@@ -75,9 +75,10 @@ test.describe("Collateral Registry — page renders", () => {
     await expect(page).toHaveURL(/\/collateral-registry/);
   });
 
-  test("page loads for regulator", async ({ page }) => {
+  test("regulator is kept out of the lender collateral workspace", async ({ page }) => {
     await gotoCollateral(page, REG_SESSION);
-    await expect(page).toHaveURL(/\/collateral-registry/);
+    await expect(page).toHaveURL(/\/dashboard/, { timeout: 12000 });
+    await expect(page.locator('[data-testid="btn-register-collateral"]')).toHaveCount(0);
   });
 
   test("unauthenticated collateral API access is denied", async ({ browser }) => {
