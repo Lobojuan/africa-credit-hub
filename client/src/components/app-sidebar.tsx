@@ -148,6 +148,7 @@ const workflowItems: NavItem[] = [
 ];
 
 const intelligenceItems: NavItem[] = [
+  { label: "Funding & Prudential Radar", url: "/prudential-radar", icon: Landmark, testId: "nav-prudential-radar", roles: ["admin", "super_admin", "lender", "regulator"] },
   { label: "NPL Early Warning", url: "/npl-early-warning", icon: Radar, testId: "nav-npl-early-warning", roles: ["admin", "super_admin", "lender", "regulator"] },
   { label: "Portfolio Intelligence", tKey: "sidebar.portfolioIntelligence", url: "/portfolio-intelligence", icon: Brain, testId: "nav-portfolio-intelligence", roles: ["admin", "super_admin", "regulator"] },
   { label: "Portfolio Triggers", tKey: "sidebar.portfolioTriggers", url: "/portfolio-triggers", icon: BellRing, testId: "nav-portfolio-triggers", roles: ["admin", "super_admin", "lender"] },

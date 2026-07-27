@@ -667,6 +667,9 @@ export const watchlistSourceEnum = pgEnum("watchlist_source", ["sanctions_un", "
 export const fraudSeverityEnum = pgEnum("fraud_severity", ["low", "medium", "high", "critical"]);
 export const fraudReviewStatusEnum = pgEnum("fraud_review_status", ["open", "investigating", "resolved", "false_positive", "escalated"]);
 export const transactionFraudActionEnum = pgEnum("transaction_fraud_action", ["allow", "step_up_authentication", "hold_for_review"]);
+// A finance/treasury submission is deliberately reviewed by a different user
+// before it can be relied upon in a bank-health view.
+export const prudentialSnapshotStatusEnum = pgEnum("prudential_snapshot_status", ["submitted", "approved", "rejected"]);
 
 export const identityVerifications = pgTable("identity_verifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -739,6 +742,37 @@ export const transactionFraudEvents = pgTable("transaction_fraud_events", {
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   uniqueIndex("transaction_fraud_events_org_reference_idx").on(table.organizationId, table.transactionReference),
+]);
+
+// Source values are retained, rather than treating an unverified dashboard
+// calculation as regulatory truth. Ratios are calculated by the API from these
+// values and are only presented as approved after maker-checker review.
+export const prudentialSnapshots = pgTable("prudential_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  reportingDate: text("reporting_date").notNull(),
+  regulatoryCapital: decimal("regulatory_capital", { precision: 18, scale: 2 }).notNull(),
+  riskWeightedAssets: decimal("risk_weighted_assets", { precision: 18, scale: 2 }).notNull(),
+  liquidAssets: decimal("liquid_assets", { precision: 18, scale: 2 }).notNull(),
+  netCashOutflows30d: decimal("net_cash_outflows_30d", { precision: 18, scale: 2 }).notNull(),
+  totalDeposits: decimal("total_deposits", { precision: 18, scale: 2 }).notNull(),
+  top20Deposits: decimal("top_20_deposits", { precision: 18, scale: 2 }).notNull(),
+  impairedExposure: decimal("impaired_exposure", { precision: 18, scale: 2 }).notNull(),
+  totalCreditExposure: decimal("total_credit_exposure", { precision: 18, scale: 2 }).notNull(),
+  capitalMinimumPct: decimal("capital_minimum_pct", { precision: 6, scale: 2 }),
+  liquidityMinimumPct: decimal("liquidity_minimum_pct", { precision: 6, scale: 2 }),
+  sourceReference: text("source_reference"),
+  notes: text("notes"),
+  status: prudentialSnapshotStatusEnum("status").notNull().default("submitted"),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("prudential_snapshots_org_country_date_idx").on(table.organizationId, table.country, table.reportingDate),
 ]);
 
 export const insertIdentityVerificationSchema = createInsertSchema(identityVerifications).omit({ id: true, createdAt: true });

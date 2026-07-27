@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `df06a26`
+**Current Commit:** `228aa16`
 **Branch:** `main`
-**Generated:** 2026-07-27T11:26:49.191Z
+**Generated:** 2026-07-27T12:31:06.328Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-27 | `228aa16` | chore: refresh dependency lockfile | Uffe J Carlson |
 | 2026-07-27 | `df06a26` | chore: update production security dependencies | Uffe J Carlson |
 | 2026-07-26 | `08c352e` | feat: add insider risk review | Uffe J Carlson |
 | 2026-07-26 | `74eff1e` | feat: add transaction fraud monitor | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-26 | `40417b6` | feat: simplify workspace navigation | Uffe J Carlson |
 | 2026-07-26 | `c274c7c` | feat: unify staff sign-in landing | Uffe J Carlson |
 | 2026-07-26 | `eeaa854` | security: require MFA for invited staff | Uffe J Carlson |
-| 2026-07-26 | `719af60` | feat: add secure staff invitation action | Uffe J Carlson |

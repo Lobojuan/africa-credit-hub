@@ -2627,6 +2627,102 @@ export async function registerRoutes(
     } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
+  // ─── Funding & prudential radar ─────────────────────────────────────────
+  // UCH does not fabricate CAR/LCR information from the credit portfolio. A
+  // treasury/finance user submits the source values, then a separate reviewer
+  // approves or rejects the snapshot before it is treated as bank-health data.
+  const prudentialSnapshotSchema = z.object({
+    reportingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Reporting date must use YYYY-MM-DD"),
+    regulatoryCapital: z.coerce.number().min(0).max(999999999999999),
+    riskWeightedAssets: z.coerce.number().positive().max(999999999999999),
+    liquidAssets: z.coerce.number().min(0).max(999999999999999),
+    netCashOutflows30d: z.coerce.number().positive().max(999999999999999),
+    totalDeposits: z.coerce.number().positive().max(999999999999999),
+    top20Deposits: z.coerce.number().min(0).max(999999999999999),
+    impairedExposure: z.coerce.number().min(0).max(999999999999999),
+    totalCreditExposure: z.coerce.number().positive().max(999999999999999),
+    capitalMinimumPct: z.coerce.number().min(0).max(100).optional(),
+    liquidityMinimumPct: z.coerce.number().min(0).max(100).optional(),
+    sourceReference: z.string().trim().max(200).optional(),
+    notes: z.string().trim().max(2000).optional(),
+  }).superRefine((data, ctx) => {
+    if (data.top20Deposits > data.totalDeposits) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["top20Deposits"], message: "Top-20 deposits cannot exceed total deposits" });
+    if (data.impairedExposure > data.totalCreditExposure) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["impairedExposure"], message: "Impaired exposure cannot exceed total credit exposure" });
+  });
+  const prudentialReviewSchema = z.object({ status: z.enum(["approved", "rejected"]), reviewNotes: z.string().trim().min(3).max(2000) });
+  const prudentialMetrics = (row: any) => {
+    const ratio = (numerator: unknown, denominator: unknown) => Math.round((Number(numerator) / Number(denominator)) * 10000) / 100;
+    const car = ratio(row.regulatory_capital, row.risk_weighted_assets);
+    const liquidity = ratio(row.liquid_assets, row.net_cash_outflows_30d);
+    const depositConcentration = ratio(row.top_20_deposits, row.total_deposits);
+    const impairment = ratio(row.impaired_exposure, row.total_credit_exposure);
+    const signals = [
+      row.capital_minimum_pct !== null && row.capital_minimum_pct !== undefined && car < Number(row.capital_minimum_pct) ? "Capital ratio below the institution policy limit" : null,
+      row.liquidity_minimum_pct !== null && row.liquidity_minimum_pct !== undefined && liquidity < Number(row.liquidity_minimum_pct) ? "Liquidity ratio below the institution policy limit" : null,
+      depositConcentration >= 40 ? "Top-20 deposit concentration requires treasury review" : null,
+      impairment >= 10 ? "Impaired-exposure ratio requires credit-risk review" : null,
+    ].filter(Boolean);
+    return { car, liquidity, depositConcentration, impairment, signals };
+  };
+
+  app.get("/api/prudential-snapshots", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT ps.*, submitter.full_name AS submitted_by_name, reviewer.full_name AS reviewed_by_name
+        FROM prudential_snapshots ps
+        JOIN users submitter ON submitter.id = ps.submitted_by
+        LEFT JOIN users reviewer ON reviewer.id = ps.reviewed_by
+        WHERE ($1::text IS NULL OR ps.organization_id = $1) AND ($2::text IS NULL OR ps.country = $2)
+        ORDER BY ps.reporting_date DESC, ps.created_at DESC LIMIT 180
+      `, [orgId, country]);
+      res.json({ snapshots: result.rows.map(row => ({ ...row, metrics: prudentialMetrics(row) })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/prudential-snapshots", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const organizationId = getOrgScope(req);
+      const requestedCountry = getCountryFilter(req);
+      if (!organizationId) return res.status(400).json({ message: "Select an institution before submitting a prudential snapshot" });
+      if (requestedCountry === GLOBAL_SCOPE) return res.status(400).json({ message: "Select a country before submitting a prudential snapshot" });
+      const country = requireWriteCountry(requestedCountry, "createPrudentialSnapshot");
+      const input = prudentialSnapshotSchema.parse(req.body);
+      const submittedBy = req.session?.userId;
+      if (!submittedBy) return res.status(401).json({ message: "Not authenticated" });
+      const result = await pool.query(`
+        INSERT INTO prudential_snapshots
+          (organization_id, country, reporting_date, regulatory_capital, risk_weighted_assets, liquid_assets, net_cash_outflows_30d, total_deposits, top_20_deposits, impaired_exposure, total_credit_exposure, capital_minimum_pct, liquidity_minimum_pct, source_reference, notes, submitted_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *
+      `, [organizationId, country, input.reportingDate, input.regulatoryCapital, input.riskWeightedAssets, input.liquidAssets, input.netCashOutflows30d, input.totalDeposits, input.top20Deposits, input.impairedExposure, input.totalCreditExposure, input.capitalMinimumPct ?? null, input.liquidityMinimumPct ?? null, input.sourceReference || null, input.notes || null, submittedBy]);
+      const snapshot = result.rows[0];
+      await storage.createAuditLog({ action: "SUBMIT_PRUDENTIAL_SNAPSHOT", entity: "prudential_snapshot", entityId: snapshot.id, userId: submittedBy, details: JSON.stringify({ reportingDate: input.reportingDate, sourceReference: input.sourceReference || null }), ipAddress: req.ip || null, organizationId });
+      res.status(201).json({ snapshot: { ...snapshot, metrics: prudentialMetrics(snapshot) } });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/prudential-snapshots/:id/review", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const reviewerId = req.session?.userId;
+      if (!reviewerId) return res.status(401).json({ message: "Not authenticated" });
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM prudential_snapshots WHERE id=$1 AND ($2::text IS NULL OR organization_id=$2) AND ($3::text IS NULL OR country=$3)`, [req.params.id, orgId, country]);
+      const snapshot = existing.rows[0];
+      if (!snapshot) return res.status(404).json({ message: "Prudential snapshot not found" });
+      if (snapshot.status !== "submitted") return res.status(409).json({ message: "Only submitted snapshots can be reviewed" });
+      if (snapshot.submitted_by === reviewerId) return res.status(403).json({ message: "Maker-checker control: the submitter cannot review this snapshot" });
+      const review = prudentialReviewSchema.parse(req.body);
+      const result = await pool.query(`UPDATE prudential_snapshots SET status=$1, reviewed_by=$2, review_notes=$3, reviewed_at=NOW(), updated_at=NOW() WHERE id=$4 RETURNING *`, [review.status, reviewerId, review.reviewNotes, snapshot.id]);
+      const updated = result.rows[0];
+      await storage.createAuditLog({ action: "REVIEW_PRUDENTIAL_SNAPSHOT", entity: "prudential_snapshot", entityId: updated.id, userId: reviewerId, details: JSON.stringify({ status: review.status, reportingDate: updated.reporting_date }), ipAddress: req.ip || null, organizationId: updated.organization_id });
+      res.json({ snapshot: { ...updated, metrics: prudentialMetrics(updated) } });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
     try {
       const borrowerId = req.params.id as string;

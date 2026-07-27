@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-27T11:26:49.191Z",
+  "generatedAt": "2026-07-27T12:31:06.328Z",
   "branch": "main",
-  "currentCommit": "df06a26",
+  "currentCommit": "228aa16",
   "commits": [
+    {
+      "hash": "228aa1679055468e05397be2270df37a08f8fbff",
+      "shortHash": "228aa16",
+      "date": "2026-07-27",
+      "author": "Uffe J Carlson",
+      "subject": "chore: refresh dependency lockfile"
+    },
     {
       "hash": "df06a261ec6f612143ccad943c19ca4ff531859e",
       "shortHash": "df06a26",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "security: require MFA for invited staff"
-    },
-    {
-      "hash": "719af60e14a9f01d59d53aef5f75e295088fde45",
-      "shortHash": "719af60",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add secure staff invitation action"
     }
   ]
 };
