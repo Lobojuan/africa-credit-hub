@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-26T23:17:41.503Z",
+  "generatedAt": "2026-07-27T09:10:22.155Z",
   "branch": "main",
-  "currentCommit": "74eff1e",
+  "currentCommit": "08c352e",
   "commits": [
+    {
+      "hash": "08c352eaef09bec11e4c8eb51f914d551c65a586",
+      "shortHash": "08c352e",
+      "date": "2026-07-26",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add insider risk review"
+    },
     {
       "hash": "74eff1e6e3516803c837924afe1f67be7dab20f7",
       "shortHash": "74eff1e",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-26",
       "author": "Uffe J Carlson",
       "subject": "docs: refresh version history"
-    },
-    {
-      "hash": "8e1e5dbb4740075bb767ece33bdb32f60780c47e",
-      "shortHash": "8e1e5db",
-      "date": "2026-07-26",
-      "author": "Uffe J Carlson",
-      "subject": "feat: complete staff account recovery flow"
     }
   ]
 };
