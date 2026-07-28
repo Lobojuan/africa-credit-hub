@@ -17092,7 +17092,6 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
       const result = await pool.query(`
         SELECT
-          ca.id AS collection_assignment_id,
           c.id AS credit_account_id,
           c.borrower_id,
           c.account_number,
@@ -17107,11 +17106,15 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           b.first_name,
           b.last_name,
           b.company_name,
-          b.country
+          b.country,
+          EXISTS (
+            SELECT 1
+            FROM collection_assignments active_assignment
+            WHERE active_assignment.credit_account_id = c.id
+              AND active_assignment.status IN ('open', 'in_progress', 'promised')
+          ) AS is_assigned
         FROM credit_accounts c
         INNER JOIN borrowers b ON b.id = c.borrower_id
-        LEFT JOIN collection_assignments ca
-          ON ca.credit_account_id = c.id AND ca.status IN ('open', 'in_progress', 'promised')
         WHERE (c.days_in_arrears > 0 OR c.status IN ('delinquent', 'default', 'written_off'))
           AND ($1::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $1)
           AND ($2::text IS NULL OR b.country = $2)
@@ -17139,7 +17142,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
           ...row,
           severity,
           signals,
-          isAssigned: Boolean(row.collection_assignment_id),
+          isAssigned: Boolean(row.is_assigned),
         };
       });
       res.json({ generatedAt: new Date().toISOString(), cases });
@@ -17219,6 +17222,24 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const acl = await ensureBorrowerAccess(req, body.borrowerId);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
       const borrower = acl.borrower;
+      if (body.creditAccountId) {
+        const account = await pool.query(
+          `SELECT id FROM credit_accounts WHERE id = $1 AND borrower_id = $2`,
+          [body.creditAccountId, borrower.id],
+        );
+        if (account.rowCount === 0) {
+          return res.status(404).json({ message: "Credit account not found for this borrower" });
+        }
+        const active = await pool.query(
+          `SELECT id FROM collection_assignments
+           WHERE credit_account_id = $1 AND status IN ('open', 'in_progress', 'promised')
+           LIMIT 1`,
+          [body.creditAccountId],
+        );
+        if ((active.rowCount ?? 0) > 0) {
+          return res.status(409).json({ message: "An active collections assignment already exists for this credit account" });
+        }
+      }
       // Tenant integrity: ALWAYS derive organizationId/country from the
       // authorized borrower record. Ignore any client-supplied values to
       // prevent cross-tenant assignment writes (e.g., a lender writing into
