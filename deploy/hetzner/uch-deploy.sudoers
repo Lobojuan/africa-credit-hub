@@ -1,0 +1,2 @@
+Cmnd_Alias UCH_RELEASE = /usr/bin/systemctl restart uch.service, /usr/bin/systemctl is-active --quiet uch.service
+deploy ALL=(root) NOPASSWD: UCH_RELEASE
