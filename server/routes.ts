@@ -17060,10 +17060,27 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
       const existing = await pool.query(`SELECT * FROM transaction_resolution_cases WHERE id = $1 AND ($2::text IS NULL OR organization_id = $2) AND ($3::text IS NULL OR country = $3)`, [req.params.id, orgId, country]);
       if (!existing.rows[0]) return res.status(404).json({ message: "Resolution case not found" });
+      // A case record must not be used to silently skip the bank's reconciliation
+      // and core-banking handoff. The funds movement itself remains outside UCH,
+      // but the evidence trail must show each operational decision in order.
+      const allowedTransitions: Record<string, string[]> = {
+        new: ["verifying", "needs_human", "rejected"],
+        verifying: ["ready_for_core_handoff", "needs_human", "rejected"],
+        ready_for_core_handoff: ["confirmed_resolved", "needs_human", "rejected"],
+        needs_human: ["verifying", "rejected"],
+        confirmed_resolved: [],
+        rejected: [],
+      };
+      const currentStatus = existing.rows[0].status as string;
+      if (!allowedTransitions[currentStatus]?.includes(body.status)) {
+        return res.status(409).json({
+          message: `Cannot move a transaction case from ${currentStatus} to ${body.status}. Complete the required review stage first.`,
+        });
+      }
       const result = await pool.query(`
         UPDATE transaction_resolution_cases
-        SET status = $1, resolution_notes = $2, reviewed_by = $3,
-            resolved_at = CASE WHEN $1 IN ('confirmed_resolved', 'rejected') THEN NOW() ELSE NULL END,
+        SET status = $1::transaction_resolution_status, resolution_notes = $2, reviewed_by = $3,
+            resolved_at = CASE WHEN $1::text IN ('confirmed_resolved', 'rejected') THEN NOW() ELSE NULL END,
             updated_at = NOW()
         WHERE id = $4 RETURNING *
       `, [body.status, body.resolutionNotes, req.session?.userId || null, req.params.id]);

@@ -121,6 +121,7 @@ export default defineConfig({
         /bank-control-center\.spec\.ts/,
         /bog-export\.spec\.ts/,
         /playbook-index\.spec\.ts/,
+        /transaction-resolution\.spec\.ts/,
       ],
     },
 
