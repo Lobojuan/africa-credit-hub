@@ -36,6 +36,7 @@ import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
 import { getAggregationCacheStats } from "./utils/aggregation-cache";
 import { getScoreCacheStats } from "./utils/score-cache";
 import { getBankIntegrationReadiness } from "./bank-integration-catalog";
+import { getNplMacroRiskProfile, getSectorSensitivity } from "./npl-macro-risk";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -17196,6 +17197,65 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         dataCompletenessPct,
         readyForRiskReview: facilitiesLoaded > 0 && incompleteFacilities === 0,
       });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── NPL macro-risk overlay ──────────────────────────────────────────────
+  // This is intentionally an explainable portfolio view. It does not consume
+  // unaudited public data or make a credit/provisioning decision. The bank must
+  // first connect and approve the dated macro series described by the profile.
+  app.get("/api/npl-early-warning/macro-risk", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      // Ghana is the first controlled profile. A platform-wide view defaults to
+      // it so a super-admin can prepare the Ghana pilot without exposing data
+      // from another country.
+      const country = requestedCountry === GLOBAL_SCOPE || !requestedCountry ? "Ghana" : requestedCountry;
+      const profile = getNplMacroRiskProfile(country);
+      if (!profile) {
+        return res.json({
+          generatedAt: new Date().toISOString(),
+          country,
+          profile: null,
+          message: `No approved macro-risk profile is configured for ${country}.`,
+        });
+      }
+
+      const result = await pool.query(`
+        WITH scoped_accounts AS (
+          SELECT c.id, c.current_balance, c.status, c.days_in_arrears,
+                 COALESCE(NULLIF(BTRIM(b.sector), ''), 'Unclassified') AS sector
+          FROM credit_accounts c
+          INNER JOIN borrowers b ON b.id = c.borrower_id
+          WHERE b.country = $1
+            AND ($2::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $2)
+        )
+        SELECT sector,
+          COUNT(*)::int AS facilities,
+          COUNT(*) FILTER (WHERE days_in_arrears > 0 OR status IN ('delinquent', 'default', 'written_off'))::int AS at_risk_facilities,
+          COALESCE(SUM(current_balance), 0)::text AS total_exposure,
+          COALESCE(SUM(current_balance) FILTER (WHERE days_in_arrears > 0 OR status IN ('delinquent', 'default', 'written_off')), 0)::text AS at_risk_exposure
+        FROM scoped_accounts
+        GROUP BY sector
+        ORDER BY at_risk_exposure DESC, total_exposure DESC
+        LIMIT 12
+      `, [country, orgId]);
+
+      const sectorExposure = result.rows.map((row) => {
+        const sensitivity = getSectorSensitivity(profile, row.sector);
+        return {
+          sector: row.sector,
+          facilities: Number(row.facilities || 0),
+          atRiskFacilities: Number(row.at_risk_facilities || 0),
+          totalExposure: String(row.total_exposure || "0"),
+          atRiskExposure: String(row.at_risk_exposure || "0"),
+          sensitivity: sensitivity?.sensitivity || "not_mapped",
+          rationale: sensitivity?.rationale || "Map this sector to a bank-approved Ghana macro scenario before relying on it.",
+        };
+      });
+
+      res.json({ generatedAt: new Date().toISOString(), country, profile, sectorExposure });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

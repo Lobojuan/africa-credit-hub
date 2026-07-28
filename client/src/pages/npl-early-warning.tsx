@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, CheckCircle2, FileCheck2, ShieldAlert, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, FileCheck2, ShieldAlert, Upload } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,27 @@ type PilotReadiness = {
   readyForRiskReview: boolean;
 };
 
+type MacroRiskOverlay = {
+  country: string;
+  profile: {
+    title: string;
+    purpose: string;
+    dataStatusMessage: string;
+    drivers: Array<{ id: string; label: string; transmission: string }>;
+    guardrail: string;
+  } | null;
+  sectorExposure?: Array<{
+    sector: string;
+    facilities: number;
+    atRiskFacilities: number;
+    totalExposure: string;
+    atRiskExposure: string;
+    sensitivity: "elevated" | "high" | "not_mapped";
+    rationale: string;
+  }>;
+  message?: string;
+};
+
 const severityClass: Record<WarningCase["severity"], string> = {
   watch: "bg-blue-500/10 text-blue-700 border-blue-500/20",
   elevated: "bg-amber-500/10 text-amber-700 border-amber-500/20",
@@ -58,6 +79,7 @@ export default function NplEarlyWarningPage() {
   const canAssign = ["admin", "super_admin", "platform_owner", "lender"].includes(user?.role || "");
   const { data, isLoading, isError } = useQuery<{ generatedAt: string; cases: WarningCase[] }>({ queryKey: ["/api/npl-early-warning"] });
   const { data: readiness, isLoading: readinessLoading } = useQuery<PilotReadiness>({ queryKey: ["/api/npl-early-warning/pilot-readiness"] });
+  const { data: macroRisk, isLoading: macroRiskLoading } = useQuery<MacroRiskOverlay>({ queryKey: ["/api/npl-early-warning/macro-risk"] });
   const cases = data?.cases || [];
   const summary = useMemo(() => ({
     critical: cases.filter((item) => item.severity === "critical").length,
@@ -110,6 +132,24 @@ export default function NplEarlyWarningPage() {
           <div><p className="font-semibold">NPL pilot control path</p><p className="mt-1 text-sm text-muted-foreground">Load a bank-approved extract, correct the completeness exceptions, assign every at-risk facility, then preserve the monthly evidence pack for independent review.</p></div>
           <div className="flex flex-wrap gap-2"><Link href="/batch-upload"><Button variant="outline" className="gap-2"><Upload className="size-4" />Data intake</Button></Link><Link href="/regulatory-evidence-packs"><Button variant="outline" className="gap-2"><FileCheck2 className="size-4" />Evidence pack</Button></Link></div>
         </CardContent>
+      </Card>
+
+      <Card data-testid="npl-macro-risk-overlay">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />{macroRisk?.profile?.title || "Macro-risk profile"}</CardTitle>
+          <CardDescription>{macroRiskLoading ? "Loading controlled macro-risk guidance…" : macroRisk?.profile?.purpose || macroRisk?.message || "Select a country with an approved macro-risk profile."}</CardDescription>
+        </CardHeader>
+        {macroRisk?.profile && <CardContent className="space-y-4">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">Data gate:</span> {macroRisk.profile.dataStatusMessage}</div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {macroRisk.profile.drivers.map((driver) => <div key={driver.id} className="rounded-lg border p-3"><p className="font-medium text-sm">{driver.label}</p><p className="mt-1 text-xs text-muted-foreground">{driver.transmission}</p></div>)}
+          </div>
+          <div>
+            <p className="mb-2 text-sm font-semibold">{macroRisk.country} portfolio sectors requiring scenario mapping</p>
+            {(macroRisk.sectorExposure?.length || 0) === 0 ? <p className="text-sm text-muted-foreground">No Ghana facilities are available in this authorised scope yet.</p> : <div className="grid gap-2 md:grid-cols-2">{macroRisk.sectorExposure?.map((sector) => <div key={sector.sector} className="flex items-start justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium text-sm">{sector.sector}</p><p className="mt-1 text-xs text-muted-foreground">{sector.atRiskFacilities} at-risk of {sector.facilities} facilities · {sector.rationale}</p></div><Badge variant="outline" className={sector.sensitivity === "high" ? "border-red-500/30 bg-red-500/10 text-red-700" : sector.sensitivity === "elevated" ? "border-amber-500/30 bg-amber-500/10 text-amber-700" : ""}>{sector.sensitivity === "not_mapped" ? "map" : sector.sensitivity}</Badge></div>)}</div>}
+          </div>
+          <p className="text-xs text-muted-foreground">{macroRisk.profile.guardrail}</p>
+        </CardContent>}
       </Card>
 
       <Card>

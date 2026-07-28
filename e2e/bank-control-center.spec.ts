@@ -27,6 +27,13 @@ test.describe("Bank Control Centre pilot journey", () => {
     await expect(page.getByTestId("npl-early-warning-desk")).toBeVisible();
     await expect(page.getByTestId("npl-pilot-data-quality")).toBeVisible();
     await expect(page.getByTestId("npl-pilot-control-strip")).toBeVisible();
+    await expect(page.getByTestId("npl-macro-risk-overlay")).toBeVisible();
+    const macroRisk = await page.request.get("/api/npl-early-warning/macro-risk");
+    expect(macroRisk.status()).toBe(200);
+    const macroRiskBody = await macroRisk.json();
+    expect(macroRiskBody.country).toBe("Ghana");
+    expect(macroRiskBody.profile?.dataStatus).toBe("bank_configuration_required");
+    expect(Array.isArray(macroRiskBody.sectorExposure)).toBe(true);
 
     await page.goto("/consent");
     await expect(page.getByTestId("consent-evidence-gate")).toBeVisible();
