@@ -1,4 +1,44 @@
+import "dotenv/config";
 import { defineConfig, devices } from "@playwright/test";
+
+/**
+ * Browser tests must use a database that is disposable by design.  In
+ * particular, they must never inherit a developer's application database:
+ * Playwright starts the app with RUN_SEED=true and test data can be mutated by
+ * nearly every spec.  Locally we derive a separate database from DATABASE_URL;
+ * CI supplies its ephemeral service database directly.
+ */
+function resolveE2EDatabaseUrl(): string {
+  const configuredUrl = process.env.E2E_DATABASE_URL;
+  const sourceUrl = configuredUrl ?? (process.env.CI ? process.env.DATABASE_URL : undefined);
+
+  if (sourceUrl) {
+    const url = new URL(sourceUrl);
+    const databaseName = url.pathname.replace(/^\//, "");
+    if (!/(^|[_-])(e2e|test)([_-]|$)/i.test(databaseName)) {
+      throw new Error(
+        "E2E_DATABASE_URL must name an isolated database containing 'e2e' or 'test'; refusing to run browser tests against a shared database.",
+      );
+    }
+    return url.toString();
+  }
+
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      "DATABASE_URL is required to derive the local E2E database. Set E2E_DATABASE_URL to an isolated database URL instead.",
+    );
+  }
+
+  const localE2EUrl = new URL(process.env.DATABASE_URL);
+  localE2EUrl.pathname = "/universal_credit_hub_e2e";
+  return localE2EUrl.toString();
+}
+
+const e2eDatabaseUrl = resolveE2EDatabaseUrl();
+const e2ePiiEncryptionKey =
+  process.env.E2E_PII_ENCRYPTION_KEY ?? "universal-credit-hub-e2e-encryption-key-not-for-production";
+const e2ePiiEncryptionSalt =
+  process.env.E2E_PII_ENCRYPTION_SALT ?? "universal-credit-hub-e2e-encryption-salt-not-for-production";
 
 // Optional executable overrides for constrained local development environments.
 // environment when Playwright's own browser binaries are unavailable.
@@ -149,11 +189,23 @@ export default defineConfig({
     // E2E_REUSE_EXISTING_SERVER=true and E2E_BASE_URL.
     // Keep gateway credentials in the launch command as well as `env`: the
     // shell that starts webServer may otherwise retain parent CI credentials.
-    command: "ENABLE_E2E_TEST_AUTH=true LOTO_USSD_TOKEN=ci-e2e-ussd-token LOTO_USSD_HMAC_SECRET='' PORT=5001 npx tsx server/index.ts",
+    // `db:push` and the seeded app both receive only the disposable E2E URL
+    // from `env` below. This makes a fresh local run reproducible and keeps it
+    // away from a developer's normal UCH data and encryption keys.
+    command: "npm run db:push && npx tsx server/index.ts",
     url: "http://localhost:5001/api/health",
     reuseExistingServer: process.env.E2E_REUSE_EXISTING_SERVER === "true",
-    timeout: 90000,
+    timeout: 180000,
     env: {
+      DATABASE_URL: e2eDatabaseUrl,
+      RUN_SEED: "true",
+      // E2E deliberately seeds multi-country coverage. Ghana-only cleanup is
+      // for a country-scoped local demo, not for this disposable test database.
+      SKIP_GHANA_CLEANUP: "true",
+      SESSION_SECRET:
+        process.env.E2E_SESSION_SECRET ?? "universal-credit-hub-e2e-session-secret-not-for-production",
+      PII_ENCRYPTION_KEY: e2ePiiEncryptionKey,
+      PII_ENCRYPTION_SALT: e2ePiiEncryptionSalt,
       ENABLE_E2E_TEST_AUTH: "true",
       // E2E calls the USSD gateway with this credential, exercising the same
       // token gate used by a real aggregator instead of relying on an IP bypass.

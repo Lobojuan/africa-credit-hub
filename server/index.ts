@@ -561,11 +561,15 @@ process.stderr.write = function (...args: any[]) {
   }
 
   if (process.env.RUN_SEED === "true") {
-    try {
-      const { cleanupNonGhanaData } = await import("./ghana-cleanup");
-      await cleanupNonGhanaData();
-    } catch (e) {
-      console.error("[Ghana Cleanup] Error (non-fatal):", e);
+    if (process.env.SKIP_GHANA_CLEANUP === "true") {
+      console.log("[Ghana Cleanup] Skipped for isolated test data");
+    } else {
+      try {
+        const { cleanupNonGhanaData } = await import("./ghana-cleanup");
+        await cleanupNonGhanaData();
+      } catch (e) {
+        console.error("[Ghana Cleanup] Error (non-fatal):", e);
+      }
     }
 
     const { seedDatabase } = await import("./seed");
