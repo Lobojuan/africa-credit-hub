@@ -127,6 +127,7 @@ const ForgeryReviewPage = lazy(() => import("@/pages/forgery-review"));
 const TransactionResolutionPage = lazy(() => import("@/pages/transaction-resolution"));
 const TransactionFraudMonitorPage = lazy(() => import("@/pages/transaction-fraud-monitor"));
 const BankControlCenterPage = lazy(() => import("@/pages/bank-control-center"));
+const BankPilotReadinessPage = lazy(() => import("@/pages/bank-pilot-readiness"));
 const InsiderRiskReviewPage = lazy(() => import("@/pages/insider-risk-review"));
 const PrudentialRadarPage = lazy(() => import("@/pages/prudential-radar"));
 const RegulatoryEvidencePacksPage = lazy(() => import("@/pages/regulatory-evidence-packs"));
@@ -310,6 +311,7 @@ function Router() {
         <Route path="/transaction-resolution" component={TransactionResolutionPage} />
         <Route path="/transaction-fraud-monitor" component={TransactionFraudMonitorPage} />
         <Route path="/bank-control-center" component={BankControlCenterPage} />
+        <Route path="/bank-pilot-readiness" component={BankPilotReadinessPage} />
         <Route path="/insider-risk-review" component={InsiderRiskReviewPage} />
         <Route path="/prudential-radar" component={PrudentialRadarPage} />
         <Route path="/regulatory-evidence-packs" component={RegulatoryEvidencePacksPage} />

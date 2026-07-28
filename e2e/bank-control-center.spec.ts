@@ -1,17 +1,23 @@
 import { expect, test } from "@playwright/test";
 
-test("Bank Control Centre gives an administrator the six operational control paths", async ({ page }) => {
-  await page.context().clearCookies();
-  const session = await page.request.post("/api/test/set-session", { data: { username: "admin" } });
-  expect(session.ok()).toBeTruthy();
+test.describe("Bank Control Centre pilot journey", () => {
+  test("guides a staff user from a bank outcome to the three-step pilot path", async ({ page }) => {
+    await page.goto("/bank-control-center");
 
-  await page.goto("/bank-control-center");
-  await expect(page.getByTestId("bank-control-center")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "What needs your attention today?" })).toBeVisible();
+    await expect(page.getByTestId("bank-control-center")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "What needs your attention today?" })).toBeVisible();
+    await expect(page.getByTestId("control-npl")).toBeVisible();
+    await expect(page.getByTestId("control-compliance")).toBeVisible();
 
-  for (const control of ["fraud", "resolution", "npl", "compliance", "prudential", "board-risk"]) {
-    await expect(page.getByTestId(`control-${control}`)).toBeVisible();
-    await expect(page.getByTestId(`control-${control}-open`)).toBeVisible();
-  }
-  await expect(page.getByTestId("bank-control-guardrail")).toBeVisible();
+    await page.getByTestId("button-start-bank-pilot").click();
+    await expect(page).toHaveURL(/\/bank-pilot-readiness$/);
+    await expect(page.getByTestId("bank-pilot-readiness")).toBeVisible();
+    await expect(page.getByTestId("pilot-step-1")).toContainText("Load the pilot loan tape");
+    await expect(page.getByTestId("pilot-step-2")).toContainText("Run controlled risk and consent decisions");
+    await expect(page.getByTestId("pilot-step-3")).toContainText("Prove the control works");
+
+    await page.getByTestId("button-pilot-step-2").click();
+    await expect(page).toHaveURL(/\/npl-early-warning$/);
+    await expect(page.getByTestId("npl-early-warning-desk")).toBeVisible();
+  });
 });

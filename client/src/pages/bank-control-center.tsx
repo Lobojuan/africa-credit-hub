@@ -96,6 +96,7 @@ export default function BankControlCenterPage() {
         <p className="mt-3 max-w-3xl text-muted-foreground">
           Start with the banking outcome you need to control. UCH connects the operational desk, approval trail, and evidence - it never moves funds or makes regulated decisions on its own.
         </p>
+        <Link href="/bank-pilot-readiness"><Button className="mt-5 gap-2" data-testid="button-start-bank-pilot">Set up the NPL &amp; consent pilot <ArrowRight className="size-4" /></Button></Link>
       </header>
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-label="Bank controls">
