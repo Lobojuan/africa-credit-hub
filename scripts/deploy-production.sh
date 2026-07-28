@@ -7,6 +7,8 @@ set -Eeuo pipefail
 readonly APP_DIR="/opt/uch"
 readonly SERVICE="uch.service"
 readonly HEALTH_URL="http://127.0.0.1:5000/api/health"
+readonly PUBLIC_BASE_URL="${UCH_PUBLIC_BASE_URL:-${CANONICAL_URL:-https://universalcredithub.com}}"
+readonly PUBLIC_HEALTH_URL="${PUBLIC_BASE_URL%/}/api/health"
 readonly TARGET_COMMIT="${1:?Usage: deploy-production.sh <approved-commit-sha>}"
 
 cd "$APP_DIR"
@@ -23,6 +25,26 @@ rollback() {
   exit "$exit_code"
 }
 trap rollback ERR
+
+assert_healthy() {
+  local url="$1"
+  curl --fail --silent --show-error --max-time 15 "$url" | node -e '
+    let body = "";
+    process.stdin.setEncoding("utf8");
+    process.stdin.on("data", (chunk) => { body += chunk; });
+    process.stdin.on("end", () => {
+      try {
+        const health = JSON.parse(body);
+        if (health.status !== "healthy" || health.checks?.database?.status !== "ok") {
+          throw new Error("health endpoint did not confirm database readiness");
+        }
+      } catch (error) {
+        console.error(`Health check failed for ${process.argv[1]}: ${error instanceof Error ? error.message : String(error)}`);
+        process.exit(1);
+      }
+    });
+  ' "$url"
+}
 
 git fetch --prune origin main
 git cat-file -e "${TARGET_COMMIT}^{commit}"
@@ -42,7 +64,11 @@ npm run build --silent
 
 sudo /bin/systemctl restart "$SERVICE"
 sleep 5
-curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" >/dev/null
+assert_healthy "$HEALTH_URL"
+# This verifies the complete customer-facing route: DNS/TLS, Caddy, the UCH
+# process and PostgreSQL. A private loopback check alone cannot prove that a
+# bank can reach the application after a release.
+assert_healthy "$PUBLIC_HEALTH_URL"
 sudo /bin/systemctl is-active --quiet "$SERVICE"
 trap - ERR
 echo "UCH release complete: ${TARGET_COMMIT}"
