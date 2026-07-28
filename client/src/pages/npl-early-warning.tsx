@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, CheckCircle2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, FileCheck2, ShieldAlert, Upload } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,15 @@ type WarningCase = {
   isAssigned: boolean;
 };
 
+type PilotReadiness = {
+  facilitiesLoaded: number;
+  atRiskFacilities: number;
+  assignedFacilities: number;
+  incompleteFacilities: number;
+  dataCompletenessPct: number;
+  readyForRiskReview: boolean;
+};
+
 const severityClass: Record<WarningCase["severity"], string> = {
   watch: "bg-blue-500/10 text-blue-700 border-blue-500/20",
   elevated: "bg-amber-500/10 text-amber-700 border-amber-500/20",
@@ -48,6 +57,7 @@ export default function NplEarlyWarningPage() {
   const { user } = useAuth();
   const canAssign = ["admin", "super_admin", "platform_owner", "lender"].includes(user?.role || "");
   const { data, isLoading, isError } = useQuery<{ generatedAt: string; cases: WarningCase[] }>({ queryKey: ["/api/npl-early-warning"] });
+  const { data: readiness, isLoading: readinessLoading } = useQuery<PilotReadiness>({ queryKey: ["/api/npl-early-warning/pilot-readiness"] });
   const cases = data?.cases || [];
   const summary = useMemo(() => ({
     critical: cases.filter((item) => item.severity === "critical").length,
@@ -88,11 +98,19 @@ export default function NplEarlyWarningPage() {
         <Link href="/collections"><Button variant="outline" className="gap-2">Open Collections <ArrowRight className="h-4 w-4" /></Button></Link>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 md:grid-cols-4">
         <Card><CardHeader className="pb-2"><CardDescription>Critical cases</CardDescription><CardTitle className="text-3xl text-red-600">{isLoading ? "—" : summary.critical}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">90+ DPD, defaulted, or written-off facilities</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardDescription>Need an owner</CardDescription><CardTitle className="text-3xl text-amber-600">{isLoading ? "—" : summary.unassigned}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">At-risk facilities not yet in Collections</CardContent></Card>
         <Card><CardHeader className="pb-2"><CardDescription>At-risk exposure</CardDescription><CardTitle className="text-3xl">{isLoading ? "—" : summary.exposure.toLocaleString(undefined, { maximumFractionDigits: 0 })}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">Current balance across the live warning queue</CardContent></Card>
+        <Card data-testid="npl-pilot-data-quality"><CardHeader className="pb-2"><CardDescription>Pilot data quality</CardDescription><CardTitle className={`text-3xl ${readiness?.readyForRiskReview ? "text-emerald-600" : "text-amber-600"}`}>{readinessLoading ? "—" : `${readiness?.dataCompletenessPct ?? 0}%`}</CardTitle></CardHeader><CardContent className="text-sm text-muted-foreground">{readinessLoading ? "Checking loan-tape completeness…" : readiness?.facilitiesLoaded ? `${readiness.facilitiesLoaded.toLocaleString()} facilities loaded · ${readiness.incompleteFacilities} need correction` : "Load an approved pilot loan tape to begin"}</CardContent></Card>
       </section>
+
+      <Card className="border-primary/20 bg-primary/5" data-testid="npl-pilot-control-strip">
+        <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+          <div><p className="font-semibold">NPL pilot control path</p><p className="mt-1 text-sm text-muted-foreground">Load a bank-approved extract, correct the completeness exceptions, assign every at-risk facility, then preserve the monthly evidence pack for independent review.</p></div>
+          <div className="flex flex-wrap gap-2"><Link href="/batch-upload"><Button variant="outline" className="gap-2"><Upload className="size-4" />Data intake</Button></Link><Link href="/regulatory-evidence-packs"><Button variant="outline" className="gap-2"><FileCheck2 className="size-4" />Evidence pack</Button></Link></div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><ShieldAlert className="h-5 w-5 text-orange-600" />Prioritised facilities</CardTitle><CardDescription>Signals are calculated from current account status, days in arrears, and restructuring history.</CardDescription></CardHeader>

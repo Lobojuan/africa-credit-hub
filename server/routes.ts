@@ -17140,6 +17140,56 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
+  // ─── NPL pilot readiness ─────────────────────────────────────────────────
+  // A bank pilot begins with a controlled loan-tape extract, not a model claim.
+  // This endpoint exposes only aggregate quality and workflow coverage so risk
+  // owners can stop a pilot before acting on incomplete account data.
+  app.get("/api/npl-early-warning/pilot-readiness", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        WITH scoped_accounts AS (
+          SELECT c.id, c.account_number, c.current_balance, c.status, c.days_in_arrears, c.next_payment_date
+          FROM credit_accounts c
+          INNER JOIN borrowers b ON b.id = c.borrower_id
+          WHERE ($1::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $1)
+            AND ($2::text IS NULL OR b.country = $2)
+        ), warning_accounts AS (
+          SELECT id FROM scoped_accounts
+          WHERE days_in_arrears > 0 OR status IN ('delinquent', 'default', 'written_off')
+        )
+        SELECT
+          (SELECT COUNT(*) FROM scoped_accounts)::int AS facilities_loaded,
+          (SELECT COUNT(*) FROM warning_accounts)::int AS at_risk_facilities,
+          (SELECT COUNT(DISTINCT ca.credit_account_id)
+             FROM collection_assignments ca
+             INNER JOIN warning_accounts wa ON wa.id = ca.credit_account_id
+             WHERE ca.status IN ('open', 'in_progress', 'promised'))::int AS assigned_facilities,
+          (SELECT COUNT(*) FROM scoped_accounts
+             WHERE account_number IS NULL OR BTRIM(account_number) = ''
+                OR current_balance IS NULL OR status IS NULL OR days_in_arrears IS NULL
+                OR next_payment_date IS NULL)::int AS incomplete_facilities
+      `, [orgId, country]);
+      const metrics = result.rows[0] || {};
+      const facilitiesLoaded = Number(metrics.facilities_loaded || 0);
+      const incompleteFacilities = Number(metrics.incomplete_facilities || 0);
+      const dataCompletenessPct = facilitiesLoaded === 0
+        ? 0
+        : Math.round(((facilitiesLoaded - incompleteFacilities) / facilitiesLoaded) * 10000) / 100;
+      res.json({
+        generatedAt: new Date().toISOString(),
+        facilitiesLoaded,
+        atRiskFacilities: Number(metrics.at_risk_facilities || 0),
+        assignedFacilities: Number(metrics.assigned_facilities || 0),
+        incompleteFacilities,
+        dataCompletenessPct,
+        readyForRiskReview: facilitiesLoaded > 0 && incompleteFacilities === 0,
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   app.get("/api/collections/assignments", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);

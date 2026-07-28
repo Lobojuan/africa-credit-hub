@@ -19,5 +19,7 @@ test.describe("Bank Control Centre pilot journey", () => {
     await page.getByTestId("button-pilot-step-2").click();
     await expect(page).toHaveURL(/\/npl-early-warning$/);
     await expect(page.getByTestId("npl-early-warning-desk")).toBeVisible();
+    await expect(page.getByTestId("npl-pilot-data-quality")).toBeVisible();
+    await expect(page.getByTestId("npl-pilot-control-strip")).toBeVisible();
   });
 });
