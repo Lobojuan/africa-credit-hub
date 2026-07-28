@@ -1,0 +1,53 @@
+name: Deploy UCH production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: uch-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run test:unit
+      - run: npm run build
+
+  deploy:
+    name: Deploy approved release
+    needs: verify
+    # Enable only after the server key and known-host fingerprint are stored.
+    if: ${{ vars.UCH_DEPLOY_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Configure deployment SSH key
+        env:
+          SSH_KEY: ${{ secrets.UCH_PROD_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.UCH_PROD_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Run guarded server release
+        env:
+          DEPLOY_HOST: ${{ secrets.UCH_PROD_HOST }}
+          DEPLOY_USER: ${{ secrets.UCH_PROD_USER }}
+          DEPLOY_COMMIT: ${{ github.sha }}
+        run: ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/uch/scripts/deploy-production.sh '$DEPLOY_COMMIT'"

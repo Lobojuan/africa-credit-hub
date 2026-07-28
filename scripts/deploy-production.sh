@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# UCH production release runner. Execute as the restricted `deploy` account.
+# Database and schema changes are intentionally blocked here: release them
+# separately after a verified backup and an approved migration plan.
+set -Eeuo pipefail
+
+readonly APP_DIR="/opt/uch"
+readonly SERVICE="uch.service"
+readonly HEALTH_URL="http://127.0.0.1:5000/api/health"
+readonly TARGET_COMMIT="${1:?Usage: deploy-production.sh <approved-commit-sha>}"
+
+cd "$APP_DIR"
+previous_commit="$(git rev-parse HEAD)"
+
+rollback() {
+  local exit_code=$?
+  trap - ERR
+  echo "Release failed; restoring ${previous_commit}." >&2
+  git reset --hard "$previous_commit"
+  npm ci --no-audit --no-fund --silent
+  npm run build --silent
+  sudo /bin/systemctl restart "$SERVICE" || true
+  exit "$exit_code"
+}
+trap rollback ERR
+
+git fetch --prune origin main
+git cat-file -e "${TARGET_COMMIT}^{commit}"
+git merge-base --is-ancestor "$TARGET_COMMIT" origin/main
+
+if git diff --name-only "$previous_commit" "$TARGET_COMMIT" | grep -Eq '^(migrations/|shared/schema\.ts$)'; then
+  echo "Schema or migration change detected. Stop: take a database backup and run the approved migration procedure separately." >&2
+  exit 20
+fi
+
+git reset --hard "$TARGET_COMMIT"
+git clean -ffd
+npm ci --no-audit --no-fund --silent
+npm run build --silent
+
+sudo /bin/systemctl restart "$SERVICE"
+sleep 5
+curl --fail --silent --show-error --max-time 10 "$HEALTH_URL" >/dev/null
+sudo /bin/systemctl is-active --quiet "$SERVICE"
+trap - ERR
+echo "UCH release complete: ${TARGET_COMMIT}"

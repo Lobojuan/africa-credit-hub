@@ -11,7 +11,7 @@ const KNOWN_SCRAPERS = [
 
 const EXEMPT_PATHS = new Set([
   "/", "/login", "/register", "/consumer-portal",
-  "/health", "/ready", "/live", "/ping", "/robots.txt", "/sitemap.xml",
+  "/health", "/ready", "/live", "/ping", "/api/health", "/robots.txt", "/sitemap.xml",
   "/api/auth/csrf-token", "/api/auth/login", "/api/consumer/login",
   "/api/consumer/register", "/api/loto/ussd/session", "/api/stripe/webhook",
   "/api/platform/status", "/api/monitoring/health",
