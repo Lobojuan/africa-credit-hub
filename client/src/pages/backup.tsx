@@ -29,6 +29,7 @@ interface BackupStatus {
   totalSizeMB: number;
   backupDir: string;
   productionRestoreEnabled: boolean;
+  offsiteDestinationConfigured: boolean;
 }
 
 export default function BackupPage() {
@@ -194,7 +195,28 @@ export default function BackupPage() {
             </div>
           </CardContent>
         </Card>
+        <Card data-testid="card-offsite-backup-status">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${status?.offsiteDestinationConfigured ? "bg-emerald-500/10" : "bg-amber-500/10"}`}>
+                <Shield className={`w-5 h-5 ${status?.offsiteDestinationConfigured ? "text-emerald-500" : "text-amber-500"}`} />
+              </div>
+              <div>
+                <p className="text-lg font-bold" data-testid="text-offsite-backup-status">
+                  {status?.offsiteDestinationConfigured ? "Configured" : "Not configured"}
+                </p>
+                <p className="text-xs text-muted-foreground">Off-site database copy</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {!status?.offsiteDestinationConfigured && (
+        <p className="text-xs rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-amber-900 dark:text-amber-200" data-testid="notice-offsite-backup-required">
+          Local backups and Hetzner server backups are enabled. Configure a separate encrypted S3-compatible destination before relying on database recovery from a total server loss.
+        </p>
+      )}
 
       <Card>
         <CardHeader className="pb-3">

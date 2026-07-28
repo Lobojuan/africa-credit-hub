@@ -317,6 +317,7 @@ export function getBackupStatus(): {
   totalSizeMB: number;
   backupDir: string;
   productionRestoreEnabled: boolean;
+  offsiteDestinationConfigured: boolean;
 } {
   const manifest = loadManifest();
   const completed = manifest.filter((r) => r.status === "completed");
@@ -335,6 +336,14 @@ export function getBackupStatus(): {
     totalSizeMB: parseFloat(totalSizeMB.toFixed(2)),
     backupDir: BACKUP_DIR,
     productionRestoreEnabled: !isProductionRestoreBlocked(),
+    // Configuration is intentionally reported separately from a successful
+    // upload. This prevents the UI from presenting a local-only copy as an
+    // off-site recovery capability.
+    offsiteDestinationConfigured: Boolean(
+      process.env.BACKUP_S3_BUCKET &&
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY,
+    ),
   };
 }
 
