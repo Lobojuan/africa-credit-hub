@@ -155,6 +155,27 @@ async function setSession(
 
 // ─── Google OAuth — initiate ──────────────────────────────────────────────────
 
+describe("Public sign-in provider status", () => {
+  it("reports only provider availability without exposing credentials", async () => {
+    const { app, prevEnv } = await makeApp(undefined, {
+      GOOGLE_CLIENT_ID: "gid-public-status",
+      GOOGLE_CLIENT_SECRET: "gsec-public-status",
+      MICROSOFT_CLIENT_ID: "",
+      MICROSOFT_CLIENT_SECRET: "",
+    });
+    try {
+      const res = await request(app).get("/api/auth/provider-status");
+      expect(res.status).toBe(200);
+      expect(res.headers["cache-control"]).toContain("no-store");
+      expect(res.body).toEqual({ google: true, microsoft: false });
+      expect(res.text).not.toContain("gid-public-status");
+      expect(res.text).not.toContain("gsec-public-status");
+    } finally {
+      await restoreEnv(prevEnv);
+    }
+  });
+});
+
 describe("Google OAuth — initiate", () => {
   afterEach(() => vi.restoreAllMocks());
 

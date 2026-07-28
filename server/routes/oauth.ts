@@ -208,6 +208,17 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || "common";
   const legacySamlAvailable = process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true";
 
+  // This public, deliberately minimal status endpoint lets the login screen
+  // avoid advertising a provider that has not been configured. It exposes no
+  // client IDs, tenant IDs, or other credential material.
+  app.get("/api/auth/provider-status", (_req: Request, res: Response) => {
+    res.set("Cache-Control", "no-store");
+    res.json({
+      google: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+      microsoft: !!(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET),
+    });
+  });
+
   // ─── Google OAuth — consumer portal ─────────────────────────────────────────
 
   app.get("/api/consumer/auth/google", (req: Request, res: Response) => {
