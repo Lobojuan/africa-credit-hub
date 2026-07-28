@@ -824,7 +824,7 @@ function AuthenticatedApp() {
           </main>
           <DemoTour />
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
-          <MfaSetupDialog open={mfaEnrollmentRequired || mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} forced={mfaEnrollmentRequired} />
+          <MfaSetupDialog open={mfaEnrollmentRequired || mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} mfaRequired={!!user.mfaRequired} forced={mfaEnrollmentRequired} />
         </div>
       </div>
       {isMobile && <MobileBottomNav />}

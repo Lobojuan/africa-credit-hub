@@ -14,10 +14,11 @@ interface MfaSetupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mfaEnabled: boolean;
+  mfaRequired?: boolean;
   forced?: boolean;
 }
 
-export function MfaSetupDialog({ open, onOpenChange, mfaEnabled, forced = false }: MfaSetupProps) {
+export function MfaSetupDialog({ open, onOpenChange, mfaEnabled, mfaRequired = false, forced = false }: MfaSetupProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [step, setStep] = useState<"idle" | "setup" | "verify">("idle");
@@ -99,16 +100,22 @@ export function MfaSetupDialog({ open, onOpenChange, mfaEnabled, forced = false 
                 <p className="text-xs text-muted-foreground">{t("mfa.enabledDesc")}</p>
               </div>
             </div>
-            <Button
-              variant="destructive"
-              className="w-full"
-              onClick={handleDisable}
-              disabled={loading}
-              data-testid="button-disable-mfa"
-            >
-              <ShieldOff className="w-4 h-4 mr-2" />
-              {loading ? t("common.processing") : t("mfa.disable")}
-            </Button>
+            {mfaRequired ? (
+              <p className="text-xs text-muted-foreground" data-testid="text-mfa-required-policy">
+                Multi-factor authentication is required for this staff account and cannot be disabled.
+              </p>
+            ) : (
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={handleDisable}
+                disabled={loading}
+                data-testid="button-disable-mfa"
+              >
+                <ShieldOff className="w-4 h-4 mr-2" />
+                {loading ? t("common.processing") : t("mfa.disable")}
+              </Button>
+            )}
           </div>
         ) : step === "idle" ? (
           <div className="space-y-4">
