@@ -695,29 +695,6 @@ export async function registerRoutes(
     });
   }, 30000);
 
-  app.get("/api/health", async (_req, res) => {
-    let dbStatus = "ok";
-    try {
-      await pool.query("SELECT 1");
-    } catch {
-      dbStatus = "error";
-    }
-    const uptimeSec = Math.round(process.uptime());
-    const totalChecks = uptimeChecks.length;
-    const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
-    const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
-    res.json({
-      status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.8.0",
-      uptime: {
-        seconds: uptimeSec,
-        formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
-        slaPercentage: Number(uptimePct),
-      },
-      timestamp: new Date().toISOString(),
-    });
-  });
-
   // Safe, staff-visible integration inventory. This returns capability status
   // only: never credentials, endpoints, or a means to activate a live bank.
   app.get("/api/bank-integration-readiness", requireRole("admin", "super_admin", "lender", "regulator"), (_req, res) => {

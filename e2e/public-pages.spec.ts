@@ -12,9 +12,13 @@ import { test, expect } from "@playwright/test";
 // ─── Health check ─────────────────────────────────────────────────────────────
 
 test.describe("Public API — health", () => {
-  test("/api/health returns 200", async ({ page }) => {
+  test("/api/health confirms both application and database readiness", async ({ page }) => {
     const resp = await page.request.get("/api/health");
     expect(resp.status()).toBe(200);
+    await expect(resp.json()).resolves.toMatchObject({
+      status: "healthy",
+      checks: { database: { status: "ok" } },
+    });
   });
 });
 

@@ -366,11 +366,37 @@ export const maintenanceState = {
   message: "We are working hard to improve your experience. The platform will be back shortly.",
 };
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", async (_req, res) => {
   if (maintenanceState.enabled) {
     return res.status(503).json({ status: "maintenance", version: "2.8.0", message: maintenanceState.message });
   }
-  res.json({ status: "ok", version: "2.8.0", uptime: Math.round(process.uptime()) });
+
+  // This is the endpoint used by the release runner and the reverse proxy.
+  // A running Node process is not sufficient evidence of a usable banking
+  // platform: the database must be reachable too.
+  const startedAt = Date.now();
+  let databaseLatencyMs = 0;
+  try {
+    const databaseStartedAt = Date.now();
+    await pool.query("SELECT 1");
+    databaseLatencyMs = Date.now() - databaseStartedAt;
+  } catch {
+    return res.status(503).json({
+      status: "degraded",
+      version: "2.8.0",
+      uptime: Math.round(process.uptime()),
+      checks: { database: { status: "error" } },
+      responseMs: Date.now() - startedAt,
+    });
+  }
+
+  res.json({
+    status: "healthy",
+    version: "2.8.0",
+    uptime: Math.round(process.uptime()),
+    checks: { database: { status: "ok", latencyMs: databaseLatencyMs } },
+    responseMs: Date.now() - startedAt,
+  });
 });
 
 app.get("/api/maintenance/status", (req, res) => {
