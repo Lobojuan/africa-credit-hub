@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 
 let e2eBorrowerId: string;
+let e2eSearchNationalId: string;
+let e2eSearchFirstName: string;
 
 test.beforeAll(async ({ browser }) => {
   // Borrower writes are maker-checker submissions, not immediately-created
@@ -14,9 +16,13 @@ test.beforeAll(async ({ browser }) => {
   expect(session.ok()).toBeTruthy();
   const resp = await pg.request.get("/api/borrowers?country=Ghana&limit=5");
   expect(resp.status()).toBe(200);
-  const body = await resp.json() as { data?: Array<{ id: string }> };
+  const body = await resp.json() as { data?: Array<{ id: string; nationalId?: string; firstName?: string }> };
   expect(body.data?.[0]).toBeTruthy();
   e2eBorrowerId = body.data![0].id;
+  e2eSearchNationalId = body.data![0].nationalId || "";
+  e2eSearchFirstName = body.data![0].firstName || "";
+  expect(e2eSearchNationalId).toBeTruthy();
+  expect(e2eSearchFirstName).toBeTruthy();
   await ctx.close();
 });
 
@@ -486,9 +492,6 @@ test.describe("Credit Bureau — Regulatory Compliance", () => {
 });
 
 // ─── Borrower search by name and NIN ─────────────────────────────────────────
-
-const e2eSearchNationalId = "GHA-ID-10001";
-const e2eSearchFirstName = "Kwame";
 
 test.describe("Credit Bureau — Borrower search by name and NIN", () => {
   test("search by NIN returns the seeded borrower", async ({ page }) => {

@@ -25,7 +25,7 @@ const PLATFORM_OWNER = { username: "demo_admin" };
 const LENDER         = { username: "lender_demo" };
 const REGULATOR      = { username: "registry_admin" };
 
-// 7 markets (south-africa added)
+// Keep this list aligned with the cards in the product page.
 const MARKETS = ["ghana", "nigeria", "kenya", "civ", "south-africa", "egypt", "ethiopia"] as const;
 
 async function gotoIndex(
@@ -87,10 +87,11 @@ test.describe("Playbook Index — heading", () => {
     expect((await heading.textContent())?.toLowerCase()).toContain("playbook");
   });
 
-  test("shows 7 markets available", async ({ page }) => {
+  test(`shows ${MARKETS.length} markets available`, async ({ page }) => {
     await gotoIndex(page);
+    await expect(page.locator('[data-testid="heading-playbook-index"]')).toBeVisible({ timeout: 15000 });
     const bodyText = await page.locator("body").textContent();
-    expect(bodyText).toMatch(/7\s+markets/i);
+    expect(bodyText).toMatch(new RegExp(`${MARKETS.length}\\s+markets`, "i"));
   });
 });
 
