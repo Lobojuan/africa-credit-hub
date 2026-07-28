@@ -35,6 +35,7 @@ import { registerOAuthRoutes, getGoogleRedirectUri, getMicrosoftRedirectUri } fr
 import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
 import { getAggregationCacheStats } from "./utils/aggregation-cache";
 import { getScoreCacheStats } from "./utils/score-cache";
+import { getBankIntegrationReadiness } from "./bank-integration-catalog";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -715,6 +716,12 @@ export async function registerRoutes(
       },
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // Safe, staff-visible integration inventory. This returns capability status
+  // only: never credentials, endpoints, or a means to activate a live bank.
+  app.get("/api/bank-integration-readiness", requireRole("admin", "super_admin", "lender", "regulator"), (_req, res) => {
+    res.json({ integrations: getBankIntegrationReadiness() });
   });
 
   app.get("/api/heartbeat", async (_req, res) => {

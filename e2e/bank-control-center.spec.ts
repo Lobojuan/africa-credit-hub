@@ -8,6 +8,12 @@ test.describe("Bank Control Centre pilot journey", () => {
     await expect(page.getByRole("heading", { name: "What needs your attention today?" })).toBeVisible();
     await expect(page.getByTestId("control-npl")).toBeVisible();
     await expect(page.getByTestId("control-compliance")).toBeVisible();
+    await page.getByTestId("button-open-integration-readiness").click();
+    await expect(page).toHaveURL(/\/bank-integration-readiness$/);
+    await expect(page.getByTestId("bank-integration-readiness")).toBeVisible();
+    await expect(page.getByTestId("integration-core-banking")).toContainText("Bank contract required");
+
+    await page.goto("/bank-control-center");
 
     await page.getByTestId("button-start-bank-pilot").click();
     await expect(page).toHaveURL(/\/bank-pilot-readiness$/);
