@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import LanguageDetector from "i18next-browser-languagedetector";
 import { PLATFORM_COMPANY_NAME, PLATFORM_ADMIN_NAME, PLATFORM_REGISTRY_REF } from "@/lib/platform-config";
+import { normaliseDetectedLanguage } from "@/lib/language-detection";
 
 // English and French are immediately available for the primary UCH markets.
 // The other full catalogues are loaded only when the user selects them; eagerly
@@ -6825,12 +6826,15 @@ i18n
       fr: { translation: fr },
     },
     fallbackLng: "en",
+    supportedLngs: ["en", "fr", "pt", "ar", "sw", "es", "zh-CN", "zh-TW"],
+    nonExplicitSupportedLngs: false,
     interpolation: {
       escapeValue: false,
     },
     detection: {
       order: ["localStorage", "navigator"],
       caches: ["localStorage"],
+      convertDetectedLanguage: normaliseDetectedLanguage,
     },
   });
 
