@@ -34,7 +34,9 @@ if git diff --name-only "$previous_commit" "$TARGET_COMMIT" | grep -Eq '^(migrat
 fi
 
 git reset --hard "$TARGET_COMMIT"
-git clean -ffd
+# Runtime data is deliberately outside Git but lives below the release root.
+# Never let a source cleanup remove uploaded evidence or database backups.
+git clean -ffd -e uploads/ -e backups/
 npm ci --no-audit --no-fund --silent
 npm run build --silent
 
