@@ -21,5 +21,12 @@ test.describe("Bank Control Centre pilot journey", () => {
     await expect(page.getByTestId("npl-early-warning-desk")).toBeVisible();
     await expect(page.getByTestId("npl-pilot-data-quality")).toBeVisible();
     await expect(page.getByTestId("npl-pilot-control-strip")).toBeVisible();
+
+    await page.goto("/consent");
+    await expect(page.getByTestId("consent-evidence-gate")).toBeVisible();
+    await expect(page.getByTestId("button-request-customer-consent")).toBeVisible();
+    await page.getByTestId("button-open-forgery-review").click();
+    await expect(page).toHaveURL(/\/forgery-review$/);
+    await expect(page.getByTestId("forgery-review-desk")).toBeVisible();
   });
 });
