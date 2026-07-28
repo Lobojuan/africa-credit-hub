@@ -543,7 +543,9 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    return doRedirect("/today");
+    // Staff sign-in starts at the outcome-led control centre. The generic
+    // dashboard and specialist tools stay available through the sidebar.
+    return doRedirect("/bank-control-center");
   }
 
   if (accountSuspended) {

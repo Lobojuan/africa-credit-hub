@@ -125,7 +125,7 @@ export default function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       // Explicit redirect — same as password login; don't rely on React re-render alone
       sessionStorage.setItem("passkey_prompt", "1");
-      window.location.replace("/today");
+      window.location.replace("/bank-control-center");
     } catch (e: any) {
       const msg = e.name === "NotAllowedError"
         ? "Fingerprint prompt was dismissed. Try again or use your password."
@@ -160,7 +160,7 @@ export default function LoginPage() {
       toast({ title: t('login.success') });
       sessionStorage.setItem("passkey_prompt", "1");
       if (window.location.pathname === "/login") {
-        window.location.replace("/today");
+        window.location.replace("/bank-control-center");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -191,7 +191,7 @@ export default function LoginPage() {
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        window.location.replace("/today");
+        window.location.replace("/bank-control-center");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
