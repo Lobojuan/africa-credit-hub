@@ -42,6 +42,11 @@ jobs:
     name: "Quality / TypeScript and Unit Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # `test:e2e:list` loads Playwright configuration but does not start a
+    # server or connect to Postgres. Keep the URL explicit so the same
+    # isolated-database guard is exercised in this fast job.
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
 
     steps:
       - uses: actions/checkout@v5
