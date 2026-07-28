@@ -28,6 +28,7 @@ interface BackupStatus {
   totalBackups: number;
   totalSizeMB: number;
   backupDir: string;
+  productionRestoreEnabled: boolean;
 }
 
 export default function BackupPage() {
@@ -318,16 +319,18 @@ export default function BackupPage() {
                           <Download className="w-3.5 h-3.5" />
                           Download
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 text-xs gap-1 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
-                          onClick={() => setConfirmRestore(backup.id)}
-                          data-testid={`button-restore-${backup.id}`}
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          Restore
-                        </Button>
+                        {status?.productionRestoreEnabled !== false && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 text-xs gap-1 text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
+                            onClick={() => setConfirmRestore(backup.id)}
+                            data-testid={`button-restore-${backup.id}`}
+                          >
+                            <Upload className="w-3.5 h-3.5" />
+                            Restore
+                          </Button>
+                        )}
                       </>
                     )}
                     <Button
@@ -350,7 +353,7 @@ export default function BackupPage() {
       </Card>
 
       <p className="text-xs text-muted-foreground text-center">
-        Automated backups run daily. Up to 30 automated backups are retained. Restoring a backup will replace all current data.
+        Automated backups run daily. Up to 30 automated backups are retained. Production recovery follows the approved disaster-recovery runbook.
       </p>
     </div>
   );

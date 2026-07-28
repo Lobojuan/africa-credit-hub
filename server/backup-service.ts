@@ -8,6 +8,15 @@ const BACKUP_DIR = path.resolve(process.cwd(), "backups");
 const MAX_BACKUPS = 30;
 const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * A production restore changes every tenant's data and must not be executable
+ * from a browser session. It belongs to the controlled DR runbook, where a
+ * verified backup is restored into an isolated target before any cutover.
+ */
+export function isProductionRestoreBlocked(): boolean {
+  return process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+}
+
 function safeBackupPath(filename: string): string {
   const resolved = path.resolve(BACKUP_DIR, filename);
   if (!resolved.startsWith(BACKUP_DIR + path.sep)) throw new Error("Invalid backup path");
@@ -168,6 +177,10 @@ export async function createBackup(
 }
 
 export async function restoreBackup(backupId: string, restoredBy: string): Promise<{ success: boolean; message: string }> {
+  if (isProductionRestoreBlocked()) {
+    throw new Error("Production database restores are disabled in the web application. Use the approved disaster-recovery runbook.");
+  }
+
   const manifest = loadManifest();
   const record = manifest.find((r) => r.id === backupId);
   if (!record) throw new Error("Backup not found");
@@ -303,6 +316,7 @@ export function getBackupStatus(): {
   totalBackups: number;
   totalSizeMB: number;
   backupDir: string;
+  productionRestoreEnabled: boolean;
 } {
   const manifest = loadManifest();
   const completed = manifest.filter((r) => r.status === "completed");
@@ -320,6 +334,7 @@ export function getBackupStatus(): {
     totalBackups: completed.length,
     totalSizeMB: parseFloat(totalSizeMB.toFixed(2)),
     backupDir: BACKUP_DIR,
+    productionRestoreEnabled: !isProductionRestoreBlocked(),
   };
 }
 

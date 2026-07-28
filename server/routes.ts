@@ -8931,7 +8931,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/backups/:id/restore", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { restoreBackup } = await import("./backup-service");
+      const { restoreBackup, isProductionRestoreBlocked } = await import("./backup-service");
+      if (isProductionRestoreBlocked()) {
+        return res.status(409).json({
+          message: "Production database restores are disabled in the web application. Use the approved disaster-recovery runbook.",
+        });
+      }
       const userId = req.session?.userId || "unknown";
       const result = await restoreBackup(req.params.id as string, String(userId));
       res.json(result);
