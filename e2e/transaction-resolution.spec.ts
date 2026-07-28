@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Transaction resolution controls", () => {
   test("prevents a case from bypassing verification and core handoff", async ({ page }) => {
+    await page.goto("/transaction-resolution");
+    await expect(page.getByTestId("transaction-resolution-desk")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Transaction Resolution Desk" })).toBeVisible();
+
     const borrowers = await page.request.get("/api/borrowers?country=Ghana&limit=1");
     expect(borrowers.ok()).toBeTruthy();
     const borrowerBody = await borrowers.json() as { data?: Array<{ id: string }> };
