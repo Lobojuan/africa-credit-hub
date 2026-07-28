@@ -453,7 +453,9 @@ test.describe("Credit Bureau — Account CRUD lifecycle", () => {
         originalAmount: "50000",
         currentBalance: "48000",
         currency: "GHS",
-        status: "active",
+        // Credit-account status uses the regulatory account-status vocabulary;
+        // "active" is a UI concept, not an accepted ledger status.
+        status: "current",
         openingDate: new Date().toISOString().split("T")[0],
       },
     });

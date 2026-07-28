@@ -12,14 +12,18 @@ async function setSession(
   page: import("@playwright/test").Page,
   session: Record<string, unknown>,
 ) {
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: session });
   expect(res.ok()).toBeTruthy();
 }
 
-const SUPER_ADMIN    = { userId: "e2e-pi-sa",     userRole: "super_admin" };
-const PLATFORM_OWNER = { userId: "e2e-pi-po",     userRole: "platform_owner" };
-const LENDER         = { userId: "e2e-pi-lender", userRole: "lender" };
-const REGULATOR      = { userId: "e2e-pi-reg",    userRole: "regulator" };
+// Use actual seeded accounts. Synthetic session ids are useful for narrowly
+// isolated API guards, but application routes load a real user record and must
+// not silently turn an E2E fixture into an unauthenticated browser session.
+const SUPER_ADMIN    = { username: "platform_admin" };
+const PLATFORM_OWNER = { username: "demo_admin" };
+const LENDER         = { username: "lender_demo" };
+const REGULATOR      = { username: "registry_admin" };
 
 // 7 markets (south-africa added)
 const MARKETS = ["ghana", "nigeria", "kenya", "civ", "south-africa", "egypt", "ethiopia"] as const;
@@ -62,7 +66,7 @@ test.describe("Playbook Index — RBAC", () => {
   for (const [role, session] of [
     ["lender",    LENDER],
     ["regulator", REGULATOR],
-    ["admin",     { userId: "e2e-pi-admin", userRole: "admin" }],
+    ["admin",     { username: "credit_admin" }],
   ] as const) {
     test(`${role} is redirected away from /sales/playbooks`, async ({ page }) => {
       await setSession(page, session);

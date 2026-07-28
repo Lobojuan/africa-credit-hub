@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+async function setSession(page: import("@playwright/test").Page) {
+  await page.context().clearCookies();
+  const response = await page.request.post("/api/test/set-session", { data: { username: "platform_admin" } });
+  expect(response.ok()).toBeTruthy();
+}
+
 test.describe("Bank Control Centre pilot journey", () => {
   test("guides a staff user from a bank outcome to the three-step pilot path", async ({ page }) => {
+    await setSession(page);
     await page.goto("/bank-control-center");
 
     await expect(page.getByTestId("bank-control-center")).toBeVisible();
