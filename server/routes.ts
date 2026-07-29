@@ -17222,6 +17222,33 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         });
       }
 
+      // Macro observations are retained as approved maker-checker records. This
+      // avoids a parallel configuration store and preserves the submitter,
+      // reviewer, source and review time alongside every value used in the view.
+      const approvedObservationResult = await pool.query(`
+        SELECT payload, reviewed_at, created_at
+        FROM pending_approvals
+        WHERE entity_type = 'npl_macro_observation'
+          AND action = 'SUBMIT_MACRO_RISK_OBSERVATION'
+          AND status = 'approved'
+          AND country = $1
+          AND ($2::text IS NULL OR organization_id = $2)
+        ORDER BY reviewed_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      `, [country, orgId]);
+      let approvedObservation: Record<string, unknown> | null = null;
+      const approvedRow = approvedObservationResult.rows[0];
+      if (approvedRow) {
+        try {
+          approvedObservation = {
+            ...JSON.parse(String(approvedRow.payload)),
+            approvedAt: approvedRow.reviewed_at || approvedRow.created_at,
+          };
+        } catch {
+          routeLogger.warn("Ignoring unreadable approved NPL macro observation");
+        }
+      }
+
       const result = await pool.query(`
         WITH scoped_accounts AS (
           SELECT c.id, c.current_balance, c.status, c.days_in_arrears,
@@ -17255,8 +17282,43 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
         };
       });
 
-      res.json({ generatedAt: new Date().toISOString(), country, profile, sectorExposure });
+      res.json({ generatedAt: new Date().toISOString(), country, profile, sectorExposure, approvedObservation });
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/npl-early-warning/macro-observations", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE || !requestedCountry ? "Ghana" : requestedCountry;
+      if (country !== "Ghana") {
+        return res.status(400).json({ message: "Macro-risk observations are currently controlled for the Ghana pilot only." });
+      }
+      const input = z.object({
+        observedAt: z.string().date(),
+        source: z.string().trim().min(3).max(500),
+        inflationAnnualPct: z.coerce.number().min(-10).max(200),
+        policyRatePct: z.coerce.number().min(0).max(200),
+        currencyDepreciationYtdPct: z.coerce.number().min(-100).max(500),
+        sectorCashflowRisk: z.enum(["low", "elevated", "high"]),
+        notes: z.string().trim().max(2_000).optional(),
+      }).parse(req.body);
+      const requesterId = req.session?.userId;
+      if (!requesterId) return res.status(401).json({ message: "Not authenticated" });
+      const approval = await storage.createPendingApproval({
+        entityType: "npl_macro_observation",
+        entityId: null,
+        action: "SUBMIT_MACRO_RISK_OBSERVATION",
+        payload: JSON.stringify({ ...input, country, schemaVersion: 1 }),
+        requestedBy: requesterId,
+        organizationId: getOrgScope(req) || null,
+        country: requireWriteCountry(country, "submitNplMacroObservation"),
+      });
+      await storage.createAuditLog({
+        action: "SUBMIT_NPL_MACRO_OBSERVATION", entity: "npl_macro_observation", entityId: approval.id,
+        userId: requesterId, details: `Submitted Ghana macro-risk observation dated ${input.observedAt} for maker-checker review`, ipAddress: req.ip || null,
+      });
+      res.status(201).json({ approval, message: "Macro-risk observation submitted for independent approval." });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.get("/api/collections/assignments", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {

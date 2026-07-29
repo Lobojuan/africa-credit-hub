@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, FileCheck2, ShieldAlert, Upload } from "lucide-react";
 import { Link } from "wouter";
@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type WarningCase = {
   collection_assignment_id: string | null;
@@ -60,6 +63,16 @@ type MacroRiskOverlay = {
     rationale: string;
   }>;
   message?: string;
+  approvedObservation?: {
+    observedAt: string;
+    source: string;
+    inflationAnnualPct: number;
+    policyRatePct: number;
+    currencyDepreciationYtdPct: number;
+    sectorCashflowRisk: "low" | "elevated" | "high";
+    notes?: string;
+    approvedAt: string;
+  } | null;
 };
 
 const severityClass: Record<WarningCase["severity"], string> = {
@@ -77,6 +90,7 @@ export default function NplEarlyWarningPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const canAssign = ["admin", "super_admin", "platform_owner", "lender"].includes(user?.role || "");
+  const [macroForm, setMacroForm] = useState({ observedAt: new Date().toISOString().slice(0, 10), source: "", inflationAnnualPct: "", policyRatePct: "", currencyDepreciationYtdPct: "", sectorCashflowRisk: "elevated", notes: "" });
   const { data, isLoading, isError } = useQuery<{ generatedAt: string; cases: WarningCase[] }>({ queryKey: ["/api/npl-early-warning"] });
   const { data: readiness, isLoading: readinessLoading } = useQuery<PilotReadiness>({ queryKey: ["/api/npl-early-warning/pilot-readiness"] });
   const { data: macroRisk, isLoading: macroRiskLoading } = useQuery<MacroRiskOverlay>({ queryKey: ["/api/npl-early-warning/macro-risk"] });
@@ -107,6 +121,24 @@ export default function NplEarlyWarningPage() {
       toast({ title: "Assigned to Collections", description: "The at-risk facility now has an operational owner." });
     },
     onError: (error: Error) => toast({ title: "Could not assign case", description: error.message, variant: "destructive" }),
+  });
+
+  const submitMacroObservation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/npl-early-warning/macro-observations", {
+        ...macroForm,
+        inflationAnnualPct: Number(macroForm.inflationAnnualPct),
+        policyRatePct: Number(macroForm.policyRatePct),
+        currencyDepreciationYtdPct: Number(macroForm.currencyDepreciationYtdPct),
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Submitted for approval", description: "A different authorised reviewer must approve this observation before UCH displays it." });
+      setMacroForm((value) => ({ ...value, source: "", inflationAnnualPct: "", policyRatePct: "", currencyDepreciationYtdPct: "", notes: "" }));
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-approvals"] });
+    },
+    onError: (error: Error) => toast({ title: "Could not submit macro observation", description: error.message, variant: "destructive" }),
   });
 
   return (
@@ -141,6 +173,7 @@ export default function NplEarlyWarningPage() {
         </CardHeader>
         {macroRisk?.profile && <CardContent className="space-y-4">
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-muted-foreground"><span className="font-semibold text-foreground">Data gate:</span> {macroRisk.profile.dataStatusMessage}</div>
+          {macroRisk.approvedObservation ? <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm" data-testid="npl-approved-macro-observation"><p className="font-semibold text-emerald-800">Approved observation · {macroRisk.approvedObservation.observedAt}</p><p className="mt-1 text-muted-foreground">Inflation {macroRisk.approvedObservation.inflationAnnualPct}% · Policy rate {macroRisk.approvedObservation.policyRatePct}% · FX depreciation {macroRisk.approvedObservation.currencyDepreciationYtdPct}% · Sector cashflow {macroRisk.approvedObservation.sectorCashflowRisk}. Source: {macroRisk.approvedObservation.source}</p></div> : <div className="rounded-lg border p-3 text-sm text-muted-foreground">No approved Ghana macro observation is active yet. Submit one below, then use Pending Approvals for independent review.</div>}
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {macroRisk.profile.drivers.map((driver) => <div key={driver.id} className="rounded-lg border p-3"><p className="font-medium text-sm">{driver.label}</p><p className="mt-1 text-xs text-muted-foreground">{driver.transmission}</p></div>)}
           </div>
@@ -149,6 +182,11 @@ export default function NplEarlyWarningPage() {
             {(macroRisk.sectorExposure?.length || 0) === 0 ? <p className="text-sm text-muted-foreground">No Ghana facilities are available in this authorised scope yet.</p> : <div className="grid gap-2 md:grid-cols-2">{macroRisk.sectorExposure?.map((sector) => <div key={sector.sector} className="flex items-start justify-between gap-3 rounded-lg border p-3"><div><p className="font-medium text-sm">{sector.sector}</p><p className="mt-1 text-xs text-muted-foreground">{sector.atRiskFacilities} at-risk of {sector.facilities} facilities · {sector.rationale}</p></div><Badge variant="outline" className={sector.sensitivity === "high" ? "border-red-500/30 bg-red-500/10 text-red-700" : sector.sensitivity === "elevated" ? "border-amber-500/30 bg-amber-500/10 text-amber-700" : ""}>{sector.sensitivity === "not_mapped" ? "map" : sector.sensitivity}</Badge></div>)}</div>}
           </div>
           <p className="text-xs text-muted-foreground">{macroRisk.profile.guardrail}</p>
+          {canAssign && macroRisk.country === "Ghana" && <form className="space-y-3 rounded-lg border p-4" data-testid="form-npl-macro-observation" onSubmit={(event) => { event.preventDefault(); submitMacroObservation.mutate(); }}>
+            <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-sm">Submit Ghana macro observation</p><Link href="/approvals"><Button type="button" variant="outline" size="sm">Open approvals</Button></Link></div>
+            <div className="grid gap-3 md:grid-cols-3"><div><Label htmlFor="macro-observed-at">Observation date</Label><Input id="macro-observed-at" type="date" value={macroForm.observedAt} onChange={(e) => setMacroForm({ ...macroForm, observedAt: e.target.value })} required /></div><div><Label htmlFor="macro-inflation">Annual inflation %</Label><Input id="macro-inflation" type="number" step="0.01" value={macroForm.inflationAnnualPct} onChange={(e) => setMacroForm({ ...macroForm, inflationAnnualPct: e.target.value })} required /></div><div><Label htmlFor="macro-policy">Policy rate %</Label><Input id="macro-policy" type="number" step="0.01" value={macroForm.policyRatePct} onChange={(e) => setMacroForm({ ...macroForm, policyRatePct: e.target.value })} required /></div><div><Label htmlFor="macro-fx">FX depreciation YTD %</Label><Input id="macro-fx" type="number" step="0.01" value={macroForm.currencyDepreciationYtdPct} onChange={(e) => setMacroForm({ ...macroForm, currencyDepreciationYtdPct: e.target.value })} required /></div><div><Label htmlFor="macro-cashflow">Sector cashflow risk</Label><select id="macro-cashflow" className="flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={macroForm.sectorCashflowRisk} onChange={(e) => setMacroForm({ ...macroForm, sectorCashflowRisk: e.target.value as "low" | "elevated" | "high" })}><option value="low">Low</option><option value="elevated">Elevated</option><option value="high">High</option></select></div><div><Label htmlFor="macro-source">Source</Label><Input id="macro-source" value={macroForm.source} onChange={(e) => setMacroForm({ ...macroForm, source: e.target.value })} placeholder="Approved bank / regulator source" required /></div></div>
+            <div><Label htmlFor="macro-notes">Notes (optional)</Label><Textarea id="macro-notes" value={macroForm.notes} onChange={(e) => setMacroForm({ ...macroForm, notes: e.target.value })} /></div><Button type="submit" disabled={submitMacroObservation.isPending}>{submitMacroObservation.isPending ? "Submitting…" : "Submit for independent approval"}</Button>
+          </form>}
         </CardContent>}
       </Card>
 
