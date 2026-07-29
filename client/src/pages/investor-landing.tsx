@@ -25,6 +25,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
 import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 import { useTranslation } from "react-i18next";
+import DOMPurify from "isomorphic-dompurify";
 const heroImage = "/marketing/investor-hero.png";
 const dashboardImage = "/marketing/app-dashboard.png";
 const mobileImage = "/marketing/app-consumer-portal.png";
@@ -737,11 +738,11 @@ export default function InvestorLandingPage() {
               </h1>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-4 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: t('landing.heroDesc') }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('landing.heroDesc'), { ALLOWED_TAGS: ["strong", "em", "br"], ALLOWED_ATTR: [] }) }}
               />
 
               <p className="text-sm text-muted-foreground/80 max-w-xl mb-8"
-                dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('landing.heroSubDesc'), { ALLOWED_TAGS: ["strong", "em", "br"], ALLOWED_ATTR: [] }) }}
               />
 
               <div className="flex flex-col sm:flex-row items-center lg:items-end justify-center lg:justify-end gap-3 mb-8">
