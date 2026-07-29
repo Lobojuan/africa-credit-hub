@@ -685,28 +685,36 @@ router.get("/api/auth/me", async (req, res) => {
   });
 });
 
-// ── Guide-mode auto-login ────────────────────────────────────────────────────
-// GET /api/auto-login?token=<MASTER_CONTROL_PASSWORD>[&as=demo_admin][&redirect=/dashboard]
-// Instantly creates a full session for AI user-guide generation or teaching demos.
-// Protected by MASTER_CONTROL_PASSWORD — never usable without the secret.
-router.get("/api/auto-login", async (req, res) => {
+// ── Guide-mode auto-login (local aid only) ────────────────────────────────────
+// This is deliberately unavailable in production. A master secret in a URL can
+// leak through browser history, logs and referrers, so guide generation must be
+// an explicit non-production action only.
+router.post("/api/auto-login", async (req, res) => {
+  const isProduction = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+  if (isProduction || process.env.ENABLE_GUIDE_AUTO_LOGIN !== "true") {
+    return res.status(404).send("Not found.");
+  }
   const MASTER = process.env.MASTER_CONTROL_PASSWORD;
   if (!MASTER) {
     return res.status(503).send("Auto-login is not configured (MASTER_CONTROL_PASSWORD not set).");
   }
 
-  const supplied = (req.query.token as string) ?? "";
-  if (!supplied || supplied !== MASTER) {
+  const supplied = typeof req.body?.token === "string" ? req.body.token : "";
+  const expected = Buffer.from(MASTER);
+  const provided = Buffer.from(supplied);
+  if (!supplied || expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
     return res.status(401).send("Invalid token.");
   }
 
-  const username = (req.query.as as string) || "demo_admin";
+  const username = typeof req.body?.as === "string" ? req.body.as : "demo_admin";
   const user = await storage.getUserByUsername(username);
   if (!user) {
     return res.status(404).send(`User "${username}" not found.`);
   }
 
-  const redirect = (req.query.redirect as string) || "/choose-workspace";
+  const redirect = typeof req.body?.redirect === "string" && req.body.redirect.startsWith("/") && !req.body.redirect.startsWith("//")
+    ? req.body.redirect
+    : "/choose-workspace";
 
   req.session.regenerate((err) => {
     if (err) return res.status(500).send("Session error.");
