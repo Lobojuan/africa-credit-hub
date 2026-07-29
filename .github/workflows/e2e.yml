@@ -250,14 +250,17 @@ jobs:
         run: npx playwright install-deps chromium firefox webkit
       - run: npm run db:push
       - run: npx playwright test --project=authenticated-firefox
-      - run: npx playwright test --project=authenticated-webkit
+      # WebKit is the Safari-engine compatibility gate. Run it serially: this
+      # avoids cross-test session and rendering interference while preserving
+      # deterministic evidence for a browser engine that is slower in CI.
+      - run: npx playwright test --project=authenticated-webkit --workers=1
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-report-authenticated-cross-browser
           path: |
-            e2e/report/
-            e2e/test-results-artifacts/
+            test-results/
+            playwright-report/
           retention-days: 14
 
   # ──────────────────────────────────────────────────────────────────────────

@@ -68,6 +68,11 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL || "http://localhost:5001",
     headless: true,
     ignoreHTTPSErrors: true,
+    // Keep browser-engine failures diagnosable in CI. E2E data is isolated and
+    // seeded, so the retained artefacts never contain production customer data.
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+    video: "retain-on-failure",
   },
 
   projects: [
