@@ -35,6 +35,11 @@ async function setSession(
   await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: session });
   expect(res.ok()).toBeTruthy();
+  // Confirm that the session cookie is available to this browser context before
+  // navigating. Without this guard, an auth-fixture regression surfaces later
+  // as a misleading empty-table assertion.
+  const authenticated = await page.request.get("/api/auth/me");
+  expect(authenticated.ok()).toBeTruthy();
 }
 
 const ADMIN_SESSION = { username: "admin" };
@@ -501,13 +506,13 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     await page.fill('[data-testid="input-search-borrowers"]', e2eSearchNationalId);
     await page.waitForTimeout(1200);
 
-    const rows = page.locator(`[data-testid^="row-borrower-"]`);
-    await expect(rows.first()).toBeVisible({ timeout: 12000 });
-    const rowCount = await rows.count();
-    expect(rowCount).toBeGreaterThanOrEqual(1);
+    const cards = page.locator(`[data-testid^="card-borrower-"]`);
+    await expect(cards.first()).toBeVisible({ timeout: 12000 });
+    const cardCount = await cards.count();
+    expect(cardCount).toBeGreaterThanOrEqual(1);
 
     // At least one row must show the NIN
-    const allText = await page.locator(`[data-testid^="row-borrower-"]`).allTextContents();
+    const allText = await cards.allTextContents();
     const found = allText.some(t => t.includes(e2eSearchNationalId) || t.includes(e2eSearchFirstName));
     expect(found).toBe(true);
   });
@@ -519,9 +524,9 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     await page.fill('[data-testid="input-search-borrowers"]', e2eSearchFirstName);
     await page.waitForTimeout(1200);
 
-    const rows = page.locator(`[data-testid^="row-borrower-"]`);
-    await expect(rows.first()).toBeVisible({ timeout: 12000 });
-    const allText = await page.locator(`[data-testid^="row-borrower-"]`).allTextContents();
+    const cards = page.locator(`[data-testid^="card-borrower-"]`);
+    await expect(cards.first()).toBeVisible({ timeout: 12000 });
+    const allText = await cards.allTextContents();
     const found = allText.some(t => t.toLowerCase().includes(e2eSearchFirstName.toLowerCase()));
     expect(found).toBe(true);
   });
@@ -545,7 +550,7 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     await page.waitForTimeout(800);
     await page.fill('[data-testid="input-search-borrowers"]', "");
     await page.waitForTimeout(800);
-    const rows = page.locator(`[data-testid^="row-borrower-"]`);
-    await expect(rows.first()).toBeVisible({ timeout: 10000 });
+    const cards = page.locator(`[data-testid^="card-borrower-"]`);
+    await expect(cards.first()).toBeVisible({ timeout: 10000 });
   });
 });

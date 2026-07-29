@@ -794,26 +794,13 @@ export class DatabaseStorage implements IStorage {
       return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
     }
 
-    const searchPattern = `%${query}%`;
-    const searchCondition = or(
-      ilike(borrowers.firstName, searchPattern),
-      ilike(borrowers.lastName, searchPattern),
-      ilike(borrowers.companyName, searchPattern),
-      ilike(borrowers.nationalId, searchPattern),
-      ilike(borrowers.tinNumber, searchPattern),
-      ilike(borrowers.phone, searchPattern),
-      ilike(borrowers.email, searchPattern),
-      ilike(borrowers.city, searchPattern),
-      ilike(borrowers.sector, searchPattern),
-      ilike(borrowers.occupation, searchPattern),
-      ilike(borrowers.employerName, searchPattern),
-      ilike(borrowers.businessRegNumber, searchPattern),
-    );
-
+    // PII is encrypted at rest. Apply the tenancy and country scope in SQL first,
+    // then search the authorised, decrypted records so National ID and other PII
+    // remain searchable without weakening at-rest encryption.
     const results = await db.select().from(borrowers)
-      .where(and(...baseFilters, searchCondition))
-      .orderBy(desc(borrowers.createdAt)).limit(200);
-    return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
+      .where(and(...baseFilters))
+      .orderBy(desc(borrowers.createdAt)).limit(1_000);
+    return this.filterBorrowerSearchResults(results as Record<string, any>[], query);
   }
 
   async searchBorrowers(query: string, organizationId?: string, country?: string | string[]): Promise<Borrower[]> {
@@ -831,29 +818,31 @@ export class DatabaseStorage implements IStorage {
       return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
     }
 
-    const searchPattern = `%${query}%`;
-    const searchCondition = or(
-      ilike(borrowers.firstName, searchPattern),
-      ilike(borrowers.lastName, searchPattern),
-      ilike(borrowers.companyName, searchPattern),
-      ilike(borrowers.nationalId, searchPattern),
-      ilike(borrowers.tinNumber, searchPattern),
-      ilike(borrowers.phone, searchPattern),
-      ilike(borrowers.email, searchPattern),
-      ilike(borrowers.city, searchPattern),
-      ilike(borrowers.region, searchPattern),
-      ilike(borrowers.address, searchPattern),
-      ilike(borrowers.sector, searchPattern),
-      ilike(borrowers.occupation, searchPattern),
-      ilike(borrowers.employerName, searchPattern),
-      ilike(borrowers.businessRegNumber, searchPattern),
-      ilike(borrowers.country, searchPattern),
-      ilike(borrowers.passportNumber, searchPattern),
-    );
-    const filters = [searchCondition, ...baseFilters].filter(Boolean);
-    const conditions = filters.length > 1 ? and(...filters) : filters[0];
-    const results = await db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
-    return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
+    // See searchBorrowersByType: sensitive borrower fields are encrypted and must
+    // only be matched after authorised records have been decrypted.
+    const where = baseFilters.length > 1 ? and(...baseFilters) : baseFilters[0];
+    const results = await db.select().from(borrowers)
+      .where(where)
+      .orderBy(desc(borrowers.createdAt)).limit(1_000);
+    return this.filterBorrowerSearchResults(results as Record<string, any>[], query);
+  }
+
+  private filterBorrowerSearchResults(records: Record<string, any>[], query: string): Borrower[] {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return decryptBorrowerArray(records) as Borrower[];
+
+    const searchableFields = [
+      "firstName", "lastName", "companyName", "nationalId", "tinNumber",
+      "phone", "email", "city", "region", "address", "sector", "occupation",
+      "employerName", "businessRegNumber", "country", "passportNumber",
+    ] as const;
+
+    return (decryptBorrowerArray(records) as Borrower[])
+      .filter((borrower) => searchableFields.some((field) => {
+        const value = borrower[field];
+        return typeof value === "string" && value.toLocaleLowerCase().includes(normalizedQuery);
+      }))
+      .slice(0, 200);
   }
 
   async countBorrowersByNationalId(nationalId: string | null): Promise<number> {
