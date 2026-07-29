@@ -169,6 +169,12 @@ Google Workspace and Microsoft Entra support staff sign-in only; neither flow cr
 
 SAML enterprise SSO is intentionally unavailable in production until its implementation is replaced with a vetted, signature-validating solution and the bank has supplied IdP metadata/certificates. Do not enable legacy SAML merely to bypass this gate.
 
+### 3.3 GitHub deployment boundary
+
+Every push to `main` verifies TypeScript, unit tests and the production build. It updates the server **only** when the GitHub repository variable `UCH_DEPLOY_ENABLED` is `true` and the production environment contains `UCH_PROD_SSH_KEY`, `UCH_PROD_KNOWN_HOSTS`, `UCH_PROD_HOST` and `UCH_PROD_USER`.
+
+When deployment is not configured, the workflow now publishes an explicit successful warning job: **Production deployment not configured**. This means the release was verified but no server changed. Once configured, the guarded server script validates both loopback and public HTTPS/database health and rolls back the code release if either check fails.
+
 ---
 
 ## 4. Database Setup

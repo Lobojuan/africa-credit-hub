@@ -51,3 +51,22 @@ jobs:
           DEPLOY_USER: ${{ secrets.UCH_PROD_USER }}
           DEPLOY_COMMIT: ${{ github.sha }}
         run: ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/uch/scripts/deploy-production.sh '$DEPLOY_COMMIT'"
+
+  deployment-not-configured:
+    name: Production deployment not configured
+    needs: verify
+    # A green verification job must never be mistaken for a server deployment.
+    # This job stays successful so repository checks remain useful before the
+    # server credentials are installed, but makes the deployment boundary clear.
+    if: ${{ vars.UCH_DEPLOY_ENABLED != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record deployment boundary
+        run: |
+          echo "::warning title=Production server was not updated::Release verification passed, but UCH_DEPLOY_ENABLED is not true. Configure the production SSH secrets and variable before treating this workflow as a server deployment."
+          {
+            echo "## Release verified; production deployment not configured"
+            echo
+            echo "TypeScript, unit tests and the production build passed. No server was updated because \`UCH_DEPLOY_ENABLED\` is not \`true\`."
+            echo "See \`docs/Deployment_Guide.md\` for the guarded deployment prerequisites."
+          } >> "$GITHUB_STEP_SUMMARY"
