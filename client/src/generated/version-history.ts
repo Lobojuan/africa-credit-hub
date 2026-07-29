@@ -18,93 +18,93 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-27T22:37:48.793Z",
+  "generatedAt": "2026-07-29T20:32:46.939Z",
   "branch": "main",
-  "currentCommit": "4898502",
+  "currentCommit": "d899caf",
   "commits": [
     {
-      "hash": "4898502e5946eb50be4949f52e1cb3a56fb584b5",
-      "shortHash": "4898502",
-      "date": "2026-07-27",
+      "hash": "d899caf41702e6677732619bb195d63747e6f0e4",
+      "shortHash": "d899caf",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "fix: enforce staff MFA and stabilise regulator coverage"
+      "subject": "security: apply central URL guard to registry tests"
     },
     {
-      "hash": "c1382dedb14e771c4fb959edf7a99dcb9e952ced",
-      "shortHash": "c1382de",
-      "date": "2026-07-27",
+      "hash": "993405f70262e6f5a819dbe16a3ab438ea69ef67",
+      "shortHash": "993405f",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "feat: add bank operations control centre"
+      "subject": "security: require HTTPS for registry credential tests"
     },
     {
-      "hash": "01025a061756101b7a072f1e44b08c8af01811c2",
-      "shortHash": "01025a0",
-      "date": "2026-07-27",
+      "hash": "7038d229aceb7758c99162c31a13d61b7dca56f1",
+      "shortHash": "7038d22",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: isolate collateral lifecycle coverage"
+      "subject": "security: remove production guide login and sanitize landing HTML"
     },
     {
-      "hash": "68d6566ecd5bee56bb99c733b171d3bec0a0a219",
-      "shortHash": "68d6566",
-      "date": "2026-07-27",
+      "hash": "af745b934b129f81eee67694495b46e613e32b82",
+      "shortHash": "af745b9",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: cover public consumer registration flow"
+      "subject": "fix: disable guide auto-login in production"
     },
     {
-      "hash": "e5cfe841858d288968419798214f120e8242e5b8",
-      "shortHash": "e5cfe84",
-      "date": "2026-07-27",
+      "hash": "dad79cd2606036fdcff7153104bb1dc9c7dcf1cc",
+      "shortHash": "dad79cd",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "fix: prevent loan form collateral select crash"
+      "subject": "fix: require evidence before IFRS 9 cure migration"
     },
     {
-      "hash": "f158d944fef838c0ca78c5cc5e1983882ca9a684",
-      "shortHash": "f158d94",
-      "date": "2026-07-27",
+      "hash": "3337333340ef0591a568a5c403f35f5bdf2b3be2",
+      "shortHash": "3337333",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "fix: handle invalid loan application responses"
+      "subject": "feat: add governed IFRS 9 draft ECL engine"
     },
     {
-      "hash": "e8e9d09175b2b2d131c7f9a35e5fe77275a84710",
-      "shortHash": "e8e9d09",
-      "date": "2026-07-27",
+      "hash": "82b7ed6eeb74fefe7b23d4066abf0900e46fb8ce",
+      "shortHash": "82b7ed6",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: align credit and loan flows with real APIs"
+      "subject": "ci: make skipped production deployments explicit"
     },
     {
-      "hash": "475b7d83693d4fe33fe545b2a8ec0f9dad4db27b",
-      "shortHash": "475b7d8",
-      "date": "2026-07-27",
+      "hash": "375bda5c1d4a7b553c94b67c94850252c6924c95",
+      "shortHash": "375bda5",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: align collateral regulator access coverage"
+      "subject": "docs: add bank SSO readiness evidence"
     },
     {
-      "hash": "fa25fee7c87dbe4c668010f501df928f4a8e5b98",
-      "shortHash": "fa25fee",
-      "date": "2026-07-27",
+      "hash": "afe7eda691910caf03ebf8ed81d94d9746a7e0cc",
+      "shortHash": "afe7eda",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: stabilize authenticated UI regression flows"
+      "subject": "feat: add approved Ghana macro-risk observations"
     },
     {
-      "hash": "2b9616d47bf5cafa01c784733c5a8d255c4b09a9",
-      "shortHash": "2b9616d",
-      "date": "2026-07-27",
+      "hash": "71ed3a1b20f13be1a9df20a7eaf4aa5a446ca2a7",
+      "shortHash": "71ed3a1",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "fix: add direct institution login route"
+      "subject": "fix: preserve HTTP assets in WebKit E2E"
     },
     {
-      "hash": "091b8be70004ce22cace510938843c90c0314c41",
-      "shortHash": "091b8be",
-      "date": "2026-07-27",
+      "hash": "8ff7fef78efab2c553508f18bb9ac70abbb30a6e",
+      "shortHash": "8ff7fef",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: mark mock oauth session as synthetic"
+      "subject": "test: stabilise and retain WebKit diagnostics"
     },
     {
-      "hash": "dce2e1c5288852336bfba7ff36409c1e1bd7e774",
-      "shortHash": "dce2e1c",
-      "date": "2026-07-27",
+      "hash": "6a533376b312391022f845191fa9c2af6b87a2ea",
+      "shortHash": "6a53337",
+      "date": "2026-07-29",
       "author": "Uffe J Carlson",
-      "subject": "test: isolate local e2e server"
+      "subject": "test: stabilise authenticated browser fixtures"
     }
   ]
 };

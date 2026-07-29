@@ -35,11 +35,11 @@ const steps: PilotStep[] = [
   },
   {
     number: "3",
-    title: "Prove the control works",
-    description: "Prepare an evidence pack for the agreed monthly NPL or prudential return, obtain independent review, then record the bank's own filing reference.",
-    proof: "A bank reviewer can trace a board or regulator statement back to the underlying records and approvals.",
-    href: "/regulatory-evidence-packs",
-    action: "Prepare evidence pack",
+    title: "Govern provision and evidence",
+    description: "Submit the bank's IFRS 9 methodology for maker-checker approval, then prepare an evidence pack for the agreed monthly NPL or prudential return.",
+    proof: "A bank reviewer can trace a draft ECL, board or regulator statement back to an approved policy, source records and approvals.",
+    href: "/ifrs9-policy-workspace",
+    action: "Open IFRS 9 workspace",
     icon: FileCheck2,
   },
 ];

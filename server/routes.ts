@@ -37,6 +37,7 @@ import { getAggregationCacheStats } from "./utils/aggregation-cache";
 import { getScoreCacheStats } from "./utils/score-cache";
 import { getBankIntegrationReadiness } from "./bank-integration-catalog";
 import { getNplMacroRiskProfile, getSectorSensitivity } from "./npl-macro-risk";
+import { calculateDraftEcl, type EclExposure, type EclScenario, type Ifrs9Policy } from "./ifrs9-provisioning";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -700,6 +701,80 @@ export async function registerRoutes(
   // only: never credentials, endpoints, or a means to activate a live bank.
   app.get("/api/bank-integration-readiness", requireRole("admin", "super_admin", "lender", "regulator"), (_req, res) => {
     res.json({ integrations: getBankIntegrationReadiness() });
+  });
+
+  // IFRS 9 policies are versioned evidence, never automatic accounting instructions.
+  // They use the existing maker-checker control: a maker submits a policy and a
+  // different authorised checker approves it through Pending Approvals.
+  const ifrs9PolicySchema = z.object({
+    id: z.string().min(3).max(100).regex(/^[a-z0-9][a-z0-9-]*$/),
+    version: z.string().min(1).max(100),
+    country: z.string().min(2).max(100),
+    effectiveDate: z.string().datetime(),
+    owner: z.string().min(2).max(200),
+    modelVersion: z.string().min(1).max(100),
+    sicrDaysPastDue: z.number().int().min(1).max(365),
+    defaultDaysPastDue: z.number().int().min(1).max(365),
+    cureMonthsRequired: z.number().int().min(1).max(60),
+    creditImpairedStatuses: z.array(z.string().min(1).max(80)).min(1).max(20),
+  }).superRefine((policy, ctx) => {
+    if (policy.defaultDaysPastDue <= policy.sicrDaysPastDue) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "defaultDaysPastDue must be greater than sicrDaysPastDue" });
+    }
+  });
+  const ifrs9ScenariosSchema = z.array(z.object({
+    id: z.string().min(1).max(80), label: z.string().min(1).max(160),
+    weight: z.number().min(0).max(1), pdMultiplier: z.number().min(0).max(10), lgdMultiplier: z.number().min(0).max(10),
+  })).min(1).max(10).superRefine((scenarios, ctx) => {
+    const total = scenarios.reduce((sum, scenario) => sum + scenario.weight, 0);
+    if (Math.abs(total - 1) > 0.000001) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Scenario weights must total 1" });
+  });
+  const ifrs9SubmissionSchema = z.object({ policy: ifrs9PolicySchema, scenarios: ifrs9ScenariosSchema, evidenceReference: z.string().min(3).max(500) });
+  const ifrs9ExposureSchema = z.object({
+    grossCarryingAmount: z.number().nonnegative(), undrawnCommitment: z.number().nonnegative().optional(), creditConversionFactor: z.number().min(0).max(1).optional(),
+    effectiveInterestRateAnnual: z.number().min(0).max(1), pd12Month: z.number().min(0).max(1), lifetimePd: z.number().min(0).max(1), lgd: z.number().min(0).max(1),
+    lifetimeMonths: z.number().int().positive(), daysPastDue: z.number().int().nonnegative(), accountStatus: z.string().min(1).max(80),
+    restructured: z.boolean().optional(), previouslyCreditImpaired: z.boolean().optional(), monthsPerformingAfterCure: z.number().int().nonnegative().optional(),
+  });
+  type ApprovedIfrs9Policy = { policy: Ifrs9Policy & { effectiveDate: string; owner: string; modelVersion: string }; scenarios: EclScenario[]; evidenceReference: string };
+  const parseIfrs9Payload = (payload: string): ApprovedIfrs9Policy | null => {
+    try { return ifrs9SubmissionSchema.parse(JSON.parse(payload)); } catch { return null; }
+  };
+  const scopedIfrs9Approvals = async (req: Request) => {
+    const approvals = await storage.getPendingApprovals(getOrgScope(req), getCountryFilter(req));
+    return approvals.filter((approval) => approval.entityType === "ifrs9_policy" && approval.action === "SUBMIT_POLICY");
+  };
+
+  app.get("/api/ifrs9/policy-workspace", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const approvals = await scopedIfrs9Approvals(req);
+      const policies = approvals.map((approval) => ({ approval, payload: parseIfrs9Payload(approval.payload) })).filter((item): item is { approval: typeof approvals[number]; payload: ApprovedIfrs9Policy } => Boolean(item.payload));
+      const active = policies.filter(({ approval }) => approval.status === "approved").sort((a, b) => String(b.approval.reviewedAt || b.approval.createdAt).localeCompare(String(a.approval.reviewedAt || a.approval.createdAt)))[0] || null;
+      res.json({ active: active && { approvalId: active.approval.id, approvedAt: active.approval.reviewedAt, policy: active.payload.policy, scenarios: active.payload.scenarios, evidenceReference: active.payload.evidenceReference }, pending: policies.filter(({ approval }) => approval.status === "pending").map(({ approval, payload }) => ({ approvalId: approval.id, createdAt: approval.createdAt, policy: payload.policy, evidenceReference: payload.evidenceReference })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/ifrs9/policy-workspace", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const submission = ifrs9SubmissionSchema.parse(req.body);
+      const country = requireWriteCountry(getCountryFilter(req), "submit_ifrs9_policy");
+      if (submission.policy.country !== country) return res.status(400).json({ message: "Policy country must match your active country scope" });
+      const approval = await storage.createPendingApproval({ entityType: "ifrs9_policy", entityId: submission.policy.id, action: "SUBMIT_POLICY", payload: JSON.stringify(submission), requestedBy: req.session!.userId!, organizationId: getOrgScope(req), country });
+      await storage.createAuditLog({ action: "SUBMIT_IFRS9_POLICY", entity: "ifrs9_policy", entityId: approval.id, userId: req.session?.userId, organizationId: getOrgScope(req), details: `Submitted IFRS 9 policy ${submission.policy.id}@${submission.policy.version} for independent approval; evidence: ${submission.evidenceReference}`, ipAddress: req.ip || null });
+      res.status(201).json({ approvalId: approval.id, status: approval.status });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.post("/api/ifrs9/draft-ecl", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const exposure = ifrs9ExposureSchema.parse(req.body);
+      const approvals = await scopedIfrs9Approvals(req);
+      const active = approvals.filter((approval) => approval.status === "approved").map((approval) => ({ approval, payload: parseIfrs9Payload(approval.payload) })).filter((item): item is { approval: typeof approvals[number]; payload: ApprovedIfrs9Policy } => Boolean(item.payload)).sort((a, b) => String(b.approval.reviewedAt || b.approval.createdAt).localeCompare(String(a.approval.reviewedAt || a.approval.createdAt)))[0];
+      if (!active) return res.status(409).json({ message: "A bank-approved IFRS 9 policy is required before draft ECL can be calculated" });
+      const result = calculateDraftEcl(exposure as EclExposure, active.payload.policy, active.payload.scenarios);
+      await storage.createAuditLog({ action: "CALCULATE_DRAFT_ECL", entity: "ifrs9_policy", entityId: active.approval.id, userId: req.session?.userId, organizationId: getOrgScope(req), details: `Draft ECL calculated using approved policy ${active.payload.policy.id}@${active.payload.policy.version}; no journal was posted`, ipAddress: req.ip || null });
+      res.json({ policy: { id: active.payload.policy.id, version: active.payload.policy.version, approvalId: active.approval.id }, result, postingPermitted: false });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.get("/api/heartbeat", async (_req, res) => {

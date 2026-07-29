@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: Universal Credit Hub Bank Pilot API
+  version: 1.0.0-pilot
+  description: |
+    A controlled integration contract for a bank-owned UCH pilot. It is not a
+    production activation or authority to move money, submit a regulatory return,
+    make a lending decision, or post accounting entries.
+servers:
+  - url: https://{bank-approved-host}
+    variables:
+      bank-approved-host:
+        default: sandbox.example-bank.invalid
+paths:
+  /api/health:
+    get:
+      summary: Service health
+      responses:
+        '200': { description: Service responded }
+  /api/bank-integration-readiness:
+    get:
+      summary: Staff-only connector readiness inventory
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Capability status only; no secrets or connector activation }
+        '401': { description: Not authenticated }
+        '403': { description: Insufficient role }
+  /api/npl-early-warning/pilot-readiness:
+    get:
+      summary: Read portfolio-data quality gate before NPL use
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Data-completeness and exception summary }
+  /api/npl-early-warning:
+    get:
+      summary: Read the scoped NPL early-warning queue
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Early-warning records; decisions remain human-owned }
+  /api/collections/assignments:
+    post:
+      summary: Assign a flagged facility to a collections workflow
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [creditAccountId, assignedTo]
+              properties:
+                creditAccountId: { type: string }
+                assignedTo: { type: string }
+                notes: { type: string, maxLength: 2000 }
+      responses:
+        '201': { description: Assignment recorded and auditable }
+        '400': { description: Invalid input }
+        '403': { description: Scope or role denied }
+  /api/ifrs9/policy-workspace:
+    get:
+      summary: Read approved and pending IFRS 9 policy versions
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Scoped policy workspace }
+    post:
+      summary: Submit a bank IFRS 9 policy for maker-checker approval
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '201': { description: Policy submitted; it is not active until independently approved }
+  /api/ifrs9/draft-ecl:
+    post:
+      summary: Calculate an explainable draft ECL using an approved policy
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '200': { description: Draft calculation; no journal or regulatory filing is created }
+        '409': { description: No independently approved policy exists in this scope }
+components:
+  securitySchemes:
+    sessionCookie: { type: apiKey, in: cookie, name: connect.sid }
+    csrfToken: { type: apiKey, in: header, name: X-CSRF-Token }
