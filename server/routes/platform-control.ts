@@ -1206,7 +1206,12 @@ export function registerPlatformControlRoutes(app: Express) {
   ];
 
   const updateRegistryCredSchema = z.object({
-    apiUrl: z.string().url("Must be a valid URL"),
+    apiUrl: z.string().url("Must be a valid URL").refine((value) => {
+      try {
+        const url = new URL(value);
+        return process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true" || url.protocol === "https:";
+      } catch { return false; }
+    }, "Registry URLs must use HTTPS in production"),
     apiKey: z.string().optional(),
   });
 
@@ -1331,11 +1336,13 @@ export function registerPlatformControlRoutes(app: Express) {
       return res.status(400).json({ message: "apiKey is required — either provide it in the request or save credentials first" });
     }
 
-    // SSRF guard: only allow https/http, block private/loopback addresses
+    // A registry credential must never be sent over plaintext transport. The
+    // host validation below remains defence-in-depth for this privileged test.
     try {
       const parsed = new URL(apiUrl);
-      if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-        return res.status(400).json({ ok: false, error: "Only http/https URLs are allowed" });
+      const isProduction = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+      if (parsed.protocol !== "https:" && (isProduction || parsed.protocol !== "http:")) {
+        return res.status(400).json({ ok: false, error: "Registry URLs must use HTTPS in production" });
       }
       const hostname = parsed.hostname.toLowerCase();
       const privatePatterns = [
@@ -1370,6 +1377,7 @@ export function registerPlatformControlRoutes(app: Express) {
           headers: { "Content-Type": "application/json", "X-Api-Key": apiKey, "User-Agent": "UCH-Registry/2.8.0" },
           body: JSON.stringify({ reference: testRef, provider }),
           signal: controller.signal,
+          redirect: "error",
         });
         latencyMs = Date.now() - t0;
         clearTimeout(timer);
