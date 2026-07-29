@@ -2,6 +2,15 @@ import { expect, test } from "@playwright/test";
 
 test.describe("Transaction resolution controls", () => {
   test("prevents a case from bypassing verification and core handoff", async ({ page }) => {
+    // Do not depend on a shared saved cookie: establish the intended real
+    // E2E identity before exercising a controlled operational workflow.
+    const session = await page.request.post("/api/test/set-session", {
+      data: { username: "platform_admin" },
+    });
+    expect(session.ok()).toBeTruthy();
+    const authenticated = await page.request.get("/api/auth/me");
+    expect(authenticated.ok()).toBeTruthy();
+
     await page.goto("/transaction-resolution");
     await expect(page.getByTestId("transaction-resolution-desk")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Transaction Resolution Desk" })).toBeVisible();

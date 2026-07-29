@@ -14,7 +14,10 @@ test.beforeAll(async ({ browser }) => {
     data: { username: "platform_admin" },
   });
   expect(session.ok()).toBeTruthy();
-  const resp = await pg.request.get("/api/borrowers?country=Ghana&limit=5");
+  // The all-borrowers feed can legitimately start with a corporate record.
+  // This suite verifies name and National ID search, so use the individual
+  // borrower API rather than assuming the first generic record has a name.
+  const resp = await pg.request.get("/api/consumers?country=Ghana&limit=5");
   expect(resp.status()).toBe(200);
   const body = await resp.json() as { data?: Array<{ id: string; nationalId?: string; firstName?: string }> };
   expect(body.data?.[0]).toBeTruthy();
