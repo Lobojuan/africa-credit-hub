@@ -1,4 +1,4 @@
-# Known Issues — africa-credit-hub
+# Known Issues — Universal Credit Hub
 
 Status legend: OPEN / FIXED(date) / FALSE-POSITIVE
 

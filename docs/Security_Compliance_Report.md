@@ -11,9 +11,9 @@
 
 ## 1. Executive Summary
 
-This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v2.0. The system handles sensitive financial and personal data across all 54 African countries and supports five languages (English, French, Portuguese, Arabic, Swahili) and must comply with data protection and financial regulatory requirements.
+This document provides a comprehensive assessment of the security controls implemented in the Credit Registry System against the requirements defined in the Software Requirements Specification (SRS) v2.0. The system handles sensitive financial and personal data across all 54 African countries and supports eight languages (English, French, Portuguese, Arabic, Swahili, Spanish, Simplified Chinese and Traditional Chinese); it must comply with applicable data-protection and financial-regulatory requirements.
 
-All ten non-functional security requirements (NFR-SEC-01 through NFR-SEC-10) have been implemented, along with fifteen enterprise security enhancements (ENT-01 through ENT-15) and additional AI-powered features (AI-001 through AI-004) and platform enhancements (ENT-16 through ENT-21). These include TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, investor demo environment, dashboard visual analytics, interactive demo tour, AI credit risk analysis, AI report summaries, AI smart chatbot, AI compliance reports, Excel export, real-time notifications, API usage analytics, dashboard sparkline trends, audit trail enhancements, and multi-language PDF reports. This report details each security control, its implementation, and compliance status.
+The controls described in this report are implemented in the codebase, subject to the deployment, configuration, governance and independent-assurance gates stated in Section 12 and the 29 July 2026 addendum below. This is not by itself a production certification, a regulator acceptance statement, or evidence that a bank identity provider has been configured. The controls include TOTP multi-factor authentication, OAuth 2.1 Bearer token exchange, tamper-evident audit log hash chains, fuzzy entity matching, dispute chatbot, low-bandwidth optimizations, XBRL upload support, data retention enforcement, exchange rate management, API administration, global search, ID photo/document upload, investor demo environment, dashboard visual analytics, interactive demo tour, AI credit risk analysis, AI report summaries, AI smart chatbot, AI compliance reports, Excel export, real-time notifications, API usage analytics, dashboard sparkline trends, audit trail enhancements, and multi-language PDF reports.
 
 ---
 
@@ -658,6 +658,19 @@ process.on("unhandledRejection", (err) => { console.error("Unhandled rejection:"
 12. **Rotate OAuth JWT signing keys** periodically
 
 ---
+
+## 12.3 July 2026 authentication and production-readiness addendum
+
+The following distinction is mandatory for release communication:
+
+| Area | Implemented code control | Required evidence before a live bank claim |
+|---|---|---|
+| Password/MFA/passkeys | Named-user session authentication, MFA policy, TOTP and WebAuthn/passkey flows. | Bank provisioning, recovery-path UAT and operational ownership. |
+| Google Workspace / Microsoft Entra | Institutional OAuth routes accept only active, pre-provisioned UCH users; provider status does not expose secrets. | Bank-owned application configuration, exact HTTPS redirect URI, consent, named-user acceptance tests and sign-off. |
+| SAML | Legacy SAML is blocked in production because it does not provide the required vetted signed-assertion validation. | A vetted replacement, IdP metadata/certificate validation and bank acceptance test. |
+| Browser/E2E assurance | Deterministic authenticated fixtures and retained WebKit failure diagnostics; the HTTP/CSP WebKit regression was repaired without weakening production HTTPS policy. | Latest release workflow must be green and bank browser/device UAT must be retained. |
+
+See [SSO Acceptance Test Checklist](SSO_Acceptance_Test_Checklist.md) and [Bank Meeting Readiness](Bank_Meeting_Readiness_2026-07-29.md).
 
 ## 13. Data Lifecycle & Retention Security
 

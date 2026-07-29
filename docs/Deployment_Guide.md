@@ -147,12 +147,27 @@ All deployments require 64-bit architecture. ARM64 (aarch64) and x86_64 are both
 | `NODE_ENV` | No | Environment mode (development/production) | `production` |
 | `AI_INTEGRATIONS_OPENAI_API_KEY` | No | OpenAI API key for AI-powered features (credit risk analysis, report summaries, chatbot, compliance reports) | `sk-...` |
 | `AI_INTEGRATIONS_OPENAI_BASE_URL` | No | OpenAI API base URL (provided by OpenAI-compatible integration) | `https://api.openai.com/v1` |
+| `CANONICAL_URL` | Yes for production OAuth | Public HTTPS origin used to build OAuth callback URIs | `https://app.example-bank.com` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Only for Google Workspace sign-in | Bank-owned Google OAuth application credentials | Store in the server secret manager; never commit |
+| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` / `MICROSOFT_TENANT_ID` | Only for Microsoft Entra sign-in | Bank-owned Entra application and tenant configuration | Store in the server secret manager; never commit |
 
 ### 3.1 Generating a Session Secret
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
+
+### 3.2 Institutional SSO go-live checklist
+
+Google Workspace and Microsoft Entra support staff sign-in only; neither flow creates a bank staff account. Before enabling a provider, the bank must:
+
+1. Set `CANONICAL_URL` to the public HTTPS origin and register the exact callback URI: `/api/auth/google/callback` or `/api/auth/microsoft/callback`.
+2. Store client credentials only in the production secret manager/environment; do not put them in source, browser configuration, screenshots, or tickets.
+3. Pre-provision active UCH users for the bank email addresses and assign least-privilege roles and organisation/country scope.
+4. Run acceptance tests for successful login, inactive/unprovisioned identity rejection, logout, lockout, MFA/passkey recovery and the correct landing destination for every role.
+5. Review the authenticated, super-admin OAuth status endpoint after configuration; it does not expose secrets.
+
+SAML enterprise SSO is intentionally unavailable in production until its implementation is replaced with a vetted, signature-validating solution and the bank has supplied IdP metadata/certificates. Do not enable legacy SAML merely to bypass this gate.
 
 ---
 
@@ -615,6 +630,7 @@ psql $DATABASE_URL -c "\dt"
 - [ ] Set up monitoring and alerting
 - [ ] Conduct security audit before go-live
 - [ ] Enforce MFA (ENT-01) for admin and regulator accounts
+- [ ] Configure and acceptance-test exactly one bank-owned identity provider before advertising SSO (Google Workspace or Microsoft Entra); SAML remains unavailable until the vetted replacement is approved
 - [ ] Rotate OAuth JWT signing keys periodically (ENT-04)
 - [ ] Verify audit log integrity (ENT-07) as part of routine security checks
 - [ ] Ensure `pg_trgm` extension (ENT-02) is available in production PostgreSQL

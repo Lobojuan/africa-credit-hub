@@ -19,6 +19,7 @@
 | **Loto POS & Devices** | /loto-pos and /loto/admin/devices pages live |
 | **Security** | PII_ENCRYPTION_KEY + PII_ENCRYPTION_SALT validated at startup. MASTER_CONTROL_PASSWORD required in production |
 | **Migrations** | Sequential journal 0000–0018, no duplicate prefixes |
+| **2026-07 hardening** | Encrypted borrower-ID search repaired, deterministic authenticated E2E fixtures, WebKit HTTP/CSP regression fixed, and Ghana macro-risk observations now use maker-checker approval and audit evidence |
 
 ## Overview
 
@@ -73,6 +74,8 @@ The platform is developed by **Universal Credit Hub** in partnership with **Syst
 - Helmet security headers, CORS policy, and rate limiting (6 tiers)
 - Google OAuth 2.0 integration
 
+> **Institutional SSO status:** Google Workspace and Microsoft Entra sign-in are supported only after a bank configures its client credentials, approved callback URI, and pre-provisioned active staff identities. SAML enterprise SSO is deliberately unavailable in production pending a vetted implementation and bank IdP metadata/certificate validation. See [Bank Meeting Readiness](docs/Bank_Meeting_Readiness_2026-07-29.md).
+
 ### Consumer Portal
 - Self-service credit report access with PDF generation
 - Online dispute filing and resolution tracking
@@ -117,7 +120,7 @@ The platform is developed by **Universal Credit Hub** in partnership with **Syst
 ## Project Structure
 
 ```
-africa-credit-hub/
+universal-credit-hub/
 ├── client/
 │   └── src/
 │       ├── components/      # Reusable UI components (sidebar, charts, forms)

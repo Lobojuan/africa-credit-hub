@@ -1,4 +1,4 @@
-# Session Log — africa-credit-hub (append-only)
+# Session Log — Universal Credit Hub (historical, append-only)
 
 > Central memory: https://github.com/Lobojuan/AI-Brain-and-Memory — read that first.
 
