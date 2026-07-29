@@ -16,6 +16,7 @@ import fs from "fs";
 import path from "path";
 import multer from "multer";
 import { getOAuthCallbackBase } from "../base-url";
+import { isSafeWebhookUrl } from "../lib/url-safety";
 
 const logger = createLogger("platform-control");
 
@@ -1359,6 +1360,9 @@ export function registerPlatformControlRoutes(app: Express) {
       const isPrivate = privatePatterns.some(p => p.test(hostname));
       if (isPrivate && process.env.NODE_ENV === "production") {
         return res.status(400).json({ ok: false, error: "Connections to private/internal hosts are not allowed" });
+      }
+      if (!isSafeWebhookUrl(parsed.toString())) {
+        return res.status(400).json({ ok: false, error: "Registry URL is not a permitted public HTTPS destination" });
       }
     } catch {
       return res.status(400).json({ ok: false, error: "Invalid URL" });
