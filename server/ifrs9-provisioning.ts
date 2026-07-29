@@ -38,6 +38,7 @@ export type EclExposure = {
   daysPastDue: number;
   accountStatus: string;
   restructured?: boolean;
+  previouslyCreditImpaired?: boolean;
   monthsPerformingAfterCure?: number;
 };
 
@@ -66,7 +67,13 @@ function inferStage(exposure: EclExposure, policy: Ifrs9Policy): Pick<DraftEclRe
   const status = exposure.accountStatus.trim().toLowerCase();
   const isCreditImpaired = policy.creditImpairedStatuses.map(value => value.toLowerCase()).includes(status)
     || exposure.daysPastDue >= policy.defaultDaysPastDue;
-  const curedEnough = (exposure.monthsPerformingAfterCure ?? 0) >= policy.cureMonthsRequired;
+  // A cure cannot be inferred merely from time passing. The facility must be
+  // currently performing with no arrears, and its prior impairment must be
+  // explicitly evidenced by the source system/policy workflow.
+  const curedEnough = Boolean(exposure.previouslyCreditImpaired)
+    && status === "current"
+    && exposure.daysPastDue === 0
+    && (exposure.monthsPerformingAfterCure ?? 0) >= policy.cureMonthsRequired;
 
   if (isCreditImpaired && !curedEnough) {
     return {
@@ -76,11 +83,11 @@ function inferStage(exposure: EclExposure, policy: Ifrs9Policy): Pick<DraftEclRe
     };
   }
 
-  if (exposure.daysPastDue >= policy.sicrDaysPastDue || Boolean(exposure.restructured) || (isCreditImpaired && curedEnough)) {
+  if (exposure.daysPastDue >= policy.sicrDaysPastDue || Boolean(exposure.restructured) || curedEnough) {
     const reasons = [
       exposure.daysPastDue >= policy.sicrDaysPastDue ? `${exposure.daysPastDue} days past due meets the SICR threshold` : "",
       exposure.restructured ? "Restructured facility requires policy review" : "",
-      isCreditImpaired && curedEnough ? "Cured credit-impaired facility remains in lifetime ECL pending policy-approved migration" : "",
+      curedEnough ? "Cured credit-impaired facility remains in lifetime ECL pending policy-approved migration" : "",
     ].filter(Boolean);
     return { stage: "stage_2", pdBasis: "lifetime", horizonMonths: exposure.lifetimeMonths, reasons, accountingTreatment: "gross_carrying_amount_interest" };
   }

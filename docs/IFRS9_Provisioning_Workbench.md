@@ -9,7 +9,7 @@ IFRS 9 describes ECL as a probability-weighted estimate of cash shortfalls and r
 ## What the first implementation covers
 
 - Stage 1 / Stage 2 / Stage 3 classification under a **versioned policy object**.
-- A transparent DPD, status, restructuring and cure-period decision path.
+- A transparent DPD, status, restructuring and cure-period decision path. A cure requires source-system evidence of prior impairment, current status, zero arrears and the policy cure period; elapsed time alone cannot downgrade an overdue default.
 - EAD from drawn balance plus undrawn commitment × approved credit-conversion factor.
 - PD, LGD, EAD and effective-interest-rate discounting.
 - Probability-weighted base/downside (or bank-defined) scenarios.

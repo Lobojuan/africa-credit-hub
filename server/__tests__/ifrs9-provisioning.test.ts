@@ -35,8 +35,13 @@ describe("calculateDraftEcl", () => {
     expect(result.accountingTreatment).toBe("net_carrying_amount_interest");
   });
 
-  it("keeps a cured default in Stage 2 lifetime ECL for reviewed migration", () => {
-    const result = calculateDraftEcl({ ...base, daysPastDue: 95, accountStatus: "default", monthsPerformingAfterCure: 3 }, GHANA_IFRS9_DRAFT_POLICY, scenarios);
+  it("does not allow a still-overdue default to be cured merely by elapsed months", () => {
+    const result = calculateDraftEcl({ ...base, daysPastDue: 95, accountStatus: "default", previouslyCreditImpaired: true, monthsPerformingAfterCure: 3 }, GHANA_IFRS9_DRAFT_POLICY, scenarios);
+    expect(result.stage).toBe("stage_3");
+  });
+
+  it("keeps an evidenced cured facility in Stage 2 lifetime ECL for reviewed migration", () => {
+    const result = calculateDraftEcl({ ...base, daysPastDue: 0, accountStatus: "current", previouslyCreditImpaired: true, monthsPerformingAfterCure: 3 }, GHANA_IFRS9_DRAFT_POLICY, scenarios);
     expect(result.stage).toBe("stage_2");
     expect(result.reasons.join(" ")).toMatch(/Cured credit-impaired/);
   });
