@@ -35,6 +35,13 @@ test.describe("Public pages — login", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
+  test("isolated HTTP test server does not upgrade local assets to HTTPS", async ({ page }) => {
+    const response = await page.goto("/login");
+    expect(response).not.toBeNull();
+    expect(response!.headers()["content-security-policy"] || "")
+      .not.toContain("upgrade-insecure-requests");
+  });
+
   test("login page has institution login button", async ({ page }) => {
     await page.goto("/login");
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });

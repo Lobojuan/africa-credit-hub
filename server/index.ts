@@ -166,7 +166,11 @@ app.use(helmet({
       baseUri: ["'self'"],
       formAction: ["'self'"],
       frameAncestors: isProductionBoot ? ["'none'"] : ["'self'"],
-      ...(isProductionBoot ? { upgradeInsecureRequests: [] } : {}),
+      // Helmet supplies this directive by default unless it is explicitly
+      // disabled. Keep HTTPS upgrading in production, but never upgrade the
+      // isolated HTTP E2E server: WebKit otherwise turns Vite asset requests
+      // into https://localhost and the application cannot boot.
+      upgradeInsecureRequests: isProductionBoot ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false,
