@@ -14,17 +14,16 @@ This register prevents a bank, regulator or delivery team from treating an older
 | `Bank_Risk_Diagnostic.md` | Controlled management-diagnostic delivery and safeguards | Current |
 | `Public_Demo_Board.md` | Public synthetic demo scope, claims boundary and conversion path | Current |
 | `UCH_Differentiated_Product_Research_2026-07-30.md` | Evidence-led product differentiation and delivery sequence | Current |
+| `Documentation_Release_Baseline_2026-07-30.md` | Documentation classes, release boundary and current regulatory source register | Current |
 | `Ghana_NPL_Pilot_Data_Contract.md` | Ghana NPL pilot extract | Current |
 | `IFRS9_Provisioning_Workbench.md` | Draft ECL boundary and governance | Current |
 | `SSO_Acceptance_Test_Checklist.md` | Bank identity-provider acceptance | Current |
 | `Production_Security_Release_Gate.md` | Production decision evidence | Current |
 | `Security_Audit_2026-07-29.md` | Current code-level security findings | Current |
 
-## Controlled legacy set
+## Controlled legacy and technical-reference set
 
-The documentation scan on 2026-07-29 found **31** files using legacy CDH/Pan-African Credit Registry wording. They may contain useful background, but are **not approved as current bank-facing product statements** until their owner reviews the identity, version, architecture, regulatory claims, screenshots and operational instructions.
-
-This includes `API_Integration_Guide.md`, `Deployment_Guide.md`, `Penetration_Test_Readiness.md`, the language variants and the legacy Ghana policy/procedure documents. The scan found **zero Replit references** in Markdown, TypeScript/TSX and JSON files.
+Every document not listed in the current bank-facing authority table is restricted from external use as a current product, security or regulatory commitment. This includes `API_Integration_Guide.md`, `Deployment_Guide.md`, `Penetration_Test_Readiness.md`, the language variants, historical manuals, exports and older Ghana policy/procedure documents. See [`Documentation_Release_Baseline_2026-07-30.md`](Documentation_Release_Baseline_2026-07-30.md) for the full release rule and source register.
 
 ## Review rule
 
