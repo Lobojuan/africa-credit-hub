@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T13:38:19.189Z",
+  "generatedAt": "2026-07-30T15:20:31.393Z",
   "branch": "main",
-  "currentCommit": "baf5663",
+  "currentCommit": "257a3fa",
   "commits": [
+    {
+      "hash": "257a3fadca7b363251e5c1d3e8af1ea87f8ac945",
+      "shortHash": "257a3fa",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add hands-on banker demo workflows"
+    },
     {
       "hash": "baf5663215b12aeace9481d0c60b53cfa6ef9e11",
       "shortHash": "baf5663",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "security: require HTTPS for registry credential tests"
-    },
-    {
-      "hash": "7038d229aceb7758c99162c31a13d61b7dca56f1",
-      "shortHash": "7038d22",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "security: remove production guide login and sanitize landing HTML"
     }
   ]
 };

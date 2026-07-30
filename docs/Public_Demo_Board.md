@@ -8,6 +8,8 @@ Visitors may also select **Improve the whole bank**, which presents all five wor
 
 Selecting a scenario moves the visitor to the matching synthetic banker workspace, so the change is immediately visible. The NPL, Credit Hub and Operations desks include fictional numeric inputs and controlled review actions that show an indicative workflow outcome; no data is stored and no real bank action is possible.
 
+The **simulated banker shift** makes the operating model explicit: a visitor chooses a bank role and incoming event, UCH routes the first governed work item to the relevant desk, and the demo shows the required human owner and evidence boundary.
+
 ## Public scenarios
 
 1. NPL and IFRS 9 readiness

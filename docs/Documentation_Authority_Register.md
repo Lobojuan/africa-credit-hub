@@ -13,6 +13,7 @@ This register prevents a bank, regulator or delivery team from treating an older
 | `Bank_Pilot_Launch_Pack.md` | Bank pilot/UAT, contacts and rollback | Current |
 | `Bank_Risk_Diagnostic.md` | Controlled management-diagnostic delivery and safeguards | Current |
 | `Public_Demo_Board.md` | Public synthetic demo scope, claims boundary and conversion path | Current |
+| `UCH_Differentiated_Product_Research_2026-07-30.md` | Evidence-led product differentiation and delivery sequence | Current |
 | `Ghana_NPL_Pilot_Data_Contract.md` | Ghana NPL pilot extract | Current |
 | `IFRS9_Provisioning_Workbench.md` | Draft ECL boundary and governance | Current |
 | `SSO_Acceptance_Test_Checklist.md` | Bank identity-provider acceptance | Current |
