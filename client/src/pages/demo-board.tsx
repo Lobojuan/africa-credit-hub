@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
-  AlertTriangle, ArrowRight, BarChart3, Building2, CheckCircle2, ClipboardCheck,
+  Activity, AlertTriangle, ArrowRight, BarChart3, Building2, CheckCircle2, ClipboardCheck,
   CreditCard, FileCheck2, FileSearch, FileText, Landmark, LockKeyhole, Radar,
-  ShieldAlert, ShieldCheck, Sparkles, X,
+  Pause, Play, ShieldAlert, ShieldCheck, Sparkles, TrendingUp, X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,27 @@ function DemoWorkspaceSurface({ activeWorkspace, onSelectWorkspace }: { activeWo
 function DemoMetric({ label, value, note, tone }: { label: string; value: string; note: string; tone: string }) { return <div className="rounded-xl border bg-muted/30 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p><p className={`mt-1 text-xl font-bold ${tone}`}>{value}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div>; }
 function DemoCheck({ label, status }: { label: string; status: string }) { const good = status === "Ready"; return <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm"><span>{label}</span><Badge variant="outline" className={good ? "border-emerald-500/30 text-emerald-700" : "border-amber-500/30 text-amber-700"}>{status}</Badge></div>; }
 function DemoTable({ headers, rows, onAction }: { headers: string[]; rows: string[][]; onAction: () => void }) { return <div className="overflow-x-auto rounded-xl border"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-muted/50 text-xs text-muted-foreground"><tr>{headers.map((header) => <th key={header} className="px-3 py-2 font-medium">{header}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row[0]} className="border-t">{row.map((cell, index) => <td key={`${row[0]}-${cell}`} className="px-3 py-3">{index === row.length - 1 ? <Button size="sm" variant="outline" onClick={onAction}>{cell}</Button> : cell}</td>)}</tr>)}</tbody></table></div>; }
+
+const liveFrames = [
+  { npl: "12.8%", nplDelta: "-0.3 pts", exposure: "GH¢18.4m", exceptions: 18, readiness: "74%", event: "New payment-stress signal detected", detail: "Fictional Trading Co. · 47 DPD", points: "0,76 28,68 56,72 84,49 112,56 140,34 168,40 196,21 224,30" },
+  { npl: "12.5%", nplDelta: "-0.6 pts", exposure: "GH¢17.9m", exceptions: 16, readiness: "78%", event: "Evidence exception cleared", detail: "Consent scope validated · simulated", points: "0,78 28,70 56,58 84,64 112,45 140,51 168,27 196,34 224,17" },
+  { npl: "12.2%", nplDelta: "-0.9 pts", exposure: "GH¢17.1m", exceptions: 14, readiness: "81%", event: "Collections action assigned", detail: "Example Logistics Ltd. · simulated", points: "0,77 28,63 56,68 84,45 112,52 140,31 168,39 196,19 224,25" },
+  { npl: "11.9%", nplDelta: "-1.2 pts", exposure: "GH¢16.6m", exceptions: 12, readiness: "84%", event: "Management pack refreshed", detail: "Independent review outstanding", points: "0,74 28,66 56,50 84,57 112,38 140,42 168,24 196,29 224,12" },
+];
+
+function LiveSimulationPanel() {
+  const [frameIndex, setFrameIndex] = useState(0);
+  const [running, setRunning] = useState(true);
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => setFrameIndex((current) => (current + 1) % liveFrames.length), 2200);
+    return () => window.clearInterval(timer);
+  }, [running]);
+  const frame = liveFrames[frameIndex];
+  return <section className="mx-auto max-w-7xl px-4 pb-8 md:px-8" data-testid="demo-live-simulation"><div className="overflow-hidden rounded-2xl border bg-slate-950 text-white shadow-xl"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-5 py-4"><div className="flex items-center gap-3"><span className="flex size-9 items-center justify-center rounded-xl bg-emerald-400/15 text-emerald-300"><Activity className="size-5" /></span><div><p className="font-semibold">UCH Executive Live Simulation</p><p className="text-xs text-slate-400">Synthetic portfolio movement · changes every 2.2 seconds</p></div></div><div className="flex items-center gap-2"><span className="flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-medium text-emerald-300"><span className="size-1.5 animate-pulse rounded-full bg-emerald-300" />SIMULATION</span><Button variant="outline" size="sm" className="border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white" onClick={() => setRunning((current) => !current)} data-testid="button-toggle-live-simulation">{running ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}{running ? "Pause" : "Resume"}</Button></div></div><div className="grid gap-4 p-5 lg:grid-cols-[1.15fr_.85fr]"><div><div className="grid gap-3 sm:grid-cols-4"><LiveMetric label="Portfolio NPL" value={frame.npl} note={frame.nplDelta} /><LiveMetric label="At-risk exposure" value={frame.exposure} note="Synthetic watchlist" /><LiveMetric label="Control exceptions" value={String(frame.exceptions)} note="Across 5 workstreams" /><LiveMetric label="Evidence ready" value={frame.readiness} note="Before bank review" /></div><div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4"><div className="flex items-center justify-between"><div><p className="font-medium">Risk trend — last 90 simulated days</p><p className="mt-1 text-xs text-slate-400">Risk exposure declines only after bank-approved action.</p></div><TrendingUp className="size-5 text-emerald-300" /></div><svg viewBox="0 0 224 92" className="mt-4 h-28 w-full" preserveAspectRatio="none" aria-label="Synthetic risk trend chart"><defs><linearGradient id="demoRiskFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6ee7b7" stopOpacity="0.45" /><stop offset="100%" stopColor="#6ee7b7" stopOpacity="0" /></linearGradient></defs><path d={`M ${frame.points} L 224,92 L 0,92 Z`} fill="url(#demoRiskFill)" /><polyline points={frame.points} fill="none" stroke="#6ee7b7" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg></div></div><div className="rounded-xl border border-white/10 bg-white/5 p-4"><p className="text-xs font-medium uppercase tracking-wide text-slate-400">Live simulated event feed</p><div className="mt-4 space-y-4"><div className="border-l-2 border-emerald-300 pl-3"><p className="text-sm font-semibold text-emerald-200">{frame.event}</p><p className="mt-1 text-xs text-slate-400">{frame.detail}</p><p className="mt-1 text-[10px] text-slate-500">Now · simulated event</p></div><div className="border-l-2 border-amber-300/70 pl-3"><p className="text-sm font-medium">IFRS 9 policy remains draft</p><p className="mt-1 text-xs text-slate-400">Independent bank approval required before ECL use.</p></div><div className="border-l-2 border-violet-300/70 pl-3"><p className="text-sm font-medium">Consent evidence review pending</p><p className="mt-1 text-xs text-slate-400">No sensitive customer action proceeds in this demo.</p></div></div></div></div><div className="border-t border-white/10 px-5 py-3 text-xs text-slate-400">A real bank dashboard would use bank-approved data, policy thresholds and human approvals. This display uses synthetic numbers only.</div></div></section>;
+}
+
+function LiveMetric({ label, value, note }: { label: string; value: string; note: string }) { return <div className="rounded-xl border border-white/10 bg-white/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 text-xl font-bold tabular-nums">{value}</p><p className="mt-1 text-xs text-emerald-300">{note}</p></div>; }
 
 const scenarios: Scenario[] = [
   { id: "npl", title: "Stop loans becoming NPLs", shortTitle: "NPL & IFRS 9", description: "Explore an early-warning queue, data-readiness checks and a governed IFRS 9 work path.", signal: "12 facilities deteriorating", impact: "GH¢18.4m exposure needs review", finding: "Arrears, restructures and missing payment dates weaken early intervention.", action: "Validate the loan tape, assign an owner and back-test the warning rules.", result: "A bank-owned NPL reduction pilot with baseline, target and monthly evidence.", href: "/npl-early-warning", icon: Radar, tone: "bg-amber-500/10 text-amber-700" },
@@ -112,6 +133,8 @@ export default function DemoBoardPage() {
         {demoScenarios.map((scenario) => { const ScenarioIcon = scenario.icon; const isSelected = scenario.id === selectedId; return <button type="button" key={scenario.id} onClick={() => setSelectedId(scenario.id)} className={`rounded-xl border bg-card p-4 text-left transition ${isSelected ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/40"}`} data-testid={`demo-scenario-${scenario.id}`}><span className={`mb-3 flex size-9 items-center justify-center rounded-lg ${scenario.tone}`}><ScenarioIcon className="size-4" /></span><p className="text-sm font-semibold">{scenario.shortTitle}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{scenario.description}</p></button>; })}
       </div>
     </section>
+
+    <LiveSimulationPanel />
 
     <section className="mx-auto max-w-7xl px-4 pb-8 md:px-8" aria-labelledby="demo-workspaces-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-medium text-primary">Product tour</p><h2 id="demo-workspaces-title" className="text-2xl font-bold">Try the UCH workspaces</h2><p className="mt-1 text-sm text-muted-foreground">Switch workspaces and trigger safe simulated actions. Every record below is fictional.</p></div><Badge variant="outline">Interactive synthetic data</Badge></div>

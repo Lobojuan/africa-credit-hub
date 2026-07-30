@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T13:14:12.285Z",
+  "generatedAt": "2026-07-30T13:20:54.398Z",
   "branch": "main",
-  "currentCommit": "f171cca",
+  "currentCommit": "54b7bbc",
   "commits": [
+    {
+      "hash": "54b7bbc9ee22bc55f4cf8d6a2bfd75b271472fe4",
+      "shortHash": "54b7bbc",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add interactive demo workspaces"
+    },
     {
       "hash": "f171ccab466e538468c58f44fd2f3bd18f05fbe2",
       "shortHash": "f171cca",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "fix: require evidence before IFRS 9 cure migration"
-    },
-    {
-      "hash": "3337333340ef0591a568a5c403f35f5bdf2b3be2",
-      "shortHash": "3337333",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add governed IFRS 9 draft ECL engine"
     }
   ]
 };

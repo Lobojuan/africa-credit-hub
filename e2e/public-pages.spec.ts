@@ -105,6 +105,9 @@ test.describe("Public pages — Demo Board", () => {
     await expect(page.getByTestId("whole-bank-workstreams")).toContainText("NPL & IFRS 9");
     await expect(page.getByTestId("demo-scenario-credit")).toBeVisible();
     await expect(page.getByTestId("demo-workspace-simulator")).toBeVisible();
+    await expect(page.getByTestId("demo-live-simulation")).toContainText("UCH Executive Live Simulation");
+    await page.getByTestId("button-toggle-live-simulation").click();
+    await expect(page.getByTestId("button-toggle-live-simulation")).toContainText("Resume");
     await page.getByTestId("demo-workspace-npl").click();
     await expect(page.getByTestId("demo-workspace-simulator")).toContainText("NPL Early Warning Desk");
     await page.getByRole("button", { name: "Assign" }).first().click();

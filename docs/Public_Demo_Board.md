@@ -16,6 +16,8 @@ Visitors may also select **Improve the whole bank**, which presents all five wor
 
 The board also includes a synthetic workspace simulator: Bank overview, NPL desk, Credit Hub, Collateral and consent, Operations, and Evidence packs. Visitors can switch views and trigger simulated review actions. These interactions never call a production API or execute a banking action.
 
+The Executive Live Simulation deliberately animates fictional portfolio metrics, a risk trend and event feed to demonstrate the operating experience. It must always retain the visible `SIMULATION` label and synthetic-data disclaimer; it is not live telemetry or a performance promise.
+
 ## Safety and claims boundary
 
 - All figures, institutions, cases and findings displayed on `/demo` are synthetic.
