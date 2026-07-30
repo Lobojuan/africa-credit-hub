@@ -13,8 +13,8 @@ export default function CreditLandingPage() {
   return (
     <div className="relative">
       <Seo
-        title="Universal Credit Hub — Pan-African Credit Registry Platform"
-        description="The only consent-first credit infrastructure covering all 54 African countries. Credit bureau, collateral registry and Loto Fiscal verified-receipt scoring on one platform. 8 languages · regulator-ready."
+        title="Universal Credit Hub — Controlled Bank Risk Operations"
+        description="Credit intelligence, NPL early warning, collateral evidence, consent controls and governed IFRS 9 policy workflows for controlled African bank pilots."
         canonical="https://universalcredithub.com/"
       />
       <div className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs">

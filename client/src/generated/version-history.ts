@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-29T20:32:46.939Z",
+  "generatedAt": "2026-07-30T12:06:18.265Z",
   "branch": "main",
-  "currentCommit": "d899caf",
+  "currentCommit": "8145abb",
   "commits": [
+    {
+      "hash": "8145abbe05d7f2c7a56b811ff835852f7803ec9b",
+      "shortHash": "8145abb",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "test: align bank pilot journey with IFRS9 workspace"
+    },
+    {
+      "hash": "1b5d4c42e4ec6169f60a8802ca1e24aeb54ceab9",
+      "shortHash": "1b5d4c4",
+      "date": "2026-07-29",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add governed bank pilot launch workspace"
+    },
     {
       "hash": "d899caf41702e6677732619bb195d63747e6f0e4",
       "shortHash": "d899caf",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "fix: preserve HTTP assets in WebKit E2E"
-    },
-    {
-      "hash": "8ff7fef78efab2c553508f18bb9ac70abbb30a6e",
-      "shortHash": "8ff7fef",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "test: stabilise and retain WebKit diagnostics"
-    },
-    {
-      "hash": "6a533376b312391022f845191fa9c2af6b87a2ea",
-      "shortHash": "6a53337",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "test: stabilise authenticated browser fixtures"
     }
   ]
 };
