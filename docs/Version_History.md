@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `9695c4d`
+**Current Commit:** `f171cca`
 **Branch:** `main`
-**Generated:** 2026-07-30T13:10:51.833Z
+**Generated:** 2026-07-30T13:14:12.285Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-30 | `f171cca` | feat: add whole bank demo journey | Uffe J Carlson |
 | 2026-07-30 | `9695c4d` | feat: add public bank demo board | Uffe J Carlson |
 | 2026-07-30 | `9e63d46` | feat: add bank risk diagnostic workspace | Uffe J Carlson |
 | 2026-07-30 | `3f83bd8` | feat: refresh controlled bank pilot landing | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-29 | `af745b9` | fix: disable guide auto-login in production | Uffe J Carlson |
 | 2026-07-29 | `dad79cd` | fix: require evidence before IFRS 9 cure migration | Uffe J Carlson |
 | 2026-07-29 | `3337333` | feat: add governed IFRS 9 draft ECL engine | Uffe J Carlson |
-| 2026-07-29 | `82b7ed6` | ci: make skipped production deployments explicit | Uffe J Carlson |

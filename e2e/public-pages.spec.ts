@@ -104,6 +104,15 @@ test.describe("Public pages — Demo Board", () => {
     await expect(page.getByTestId("demo-scenario-whole")).toBeVisible();
     await expect(page.getByTestId("whole-bank-workstreams")).toContainText("NPL & IFRS 9");
     await expect(page.getByTestId("demo-scenario-credit")).toBeVisible();
+    await expect(page.getByTestId("demo-workspace-simulator")).toBeVisible();
+    await page.getByTestId("demo-workspace-npl").click();
+    await expect(page.getByTestId("demo-workspace-simulator")).toContainText("NPL Early Warning Desk");
+    await page.getByRole("button", { name: "Assign" }).first().click();
+    await expect(page.getByTestId("demo-simulated-action")).toContainText("simulated");
+    await page.getByTestId("demo-workspace-collateral").click();
+    await expect(page.getByTestId("demo-workspace-simulator")).toContainText("Collateral & consent controls");
+    await page.getByTestId("demo-workspace-evidence").click();
+    await expect(page.getByTestId("demo-workspace-simulator")).toContainText("Management evidence pack");
 
     await page.getByTestId("demo-scenario-operations").click();
     await expect(page.getByTestId("demo-scenario-workspace")).toContainText("Resolve fraud and failed transactions");

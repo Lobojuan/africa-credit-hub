@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T13:10:51.833Z",
+  "generatedAt": "2026-07-30T13:14:12.285Z",
   "branch": "main",
-  "currentCommit": "9695c4d",
+  "currentCommit": "f171cca",
   "commits": [
+    {
+      "hash": "f171ccab466e538468c58f44fd2f3bd18f05fbe2",
+      "shortHash": "f171cca",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add whole bank demo journey"
+    },
     {
       "hash": "9695c4de88cf1f5dc7fa832f04389df8e589f5de",
       "shortHash": "9695c4d",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "feat: add governed IFRS 9 draft ECL engine"
-    },
-    {
-      "hash": "82b7ed6eeb74fefe7b23d4066abf0900e46fb8ce",
-      "shortHash": "82b7ed6",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "ci: make skipped production deployments explicit"
     }
   ]
 };

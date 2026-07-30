@@ -14,6 +14,8 @@ Visitors may also select **Improve the whole bank**, which presents all five wor
 4. Reporting and prudential controls
 5. Core Credit Hub credit intelligence
 
+The board also includes a synthetic workspace simulator: Bank overview, NPL desk, Credit Hub, Collateral and consent, Operations, and Evidence packs. Visitors can switch views and trigger simulated review actions. These interactions never call a production API or execute a banking action.
+
 ## Safety and claims boundary
 
 - All figures, institutions, cases and findings displayed on `/demo` are synthetic.
