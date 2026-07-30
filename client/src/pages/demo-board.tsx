@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import {
-  AlertTriangle, ArrowRight, BarChart3, CheckCircle2, ClipboardCheck,
+  AlertTriangle, ArrowRight, BarChart3, Building2, CheckCircle2, ClipboardCheck,
   CreditCard, FileSearch, FileText, Landmark, LockKeyhole, Radar,
   ShieldAlert, ShieldCheck, Sparkles, X,
 } from "lucide-react";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 
 type Scenario = {
-  id: "npl" | "consent" | "operations" | "reporting" | "credit";
+  id: "whole" | "npl" | "consent" | "operations" | "reporting" | "credit";
   title: string;
   shortTitle: string;
   description: string;
@@ -33,11 +33,28 @@ const scenarios: Scenario[] = [
   { id: "credit", title: "See the core Credit Hub", shortTitle: "Credit intelligence", description: "Walk through borrower, credit-account, affordability and reasoned credit-review capabilities.", signal: "4 decision inputs missing", impact: "Thin-file review incomplete", finding: "Credit decisions need consented evidence, explainable scoring and an accountable officer review.", action: "Complete the evidence profile, score within policy and preserve the human decision.", result: "A controlled credit-intelligence pilot for one agreed lending segment.", href: "/credit", icon: CreditCard, tone: "bg-sky-500/10 text-sky-700" },
 ];
 
+const wholeBankScenario: Scenario = {
+  id: "whole",
+  title: "Improve the whole bank",
+  shortTitle: "Whole-bank transformation",
+  description: "See every UCH workstream as one sequenced management diagnostic and remediation programme.",
+  signal: "5 connected workstreams",
+  impact: "One management risk view",
+  finding: "Credit risk, customer operations, consent, collateral and reporting controls share data, ownership and evidence dependencies. Improving one in isolation can leave the wider control gap open.",
+  action: "Run a bank-wide, file-first management diagnostic, validate findings with each accountable executive and sequence the remedies by risk and dependency.",
+  result: "A phased 90-day plan: stabilise data and evidence first, prove high-value controls next, then integrate bank-approved workflows.",
+  href: "/bank-risk-diagnostic",
+  icon: Building2,
+  tone: "bg-primary/10 text-primary",
+};
+
+const demoScenarios = [wholeBankScenario, ...scenarios];
+
 export default function DemoBoardPage() {
-  const [selectedId, setSelectedId] = useState<Scenario["id"]>("npl");
+  const [selectedId, setSelectedId] = useState<Scenario["id"]>("whole");
   const [reportOpen, setReportOpen] = useState(false);
   const [name, setName] = useState("");
-  const selected = useMemo(() => scenarios.find((scenario) => scenario.id === selectedId)!, [selectedId]);
+  const selected = useMemo(() => demoScenarios.find((scenario) => scenario.id === selectedId)!, [selectedId]);
   const Icon = selected.icon;
 
   return <main className="min-h-screen bg-muted/20" data-testid="public-demo-board">
@@ -52,15 +69,15 @@ export default function DemoBoardPage() {
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-8 md:py-16">
         <Badge variant="outline" className="border-primary/30 bg-background">No registration required</Badge>
         <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight md:text-5xl">Choose the banking problem. See the controlled fix.</h1>
-        <p className="mt-4 max-w-3xl text-muted-foreground md:text-lg">This interactive board uses fictional data to demonstrate how UCH identifies risk, preserves evidence and turns an accepted gap into a bank-owned remediation or pilot. It is not a live bank environment, audit or regulatory filing.</p>
+        <p className="mt-4 max-w-3xl text-muted-foreground md:text-lg">Start with one banking problem—or choose the whole-bank path. This interactive board uses fictional data to demonstrate how UCH identifies risk, preserves evidence and turns accepted gaps into a bank-owned remediation or pilot. It is not a live bank environment, audit or regulatory filing.</p>
         <div className="mt-6 flex flex-wrap gap-2 text-xs"><span className="rounded-full border bg-background px-3 py-1.5">No real customer data</span><span className="rounded-full border bg-background px-3 py-1.5">No production actions</span><span className="rounded-full border bg-background px-3 py-1.5">Management diagnostic, not certification</span></div>
       </div>
     </section>
 
     <section className="mx-auto max-w-7xl px-4 py-8 md:px-8" aria-labelledby="demo-scenarios-title">
-      <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-sm font-medium text-primary">Interactive scenarios</p><h2 id="demo-scenarios-title" className="text-2xl font-bold">What would you like to improve?</h2></div><Badge variant="secondary">5 UCH capabilities</Badge></div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        {scenarios.map((scenario) => { const ScenarioIcon = scenario.icon; const isSelected = scenario.id === selectedId; return <button type="button" key={scenario.id} onClick={() => setSelectedId(scenario.id)} className={`rounded-xl border bg-card p-4 text-left transition ${isSelected ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/40"}`} data-testid={`demo-scenario-${scenario.id}`}><span className={`mb-3 flex size-9 items-center justify-center rounded-lg ${scenario.tone}`}><ScenarioIcon className="size-4" /></span><p className="text-sm font-semibold">{scenario.shortTitle}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{scenario.description}</p></button>; })}
+      <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-sm font-medium text-primary">Interactive scenarios</p><h2 id="demo-scenarios-title" className="text-2xl font-bold">What would you like to improve?</h2></div><Badge variant="secondary">Whole bank + 5 UCH workstreams</Badge></div>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        {demoScenarios.map((scenario) => { const ScenarioIcon = scenario.icon; const isSelected = scenario.id === selectedId; return <button type="button" key={scenario.id} onClick={() => setSelectedId(scenario.id)} className={`rounded-xl border bg-card p-4 text-left transition ${isSelected ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/40"}`} data-testid={`demo-scenario-${scenario.id}`}><span className={`mb-3 flex size-9 items-center justify-center rounded-lg ${scenario.tone}`}><ScenarioIcon className="size-4" /></span><p className="text-sm font-semibold">{scenario.shortTitle}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{scenario.description}</p></button>; })}
       </div>
     </section>
 
@@ -71,6 +88,7 @@ export default function DemoBoardPage() {
           <div className="grid gap-3 sm:grid-cols-3"><div className="rounded-xl border bg-muted/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Signal</p><p className="mt-2 font-semibold">{selected.signal}</p></div><div className="rounded-xl border bg-muted/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Management impact</p><p className="mt-2 font-semibold">{selected.impact}</p></div><div className="rounded-xl border bg-muted/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Control status</p><p className="mt-2 font-semibold text-amber-700">Needs bank review</p></div></div>
           <div className="rounded-xl border-l-4 border-primary bg-primary/5 p-4"><p className="flex items-center gap-2 font-semibold"><FileSearch className="size-4 text-primary" />What UCH finds</p><p className="mt-2 text-sm text-muted-foreground">{selected.finding}</p></div>
           <div className="grid gap-4 sm:grid-cols-2"><div className="rounded-xl border p-4"><p className="flex items-center gap-2 font-semibold"><ClipboardCheck className="size-4 text-primary" />Controlled next action</p><p className="mt-2 text-sm text-muted-foreground">{selected.action}</p></div><div className="rounded-xl border p-4"><p className="flex items-center gap-2 font-semibold"><CheckCircle2 className="size-4 text-emerald-600" />If the bank proceeds</p><p className="mt-2 text-sm text-muted-foreground">{selected.result}</p></div></div>
+          {selected.id === "whole" && <div className="grid gap-2 rounded-xl border bg-muted/30 p-4 sm:grid-cols-5" data-testid="whole-bank-workstreams">{scenarios.map((scenario) => <div key={scenario.id} className="rounded-lg bg-background p-2 text-center text-xs font-medium">{scenario.shortTitle}</div>)}</div>}
           <div className="flex flex-wrap gap-3"><Button onClick={() => setReportOpen(true)} data-testid="button-open-virtual-report"><FileText className="size-4" />Create virtual management report</Button><Link href={selected.href}><Button variant="outline">Explore related UCH workspace <ArrowRight className="size-4" /></Button></Link></div>
         </CardContent>
       </Card>

@@ -101,6 +101,8 @@ test.describe("Public pages — Demo Board", () => {
     await expect(page.getByTestId("public-demo-board")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Choose the banking problem. See the controlled fix." })).toBeVisible();
     await expect(page.getByText("No real customer data")).toBeVisible();
+    await expect(page.getByTestId("demo-scenario-whole")).toBeVisible();
+    await expect(page.getByTestId("whole-bank-workstreams")).toContainText("NPL & IFRS 9");
     await expect(page.getByTestId("demo-scenario-credit")).toBeVisible();
 
     await page.getByTestId("demo-scenario-operations").click();

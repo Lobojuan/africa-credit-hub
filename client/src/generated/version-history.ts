@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T13:02:23.126Z",
+  "generatedAt": "2026-07-30T13:10:51.833Z",
   "branch": "main",
-  "currentCommit": "9e63d46",
+  "currentCommit": "9695c4d",
   "commits": [
+    {
+      "hash": "9695c4de88cf1f5dc7fa832f04389df8e589f5de",
+      "shortHash": "9695c4d",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add public bank demo board"
+    },
     {
       "hash": "9e63d46f56e036c8ef07b37419d6339d8d00d1b3",
       "shortHash": "9e63d46",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "ci: make skipped production deployments explicit"
-    },
-    {
-      "hash": "375bda5c1d4a7b553c94b67c94850252c6924c95",
-      "shortHash": "375bda5",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "docs: add bank SSO readiness evidence"
     }
   ]
 };

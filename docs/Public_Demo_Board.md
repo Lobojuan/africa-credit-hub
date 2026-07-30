@@ -4,6 +4,8 @@
 
 `/demo` is Universal Credit Hub's public, no-registration product demonstration. It lets a bank visitor select a business problem and see a fictional, controlled UCH scenario before requesting a management diagnostic.
 
+Visitors may also select **Improve the whole bank**, which presents all five workstreams as one sequenced management-diagnostic and remediation programme. It does not claim that a single tool can autonomously remediate a bank.
+
 ## Public scenarios
 
 1. NPL and IFRS 9 readiness
