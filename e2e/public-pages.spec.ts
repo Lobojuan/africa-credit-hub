@@ -118,7 +118,9 @@ test.describe("Public pages — Demo Board", () => {
     await expect(page.getByTestId("demo-workspace-simulator")).toContainText("Management evidence pack");
 
     await page.getByTestId("demo-scenario-operations").click();
+    await expect(page.getByTestId("selected-scenario-detail")).toContainText("Now showing: Fraud & resolution");
     await expect(page.getByTestId("demo-scenario-workspace")).toContainText("Resolve fraud and failed transactions");
+    await expect(page.getByTestId("demo-workspace-simulator")).toContainText("Transaction resolution queue");
     await page.getByTestId("button-open-virtual-report").click();
     await expect(page.getByTestId("virtual-management-report")).toBeVisible();
     await expect(page.getByTestId("virtual-management-report")).toContainText("fictional data");

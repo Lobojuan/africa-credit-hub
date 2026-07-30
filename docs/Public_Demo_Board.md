@@ -6,6 +6,8 @@
 
 Visitors may also select **Improve the whole bank**, which presents all five workstreams as one sequenced management-diagnostic and remediation programme. It does not claim that a single tool can autonomously remediate a bank.
 
+Selecting a scenario moves the visitor to the matching synthetic live simulation and product-tour workspace, so the change is immediately visible.
+
 ## Public scenarios
 
 1. NPL and IFRS 9 readiness

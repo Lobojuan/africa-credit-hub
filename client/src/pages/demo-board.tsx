@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import {
   Activity, AlertTriangle, ArrowRight, BarChart3, Building2, CheckCircle2, ClipboardCheck,
@@ -107,8 +107,15 @@ export default function DemoBoardPage() {
   const [activeWorkspace, setActiveWorkspace] = useState<DemoWorkspace>("overview");
   const [reportOpen, setReportOpen] = useState(false);
   const [name, setName] = useState("");
+  const scenarioDetailRef = useRef<HTMLElement | null>(null);
   const selected = useMemo(() => demoScenarios.find((scenario) => scenario.id === selectedId)!, [selectedId]);
   const Icon = selected.icon;
+  const chooseScenario = (scenario: Scenario) => {
+    setSelectedId(scenario.id);
+    const workspaceByScenario: Record<Scenario["id"], DemoWorkspace> = { whole: "overview", npl: "npl", consent: "collateral", operations: "operations", reporting: "evidence", credit: "credit" };
+    setActiveWorkspace(workspaceByScenario[scenario.id]);
+    window.setTimeout(() => scenarioDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+  };
 
   return <main className="min-h-screen bg-muted/20" data-testid="public-demo-board">
     <header className="border-b bg-background/90 backdrop-blur">
@@ -130,11 +137,11 @@ export default function DemoBoardPage() {
     <section className="mx-auto max-w-7xl px-4 py-8 md:px-8" aria-labelledby="demo-scenarios-title">
       <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-sm font-medium text-primary">Interactive scenarios</p><h2 id="demo-scenarios-title" className="text-2xl font-bold">What would you like to improve?</h2></div><Badge variant="secondary">Whole bank + 5 UCH workstreams</Badge></div>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        {demoScenarios.map((scenario) => { const ScenarioIcon = scenario.icon; const isSelected = scenario.id === selectedId; return <button type="button" key={scenario.id} onClick={() => setSelectedId(scenario.id)} className={`rounded-xl border bg-card p-4 text-left transition ${isSelected ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/40"}`} data-testid={`demo-scenario-${scenario.id}`}><span className={`mb-3 flex size-9 items-center justify-center rounded-lg ${scenario.tone}`}><ScenarioIcon className="size-4" /></span><p className="text-sm font-semibold">{scenario.shortTitle}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{scenario.description}</p></button>; })}
+        {demoScenarios.map((scenario) => { const ScenarioIcon = scenario.icon; const isSelected = scenario.id === selectedId; return <button type="button" key={scenario.id} onClick={() => chooseScenario(scenario)} className={`rounded-xl border bg-card p-4 text-left transition ${isSelected ? "border-primary ring-2 ring-primary/15" : "hover:border-primary/40"}`} data-testid={`demo-scenario-${scenario.id}`}><span className={`mb-3 flex size-9 items-center justify-center rounded-lg ${scenario.tone}`}><ScenarioIcon className="size-4" /></span><p className="text-sm font-semibold">{scenario.shortTitle}</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">{scenario.description}</p></button>; })}
       </div>
     </section>
 
-    <LiveSimulationPanel />
+    <section ref={scenarioDetailRef} className="scroll-mt-4" data-testid="selected-scenario-detail"><div className="mx-auto max-w-7xl px-4 pb-3 md:px-8"><div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm"><Activity className="size-4 text-primary" /><span>Now showing: <strong>{selected.shortTitle}</strong> — the live simulation and product tour below have switched to this workstream.</span></div></div><LiveSimulationPanel /></section>
 
     <section className="mx-auto max-w-7xl px-4 pb-8 md:px-8" aria-labelledby="demo-workspaces-title">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-medium text-primary">Product tour</p><h2 id="demo-workspaces-title" className="text-2xl font-bold">Try the UCH workspaces</h2><p className="mt-1 text-sm text-muted-foreground">Switch workspaces and trigger safe simulated actions. Every record below is fictional.</p></div><Badge variant="outline">Interactive synthetic data</Badge></div>

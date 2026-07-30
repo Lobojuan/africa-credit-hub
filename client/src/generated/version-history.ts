@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T13:20:54.398Z",
+  "generatedAt": "2026-07-30T13:30:55.415Z",
   "branch": "main",
-  "currentCommit": "54b7bbc",
+  "currentCommit": "051a9a2",
   "commits": [
+    {
+      "hash": "051a9a2858b47d7e9403cd9a692815808a46552c",
+      "shortHash": "051a9a2",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add live executive demo simulation"
+    },
     {
       "hash": "54b7bbc9ee22bc55f4cf8d6a2bfd75b271472fe4",
       "shortHash": "54b7bbc",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "fix: disable guide auto-login in production"
-    },
-    {
-      "hash": "dad79cd2606036fdcff7153104bb1dc9c7dcf1cc",
-      "shortHash": "dad79cd",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "fix: require evidence before IFRS 9 cure migration"
     }
   ]
 };
