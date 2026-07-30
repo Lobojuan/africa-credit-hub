@@ -11,6 +11,7 @@ This register prevents a bank, regulator or delivery team from treating an older
 | `Bank_Meeting_Readiness_2026-07-29.md` | Meeting scope and truthful readiness statement | Current |
 | `Bank_Integration_Sandbox.md` and `openapi/uch-bank-pilot.openapi.yaml` | Controlled integration sandbox | Current |
 | `Bank_Pilot_Launch_Pack.md` | Bank pilot/UAT, contacts and rollback | Current |
+| `Bank_Risk_Diagnostic.md` | Controlled management-diagnostic delivery and safeguards | Current |
 | `Ghana_NPL_Pilot_Data_Contract.md` | Ghana NPL pilot extract | Current |
 | `IFRS9_Provisioning_Workbench.md` | Draft ECL boundary and governance | Current |
 | `SSO_Acceptance_Test_Checklist.md` | Bank identity-provider acceptance | Current |

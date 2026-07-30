@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T12:06:18.265Z",
+  "generatedAt": "2026-07-30T12:34:54.696Z",
   "branch": "main",
-  "currentCommit": "8145abb",
+  "currentCommit": "3f83bd8",
   "commits": [
+    {
+      "hash": "3f83bd8d7174cf660bb80c9396d01971b30f0bdb",
+      "shortHash": "3f83bd8",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: refresh controlled bank pilot landing"
+    },
     {
       "hash": "8145abbe05d7f2c7a56b811ff835852f7803ec9b",
       "shortHash": "8145abb",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "feat: add approved Ghana macro-risk observations"
-    },
-    {
-      "hash": "71ed3a1b20f13be1a9df20a7eaf4aa5a446ca2a7",
-      "shortHash": "71ed3a1",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "fix: preserve HTTP assets in WebKit E2E"
     }
   ]
 };

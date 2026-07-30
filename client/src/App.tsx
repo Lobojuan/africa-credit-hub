@@ -127,6 +127,7 @@ const ForgeryReviewPage = lazy(() => import("@/pages/forgery-review"));
 const TransactionResolutionPage = lazy(() => import("@/pages/transaction-resolution"));
 const TransactionFraudMonitorPage = lazy(() => import("@/pages/transaction-fraud-monitor"));
 const BankControlCenterPage = lazy(() => import("@/pages/bank-control-center"));
+const BankRiskDiagnosticPage = lazy(() => import("@/pages/bank-risk-diagnostic"));
 const BankPilotReadinessPage = lazy(() => import("@/pages/bank-pilot-readiness"));
 const BankIntegrationReadinessPage = lazy(() => import("@/pages/bank-integration-readiness"));
 const Ifrs9PolicyWorkspacePage = lazy(() => import("@/pages/ifrs9-policy-workspace"));
@@ -313,6 +314,7 @@ function Router() {
         <Route path="/transaction-resolution" component={TransactionResolutionPage} />
         <Route path="/transaction-fraud-monitor" component={TransactionFraudMonitorPage} />
         <Route path="/bank-control-center" component={BankControlCenterPage} />
+        <Route path="/bank-risk-diagnostic" component={BankRiskDiagnosticPage} />
         <Route path="/bank-pilot-readiness" component={BankPilotReadinessPage} />
         <Route path="/bank-integration-readiness" component={BankIntegrationReadinessPage} />
         <Route path="/ifrs9-policy-workspace" component={Ifrs9PolicyWorkspacePage} />

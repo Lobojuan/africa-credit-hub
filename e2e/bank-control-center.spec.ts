@@ -7,6 +7,24 @@ async function setSession(page: import("@playwright/test").Page) {
 }
 
 test.describe("Bank Control Centre pilot journey", () => {
+  test("opens the controlled bank risk diagnostic and keeps its data boundary visible", async ({ page }) => {
+    await setSession(page);
+    await page.goto("/bank-control-center");
+
+    await page.getByTestId("button-start-bank-diagnostic").click();
+    await expect(page).toHaveURL(/\/bank-risk-diagnostic$/);
+    await expect(page.getByTestId("bank-risk-diagnostic")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Find the risk. Prove the gap. Fix what matters." })).toBeVisible();
+    await expect(page.getByTestId("diagnostic-safety-boundary")).toContainText("unrestricted server access");
+    await expect(page.getByTestId("diagnostic-selected-count")).toContainText("3 selected");
+
+    await page.getByTestId("button-toggle-diagnostic-operations").click();
+    await expect(page.getByTestId("diagnostic-selected-count")).toContainText("4 selected");
+    await page.getByTestId("diagnostic-step-intake").click();
+    await page.getByTestId("button-diagnostic-data-intake").click();
+    await expect(page).toHaveURL(/\/batch-upload$/);
+  });
+
   test("guides a staff user from a bank outcome to the three-step pilot path", async ({ page }) => {
     await setSession(page);
     await page.goto("/bank-control-center");
