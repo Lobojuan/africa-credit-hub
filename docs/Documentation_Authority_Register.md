@@ -15,6 +15,7 @@ This register prevents a bank, regulator or delivery team from treating an older
 | `Public_Demo_Board.md` | Public synthetic demo scope, claims boundary and conversion path | Current |
 | `UCH_Differentiated_Product_Research_2026-07-30.md` | Evidence-led product differentiation and delivery sequence | Current |
 | `Documentation_Release_Baseline_2026-07-30.md` | Documentation classes, release boundary and current regulatory source register | Current |
+| `Country_Clearance_and_Safety_Matrix.md` | Country-by-country activation status and mandatory safety/clearance gates | Current |
 | `Ghana_NPL_Pilot_Data_Contract.md` | Ghana NPL pilot extract | Current |
 | `IFRS9_Provisioning_Workbench.md` | Draft ECL boundary and governance | Current |
 | `SSO_Acceptance_Test_Checklist.md` | Bank identity-provider acceptance | Current |

@@ -53,6 +53,8 @@ Each item is marked:
 5. **Real-time Fraud Monitor and Prudential Radar - integration phase:** requires each pilot bank's approved transaction/core-banking data contract.
 6. **RegTech Evidence Pack and country-pack rollout:** Ghana first, then regulator/country specific implementation packs.
 
+Country activation must follow the [Country Clearance and Safety Matrix](Country_Clearance_and_Safety_Matrix.md); presentation/configuration alone is never evidence of local regulatory or privacy clearance.
+
 ## Pilot acceptance checklist
 
 Before any bank pilot is marked successful, UCH must show:

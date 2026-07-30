@@ -2,7 +2,7 @@
   <h1 align="center">Universal Credit Hub (UCH v2.8)</h1>
   <p align="center"><strong>Pan-African Credit Registry Infrastructure</strong></p>
   <p align="center">
-    Enterprise-grade, multi-tenant SaaS credit data hub serving all 54 African countries,<br/>
+    Enterprise-grade, multi-tenant credit data hub designed for African financial institutions,<br/>
     42+ currencies, and 8 languages (EN, FR, PT, AR, SW, ES, zh-CN, zh-TW).
   </p>
 </p>
@@ -33,7 +33,7 @@ The platform is developed by **Universal Credit Hub** in partnership with **Syst
 
 | Capability | Description |
 |---|---|
-| **54-Country Coverage** | Full country registry with jurisdiction-specific data retention, local currencies, and national ID formats |
+| **Pan-African country framework** | Country-scoped data and policy framework; real-data activation is country- and bank-specific. See [Country Clearance and Safety Matrix](docs/Country_Clearance_and_Safety_Matrix.md). |
 | **Data Sovereignty** | Backend middleware enforces organisation- and country-scoped isolation on every database query |
 | **AI Portfolio Intelligence** | GPT-4o / Claude Opus powered risk analysis, concentration alerts, and natural-language querying |
 | **Cross-Border Entity Resolution** | Bilateral data-sharing agreements with institutional-level access control |
