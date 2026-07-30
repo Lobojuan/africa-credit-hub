@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T15:20:31.393Z",
+  "generatedAt": "2026-07-30T15:26:55.207Z",
   "branch": "main",
-  "currentCommit": "257a3fa",
+  "currentCommit": "906b94e",
   "commits": [
+    {
+      "hash": "906b94e736f36fde590e5f8196a01fa5bb9b5853",
+      "shortHash": "906b94e",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add governed banker shift demo"
+    },
     {
       "hash": "257a3fadca7b363251e5c1d3e8af1ea87f8ac945",
       "shortHash": "257a3fa",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "security: apply central URL guard to registry tests"
-    },
-    {
-      "hash": "993405f70262e6f5a819dbe16a3ab438ea69ef67",
-      "shortHash": "993405f",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "security: require HTTPS for registry credential tests"
     }
   ]
 };

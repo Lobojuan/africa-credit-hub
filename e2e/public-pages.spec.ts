@@ -108,6 +108,7 @@ test.describe("Public pages — Demo Board", () => {
     await page.getByTestId("button-start-banker-shift").click();
     await expect(page.getByTestId("banker-shift")).toContainText("First governed work item");
     await page.getByTestId("button-open-first-work-item").click();
+    await expect(page.getByTestId("banker-shift-journey")).toContainText("Specialist review");
     await expect(page.getByTestId("demo-workspace-simulator")).toContainText("NPL Early Warning Desk");
     await expect(page.getByTestId("demo-live-simulation")).toContainText("UCH Executive Live Simulation");
     await page.getByTestId("button-toggle-live-simulation").click();
