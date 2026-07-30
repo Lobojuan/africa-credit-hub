@@ -18,10 +18,38 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T15:26:55.207Z",
+  "generatedAt": "2026-07-30T15:41:25.511Z",
   "branch": "main",
-  "currentCommit": "906b94e",
+  "currentCommit": "c71c8d2",
   "commits": [
+    {
+      "hash": "c71c8d285998efd69d0f43cac7eaca19259ca691",
+      "shortHash": "c71c8d2",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "docs: define country clearance safety matrix"
+    },
+    {
+      "hash": "e08ac22310b5ca143bea1da1b5d2f2787bd13621",
+      "shortHash": "e08ac22",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "docs: establish controlled release baseline"
+    },
+    {
+      "hash": "965b01f7008af89e723fd0d8e307f38a564f3451",
+      "shortHash": "965b01f",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "docs: describe banker shift demo"
+    },
+    {
+      "hash": "02793156c74e48f3c2fbbd34a0cd825d5f43c580",
+      "shortHash": "0279315",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: show governed demo journey"
+    },
     {
       "hash": "906b94e736f36fde590e5f8196a01fa5bb9b5853",
       "shortHash": "906b94e",
@@ -77,34 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-30",
       "author": "Uffe J Carlson",
       "subject": "feat: add bank risk diagnostic workspace"
-    },
-    {
-      "hash": "3f83bd8d7174cf660bb80c9396d01971b30f0bdb",
-      "shortHash": "3f83bd8",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "feat: refresh controlled bank pilot landing"
-    },
-    {
-      "hash": "8145abbe05d7f2c7a56b811ff835852f7803ec9b",
-      "shortHash": "8145abb",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "test: align bank pilot journey with IFRS9 workspace"
-    },
-    {
-      "hash": "1b5d4c42e4ec6169f60a8802ca1e24aeb54ceab9",
-      "shortHash": "1b5d4c4",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add governed bank pilot launch workspace"
-    },
-    {
-      "hash": "d899caf41702e6677732619bb195d63747e6f0e4",
-      "shortHash": "d899caf",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "security: apply central URL guard to registry tests"
     }
   ]
 };

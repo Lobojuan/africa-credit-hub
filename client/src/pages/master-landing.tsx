@@ -61,8 +61,8 @@ export default function MasterLandingPage() {
             {t("landingShell.masterHero.subtitle", { brand })}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/login"><Button size="lg" className="gap-2" data-testid="button-cta-primary">{t("landingShell.masterHero.ctaPrimary")} <ArrowRight className="w-4 h-4" /></Button></Link>
-            <Link href="/pricing"><Button size="lg" variant="outline" data-testid="button-cta-secondary">{t("landingShell.masterHero.ctaSecondary")}</Button></Link>
+            <Link href="/demo"><Button size="lg" className="gap-2" data-testid="cta-explore-demo">Explore the interactive demo <ArrowRight className="w-4 h-4" /></Button></Link>
+            <Link href="/login"><Button size="lg" variant="outline" data-testid="button-cta-primary">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
           </div>
         </div>
       </section>

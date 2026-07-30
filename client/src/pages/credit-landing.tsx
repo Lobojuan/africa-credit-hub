@@ -1,11 +1,9 @@
-import { lazy, Suspense } from "react";
 import { Link } from "wouter";
-import { Loader2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 import { Seo } from "@/components/seo";
-
-const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
+import MasterLandingPage from "@/pages/master-landing";
 
 export default function CreditLandingPage() {
   const { t } = useTranslation();
@@ -26,9 +24,7 @@ export default function CreditLandingPage() {
           </span>
         </div>
       </div>
-      <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>}>
-        <InvestorLandingPage />
-      </Suspense>
+      <MasterLandingPage />
     </div>
   );
 }
