@@ -27,7 +27,7 @@ test.describe("Bank Control Centre pilot journey", () => {
     await expect(page.getByTestId("bank-pilot-readiness")).toBeVisible();
     await expect(page.getByTestId("pilot-step-1")).toContainText("Load the pilot loan tape");
     await expect(page.getByTestId("pilot-step-2")).toContainText("Run controlled risk and consent decisions");
-    await expect(page.getByTestId("pilot-step-3")).toContainText("Prove the control works");
+    await expect(page.getByTestId("pilot-step-3")).toContainText("Govern provision and evidence");
 
     await page.getByTestId("button-pilot-step-2").click();
     await expect(page).toHaveURL(/\/npl-early-warning$/);
