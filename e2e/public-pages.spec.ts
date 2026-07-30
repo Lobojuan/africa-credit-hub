@@ -110,8 +110,15 @@ test.describe("Public pages — Demo Board", () => {
     await expect(page.getByTestId("button-toggle-live-simulation")).toContainText("Resume");
     await page.getByTestId("demo-workspace-npl").click();
     await expect(page.getByTestId("demo-workspace-simulator")).toContainText("NPL Early Warning Desk");
+    await page.getByTestId("input-npl-dpd").fill("96");
+    await page.getByTestId("button-run-npl-review").click();
+    await expect(page.getByTestId("npl-review-result")).toContainText("Stage 3 candidate");
     await page.getByRole("button", { name: "Assign" }).first().click();
     await expect(page.getByTestId("demo-simulated-action")).toContainText("simulated");
+    await page.getByTestId("demo-workspace-credit").click();
+    await page.getByTestId("input-credit-requested").fill("300000");
+    await page.getByTestId("button-run-credit-review").click();
+    await expect(page.getByTestId("credit-review-result")).toBeVisible();
     await page.getByTestId("demo-workspace-collateral").click();
     await expect(page.getByTestId("demo-workspace-simulator")).toContainText("Collateral & consent controls");
     await page.getByTestId("demo-workspace-evidence").click();

@@ -6,7 +6,7 @@
 
 Visitors may also select **Improve the whole bank**, which presents all five workstreams as one sequenced management-diagnostic and remediation programme. It does not claim that a single tool can autonomously remediate a bank.
 
-Selecting a scenario moves the visitor to the matching synthetic live simulation and product-tour workspace, so the change is immediately visible.
+Selecting a scenario moves the visitor to the matching synthetic banker workspace, so the change is immediately visible. The NPL, Credit Hub and Operations desks include fictional numeric inputs and controlled review actions that show an indicative workflow outcome; no data is stored and no real bank action is possible.
 
 ## Public scenarios
 

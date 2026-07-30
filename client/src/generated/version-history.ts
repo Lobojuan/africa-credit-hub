@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T13:30:55.415Z",
+  "generatedAt": "2026-07-30T13:38:19.189Z",
   "branch": "main",
-  "currentCommit": "051a9a2",
+  "currentCommit": "baf5663",
   "commits": [
+    {
+      "hash": "baf5663215b12aeace9481d0c60b53cfa6ef9e11",
+      "shortHash": "baf5663",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "fix: focus demo scenario selection"
+    },
     {
       "hash": "051a9a2858b47d7e9403cd9a692815808a46552c",
       "shortHash": "051a9a2",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "security: remove production guide login and sanitize landing HTML"
-    },
-    {
-      "hash": "af745b934b129f81eee67694495b46e613e32b82",
-      "shortHash": "af745b9",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "fix: disable guide auto-login in production"
     }
   ]
 };
