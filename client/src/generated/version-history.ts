@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T12:34:54.696Z",
+  "generatedAt": "2026-07-30T13:02:23.126Z",
   "branch": "main",
-  "currentCommit": "3f83bd8",
+  "currentCommit": "9e63d46",
   "commits": [
+    {
+      "hash": "9e63d46f56e036c8ef07b37419d6339d8d00d1b3",
+      "shortHash": "9e63d46",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add bank risk diagnostic workspace"
+    },
     {
       "hash": "3f83bd8d7174cf660bb80c9396d01971b30f0bdb",
       "shortHash": "3f83bd8",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-29",
       "author": "Uffe J Carlson",
       "subject": "docs: add bank SSO readiness evidence"
-    },
-    {
-      "hash": "afe7eda691910caf03ebf8ed81d94d9746a7e0cc",
-      "shortHash": "afe7eda",
-      "date": "2026-07-29",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add approved Ghana macro-risk observations"
     }
   ]
 };

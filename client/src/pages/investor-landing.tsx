@@ -6,7 +6,7 @@ import {
   Languages, MapPin, TrendingUp, Bot, Upload,
   ChevronDown, Star, Eye, FileText, Clock,
   Database, Layers, AlertTriangle, Target, Workflow,
-  Search, Gavel, Settings, Key, RefreshCw, Landmark,
+  Search, Gavel, Settings, Key, RefreshCw, Landmark, Radar,
   PieChart, LineChart, Map, Fingerprint, ShieldCheck,
   UserCheck, FileCheck, Timer, BadgeCheck, Network,
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
@@ -24,7 +24,6 @@ import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 import { useTranslation } from "react-i18next";
 import DOMPurify from "isomorphic-dompurify";
 const heroImage = "/marketing/investor-hero.png";
-const dashboardImage = "/marketing/app-dashboard.png";
 const mobileImage = "/marketing/app-consumer-portal.png";
 const networkImage = "/marketing/app-command-center.png";
 const borrowersImage = "/marketing/app-borrowers.png";
@@ -619,9 +618,9 @@ export default function InvestorLandingPage() {
               />
 
               <div className="flex flex-col sm:flex-row items-center lg:items-end justify-center lg:justify-end gap-3 mb-8">
-                <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
+                <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/demo")} data-testid="cta-explore-demo">
                   <ArrowRight className="w-4 h-4" />
-                  {t('landing.startTrial')}
+                  Explore the interactive demo
                 </Button>
                 <Button
                   variant="outline"
@@ -764,13 +763,10 @@ export default function InvestorLandingPage() {
               </Button>
             </div>
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
-                <img
-                  src={dashboardImage}
-                  alt="Universal Credit Hub v2.8 dashboard showing borrowers, credit accounts, and portfolio analytics"
-                  className="w-full h-auto"
-                  loading="lazy"
-                />
+              <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-2xl" data-testid="current-demo-preview">
+                <div className="flex items-center justify-between border-b pb-4"><div className="flex items-center gap-2"><span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Radar className="size-4" /></span><div><p className="text-sm font-semibold">Current UCH Demo Board</p><p className="text-xs text-muted-foreground">Synthetic data · no registration</p></div></div><Badge variant="outline">v2.8</Badge></div>
+                <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl border bg-amber-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">NPL &amp; IFRS 9</p><p className="mt-2 text-sm font-semibold">Early warnings &amp; evidence</p></div><div className="rounded-xl border bg-violet-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Consent &amp; collateral</p><p className="mt-2 text-sm font-semibold">Reviewable control trail</p></div><div className="rounded-xl border bg-rose-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Operations</p><p className="mt-2 text-sm font-semibold">Fraud &amp; resolution</p></div><div className="rounded-xl border bg-emerald-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Reporting</p><p className="mt-2 text-sm font-semibold">Evidence-ready controls</p></div></div>
+                <Button className="mt-5 w-full" onClick={() => navigate("/demo")} data-testid="button-open-current-demo">Explore the live demo board <ArrowRight className="size-4" /></Button>
               </div>
             </div>
           </div>

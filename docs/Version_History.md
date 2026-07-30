@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `3f83bd8`
+**Current Commit:** `9e63d46`
 **Branch:** `main`
-**Generated:** 2026-07-30T12:34:54.696Z
+**Generated:** 2026-07-30T13:02:23.126Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-30 | `9e63d46` | feat: add bank risk diagnostic workspace | Uffe J Carlson |
 | 2026-07-30 | `3f83bd8` | feat: refresh controlled bank pilot landing | Uffe J Carlson |
 | 2026-07-30 | `8145abb` | test: align bank pilot journey with IFRS9 workspace | Uffe J Carlson |
 | 2026-07-29 | `1b5d4c4` | feat: add governed bank pilot launch workspace | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-29 | `3337333` | feat: add governed IFRS 9 draft ECL engine | Uffe J Carlson |
 | 2026-07-29 | `82b7ed6` | ci: make skipped production deployments explicit | Uffe J Carlson |
 | 2026-07-29 | `375bda5` | docs: add bank SSO readiness evidence | Uffe J Carlson |
-| 2026-07-29 | `afe7eda` | feat: add approved Ghana macro-risk observations | Uffe J Carlson |

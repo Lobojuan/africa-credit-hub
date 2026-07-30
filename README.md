@@ -20,6 +20,8 @@
 | **Security** | PII_ENCRYPTION_KEY + PII_ENCRYPTION_SALT validated at startup. MASTER_CONTROL_PASSWORD required in production |
 | **Migrations** | Sequential journal 0000–0018, no duplicate prefixes |
 | **2026-07 hardening** | Encrypted borrower-ID search repaired, deterministic authenticated E2E fixtures, WebKit HTTP/CSP regression fixed, and Ghana macro-risk observations now use maker-checker approval and audit evidence |
+| **Public Demo Board** | Outcome-led, no-registration `/demo` shows synthetic NPL/IFRS 9, consent/collateral, fraud/resolution, reporting/prudential and core credit-intelligence scenarios with a browser-only virtual management report. It is not a bank environment, audit or regulatory filing. See [Public Demo Board](docs/Public_Demo_Board.md). |
+| **Bank Risk Diagnostic** | Authenticated `/bank-risk-diagnostic` guides a file-first, read-only management diagnostic from engagement authority through bank-validated findings and a measurable pilot path. See [Bank Risk Diagnostic](docs/Bank_Risk_Diagnostic.md). |
 
 ## Overview
 

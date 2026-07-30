@@ -87,6 +87,30 @@ test.describe("Public pages — login", () => {
   });
 });
 
+test.describe("Public pages — Demo Board", () => {
+  test("landing page leads unauthenticated visitors to the Demo Board", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("cta-explore-demo").click();
+    await expect(page).toHaveURL(/\/demo$/);
+    await expect(page.getByTestId("public-demo-board")).toBeVisible();
+  });
+
+  test("shows a safe, no-registration synthetic bank demo and virtual report", async ({ page }) => {
+    await page.goto("/demo");
+
+    await expect(page.getByTestId("public-demo-board")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Choose the banking problem. See the controlled fix." })).toBeVisible();
+    await expect(page.getByText("No real customer data")).toBeVisible();
+    await expect(page.getByTestId("demo-scenario-credit")).toBeVisible();
+
+    await page.getByTestId("demo-scenario-operations").click();
+    await expect(page.getByTestId("demo-scenario-workspace")).toContainText("Resolve fraud and failed transactions");
+    await page.getByTestId("button-open-virtual-report").click();
+    await expect(page.getByTestId("virtual-management-report")).toBeVisible();
+    await expect(page.getByTestId("virtual-management-report")).toContainText("fictional data");
+  });
+});
+
 // ─── Protected routes redirect unauthenticated users ─────────────────────────
 
 test.describe("Public pages — unauthenticated redirect guard", () => {
