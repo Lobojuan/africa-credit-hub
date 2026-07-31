@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Building2, Layers, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Building2, Layers, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2, FileSearch } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PRODUCT_ORDER, PRODUCT_REGISTRY } from "@/lib/products";
@@ -14,6 +14,22 @@ export default function MasterLandingPage() {
   const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const year = new Date().getFullYear();
+  const pillars = [
+    ...PRODUCT_ORDER.map((id) => ({ ...PRODUCT_REGISTRY[id], kind: "product" as const })),
+    {
+      id: "forensics",
+      kind: "service" as const,
+      name: t("landingShell.forensics.name"),
+      tagline: t("landingShell.forensics.tagline"),
+      description: t("landingShell.forensics.description"),
+      action: t("landingShell.forensics.action"),
+      href: "/forensics",
+      icon: FileSearch,
+      accentFrom: "hsl(340 70% 48%)",
+      accentTo: "hsl(12 85% 52%)",
+      accentText: "hsl(340 62% 38%)",
+    },
+  ];
 
   useEffect(() => {
     document.title = `${brand} — ${t("platform.brand.tagline")}`;
@@ -35,6 +51,7 @@ export default function MasterLandingPage() {
           <nav className="flex items-center gap-1.5 md:gap-2">
             <Link href="/for-lenders" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-lenders">For Lenders</Button></Link>
             <Link href="/for-regulators" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-regulators">For Regulators</Button></Link>
+            <Link href="/forensics" className="hidden xl:inline-flex"><Button variant="ghost" size="sm" data-testid="link-forensics">Diagnostic</Button></Link>
             <Link href="/financial-inclusion" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-impact">Impact</Button></Link>
             <Link href="/pricing" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-pricing">Pricing</Button></Link>
             <Link href="/press" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-press">Press</Button></Link>
@@ -71,16 +88,15 @@ export default function MasterLandingPage() {
         <h2 className="text-xs uppercase tracking-widest font-semibold text-slate-500 dark:text-slate-400 text-center mb-6" data-testid="text-pillars-title">
           {t("landingShell.pillarsTitle")}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {PRODUCT_ORDER.map((id) => {
-            const p = PRODUCT_REGISTRY[id];
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          {pillars.map((p) => {
             const Icon = p.icon;
-            const isPilot = p.status !== "live";
+            const isPilot = p.kind === "product" && p.status !== "live";
             return (
               <Card
-                key={id}
+                key={p.id}
                 className="relative overflow-hidden border-slate-200/80 dark:border-slate-800 hover-elevate transition-all"
-                data-testid={`card-product-${id}`}
+                data-testid={`card-product-${p.id}`}
               >
                 <div
                   className="h-1.5 w-full"
@@ -95,28 +111,28 @@ export default function MasterLandingPage() {
                       <Icon className="w-6 h-6" />
                     </div>
                     {isPilot && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider" data-testid={`badge-status-${id}`}>
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider" data-testid={`badge-status-${p.id}`}>
                         {t("products.loto.comingSoon")}
                       </Badge>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-1" data-testid={`text-product-name-${id}`}>
-                    {t(p.nameKey, p.englishName)}
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-1" data-testid={`text-product-name-${p.id}`}>
+                    {p.kind === "product" ? t(p.nameKey, p.englishName) : p.name}
                   </h3>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3" data-testid={`text-product-tagline-${id}`}>
-                    {t(p.taglineKey, p.englishTagline)}
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3" data-testid={`text-product-tagline-${p.id}`}>
+                    {p.kind === "product" ? t(p.taglineKey, p.englishTagline) : p.tagline}
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-1" data-testid={`text-product-desc-${id}`}>
-                    {t(p.descKey, p.englishDesc)}
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-1" data-testid={`text-product-desc-${p.id}`}>
+                    {p.kind === "product" ? t(p.descKey, p.englishDesc) : p.description}
                   </p>
-                  <Link href={p.publicLanding}>
+                  <Link href={p.kind === "product" ? p.publicLanding : p.href}>
                     <Button
                       variant="ghost"
                       className="mt-5 -ml-3 self-start gap-1.5 font-semibold"
                       style={{ color: p.accentText }}
-                      data-testid={`button-learn-${id}`}
+                      data-testid={`button-learn-${p.id}`}
                     >
-                      {t(`products.${id}.learnMore`, `Learn about ${p.englishName}`)}
+                      {p.kind === "product" ? t(`products.${p.id}.learnMore`, `Learn about ${p.englishName}`) : p.action}
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>

@@ -139,6 +139,40 @@ test.describe("Public pages — Demo Board", () => {
   });
 });
 
+test.describe("Public marketing navigation", () => {
+  test("landing has the fourth bank-diagnostic pillar", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("card-product-forensics")).toContainText("Bank Diagnostic");
+    await page.getByTestId("button-learn-forensics").click();
+    await expect(page).toHaveURL(/\/forensics$/);
+    await expect(page.getByTestId("public-forensics-page")).toBeVisible();
+    await expect(page.getByTestId("button-request-diagnostic")).toBeVisible();
+  });
+
+  for (const path of ["/financial-inclusion", "/security", "/market-validation"]) {
+    test(`${path} has a full public route back to UCH`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByTestId("link-public-home")).toBeVisible();
+      await expect(page.getByTestId("link-public-demo")).toBeVisible();
+      await expect(page.getByTestId("button-public-signin")).toBeVisible();
+    });
+  }
+
+  test("pricing redirects to contact sales with a visible Home return", async ({ page }) => {
+    await page.goto("/pricing");
+    await expect(page).toHaveURL(/\/contact-sales$/);
+    await expect(page.getByTestId("link-back-home")).toBeVisible();
+  });
+
+  for (const path of ["/score-guide", "/portal", "/start-trial"]) {
+    test(`${path} has a compact return to UCH`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.getByTestId("link-public-home")).toBeVisible();
+      await expect(page.getByTestId("button-public-signin")).toBeVisible();
+    });
+  }
+});
+
 // ─── Protected routes redirect unauthenticated users ─────────────────────────
 
 test.describe("Public pages — unauthenticated redirect guard", () => {

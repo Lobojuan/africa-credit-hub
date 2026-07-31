@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-30T15:41:25.511Z",
+  "generatedAt": "2026-07-31T12:30:49.822Z",
   "branch": "main",
-  "currentCommit": "c71c8d2",
+  "currentCommit": "45e6b49",
   "commits": [
+    {
+      "hash": "45e6b491973fb7c58992d7273baa1b703ae0ac37",
+      "shortHash": "45e6b49",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "docs: add two-week delivery report"
+    },
+    {
+      "hash": "4910ca39d0aad6b5653a9dd504cffa69d2c7f777",
+      "shortHash": "4910ca3",
+      "date": "2026-07-30",
+      "author": "Uffe J Carlson",
+      "subject": "fix: retire unsafe public landing claims"
+    },
     {
       "hash": "c71c8d285998efd69d0f43cac7eaca19259ca691",
       "shortHash": "c71c8d2",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-30",
       "author": "Uffe J Carlson",
       "subject": "feat: add whole bank demo journey"
-    },
-    {
-      "hash": "9695c4de88cf1f5dc7fa832f04389df8e589f5de",
-      "shortHash": "9695c4d",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add public bank demo board"
-    },
-    {
-      "hash": "9e63d46f56e036c8ef07b37419d6339d8d00d1b3",
-      "shortHash": "9e63d46",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add bank risk diagnostic workspace"
     }
   ]
 };

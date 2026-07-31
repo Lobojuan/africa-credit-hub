@@ -11,7 +11,7 @@ This register prevents a bank, regulator or delivery team from treating an older
 | `Bank_Meeting_Readiness_2026-07-29.md` | Meeting scope and truthful readiness statement | Current |
 | `Bank_Integration_Sandbox.md` and `openapi/uch-bank-pilot.openapi.yaml` | Controlled integration sandbox | Current |
 | `Bank_Pilot_Launch_Pack.md` | Bank pilot/UAT, contacts and rollback | Current |
-| `Bank_Risk_Diagnostic.md` | Controlled management-diagnostic delivery and safeguards | Current |
+| `Bank_Risk_Diagnostic.md` | UCH Bank Diagnostic & Forensics delivery, public conversion and safeguards | Current |
 | `Public_Demo_Board.md` | Public synthetic demo scope, claims boundary and conversion path | Current |
 | `UCH_Differentiated_Product_Research_2026-07-30.md` | Evidence-led product differentiation and delivery sequence | Current |
 | `Documentation_Release_Baseline_2026-07-30.md` | Documentation classes, release boundary and current regulatory source register | Current |

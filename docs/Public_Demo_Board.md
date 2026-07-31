@@ -34,7 +34,7 @@ The Executive Live Simulation deliberately animates fictional portfolio metrics,
 
 1. Visitor selects an outcome and reviews a synthetic scenario.
 2. Visitor opens a virtual management-report preview.
-3. Visitor requests a paid Bank Risk Diagnostic.
+3. Visitor requests a UCH Bank Diagnostic & Forensics engagement.
 4. UCH delivers a file-first, read-only management diagnostic.
 5. Bank-validated findings can become a fixed-scope 90-day pilot with a baseline, target, owner and acceptance test.
 

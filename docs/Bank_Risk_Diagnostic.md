@@ -1,8 +1,8 @@
-# UCH Bank Risk Diagnostic
+# UCH Bank Diagnostic & Forensics
 
 ## Purpose
 
-The UCH Bank Risk Diagnostic is a fixed-scope management assessment that converts a bank-approved, read-only data extract into validated risk and control findings. It is decision support for bank management; it is not an external audit, regulatory certification, penetration test, legal opinion, or a substitute for the bank's internal controls.
+The UCH Bank Diagnostic & Forensics engagement is a fixed-scope management assessment that converts a bank-approved, read-only data extract into validated risk and control findings. It is decision support for bank management; it is not an external audit, regulatory certification, penetration test, legal opinion, or a substitute for the bank's internal controls.
 
 ## Delivery model
 
@@ -34,6 +34,6 @@ The UCH Bank Risk Diagnostic is a fixed-scope management assessment that convert
 
 The recommended offer is a paid, fixed-scope diagnostic. Credit 100% of the diagnostic fee toward a 90-day UCH pilot when the bank proceeds within 60 days. The pilot must define a baseline, target, accountable bank owner and acceptance test before it begins.
 
-## UCH workflow
+## UCH workflow and public conversion
 
-The user-facing workspace is `/bank-risk-diagnostic`. It links to the existing data intake, NPL early-warning, consent, transaction-resolution, evidence-pack and bank-pilot paths. The workspace itself does not persist an engagement record yet; this first slice establishes the safe engagement flow and navigation. Persisted engagement records, uploads, finding approval and report generation require a dedicated backend data model before a live client assessment.
+Public visitors can review the offer at `/forensics` and request a diagnostic through the contact-sales path. The authenticated workspace is `/bank-risk-diagnostic`; it links to the existing data intake, NPL early-warning, consent, transaction-resolution, evidence-pack and bank-pilot paths. The workspace itself does not persist an engagement record yet; this first slice establishes the safe engagement flow and navigation. Persisted engagement records, uploads, finding approval and report generation require a dedicated backend data model before a live client assessment.

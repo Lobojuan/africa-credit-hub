@@ -39,6 +39,7 @@ import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
 import { AppFooter } from "@/components/app-footer";
+import { PublicPageFrame } from "@/components/public-page-frame";
 import { MfaSetupDialog } from "@/components/mfa-setup";
 import { useToast } from "@/hooks/use-toast";
 
@@ -188,6 +189,7 @@ const FinancialInclusionPage = lazy(() => import("@/pages/financial-inclusion"))
 const PressKitPage = lazy(() => import("@/pages/press-kit"));
 const ForLendersPage = lazy(() => import("@/pages/for-lenders"));
 const ForRegulatorsPage = lazy(() => import("@/pages/for-regulators"));
+const ForensicsPage = lazy(() => import("@/pages/forensics"));
 const PlatformMapPage = lazy(() => import("@/pages/platform-map"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
@@ -950,7 +952,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
+  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -967,26 +969,27 @@ function App() {
             <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
             <Route path="/collateral" component={() => <Redirect to="/" />} />
             <Route path="/loto" component={() => <Redirect to="/" />} />
-            <Route path="/financial-inclusion" component={() => <Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense>} />
+            <Route path="/financial-inclusion" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense></PublicPageFrame>} />
             <Route path="/press" component={() => <Suspense fallback={<LazyFallback />}><PressKitPage /></Suspense>} />
             <Route path="/for-lenders" component={() => <Suspense fallback={<LazyFallback />}><ForLendersPage /></Suspense>} />
             <Route path="/for-regulators" component={() => <Suspense fallback={<LazyFallback />}><ForRegulatorsPage /></Suspense>} />
+            <Route path="/forensics" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><ForensicsPage /></Suspense></PublicPageFrame>} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
             <Route path="/demo" component={() => <Suspense fallback={<LazyFallback />}><DemoBoardPage /></Suspense>} />
-            <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />
+            <Route path="/pricing" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><PricingPage /></Suspense></PublicPageFrame>} />
             <Route path="/contact-sales" component={() => <Suspense fallback={<LazyFallback />}><ContactSalesPage /></Suspense>} />
-            <Route path="/security" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
-            <Route path="/security-compliance" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
+            <Route path="/security" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense></PublicPageFrame>} />
+            <Route path="/security-compliance" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense></PublicPageFrame>} />
             <Route path="/terms" component={() => <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense>} />
             <Route path="/privacy" component={() => <Suspense fallback={<LazyFallback />}><PrivacyPolicyPage /></Suspense>} />
-            <Route path="/market-validation" component={() => <Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense>} />
-            <Route path="/start-trial" component={() => <Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense>} />
+            <Route path="/market-validation" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense></PublicPageFrame>} />
+            <Route path="/start-trial" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense></PublicPageFrame>} />
             <Route path="/signup" component={() => <Suspense fallback={<LazyFallback />}><SignUpPage /></Suspense>} />
-            <Route path="/score-guide" component={() => <Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense>} />
+            <Route path="/score-guide" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense></PublicPageFrame>} />
             <Route path="/api-docs" component={() => <Suspense fallback={<LazyFallback />}><ApiDocsPage /></Suspense>} />
             <Route path="/partner-docs" component={() => <Suspense fallback={<LazyFallback />}><PartnerDocsPage /></Suspense>} />
-            <Route path="/portal" component={() => <Suspense fallback={<LazyFallback />}><PortalPage /></Suspense>} />
+            <Route path="/portal" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><PortalPage /></Suspense></PublicPageFrame>} />
             <Route path="/platform-control-9x7k" component={() => <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>} />
             <Route path="/verify/:code">
               <Suspense fallback={<LazyFallback />}>
