@@ -18,6 +18,7 @@ export default defineConfig({
       "server/__tests__/loto-fiscal-foundation.test.ts",
       "server/__tests__/loto-credit-pipeline.test.ts",
       "server/__tests__/loto-merchant-credit.test.ts",
+      "server/__tests__/public-seo-routes.test.ts",
       "client/src/**/__tests__/**/*.test.{ts,tsx}",
     ],
     exclude: ["node_modules", "dist"],

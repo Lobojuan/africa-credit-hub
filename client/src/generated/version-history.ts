@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-03T09:34:51.192Z",
+  "generatedAt": "2026-08-03T09:42:35.931Z",
   "branch": "main",
-  "currentCommit": "71cd7fa",
+  "currentCommit": "3241363",
   "commits": [
+    {
+      "hash": "32413634587ba6e1ef0824d0a68b740ce9eb5f9f",
+      "shortHash": "3241363",
+      "date": "2026-08-03",
+      "author": "Uffe J Carlson",
+      "subject": "fix: make public pages crawlable and searchable"
+    },
     {
       "hash": "71cd7fa20637e1133157d69909fc256c04bf77a1",
       "shortHash": "71cd7fa",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-30",
       "author": "Uffe J Carlson",
       "subject": "feat: add live executive demo simulation"
-    },
-    {
-      "hash": "54b7bbc9ee22bc55f4cf8d6a2bfd75b271472fe4",
-      "shortHash": "54b7bbc",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add interactive demo workspaces"
     }
   ]
 };
