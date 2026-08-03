@@ -37,5 +37,6 @@ describe("public SEO route manifest", () => {
 
   it("keeps the original SPA route when Express consumes a wildcard mount", () => {
     expect(getOriginalRequestPath("/forensics?source=linkedin")).toBe("/forensics");
+    expect(getOriginalRequestPath("/contact-sales/")).toBe("/contact-sales");
   });
 });

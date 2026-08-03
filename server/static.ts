@@ -36,7 +36,11 @@ export function renderPublicSeoHtml(html: string, pathName: string, baseUrl = "h
 }
 
 export function getOriginalRequestPath(originalUrl: string): string {
-  return new URL(originalUrl, "http://localhost").pathname;
+  const pathName = new URL(originalUrl, "http://localhost").pathname;
+  // Treat a trailing slash as the same public page. This keeps the canonical
+  // metadata stable whether a visitor, an old bookmark, or a proxy requests
+  // `/contact-sales` or `/contact-sales/`.
+  return pathName.length > 1 ? pathName.replace(/\/+$/, "") : pathName;
 }
 
 export function serveStatic(app: Express) {
