@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getPublicSitemapXml, isPublicSeoPath } from "../seo-public-routes";
-import { renderPublicSeoHtml } from "../static";
+import { getOriginalRequestPath, renderPublicSeoHtml } from "../static";
 
 const shell = `<!doctype html><html><head>
 <title>Universal Credit Hub</title>
@@ -33,5 +33,9 @@ describe("public SEO route manifest", () => {
     expect(html).toContain("Bank Diagnostic &amp; Forensics for African Banks");
     expect(html).toContain('content="https://universalcredithub.com/forensics"');
     expect(html).toContain('rel="canonical" href="https://universalcredithub.com/forensics"');
+  });
+
+  it("keeps the original SPA route when Express consumes a wildcard mount", () => {
+    expect(getOriginalRequestPath("/forensics?source=linkedin")).toBe("/forensics");
   });
 });

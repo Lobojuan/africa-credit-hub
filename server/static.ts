@@ -35,6 +35,10 @@ export function renderPublicSeoHtml(html: string, pathName: string, baseUrl = "h
   return rendered;
 }
 
+export function getOriginalRequestPath(originalUrl: string): string {
+  return new URL(originalUrl, "http://localhost").pathname;
+}
+
 export function serveStatic(app: Express) {
   const distPath = path.resolve(process.cwd(), "dist", "public");
   if (!fs.existsSync(distPath)) {
@@ -50,7 +54,11 @@ export function serveStatic(app: Express) {
 
   app.use("/{*path}", (req, res) => {
     const nonce = res.locals.cspNonce || "";
-    const html = renderPublicSeoHtml(rawHtml, req.path).replace(/<script/g, `<script nonce="${nonce}"`);
+    // Express consumes the wildcard mount path before exposing req.path here,
+    // which would make every SPA route look like "/". originalUrl preserves
+    // the public URL that a crawler or sharing service actually requested.
+    const requestPath = getOriginalRequestPath(req.originalUrl);
+    const html = renderPublicSeoHtml(rawHtml, requestPath).replace(/<script/g, `<script nonce="${nonce}"`);
     res.set("Content-Type", "text/html").send(html);
   });
 }
