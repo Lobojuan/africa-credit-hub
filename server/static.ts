@@ -47,7 +47,13 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  // The build creates legacy per-route SPA fallback directories. Serving an
+  // `index.html` from one of those directories bypasses the metadata renderer
+  // below (and Express redirects the slashless URL), which makes a public
+  // page such as `/contact-sales` look like the home page to link previews.
+  // Static assets remain cacheable, while every application route now falls
+  // through to the single, route-aware HTML response.
+  app.use(express.static(distPath, { index: false, redirect: false }));
 
   const indexPath = path.resolve(distPath, "index.html");
   const rawHtml = fs.readFileSync(indexPath, "utf-8");
