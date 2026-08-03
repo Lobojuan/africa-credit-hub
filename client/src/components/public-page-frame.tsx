@@ -27,12 +27,12 @@ export function PublicPageFrame({ children, mode = "full" }: PublicPageFrameProp
       <>
         <header className="border-b border-slate-200/70 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 md:px-6">
-            <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100" data-testid="link-public-home">
+            <Link href="/" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-100" data-testid="link-public-home" aria-label={labels.back}>
               <ArrowLeft className="size-4" /> {labels.back}
             </Link>
             <div className="flex items-center gap-2">
               <LanguageSwitcher />
-              <Link href="/login"><Button size="sm" variant="outline" data-testid="button-public-signin">{labels.signIn}</Button></Link>
+              <Button asChild size="sm" variant="outline" data-testid="button-public-signin"><Link href="/login">{labels.signIn}</Link></Button>
             </div>
           </div>
         </header>
@@ -45,18 +45,18 @@ export function PublicPageFrame({ children, mode = "full" }: PublicPageFrameProp
     <>
       <header className="border-b border-slate-200/70 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
         <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between gap-3 px-4 py-2 md:px-6">
-          <Link href="/" className="inline-flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100" data-testid="link-public-home">
+          <Link href="/" className="inline-flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100" data-testid="link-public-home" aria-label={PLATFORM_COMPANY_NAME}>
             <span className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 via-violet-600 to-amber-500 text-white"><Building2 className="size-5" /></span>
             <span className="hidden sm:inline">{PLATFORM_COMPANY_NAME}</span>
           </Link>
           <nav className="flex items-center gap-1 sm:gap-2" aria-label="Public navigation">
-            <Link href="/"><Button variant="ghost" size="sm" className="hidden md:inline-flex">{labels.home}</Button></Link>
-            <Link href="/demo"><Button variant="ghost" size="sm" data-testid="link-public-demo">{labels.demo}</Button></Link>
-            <Link href="/forensics"><Button variant="ghost" size="sm" className="hidden lg:inline-flex">{french ? "Diagnostic" : "Diagnostic"}</Button></Link>
-            <Link href="/security"><Button variant="ghost" size="sm" className="hidden lg:inline-flex"><ShieldCheck className="mr-1 size-3.5" />{labels.security}</Button></Link>
-            <Link href="/contact-sales"><Button variant="ghost" size="sm" className="hidden md:inline-flex">{labels.contact}</Button></Link>
+            <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex"><Link href="/">{labels.home}</Link></Button>
+            <Button asChild variant="ghost" size="sm" data-testid="link-public-demo"><Link href="/demo">{labels.demo}</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex"><Link href="/forensics">{french ? "Diagnostic" : "Diagnostic"}</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex"><Link href="/security"><ShieldCheck className="mr-1 size-3.5" />{labels.security}</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex"><Link href="/contact-sales">{labels.contact}</Link></Button>
             <LanguageSwitcher />
-            <Link href="/login"><Button size="sm" data-testid="button-public-signin">{labels.signIn}</Button></Link>
+            <Button asChild size="sm" data-testid="button-public-signin"><Link href="/login">{labels.signIn}</Link></Button>
           </nav>
         </div>
       </header>

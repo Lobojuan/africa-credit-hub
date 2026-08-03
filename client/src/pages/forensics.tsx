@@ -62,8 +62,8 @@ export default function ForensicsPage() {
             <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-slate-950 dark:text-slate-50 md:text-6xl">{copy.title}</h1>
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-600 dark:text-slate-300 md:text-lg">{copy.subtitle}</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/contact-sales?service=bank-diagnostic"><Button size="lg" className="gap-2" data-testid="button-request-diagnostic">{copy.primary}<ArrowRight className="size-4" /></Button></Link>
-              <Link href="/demo"><Button size="lg" variant="outline" data-testid="button-forensics-demo">{copy.secondary}</Button></Link>
+              <Button asChild size="lg" className="gap-2" data-testid="button-request-diagnostic"><Link href="/contact-sales?service=bank-diagnostic">{copy.primary}<ArrowRight className="size-4" /></Link></Button>
+              <Button asChild size="lg" variant="outline" data-testid="button-forensics-demo"><Link href="/demo">{copy.secondary}</Link></Button>
             </div>
           </div>
           <Card className="border-blue-200/80 bg-white/80 shadow-xl dark:border-slate-700 dark:bg-slate-900/80">
@@ -82,14 +82,14 @@ export default function ForensicsPage() {
         <div className="mx-auto max-w-6xl px-4 py-16 md:px-6">
           <h2 className="text-2xl font-bold tracking-tight md:text-3xl">{copy.howTitle}</h2>
           <div className="mt-8 grid gap-5 md:grid-cols-3">
-            {copy.steps.map(([title, body], index) => <Card key={title}><CardContent className="p-6"><span className="flex size-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">{index + 1}</span><h3 className="mt-4 font-bold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p></CardContent></Card>)}
+            {copy.steps.map(([title, body], index) => <Card key={title}><CardContent className="p-6"><span className="flex size-8 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">{index + 1}</span><h3 className="mt-4 font-bold">{title}</h3><p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{body}</p></CardContent></Card>)}
           </div>
         </div>
       </section>
 
       <section className="mx-auto grid max-w-6xl gap-6 px-4 py-16 md:grid-cols-2 md:px-6">
-        <Card className="border-amber-300/70 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-950/20"><CardContent className="p-6"><h2 className="font-bold">{copy.boundaryTitle}</h2><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{copy.boundary}</p></CardContent></Card>
-        <Card><CardContent className="p-6"><div className="flex items-center gap-2"><UsersRound className="size-5 text-blue-600" /><h2 className="font-bold">{copy.deliverableTitle}</h2></div><ul className="mt-4 grid gap-2 text-sm text-muted-foreground">{copy.deliverables.map((item) => <li key={item} className="flex gap-2"><CheckCircle2 className="size-4 text-emerald-600" />{item}</li>)}</ul></CardContent></Card>
+        <Card className="border-amber-300/70 bg-amber-50/70 dark:border-amber-500/30 dark:bg-amber-950/20"><CardContent className="p-6"><h2 className="font-bold">{copy.boundaryTitle}</h2><p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200">{copy.boundary}</p></CardContent></Card>
+        <Card><CardContent className="p-6"><div className="flex items-center gap-2"><UsersRound className="size-5 text-blue-600" /><h2 className="font-bold">{copy.deliverableTitle}</h2></div><ul className="mt-4 grid gap-2 text-sm text-slate-700 dark:text-slate-200">{copy.deliverables.map((item) => <li key={item} className="flex gap-2"><CheckCircle2 className="size-4 text-emerald-600" />{item}</li>)}</ul></CardContent></Card>
       </section>
     </main>
   );

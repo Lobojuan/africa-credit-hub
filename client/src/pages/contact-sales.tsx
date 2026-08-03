@@ -59,24 +59,24 @@ export default function ContactSalesPage() {
 
   if (sent) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <main className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-lg w-full text-center">
           <CardContent className="pt-10 pb-10 space-y-4">
             <div className="w-16 h-16 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mx-auto">
               <Send className="w-8 h-8 text-teal-600 dark:text-teal-400" />
             </div>
             <h2 className="text-2xl font-bold" data-testid="text-contact-success">Thank you for reaching out</h2>
-            <p className="text-muted-foreground">
+            <p className="text-slate-600 dark:text-slate-300">
               Our enterprise team will review your inquiry and get back to you within 24 hours.
             </p>
           </CardContent>
         </Card>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
+    <main className="min-h-screen bg-background py-12 px-4">
       <Seo title="Contact Universal Credit Hub | Bank Software & Diagnostic Engagements" description="Speak with Universal Credit Hub about controlled bank risk operations software or a Ghana and Africa bank diagnostic engagement." canonical="/contact-sales" />
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
@@ -96,7 +96,7 @@ export default function ContactSalesPage() {
               <h1 className="text-3xl font-extrabold tracking-tight" data-testid="text-contact-title">
                 Let's build Africa's credit future together
               </h1>
-              <p className="mt-3 text-muted-foreground">
+              <p className="mt-3 text-slate-600 dark:text-slate-300">
                 Whether you're a commercial bank exploring integration or a central bank seeking sovereign infrastructure, our team is ready to discuss your needs.
               </p>
             </div>
@@ -106,14 +106,14 @@ export default function ContactSalesPage() {
                 <Mail className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Email</p>
-                  <a href="mailto:sales@universalcredithub.com" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-email">
+                  <a href="mailto:sales@universalcredithub.com" className="text-sm text-slate-600 hover:text-foreground dark:text-slate-300" data-testid="link-email">
                     sales@universalcredithub.com
                   </a>
                 </div>
               </div>
               <div className="rounded-lg border bg-muted/30 p-4 text-sm">
                 <p className="font-medium text-foreground">Platform owners</p>
-                <div className="mt-2 space-y-1 text-muted-foreground">
+                <div className="mt-2 space-y-1 text-slate-600 dark:text-slate-300">
                   <p><a className="hover:text-foreground" href="mailto:Thomas.Baafi@universalcredithub.com">Thomas Baafi</a> · Platform owner</p>
                   <p><a className="hover:text-foreground" href="mailto:uffe.carlson@universalcredithub.com">Uffe Carlson</a> · Platform owner · <a className="hover:text-foreground" href="tel:+233552395548">+233 552 395 548</a></p>
                 </div>
@@ -122,7 +122,7 @@ export default function ContactSalesPage() {
                 <Phone className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Phone</p>
-                  <a href={`tel:${PLATFORM_CONTACT_PHONE}`} className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-phone">
+                  <a href={`tel:${PLATFORM_CONTACT_PHONE}`} className="text-sm text-slate-600 hover:text-foreground dark:text-slate-300" data-testid="link-phone">
                     {PLATFORM_CONTACT_PHONE || "Contact us"}
                   </a>
                 </div>
@@ -131,23 +131,23 @@ export default function ContactSalesPage() {
                 <MapPin className="w-5 h-5 text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-sm font-medium">Headquarters</p>
-                  <p className="text-sm text-muted-foreground">Accra, Ghana</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">Accra, Ghana</p>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3 pt-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <Shield className="w-4 h-4 text-teal-500" />
-                <span>ISO 27001 compliant infrastructure</span>
+                <span>Governance-focused deployment approach</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <Globe className="w-4 h-4 text-teal-500" />
-                <span>Serving 54 African jurisdictions</span>
+                <span>Built for African banking and regulatory contexts</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                 <Building2 className="w-4 h-4 text-teal-500" />
-                <span>Trusted by central banks & Tier-1 institutions</span>
+                <span>Structured for bank and regulator engagements</span>
               </div>
             </div>
           </div>
@@ -194,9 +194,9 @@ export default function ContactSalesPage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label>I'm interested in</Label>
+                    <Label htmlFor="contact-tier">I'm interested in</Label>
                     <Select value={form.tier} onValueChange={(v) => setForm({ ...form, tier: v })}>
-                      <SelectTrigger data-testid="select-contact-tier">
+                      <SelectTrigger id="contact-tier" data-testid="select-contact-tier">
                         <SelectValue placeholder="Select a plan" />
                       </SelectTrigger>
                       <SelectContent>
@@ -222,6 +222,6 @@ export default function ContactSalesPage() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

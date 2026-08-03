@@ -164,6 +164,16 @@ test.describe("Public marketing navigation", () => {
     await expect(page.getByTestId("button-request-diagnostic")).toBeVisible();
   });
 
+  test("public navigation and contact form expose accessible controls", async ({ page }) => {
+    await page.goto("/forensics");
+    await expect(page.getByTestId("link-public-home")).toHaveAccessibleName("Universal Credit Hub");
+    await expect(page.getByTestId("button-public-signin")).toHaveAccessibleName("Sign in");
+
+    await page.goto("/contact-sales");
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByTestId("select-contact-tier")).toHaveAccessibleName("I'm interested in");
+  });
+
   for (const path of ["/financial-inclusion", "/security", "/market-validation"]) {
     test(`${path} has a full public route back to UCH`, async ({ page }) => {
       await page.goto(path);
