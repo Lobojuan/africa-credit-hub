@@ -62,6 +62,7 @@ export default function MasterLandingPage() {
         </div>
       </header>
 
+      <main>
       <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-24 pb-12 md:pb-16">
         <div className="text-center max-w-3xl mx-auto">
           <Badge variant="secondary" className="mb-5 text-xs font-medium" data-testid="badge-eyebrow">
@@ -244,6 +245,7 @@ export default function MasterLandingPage() {
         </div>
       </section>
 
+      </main>
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">

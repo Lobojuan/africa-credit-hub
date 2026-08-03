@@ -957,6 +957,15 @@ function PublicChatbotWrapper() {
   return <PublicChatbot />;
 }
 
+function TrialBannerWrapper() {
+  const [location] = useLocation();
+  // Public and account-entry pages do not have a session by design. Avoid a
+  // needless `/api/auth/me` request (and its expected 401) on every marketing
+  // page while keeping the banner available throughout the signed-in app.
+  const publicOrEntryPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion", "/login", "/forgot-password", "/reset-password", "/activate-account"];
+  return publicOrEntryPaths.includes(location) ? null : <TrialBanner />;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -1048,7 +1057,7 @@ function App() {
             </Route>
           </Switch>
           <Toaster />
-          <TrialBanner />
+          <TrialBannerWrapper />
           <PWAInstallPrompt />
           <PublicChatbotWrapper />
         </TooltipProvider>

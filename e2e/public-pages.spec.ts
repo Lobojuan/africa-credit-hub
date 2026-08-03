@@ -140,6 +140,21 @@ test.describe("Public pages — Demo Board", () => {
 });
 
 test.describe("Public marketing navigation", () => {
+  test("landing avoids an unauthenticated session request and keeps core landmarks accessible", async ({ page }) => {
+    const authResponses: number[] = [];
+    page.on("response", (response) => {
+      if (new URL(response.url()).pathname === "/api/auth/me") {
+        authResponses.push(response.status());
+      }
+    });
+
+    await page.goto("/");
+    await expect(page.locator("main")).toBeVisible();
+    await expect(page.getByTestId("button-public-chatbot")).toHaveAccessibleName("Open Universal Credit Hub assistant");
+    await page.waitForTimeout(300);
+    expect(authResponses).toEqual([]);
+  });
+
   test("landing has the fourth bank-diagnostic pillar", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByTestId("card-product-forensics")).toContainText("Bank Diagnostic");

@@ -101,6 +101,7 @@ export function PublicChatbot() {
             boxShadow: `0 4px 20px ${brandColors.accentMuted}`,
           }}
           data-testid="button-public-chatbot"
+          aria-label="Open Universal Credit Hub assistant"
         >
           <MessageCircle className="w-6 h-6 text-white" />
         </button>
@@ -125,6 +126,7 @@ export function PublicChatbot() {
               onClick={() => setOpen(false)}
               className="text-white/80 hover:text-white transition-colors p-1"
               data-testid="button-close-chatbot"
+              aria-label="Close Universal Credit Hub assistant"
             >
               <X className="w-5 h-5" />
             </button>

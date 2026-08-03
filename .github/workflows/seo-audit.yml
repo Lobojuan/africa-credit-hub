@@ -19,7 +19,8 @@ jobs:
         with:
           urls: |
             https://universalcredithub.com/
-            https://universalcredithub.com/login
+            https://universalcredithub.com/forensics
+            https://universalcredithub.com/contact-sales
           configPath: .lighthouserc.json
           uploadArtifacts: true
           temporaryPublicStorage: true

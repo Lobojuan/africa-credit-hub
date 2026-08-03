@@ -2,8 +2,8 @@
 
 **System:** Universal Credit Hub (UCH) / Cross-Jurisdictional Credit Registry
 
-**Review date:** 25 July 2026  
-**Evidence base:** `shared/schema.ts`, `server/`, `client/src/`, Playwright configuration and CI workflows.  
+**Review date:** 3 August 2026
+**Evidence base:** `shared/schema.ts`, `server/`, `client/src/`, Playwright configuration, CI workflows and the release-readiness evidence record.
 **Purpose:** Establish a truthful delivery baseline before treating the legacy SRS traceability matrix as a contractual implementation record.
 
 ## 1. Executive conclusion
@@ -18,8 +18,8 @@ The existing documents are useful historical test inventories, but must not be u
 | Application pages | 128 React page modules |
 | HTTP route registrations | 587 Express route registrations |
 | Roles | 8: platform owner, super admin, admin, regulator, lender, viewer, DGI officer, tax-authority admin |
-| E2E inventory | 403 Playwright tests in 16 files |
-| Unit suite | 332 passing, 1 intentionally skipped (at review time) |
+| E2E inventory | 496 Playwright tests in 18 files |
+| Unit suite | 346 passing, 1 intentionally skipped |
 
 ## 2. Implemented capability map
 
@@ -82,4 +82,4 @@ The registry foundation already covers much of the operational stack. The remain
 
 ## 7. Current review status
 
-This document is the current authoritative review baseline. The legacy `SRS_Traceability_Matrix.md` and `UAT_Test_Document.md` remain historical artefacts until their v3 replacements are completed and explicitly signed off.
+This document is the current authoritative review baseline. The legacy `SRS_Traceability_Matrix.md` and `UAT_Test_Document.md` remain historical artefacts until their v3 replacements are completed and explicitly signed off. The dated release evidence is maintained in `Release_Readiness_2026-08-03.md`.

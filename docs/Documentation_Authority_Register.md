@@ -21,6 +21,7 @@ This register prevents a bank, regulator or delivery team from treating an older
 | `SSO_Acceptance_Test_Checklist.md` | Bank identity-provider acceptance | Current |
 | `Production_Security_Release_Gate.md` | Production decision evidence | Current |
 | `Security_Audit_2026-07-29.md` | Current code-level security findings | Current |
+| `Release_Readiness_2026-08-03.md` | Dated automated, public-site and residual-risk evidence | Current |
 
 ## Controlled legacy and technical-reference set
 
