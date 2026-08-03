@@ -4,6 +4,7 @@ import { ArrowRight, CheckCircle2, FileSearch, ShieldCheck, UsersRound } from "l
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Seo } from "@/components/seo";
 
 const english = {
   eyebrow: "UCH Bank Diagnostic & Forensics",
@@ -53,6 +54,7 @@ export default function ForensicsPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" data-testid="public-forensics-page">
+      <Seo title="Bank Diagnostic & Forensics for African Banks | Universal Credit Hub" description="A controlled bank diagnostic for NPL risk, IFRS 9 readiness, fraud operations, collateral evidence and data quality. Bank-approved access and management-owned remediation." canonical="/forensics" />
       <section className="mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-24">
         <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div>

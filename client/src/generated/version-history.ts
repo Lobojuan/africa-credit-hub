@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-31T12:30:49.822Z",
+  "generatedAt": "2026-08-03T09:34:51.192Z",
   "branch": "main",
-  "currentCommit": "45e6b49",
+  "currentCommit": "71cd7fa",
   "commits": [
+    {
+      "hash": "71cd7fa20637e1133157d69909fc256c04bf77a1",
+      "shortHash": "71cd7fa",
+      "date": "2026-07-31",
+      "author": "Uffe J Carlson",
+      "subject": "feat: add public bank diagnostic and navigation"
+    },
     {
       "hash": "45e6b491973fb7c58992d7273baa1b703ae0ac37",
       "shortHash": "45e6b49",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-07-30",
       "author": "Uffe J Carlson",
       "subject": "feat: add interactive demo workspaces"
-    },
-    {
-      "hash": "f171ccab466e538468c58f44fd2f3bd18f05fbe2",
-      "shortHash": "f171cca",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add whole bank demo journey"
     }
   ]
 };

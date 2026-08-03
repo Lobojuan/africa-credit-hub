@@ -15,6 +15,7 @@ import { createServer } from "http";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
 import { warnIfCanonicalUrlMissing, logOAuthCallbackUrls } from "./base-url";
+import { getPublicSitemapXml, isPublicSeoPath } from "./seo-public-routes";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 
@@ -186,11 +187,9 @@ app.use(compression());
 app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-  if (!req.path.startsWith("/api")) {
+  if (isPublicSeoPath(req.path)) {
     res.setHeader("X-Robots-Tag", "index, follow");
-  }
-
-  if (req.path.startsWith("/api")) {
+  } else {
     res.setHeader("X-Robots-Tag", "noindex, noarchive, nosnippet");
   }
 
@@ -776,30 +775,21 @@ process.stderr.write = function (...args: any[]) {
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.send(
-      "# Universal Credit Hub — Automated access strictly prohibited.\n" +
-      "# © 2026 Universal Credit Hub Ltd. Registered in Ghana.\n" +
-      "# Unauthorised scraping, crawling, or data extraction is prohibited\n" +
-      "# under the Ghana Copyright Act 2005 (Act 690) and international IP treaties.\n" +
-      "# Legal: uffe.carlson@gmail.com | +233 552 395548\n\n" +
+      "# Universal Credit Hub — public marketing pages only.\n" +
+      "# Customer, bank, administrative and API routes are not crawlable.\n\n" +
       "User-agent: *\n" +
-      "Disallow: /\n" +
-      "Allow: /.well-known/\n" +
-      "Allow: /sitemap.xml\n"
+      "Allow: /\n" +
+      "Disallow: /api/\n" +
+      "Disallow: /admin/\n" +
+      "Disallow: /master-control/\n" +
+      "Sitemap: https://universalcredithub.com/sitemap.xml\n"
     );
   });
 
   app.get("/sitemap.xml", (_req, res) => {
     res.setHeader("Content-Type", "application/xml");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    res.send(
-      `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://universalcredithub.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://universalcredithub.com/login</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://universalcredithub.com/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://universalcredithub.com/consumer-portal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-</urlset>`
-    );
+    res.send(getPublicSitemapXml("https://universalcredithub.com"));
   });
 
   if (process.env.NODE_ENV === "production") {

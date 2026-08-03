@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Seo } from "@/components/seo";
 
 type Scenario = {
   id: "whole" | "npl" | "consent" | "operations" | "reporting" | "credit";
@@ -167,6 +168,7 @@ export default function DemoBoardPage() {
   };
 
   return <main className="min-h-screen bg-muted/20" data-testid="public-demo-board">
+    <Seo title="Interactive Bank Risk Operations Demo | Universal Credit Hub" description="Explore a fictional, hands-on bank operations demo for NPL early warning, credit intelligence, collateral, consent controls and evidence packs." canonical="/demo" />
     <header className="border-b bg-background/90 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 md:px-8">
         <Link href="/" className="flex items-center gap-2 font-semibold"><span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground"><ShieldCheck className="size-5" /></span>Universal Credit Hub</Link>

@@ -11,6 +11,7 @@ import { Link } from "wouter";
 import { Building2, Mail, Phone, MapPin, ArrowLeft, Send, Shield, Globe, Loader2 } from "lucide-react";
 import { PLATFORM_CONTACT_PHONE } from "@/lib/platform-config";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { Seo } from "@/components/seo";
 
 export default function ContactSalesPage() {
   const { t } = useTranslation();
@@ -76,6 +77,7 @@ export default function ContactSalesPage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
+      <Seo title="Contact Universal Credit Hub | Bank Software & Diagnostic Engagements" description="Speak with Universal Credit Hub about controlled bank risk operations software or a Ghana and Africa bank diagnostic engagement." canonical="/contact-sales" />
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -107,6 +109,13 @@ export default function ContactSalesPage() {
                   <a href="mailto:sales@universalcredithub.com" className="text-sm text-muted-foreground hover:text-foreground" data-testid="link-email">
                     sales@universalcredithub.com
                   </a>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-muted/30 p-4 text-sm">
+                <p className="font-medium text-foreground">Platform owners</p>
+                <div className="mt-2 space-y-1 text-muted-foreground">
+                  <p><a className="hover:text-foreground" href="mailto:Thomas.Baafi@universalcredithub.com">Thomas Baafi</a> · Platform owner</p>
+                  <p><a className="hover:text-foreground" href="mailto:uffe.carlson@universalcredithub.com">Uffe Carlson</a> · Platform owner · <a className="hover:text-foreground" href="tel:+233552395548">+233 552 395 548</a></p>
                 </div>
               </div>
               <div className="flex items-start gap-3">

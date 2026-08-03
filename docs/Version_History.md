@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `45e6b49`
+**Current Commit:** `71cd7fa`
 **Branch:** `main`
-**Generated:** 2026-07-31T12:30:49.822Z
+**Generated:** 2026-08-03T09:34:51.192Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-07-31 | `71cd7fa` | feat: add public bank diagnostic and navigation | Uffe J Carlson |
 | 2026-07-30 | `45e6b49` | docs: add two-week delivery report | Uffe J Carlson |
 | 2026-07-30 | `4910ca3` | fix: retire unsafe public landing claims | Uffe J Carlson |
 | 2026-07-30 | `c71c8d2` | docs: define country clearance safety matrix | Uffe J Carlson |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-30 | `baf5663` | fix: focus demo scenario selection | Uffe J Carlson |
 | 2026-07-30 | `051a9a2` | feat: add live executive demo simulation | Uffe J Carlson |
 | 2026-07-30 | `54b7bbc` | feat: add interactive demo workspaces | Uffe J Carlson |
-| 2026-07-30 | `f171cca` | feat: add whole bank demo journey | Uffe J Carlson |
