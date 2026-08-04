@@ -10,6 +10,7 @@ import {
   getSupportedCountries,
   GLOBAL_VIEW_THEME,
   getCountryConfig,
+  setRuntimeCountry,
 } from "@/lib/country-mode";
 
 interface CountryContextType {
@@ -58,21 +59,27 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
 
   const serverCountry = user?.viewingCountry ?? undefined;
 
-  const initialCountry = serverCountry && serverCountry !== "global" ? serverCountry : null;
+  // Ghana is UCH's initial operating context. A platform owner can explicitly
+  // switch to another country (or Global View), which then drives both query
+  // scoping and default display currency.
+  const initialCountry = serverCountry && serverCountry !== "global" ? serverCountry : "Ghana";
   const [activeCountry, setActiveCountry] = useState<string | null>(initialCountry);
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
     setGlobalCountry(initialCountry);
+    setRuntimeCountry(initialCountry);
   }, []);
 
   useEffect(() => {
     if (serverCountry && serverCountry !== "global") {
       setActiveCountry(serverCountry);
       setGlobalCountry(serverCountry);
+      setRuntimeCountry(serverCountry);
     } else if (serverCountry === "global") {
-      setActiveCountry(null);
-      setGlobalCountry(null);
+      setActiveCountry("Ghana");
+      setGlobalCountry("Ghana");
+      setRuntimeCountry("Ghana");
     }
   }, [serverCountry]);
 
@@ -104,6 +111,7 @@ export function CountryThemeProvider({ children }: { children: ReactNode }) {
       await switchMutation.mutateAsync(country);
       setActiveCountry(country);
       setGlobalCountry(country);
+      setRuntimeCountry(country);
       queryClient.removeQueries({
         predicate: (q) => {
           const key = q.queryKey[0] as string;

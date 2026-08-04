@@ -662,6 +662,16 @@ export function getCountryMode(): string | null {
   return null;
 }
 
+// The deployed product can run in a single-country build, while a platform
+// owner can switch country context at runtime. Keep that selected context in
+// this small shared module so default-currency helpers agree with the active
+// country without changing the currency recorded on an individual facility.
+let runtimeCountry: string | null = null;
+
+export function setRuntimeCountry(country: string | null): void {
+  runtimeCountry = country;
+}
+
 export function isGhanaMode(): boolean {
   return getCountryMode() === "ghana";
 }
@@ -691,7 +701,8 @@ export function getDefaultCountry(): string | null {
 
 export function getDefaultCurrency(): string | null {
   const config = getCountryConfig();
-  return config ? config.currency : null;
+  if (config) return config.currency;
+  return runtimeCountry ? getCountryConfigByName(runtimeCountry)?.currency || "GHS" : "GHS";
 }
 
 export function getBrandTitle(): string {

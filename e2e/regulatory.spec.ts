@@ -26,6 +26,17 @@ async function gotoRegDashboard(
 // ─── KPI strip ────────────────────────────────────────────────────────────────
 
 test.describe("Regulatory Dashboard — KPI strip", () => {
+  test("country selection changes the dashboard's default display currency", async ({ page }) => {
+    await setSession(page, PLATFORM_OWNER_SESSION);
+    await page.goto("/regulatory-dashboard");
+    await expect(page.getByTestId("button-country-selector")).toContainText("Ghana", { timeout: 15000 });
+
+    await page.getByTestId("button-country-selector").click();
+    await page.getByTestId("menu-item-country-CM").click();
+    await expect(page.getByTestId("button-country-selector")).toContainText("Cameroon");
+    await expect(page.getByTestId("stat-total-exposure")).toContainText("XAF");
+  });
+
   test("all 6 KPI stat cards are visible", async ({ page }) => {
     await gotoRegDashboard(page);
     const kpis = [
