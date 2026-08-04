@@ -143,6 +143,39 @@ test.describe("Public pages — Demo Board", () => {
 });
 
 test.describe("Public marketing navigation", () => {
+  test("product cards open their intended public workspaces and preserve a Home return", async ({ page }) => {
+    await page.goto("/collateral");
+    await expect(page.getByTestId("text-breadcrumb-current")).toContainText("Collateral Registry");
+    await expect(page.getByTestId("link-breadcrumb-home")).toBeVisible();
+
+    await page.goto("/loto");
+    await expect(page.getByTestId("text-breadcrumb-current")).toContainText("Loto Fiscal");
+    await expect(page.getByTestId("button-back-home")).toBeVisible();
+  });
+
+  test("public collateral verification has a usable entry point and returns to UCH", async ({ page }) => {
+    await page.goto("/verify");
+    await expect(page.getByTestId("form-certificate-lookup")).toBeVisible();
+    await page.getByTestId("input-certificate-code").fill("TESTCODE123");
+    await page.getByTestId("button-verify-certificate").click();
+    await expect(page).toHaveURL(/\/verify\/TESTCODE123$/);
+    await expect(page.getByTestId("link-back-home")).toBeVisible();
+    await expect(page.getByTestId("link-verify-another")).toBeVisible();
+  });
+
+  for (const path of [
+    "/collateral", "/loto", "/financial-inclusion", "/press", "/for-lenders",
+    "/for-regulators", "/forensics", "/ai-demo", "/demo", "/contact-sales",
+    "/security", "/terms", "/privacy", "/market-validation", "/start-trial",
+    "/signup", "/score-guide", "/api-docs", "/partner-docs", "/portal",
+    "/consumer/register", "/my-credit", "/consumer-portal", "/verify",
+  ]) {
+    test(`${path} retains a visible route back to the public home page`, async ({ page }) => {
+      await page.goto(path);
+      await expect(page.locator('a[href="/"]').first()).toBeVisible({ timeout: 15000 });
+    });
+  }
+
   test("landing avoids an unauthenticated session request and keeps core landmarks accessible", async ({ page }) => {
     const authResponses: number[] = [];
     page.on("response", (response) => {

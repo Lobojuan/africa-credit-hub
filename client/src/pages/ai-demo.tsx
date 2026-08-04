@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -305,7 +305,7 @@ function AIDemoPage() {
     <div className="min-h-screen bg-background text-foreground" data-testid="ai-demo-page">
       <nav className="border-b border-border/50 bg-background/95 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")} data-testid="nav-home">
+          <Link href="/" className="flex items-center gap-3" data-testid="nav-home" aria-label="Universal Credit Hub home">
             <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: brandColors.headerGradient }}>
               <Brain className="w-5 h-5 text-white" />
             </div>
@@ -313,10 +313,10 @@ function AIDemoPage() {
               <span className="font-bold text-sm tracking-tight">Universal Credit Hub</span>
               <span className="text-[10px] text-muted-foreground ml-1.5">AI Demo</span>
             </div>
-          </div>
+          </Link>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => navigate("/")} data-testid="link-back-home">
-              <ArrowLeft className="w-3 h-3" /> Back
+            <Button asChild variant="ghost" size="sm" className="text-xs gap-1" data-testid="link-back-home">
+              <Link href="/"><ArrowLeft className="w-3 h-3" /> Back</Link>
             </Button>
             <Button size="sm" className="text-xs" onClick={() => navigate("/start-trial")} data-testid="button-start-trial">
               Start Free Trial <ArrowRight className="w-3 h-3 ml-1" />

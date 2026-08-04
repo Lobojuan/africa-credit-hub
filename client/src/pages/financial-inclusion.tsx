@@ -104,7 +104,7 @@ export default function FinancialInclusionPage() {
           {t("financialInclusion.heroSubtitle", "Universal Credit Hub turns verified VAT receipts — Loto Fiscal in Côte d'Ivoire and Francophone markets, Verified Receipts everywhere else — into a credit profile that unlocks loans for previously invisible merchants in all 54 African countries, entirely on the merchant's terms.")}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href="/loto-fiscal">
+          <Link href="/loto">
             <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700" data-testid="button-cta-loto">
               {t("financialInclusion.ctaLoto", "Open Loto Fiscal")}
               <ArrowRight className="w-4 h-4 ml-2" />

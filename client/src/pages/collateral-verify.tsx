@@ -1,6 +1,9 @@
-import { useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { CheckCircle, XCircle, Loader2, Shield, Calendar, Building2, User, FileText, Tag } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle, XCircle, Loader2, Shield, Calendar, Building2, User, FileText, Tag, ArrowLeft, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface VerifyResult {
   valid: boolean;
@@ -19,7 +22,9 @@ interface VerifyResult {
 
 export default function CollateralVerifyPage() {
   const [, params] = useRoute("/verify/:code");
+  const [, navigate] = useLocation();
   const code = params?.code ?? "";
+  const [verificationCode, setVerificationCode] = useState("");
 
   const { data, isLoading, isError } = useQuery<VerifyResult>({
     queryKey: ["/api/public/collateral/verify", code],
@@ -48,6 +53,34 @@ export default function CollateralVerifyPage() {
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+          {!code && (
+            <form
+              className="p-6 space-y-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const normalized = verificationCode.trim();
+                if (normalized) navigate(`/verify/${encodeURIComponent(normalized)}`);
+              }}
+              data-testid="form-certificate-lookup"
+            >
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Verify a certificate</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Enter the code printed on a collateral certificate to check its registry status.</p>
+              </div>
+              <label htmlFor="certificate-code" className="text-sm font-medium text-slate-700 dark:text-slate-200">Verification code</label>
+              <Input
+                id="certificate-code"
+                value={verificationCode}
+                onChange={(event) => setVerificationCode(event.target.value)}
+                placeholder="e.g. UCH-AB12-CD34"
+                autoComplete="off"
+                data-testid="input-certificate-code"
+              />
+              <Button type="submit" className="w-full gap-2" disabled={!verificationCode.trim()} data-testid="button-verify-certificate">
+                <Search className="size-4" /> Verify certificate
+              </Button>
+            </form>
+          )}
           {isLoading && (
             <div className="flex flex-col items-center justify-center py-16 gap-3" data-testid="verify-loading">
               <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -150,6 +183,16 @@ export default function CollateralVerifyPage() {
                 Verified against the Pan-African Collateral Registry · {new Date().toLocaleDateString("en", { year: "numeric", month: "long", day: "numeric" })}
               </div>
             </div>
+          )}
+        </div>
+        <div className="mt-5 flex items-center justify-center gap-4 text-sm">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white" data-testid="link-back-home">
+            <ArrowLeft className="size-4" /> Back to UCH
+          </Link>
+          {code && (
+            <Link href="/verify" className="inline-flex items-center gap-1.5 text-blue-700 hover:text-blue-900 dark:text-blue-300 dark:hover:text-blue-100" data-testid="link-verify-another">
+              <Search className="size-4" /> Verify another
+            </Link>
           )}
         </div>
       </div>

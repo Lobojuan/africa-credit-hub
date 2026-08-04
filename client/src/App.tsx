@@ -976,8 +976,8 @@ function App() {
             <Route path="/investor" component={() => <Redirect to="/" />} />
             <Route path="/solutions" component={() => <Redirect to="/" />} />
             <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
-            <Route path="/collateral" component={() => <Redirect to="/" />} />
-            <Route path="/loto" component={() => <Redirect to="/" />} />
+            <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
+            <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
             <Route path="/financial-inclusion" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense></PublicPageFrame>} />
             <Route path="/press" component={() => <Suspense fallback={<LazyFallback />}><PressKitPage /></Suspense>} />
             <Route path="/for-lenders" component={() => <Suspense fallback={<LazyFallback />}><ForLendersPage /></Suspense>} />
@@ -1000,6 +1000,11 @@ function App() {
             <Route path="/partner-docs" component={() => <Suspense fallback={<LazyFallback />}><PartnerDocsPage /></Suspense>} />
             <Route path="/portal" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><PortalPage /></Suspense></PublicPageFrame>} />
             <Route path="/platform-control-9x7k" component={() => <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>} />
+            <Route path="/verify">
+              <Suspense fallback={<LazyFallback />}>
+                <CollateralVerifyPage />
+              </Suspense>
+            </Route>
             <Route path="/verify/:code">
               <Suspense fallback={<LazyFallback />}>
                 <CollateralVerifyPage />

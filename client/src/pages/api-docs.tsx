@@ -1266,9 +1266,16 @@ export default function ApiDocsPage() {
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6 max-w-[1000px] mx-auto">
       <div className="flex items-center gap-2 sm:gap-4">
-        <Button variant="ghost" size="icon" className="shrink-0" onClick={() => navigate("/api-keys")} data-testid="button-back">
-          <ArrowLeft className="w-5 h-5" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/api-keys")} data-testid="button-back" aria-label="Back to API keys">
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-1" data-testid="link-back-home">
+              <ArrowLeft className="w-3.5 h-3.5" /> Home
+            </Button>
+          </Link>
+        </div>
         <div className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <div className="page-header-bar" />
