@@ -2599,6 +2599,13 @@ const en = {
       ctaPrimary: "Sign in",
       ctaSecondary: "See pricing",
     },
+    video: {
+      title: "See UCH in action",
+      subtitle: "A short introduction to the Universal Credit Hub platform.",
+      play: "Play Universal Credit Hub introduction video",
+      unavailable: "The platform introduction is temporarily unavailable.",
+      unavailableDetail: "You can still explore the live interactive demo.",
+    },
     pillarsTitle: "Four ways UCH helps a bank move forward",
     forensics: {
       name: "Bank Diagnostic & Forensics",
@@ -6018,6 +6025,13 @@ const fr: typeof en = {
       subtitle: "{{brand}} réunit l'intelligence de crédit, les preuves de garanties, l'analyse des données fiscales et un diagnostic bancaire contrôlé - reliés par le consentement, une responsabilité claire et une piste d'audit.",
       ctaPrimary: "Se connecter",
       ctaSecondary: "Voir les tarifs",
+    },
+    video: {
+      title: "Découvrez UCH en action",
+      subtitle: "Une courte introduction à la plateforme Universal Credit Hub.",
+      play: "Lire la vidéo d'introduction Universal Credit Hub",
+      unavailable: "La présentation de la plateforme est temporairement indisponible.",
+      unavailableDetail: "Vous pouvez toujours explorer la démo interactive.",
     },
     pillarsTitle: "Quatre façons dont UCH aide une banque à progresser",
     forensics: {

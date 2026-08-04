@@ -90,6 +90,9 @@ test.describe("Public pages — login", () => {
 test.describe("Public pages — Demo Board", () => {
   test("landing page leads unauthenticated visitors to the Demo Board", async ({ page }) => {
     await page.goto("/");
+    await expect(page.getByTestId("landing-video-panel")).toBeVisible();
+    await expect(page.getByTestId("video-platform-demo")).toHaveAttribute("src", "/marketing/platform-demo.mp4");
+    await expect(page.getByTestId("button-play-landing-video")).toHaveAccessibleName("Play Universal Credit Hub introduction video");
     await page.getByTestId("cta-explore-demo").click();
     await expect(page).toHaveURL(/\/demo$/);
     await expect(page.getByTestId("public-demo-board")).toBeVisible();

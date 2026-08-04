@@ -1,19 +1,24 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Building2, Layers, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2, FileSearch } from "lucide-react";
+import { ArrowRight, Building2, Layers, Play, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2, FileSearch } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PRODUCT_ORDER, PRODUCT_REGISTRY } from "@/lib/products";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
+const platformDemoVideo = "/marketing/platform-demo.mp4";
+
 export default function MasterLandingPage() {
   const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const year = new Date().getFullYear();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
   const pillars = [
     ...PRODUCT_ORDER.map((id) => ({ ...PRODUCT_REGISTRY[id], kind: "product" as const })),
     {
@@ -63,9 +68,10 @@ export default function MasterLandingPage() {
       </header>
 
       <main>
-      <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-24 pb-12 md:pb-16">
-        <div className="text-center max-w-3xl mx-auto">
-          <Badge variant="secondary" className="mb-5 text-xs font-medium" data-testid="badge-eyebrow">
+      <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-20 pb-12 md:pb-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+          <div className="text-center lg:text-left">
+            <Badge variant="secondary" className="mb-5 text-xs font-medium" data-testid="badge-eyebrow">
             <Sparkles className="w-3 h-3 mr-1.5" />
             {t("landingShell.masterHero.eyebrow")}
           </Badge>
@@ -78,9 +84,50 @@ export default function MasterLandingPage() {
           <p className="mt-5 md:mt-7 text-base md:text-lg text-slate-600 dark:text-slate-300 leading-relaxed" data-testid="text-hero-subtitle">
             {t("landingShell.masterHero.subtitle", { brand })}
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
             <Link href="/demo"><Button size="lg" className="gap-2" data-testid="cta-explore-demo">Explore the interactive demo <ArrowRight className="w-4 h-4" /></Button></Link>
             <Link href="/login"><Button size="lg" variant="outline" data-testid="button-cta-primary">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
+          </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-2xl dark:border-slate-700" data-testid="landing-video-panel">
+            {!videoUnavailable ? (
+              <>
+                <video
+                  ref={videoRef}
+                  src={platformDemoVideo}
+                  playsInline
+                  preload="metadata"
+                  controls={videoPlaying}
+                  className="aspect-video w-full bg-slate-950 object-cover"
+                  data-testid="video-platform-demo"
+                  onEnded={() => setVideoPlaying(false)}
+                  onError={() => setVideoUnavailable(true)}
+                />
+                {!videoPlaying && (
+                  <button
+                    type="button"
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center transition-colors hover:bg-slate-950/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
+                    onClick={() => {
+                      setVideoPlaying(true);
+                      videoRef.current?.play().catch(() => setVideoPlaying(false));
+                    }}
+                    aria-label={t("landingShell.video.play")}
+                    data-testid="button-play-landing-video"
+                  >
+                    <span className="flex size-16 items-center justify-center rounded-full bg-white/95 text-slate-950 shadow-xl transition-transform group-hover:scale-105"><Play className="ml-1 size-7" /></span>
+                    <span className="mt-4 text-base font-semibold text-white">{t("landingShell.video.title")}</span>
+                    <span className="mt-1 max-w-sm text-sm text-slate-200">{t("landingShell.video.subtitle")}</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex aspect-video flex-col items-center justify-center p-8 text-center text-white">
+                <Play className="size-8 text-slate-300" />
+                <p className="mt-3 font-semibold">{t("landingShell.video.unavailable")}</p>
+                <p className="mt-1 text-sm text-slate-300">{t("landingShell.video.unavailableDetail")}</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
