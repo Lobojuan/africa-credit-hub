@@ -414,13 +414,13 @@ export async function enqueueMerchantInactivityAlerts(now: Date = new Date()): P
     SELECT m.id,
            m.shop_name AS name,
            m.country_code,
-           u.phone AS phone,
+           b.phone AS phone,
            m.user_id,
            EXTRACT(DAY FROM now() - COALESCE(MAX(r.issued_at), m.registered_at))::int AS days
     FROM loto_merchants m
     LEFT JOIN loto_receipts r ON r.merchant_id = m.id
-    LEFT JOIN users u ON u.id = m.user_id
-    GROUP BY m.id, u.phone
+    LEFT JOIN borrowers b ON b.id = m.borrower_id
+    GROUP BY m.id, b.phone
     HAVING EXTRACT(DAY FROM now() - COALESCE(MAX(r.issued_at), m.registered_at)) >= 7
     LIMIT 200
   `);

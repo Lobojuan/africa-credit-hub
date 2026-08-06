@@ -872,6 +872,22 @@ export class DatabaseStorage implements IStorage {
     return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE country = ${country})`;
   }
 
+  /**
+   * Credit facilities inherit jurisdiction from their borrower. Older and
+   * imported facilities legitimately have no organisation_id, so filtering
+   * them through organisations hides valid country data from platform and
+   * regulator views. An explicit organisation scope is still applied by the
+   * calling query when the signed-in user belongs to one.
+   */
+  private creditAccountCountryFilter(country?: string | string[]) {
+    if (!country || (country as string) === GLOBAL_SCOPE) return undefined;
+    if (Array.isArray(country)) {
+      if (country.length === 0) return undefined;
+      return sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE ${inArray(borrowers.country, country)})`;
+    }
+    return sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE ${eq(borrowers.country, country)})`;
+  }
+
   async globalSearch(query: string, organizationId?: string, country?: string | string[]): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }> {
     requireCountryScope(country, "globalSearch");
     const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
@@ -880,7 +896,7 @@ export class DatabaseStorage implements IStorage {
     const orgTelcoFilter = organizationId ? eq(telcoProfiles.organizationId, organizationId) : undefined;
     const countryBorrowerFilter = this.buildCountryCondition(borrowers, country);
     const countryInstFilter = this.buildCountryCondition(institutions, country);
-    const countryAccFilter = country ? this.countryOrgFilter(creditAccounts, country) : undefined;
+    const countryAccFilter = country ? this.creditAccountCountryFilter(country) : undefined;
     const countryTelcoFilter = this.buildCountryCondition(telcoProfiles, country);
 
     let borrowerResults: Borrower[] = [];
@@ -1269,7 +1285,7 @@ export class DatabaseStorage implements IStorage {
     const safeLimit = capListLimit(limit);
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.creditAccountCountryFilter(country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(creditAccounts.createdAt, cutoff), gte(creditAccounts.updatedAt, cutoff)));
@@ -1975,7 +1991,7 @@ export class DatabaseStorage implements IStorage {
 
     const accFilters: any[] = [];
     if (organizationId) accFilters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country) accFilters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country) accFilters.push(this.creditAccountCountryFilter(country));
     const accFilter = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
 
     const approvalFilters: any[] = [];
@@ -2108,7 +2124,7 @@ export class DatabaseStorage implements IStorage {
 
     const accFilters: any[] = [];
     if (organizationId) accFilters.push(eq(creditAccounts.organizationId, organizationId));
-    if (scopedCountry) accFilters.push(this.countryOrgFilter(creditAccounts, scopedCountry));
+    if (scopedCountry) accFilters.push(this.creditAccountCountryFilter(scopedCountry));
     const accFilter = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
 
     const approvalFilters: any[] = [];
@@ -2172,7 +2188,7 @@ export class DatabaseStorage implements IStorage {
   async getPortfolioAggregates(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.creditAccountCountryFilter(country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [[totals], statusBreakdown, typeBreakdown, institutionCount] = await Promise.all([
@@ -2253,7 +2269,7 @@ export class DatabaseStorage implements IStorage {
   async getConcentrationData(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.creditAccountCountryFilter(country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [totalRow] = await db.select({
@@ -2441,7 +2457,7 @@ export class DatabaseStorage implements IStorage {
   async getGuarantorsByBorrower(borrowerId: string, country?: string): Promise<Guarantor[]> {
     requireCountryScope(country, "getGuarantorsByBorrower");
     const accFilters: any[] = [eq(creditAccounts.borrowerId, borrowerId)];
-    accFilters.push(this.countryOrgFilter(creditAccounts, country!));
+    accFilters.push(this.creditAccountCountryFilter(country!));
     const accWhere = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
     const accounts = await db.select({ id: creditAccounts.id }).from(creditAccounts).where(accWhere);
     if (accounts.length === 0) return [];
