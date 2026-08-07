@@ -32,6 +32,17 @@ export function renderPublicSeoHtml(html: string, pathName: string, baseUrl = "h
   rendered = replaceMetaTag(rendered, "name", "twitter:title", page.title);
   rendered = replaceMetaTag(rendered, "name", "twitter:description", page.description);
   rendered = rendered.replace(/<link\s+rel=["']canonical["'][^>]*>/i, `<link rel="canonical" href="${canonical}" />`);
+
+  // These are equivalent public home pages. Give crawlers a stable English /
+  // French pairing instead of relying on a browser-only language switch.
+  if (page.path === "/" || page.path === "/fr") {
+    const language = page.path === "/fr" ? "fr" : "en";
+    const frenchAlternate = `${baseUrl.replace(/\/+$/, "")}/fr`;
+    rendered = /<html\s+lang=["'][^"']*["']/i.test(rendered)
+      ? rendered.replace(/<html\s+lang=["'][^"']*["']/i, `<html lang="${language}"`)
+      : rendered.replace(/<html\b/i, `<html lang="${language}"`);
+    rendered = rendered.replace("</head>", `    <link rel="alternate" hreflang="fr" href="${frenchAlternate}" />\n  </head>`);
+  }
   return rendered;
 }
 

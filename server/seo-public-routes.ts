@@ -6,6 +6,7 @@
  */
 export const PUBLIC_SEO_ROUTES = [
   { path: "/", priority: "1.0", changefreq: "weekly", title: "Universal Credit Hub — Controlled Bank Risk Operations", description: "Credit intelligence, NPL early warning, collateral evidence, consent controls and governed IFRS 9 policy workflows for controlled African bank pilots." },
+  { path: "/fr", priority: "0.9", changefreq: "weekly", title: "Universal Credit Hub — Opérations de risque bancaire maîtrisées", description: "Intelligence de crédit, alerte précoce NPL, preuves de garanties, contrôles de consentement et flux IFRS 9 gouvernés pour des pilotes bancaires africains maîtrisés." },
   { path: "/forensics", priority: "0.9", changefreq: "monthly", title: "Bank Diagnostic & Forensics for African Banks | Universal Credit Hub", description: "A controlled bank diagnostic for NPL risk, IFRS 9 readiness, fraud operations, collateral evidence and data quality." },
   { path: "/demo", priority: "0.8", changefreq: "monthly", title: "Interactive Bank Risk Operations Demo | Universal Credit Hub", description: "Explore a fictional, hands-on bank operations demo for NPL early warning, credit intelligence, collateral, consent controls and evidence packs." },
   { path: "/for-lenders", priority: "0.8", changefreq: "monthly", title: "Credit Intelligence for African Lenders | Universal Credit Hub", description: "Explore controlled credit intelligence, collateral evidence and consent-led data workflows for African lenders." },
@@ -21,7 +22,8 @@ export const PUBLIC_SEO_ROUTES = [
 const PUBLIC_SEO_PATHS = new Set<string>(PUBLIC_SEO_ROUTES.map((route) => route.path));
 
 export function isPublicSeoPath(path: string): boolean {
-  return PUBLIC_SEO_PATHS.has(path);
+  const normalized = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  return PUBLIC_SEO_PATHS.has(normalized);
 }
 
 export function getPublicSeoMetadata(path: string) {

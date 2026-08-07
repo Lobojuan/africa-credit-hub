@@ -42,6 +42,7 @@ import { AppFooter } from "@/components/app-footer";
 import { PublicPageFrame } from "@/components/public-page-frame";
 import { MfaSetupDialog } from "@/components/mfa-setup";
 import { useToast } from "@/hooks/use-toast";
+import { changeAppLanguage } from "@/lib/i18n";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -952,7 +953,7 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
+  const publicPaths = ["/", "/fr", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
 }
@@ -962,8 +963,16 @@ function TrialBannerWrapper() {
   // Public and account-entry pages do not have a session by design. Avoid a
   // needless `/api/auth/me` request (and its expected 401) on every marketing
   // page while keeping the banner available throughout the signed-in app.
-  const publicOrEntryPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion", "/login", "/forgot-password", "/reset-password", "/activate-account"];
+  const publicOrEntryPaths = ["/", "/fr", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion", "/login", "/forgot-password", "/reset-password", "/activate-account"];
   return publicOrEntryPaths.includes(location) ? null : <TrialBanner />;
+}
+
+function FrenchLandingPage() {
+  useEffect(() => {
+    void changeAppLanguage("fr");
+  }, []);
+
+  return <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>;
 }
 
 function App() {
@@ -972,6 +981,7 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
+            <Route path="/fr" component={FrenchLandingPage} />
             <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
             <Route path="/investor" component={() => <Redirect to="/" />} />
             <Route path="/solutions" component={() => <Redirect to="/" />} />
