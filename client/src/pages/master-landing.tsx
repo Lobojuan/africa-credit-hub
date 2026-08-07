@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Building2, Layers, Play, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2, FileSearch } from "lucide-react";
+import { ArrowRight, Building2, Layers, Play, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2, FileSearch, LockKeyhole, UserCheck, FileCheck2 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PRODUCT_ORDER, PRODUCT_REGISTRY } from "@/lib/products";
@@ -62,6 +62,7 @@ export default function MasterLandingPage() {
             <Link href="/press" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-press">Press</Button></Link>
             <ThemeToggle />
             <LanguageSwitcher />
+            <Link href="/contact-sales" className="hidden sm:inline-flex"><Button variant="outline" size="sm" data-testid="button-header-diagnostic">{t("landingShell.ctaDiagnostic")}</Button></Link>
             <Link href="/login"><Button size="sm" data-testid="button-signin">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
           </nav>
         </div>
@@ -85,8 +86,13 @@ export default function MasterLandingPage() {
             {t("landingShell.masterHero.subtitle", { brand })}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-            <Link href="/demo"><Button size="lg" className="gap-2" data-testid="cta-explore-demo">Explore the interactive demo <ArrowRight className="w-4 h-4" /></Button></Link>
-            <Link href="/login"><Button size="lg" variant="outline" data-testid="button-cta-primary">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
+            <Link href="/contact-sales"><Button size="lg" className="gap-2" data-testid="cta-request-diagnostic">{t("landingShell.ctaDiagnostic")} <ArrowRight className="w-4 h-4" /></Button></Link>
+            <Link href="/demo"><Button size="lg" variant="outline" className="gap-2" data-testid="cta-explore-demo">{t("landingShell.ctaDemo")} <ArrowRight className="w-4 h-4" /></Button></Link>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-medium text-slate-600 dark:text-slate-300 lg:justify-start" data-testid="landing-trust-signals">
+            <span className="inline-flex items-center gap-1.5"><LockKeyhole className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal1")}</span>
+            <span className="inline-flex items-center gap-1.5"><UserCheck className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal2")}</span>
+            <span className="inline-flex items-center gap-1.5"><FileCheck2 className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal3")}</span>
           </div>
           </div>
 
@@ -191,6 +197,25 @@ export default function MasterLandingPage() {
         </div>
       </section>
 
+      <section className="bg-slate-950 text-white">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-16">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300">{t("landingShell.adoptionEyebrow")}</p>
+            <h2 className="mt-3 text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-adoption-title">{t("landingShell.adoptionTitle")}</h2>
+            <p className="mt-3 text-slate-300" data-testid="text-adoption-subtitle">{t("landingShell.adoptionSubtitle")}</p>
+          </div>
+          <div className="mt-9 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="rounded-xl border border-white/15 bg-white/5 p-5" data-testid={`card-adoption-${n}`}>
+                <div className="flex size-8 items-center justify-center rounded-full bg-emerald-400 font-bold text-slate-950">{n}</div>
+                <h3 className="mt-4 font-bold">{t(`landingShell.adoptionStep${n}Title`)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">{t(`landingShell.adoptionStep${n}Body`)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="max-w-6xl mx-auto px-4 md:px-6 pb-16">
         <h2 className="text-xs uppercase tracking-widest font-semibold text-slate-500 dark:text-slate-400 text-center mb-6" data-testid="text-audiences-title">
           {t("landingShell.audiencesTitle")}
@@ -289,6 +314,23 @@ export default function MasterLandingPage() {
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300" data-testid="text-trust-subtitle">{t("landingShell.trustSubtitle")}</p>
           </div>
           <Link href="/security"><Button variant="outline" className="gap-2" data-testid="button-security"><Shield className="w-4 h-4" />Security</Button></Link>
+        </div>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-4 md:px-6 pb-16 md:pb-20">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50" data-testid="text-faq-title">{t("landingShell.faqTitle")}</h2>
+          <p className="mt-3 text-slate-600 dark:text-slate-300">{t("landingShell.faqSubtitle")}</p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Card key={n} className="border-slate-200/80 dark:border-slate-800" data-testid={`card-faq-${n}`}>
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-50">{t(`landingShell.faq${n}Question`)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t(`landingShell.faq${n}Answer`)}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
