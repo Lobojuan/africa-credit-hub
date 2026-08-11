@@ -80,6 +80,9 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-REG-04 | System shall calculate a scoped gross-NPL target gap using an explicit numerator, denominator and reporting currency | Implemented baseline | NPL Reduction Plan (`/api/npl-reduction-plan`, `npl-reduction-plan-card.tsx`) | Excludes written-off balances, blocks unsafe multi-currency consolidation, and requires bank reconciliation before plan submission | TC-NPL-PLAN-001, TC-NPL-PLAN-002 |
 | FR-REG-05 | System shall govern an NPL reduction plan with dated targets and independent approval | Implemented baseline | NPL Reduction Plan and Pending Approvals | Requires at least two non-increasing milestones, final target at or below 10%, Board evidence reference, executive owner and maker-checker review | TC-NPL-PLAN-003 |
 | FR-REG-06 | System shall distinguish management evidence from regulatory submission | Implemented | NPL Reduction Plan, Regulatory Evidence Packs | UCH records plan and evidence status but does not approve a cure/write-off, post an accounting entry or file with a regulator | TC-NPL-PLAN-004 |
+| FR-REG-07 | System shall support versioned bank-specific loan-tape column mappings with maker-checker approval | Implemented baseline | Loan-tape Reconciliation (`bank_mapping_profiles`, `/api/loan-tape-reconciliation/profiles`) | Required canonical fields are enforced; profile maker cannot act as checker; only an approved version can validate a source extract | TC-LTR-001, TC-LTR-002 |
+| FR-REG-08 | System shall fingerprint each controlled loan-tape validation and persist reconciliation exceptions without retaining raw source rows | Implemented baseline | Loan-tape Reconciliation (`loan_tape_imports`, `loan_tape_reconciliation_exceptions`) | Stores SHA-256 source/row fingerprints, masked account references, summaries and exceptions; reconciliation does not update the authoritative credit-account ledger | TC-LTR-003, TC-LTR-004 |
+| FR-REG-09 | System shall block loan-tape evidence runs with critical/high data, classification, staging or collateral-control exceptions | Implemented baseline | `server/loan-tape-reconciliation.ts`, reconciliation workspace | Applies canonical completeness and consistency rules; bank-approved collateral age is optional; UCH does not autonomously assign IFRS stage | TC-LTR-005, TC-LTR-006 |
 
 ---
 
@@ -221,7 +224,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-COL (Data Collection) | 8 | 8 | 0 | 0 |
 | FR-CR (Credit Reporting) | 8 | 8 | 0 | 0 |
 | FR-CON (Consent & Disputes) | 9 | 9 | 0 | 0 |
-| FR-REG (Regulatory) | 3 | 3 | 0 | 0 |
+| FR-REG (Regulatory) | 9 | 9 | 0 | 0 |
 | FR-SPEC (Special Loans) | 5 | 5 | 0 | 0 |
 | FR-COMM (Commercial) | 5 | 5 | 0 | 0 |
 | FR-DP (Data Providers) | 4 | 4 | 0 | 0 |
@@ -231,7 +234,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | ENT (Enterprise Enhancements) | 21 | 21 | 0 | 0 |
 | PCC (Platform Command Center) | 10 | 10 | 0 | 0 |
 | AI (AI-Powered Features) | 4 | 4 | 0 | 0 |
-| **Total** | **99** | **99** | **0** | **0** |
+| **Total** | **105** | **105** | **0** | **0** |
 
 ---
 

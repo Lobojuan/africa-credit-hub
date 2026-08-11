@@ -37,6 +37,69 @@ paths:
       security: [{ sessionCookie: [] }]
       responses:
         '200': { description: Early-warning records; decisions remain human-owned }
+  /api/loan-tape-reconciliation/profiles:
+    get:
+      summary: List bank-scoped, versioned loan-tape mapping profiles
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Mapping governance register in the authorised organisation and country scope }
+    post:
+      summary: Submit a bank source-column mapping for independent review
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '201': { description: Pending mapping version created; maker cannot approve it }
+        '409': { description: Mapping name/version already exists in the scope }
+  /api/loan-tape-reconciliation/profiles/{id}/review:
+    patch:
+      summary: Approve or reject a mapping as an independent checker
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Review decision and evidence recorded }
+        '409': { description: Self-review or non-pending version blocked }
+  /api/loan-tape-reconciliation/validate:
+    post:
+      summary: Fingerprint and validate a controlled CSV without updating the loan ledger
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mappingProfileId, reportingDate, originalFilename, csvData]
+              properties:
+                mappingProfileId: { type: string, format: uuid }
+                reportingDate: { type: string, format: date }
+                originalFilename: { type: string, pattern: '\\.csv$' }
+                csvData: { type: string, maxLength: 4500000, description: Processed in memory; raw rows are not retained in reconciliation tables }
+      responses:
+        '201': { description: Immutable ready/blocked run summary and exception evidence recorded }
+        '409': { description: Mapping has not passed independent approval }
+  /api/loan-tape-reconciliation/imports:
+    get:
+      summary: List immutable reconciliation evidence runs
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Scoped run summaries and source SHA-256 fingerprints }
+  /api/loan-tape-reconciliation/imports/{id}/exceptions:
+    get:
+      summary: List persistent, masked reconciliation exceptions for a run
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Exceptions contain masked account references and no raw source rows }
+  /api/loan-tape-reconciliation/exceptions/{id}:
+    patch:
+      summary: Record a corrected or governed-waiver exception disposition
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Resolution identity, note and timestamp recorded }
+        '403': { description: Waiver requires administrator authority }
   /api/npl-reduction-plan:
     get:
       summary: Read the reconciled NPL target gap and governed plan status

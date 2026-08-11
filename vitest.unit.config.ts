@@ -12,6 +12,7 @@ export default defineConfig({
       "server/__tests__/credit-score.test.ts",
       "server/__tests__/ifrs9-provisioning.test.ts",
       "server/__tests__/npl-reduction-plan.test.ts",
+      "server/__tests__/loan-tape-reconciliation.test.ts",
       "server/__tests__/performance-cache.test.ts",
       "server/__tests__/loto-draw-engine.test.ts",
       "server/__tests__/loto-messaging.test.ts",

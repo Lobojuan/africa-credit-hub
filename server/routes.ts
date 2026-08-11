@@ -39,6 +39,7 @@ import { getBankIntegrationReadiness } from "./bank-integration-catalog";
 import { getNplMacroRiskProfile, getSectorSensitivity } from "./npl-macro-risk";
 import { calculateDraftEcl, type EclExposure, type EclScenario, type Ifrs9Policy } from "./ifrs9-provisioning";
 import { registerNplReductionPlanRoutes } from "./routes/npl-reduction-plan";
+import { registerLoanTapeReconciliationRoutes } from "./routes/loan-tape-reconciliation";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -17280,6 +17281,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   // This is intentionally an explainable portfolio view. It does not consume
   // unaudited public data or make a credit/provisioning decision. The bank must
   // first connect and approve the dated macro series described by the profile.
+  registerLoanTapeReconciliationRoutes(app);
   registerNplReductionPlanRoutes(app);
 
   app.get("/api/npl-early-warning/macro-risk", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {

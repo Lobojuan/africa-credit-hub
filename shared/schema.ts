@@ -488,6 +488,72 @@ export const batchJobs = pgTable("batch_jobs", {
 });
 export type BatchJob = typeof batchJobs.$inferSelect;
 
+// Bank loan-tape control plane. These tables preserve mapping, validation and
+// exception evidence without creating a second loan ledger or retaining raw
+// source rows. `credit_accounts` remains the authoritative UCH facility record.
+export const bankMappingProfiles = pgTable("bank_mapping_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  name: text("name").notNull(),
+  bankName: text("bank_name").notNull(),
+  sourceSystem: text("source_system").notNull(),
+  version: text("version").notNull(),
+  fieldMappings: jsonb("field_mappings").notNull().$type<Record<string, string>>(),
+  validationRules: jsonb("validation_rules").notNull().default(sql`'{}'::jsonb`).$type<Record<string, unknown>>(),
+  status: text("status").notNull().default("pending"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  mappingProfileVersionIdx: uniqueIndex("bank_mapping_profiles_org_country_name_version_idx")
+    .on(table.organizationId, table.country, table.name, table.version),
+}));
+
+export const loanTapeImports = pgTable("loan_tape_imports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mappingProfileId: varchar("mapping_profile_id").notNull().references(() => bankMappingProfiles.id),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  reportingDate: text("reporting_date").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  sourceSha256: text("source_sha256").notNull(),
+  status: text("status").notNull().default("validating"),
+  totalRecords: integer("total_records").notNull().default(0),
+  cleanRecords: integer("clean_records").notNull().default(0),
+  exceptionCount: integer("exception_count").notNull().default(0),
+  criticalExceptionCount: integer("critical_exception_count").notNull().default(0),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const loanTapeReconciliationExceptions = pgTable("loan_tape_reconciliation_exceptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  importId: varchar("import_id").notNull().references(() => loanTapeImports.id, { onDelete: "cascade" }),
+  sourceRowNumber: integer("source_row_number").notNull(),
+  accountReference: text("account_reference"),
+  rowFingerprint: text("row_fingerprint").notNull(),
+  exceptionType: text("exception_type").notNull(),
+  severity: text("severity").notNull(),
+  fieldName: text("field_name"),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"),
+  resolutionNote: text("resolution_note"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBankMappingProfileSchema = createInsertSchema(bankMappingProfiles).omit({ id: true, reviewedBy: true, reviewNotes: true, reviewedAt: true, createdAt: true, updatedAt: true });
+export type InsertBankMappingProfile = z.infer<typeof insertBankMappingProfileSchema>;
+export type BankMappingProfile = typeof bankMappingProfiles.$inferSelect;
+export type LoanTapeImport = typeof loanTapeImports.$inferSelect;
+export type LoanTapeReconciliationException = typeof loanTapeReconciliationExceptions.$inferSelect;
+
 export const billingRecords = pgTable("billing_records", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   institutionName: text("institution_name").notNull(),

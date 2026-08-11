@@ -86,6 +86,7 @@ const UserManagementPage = lazy(() => import("@/pages/user-management"));
 const PendingApprovalsPage = lazy(() => import("@/pages/pending-approvals"));
 const DisputesPage = lazy(() => import("@/pages/disputes"));
 const BatchUploadPage = lazy(() => import("@/pages/batch-upload"));
+const LoanTapeReconciliationPage = lazy(() => import("@/pages/loan-tape-reconciliation"));
 const InstitutionsPage = lazy(() => import("@/pages/institutions"));
 const ConsentManagementPage = lazy(() => import("@/pages/consent-management"));
 const BillingPage = lazy(() => import("@/pages/billing"));
@@ -261,6 +262,7 @@ function Router() {
         <Route path="/approvals" component={PendingApprovalsPage} />
         <Route path="/disputes" component={DisputesPage} />
         <Route path="/batch-upload" component={BatchUploadPage} />
+        <Route path="/loan-tape-reconciliation" component={LoanTapeReconciliationPage} />
         <Route path="/institutions" component={InstitutionsPage} />
         <Route path="/consent" component={ConsentManagementPage} />
         <Route path="/billing" component={BillingPage} />

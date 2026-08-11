@@ -8,7 +8,13 @@ Start with one agreed portfolio, one legal entity, and one reporting date. The b
 
 ## Required loan-tape fields
 
-Use the CSV template in **Batch Upload**. Each facility needs these fields:
+The bank must first create a versioned mapping in **Loan-tape Reconciliation**. A different authorised user approves that mapping before it can be used. The source CSV may retain the bank's own column names; the approved profile maps them to these minimum UCH canonical fields:
+
+`accountNumber`, `currentBalance`, `currency`, `status`, `daysInArrears`, `reportingDate`, `lenderInstitution`.
+
+The controlled pre-import gate fingerprints the source file, validates up to 50,000 rows, masks account references in exceptions, and persists exception evidence. It does not retain the raw CSV or write to `credit_accounts`. Any critical or high exception blocks that run. A corrected file must be validated as a new evidence run before the separate approved batch-upload process.
+
+The downstream **Batch Upload** contract remains broader because it creates or updates operational borrower and facility records. Each facility needs these fields:
 
 `borrowerId`, `borrowerName`, `dateOfBirth`, `address`, `nationalId`, `phoneNumber`, `reportingDate`, `lenderInstitution`, `accountNumber`, `accountType`, `originalAmount`, `currentBalance`, `currency`, `disbursementDate`, `maturityDate`, `status`, `daysInArrears`.
 
@@ -37,7 +43,7 @@ UCH blocks a consolidated reduction-plan submission when several currencies are 
 
 ## Quality gate
 
-Before the risk team uses the watchlist, the bank data owner must resolve missing account number, current balance, account status, days in arrears, and next payment date. The NPL desk displays the aggregate completeness score and does not imply that incomplete data is fit for a credit decision.
+Before the risk team uses the watchlist, the bank data owner must use an independently approved mapping and resolve the persistent pre-import exceptions for account reference, balance, currency, status, arrears, reporting date and lender. Classification, imported IFRS stage, collateral valuation and insurance checks are applied when those source fields are mapped. A collateral-age rule is used only when the bank has approved it. The NPL desk displays the downstream aggregate completeness score and does not imply that incomplete data is fit for a credit decision.
 
 ## 90-day proof measures
 
@@ -58,4 +64,4 @@ Approval of this workflow is approval of the management plan evidence only. It d
 
 ## Security and evidence
 
-Transmit data through the bank-approved channel only. Use a Ghana-hosted or bank-hosted deployment for real customer data. UCH records workflow and evidence references; it does not submit a regulatory filing, move money, or make a credit decision by itself.
+Transmit data through the bank-approved channel only. Use a Ghana-hosted or bank-hosted deployment for real customer data. Mapping versions, reviewer identity, SHA-256 file and row fingerprints, masked account references, exception status and resolution notes form the pre-import evidence trail. UCH records workflow and evidence references; it does not submit a regulatory filing, move money, make a credit decision, assign an IFRS stage or post a journal by itself.

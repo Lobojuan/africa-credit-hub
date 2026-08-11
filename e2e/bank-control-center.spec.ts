@@ -7,6 +7,54 @@ async function setSession(page: import("@playwright/test").Page) {
 }
 
 test.describe("Bank Control Centre pilot journey", () => {
+  test("governs a bank mapping and persists masked reconciliation exceptions", async ({ page }) => {
+    await page.context().clearCookies();
+    let session = await page.request.post("/api/test/set-session", { data: { username: "platform_admin" } });
+    expect(session.ok()).toBeTruthy();
+    const organizationsResponse = await page.request.get("/api/admin/organizations/list");
+    expect(organizationsResponse.status()).toBe(200);
+    const organizations = await organizationsResponse.json() as Array<{ id: string; country: string }>;
+    const organization = organizations.find((item) => item.country === "Ghana") || organizations[0];
+    expect(organization).toBeTruthy();
+    const scopeQuery = `orgId=${encodeURIComponent(organization!.id)}&country=${encodeURIComponent(organization!.country)}`;
+    const suffix = Date.now().toString();
+    const fieldMappings = {
+      accountNumber: "facility_id", currentBalance: "balance", currency: "ccy", status: "account_status",
+      daysInArrears: "dpd", reportingDate: "as_of_date", lenderInstitution: "bank", ifrs9Stage: "ifrs_stage",
+    };
+    const created = await page.request.post(`/api/loan-tape-reconciliation/profiles?${scopeQuery}`, {
+      data: { name: `E2E controlled mapping ${suffix}`, bankName: "E2E Ghana Bank", sourceSystem: "Synthetic core", version: suffix, fieldMappings, validationRules: {} },
+    });
+    expect(created.status(), await created.text()).toBe(201);
+    const createdBody = await created.json() as { id: string };
+    session = await page.request.post("/api/test/set-session", { data: { username: "admin" } });
+    expect(session.ok()).toBeTruthy();
+    const reviewed = await page.request.patch(`/api/loan-tape-reconciliation/profiles/${createdBody.id}/review?${scopeQuery}`, {
+      data: { decision: "approved", reviewNotes: "E2E independent checker confirmed the controlled synthetic source mapping." },
+    });
+    expect(reviewed.status(), await reviewed.text()).toBe(200);
+
+    session = await page.request.post("/api/test/set-session", { data: { username: "platform_admin" } });
+    expect(session.ok()).toBeTruthy();
+    const validation = await page.request.post(`/api/loan-tape-reconciliation/validate?${scopeQuery}`, {
+      data: {
+        mappingProfileId: createdBody.id,
+        reportingDate: "2026-08-31",
+        originalFilename: "e2e-controlled-loan-tape.csv",
+        csvData: "facility_id,balance,ccy,account_status,dpd,as_of_date,bank,ifrs_stage\nE2E-SECRET-9876,100000,GHS,current,112,2026-08-31,E2E Ghana Bank,2",
+      },
+    });
+    expect(validation.status(), await validation.text()).toBe(201);
+    const run = await validation.json() as { id: string; status: string; rawRowsRetained: boolean; exceptionCount: number };
+    expect(run).toMatchObject({ status: "blocked", rawRowsRetained: false });
+    expect(run.exceptionCount).toBeGreaterThan(0);
+    const exceptionResponse = await page.request.get(`/api/loan-tape-reconciliation/imports/${run.id}/exceptions?${scopeQuery}`);
+    expect(exceptionResponse.status()).toBe(200);
+    const exceptionText = await exceptionResponse.text();
+    expect(exceptionText).toContain("***9876");
+    expect(exceptionText).not.toContain("E2E-SECRET-9876");
+  });
+
   test("opens the controlled bank risk diagnostic and keeps its data boundary visible", async ({ page }) => {
     await setSession(page);
     await page.goto("/bank-control-center");
@@ -59,6 +107,17 @@ test.describe("Bank Control Centre pilot journey", () => {
     const nplPlanBody = await nplPlan.json();
     expect(nplPlanBody).toHaveProperty("methodology");
     expect(nplPlanBody).toHaveProperty("portfolioReadyForPlan");
+    await page.getByTestId("open-loan-tape-reconciliation").click();
+    await expect(page).toHaveURL(/\/loan-tape-reconciliation$/);
+    await expect(page.getByTestId("loan-tape-reconciliation-page")).toBeVisible();
+    await expect(page.getByTestId("mapping-profile-form")).toBeVisible();
+    await expect(page.getByTestId("loan-tape-validation-form")).toContainText("never writes to credit accounts");
+    const mappingProfiles = await page.request.get("/api/loan-tape-reconciliation/profiles");
+    expect(mappingProfiles.status()).toBe(200);
+    const reconciliationRuns = await page.request.get("/api/loan-tape-reconciliation/imports");
+    expect(reconciliationRuns.status()).toBe(200);
+
+    await page.goto("/npl-early-warning");
     const macroRisk = await page.request.get("/api/npl-early-warning/macro-risk");
     expect(macroRisk.status()).toBe(200);
     const macroRiskBody = await macroRisk.json();

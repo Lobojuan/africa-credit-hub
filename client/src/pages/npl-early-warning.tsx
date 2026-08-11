@@ -163,7 +163,7 @@ export default function NplEarlyWarningPage() {
       <Card className="border-primary/20 bg-primary/5" data-testid="npl-pilot-control-strip">
         <CardContent className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div><p className="font-semibold">NPL pilot control path</p><p className="mt-1 text-sm text-muted-foreground">Load a bank-approved extract, correct the completeness exceptions, assign every at-risk facility, then preserve the monthly evidence pack for independent review.</p></div>
-          <div className="flex flex-wrap gap-2"><Link href="/batch-upload"><Button variant="outline" className="gap-2"><Upload className="size-4" />Data intake</Button></Link><Link href="/regulatory-evidence-packs"><Button variant="outline" className="gap-2"><FileCheck2 className="size-4" />Evidence pack</Button></Link></div>
+          <div className="flex flex-wrap gap-2"><Link href="/loan-tape-reconciliation"><Button variant="outline" className="gap-2" data-testid="open-loan-tape-reconciliation"><Upload className="size-4" />Reconcile loan tape</Button></Link><Link href="/regulatory-evidence-packs"><Button variant="outline" className="gap-2"><FileCheck2 className="size-4" />Evidence pack</Button></Link></div>
         </CardContent>
       </Card>
 
