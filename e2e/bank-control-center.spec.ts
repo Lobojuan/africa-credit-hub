@@ -107,6 +107,29 @@ test.describe("Bank Control Centre pilot journey", () => {
     const nplPlanBody = await nplPlan.json();
     expect(nplPlanBody).toHaveProperty("methodology");
     expect(nplPlanBody).toHaveProperty("portfolioReadyForPlan");
+    const caseLedgerLink = page.locator('[data-testid^="open-npl-case-"]').first();
+    await expect(caseLedgerLink).toBeVisible();
+    await caseLedgerLink.click();
+    await expect(page).toHaveURL(/\/npl-case-ledger\?creditAccountId=/);
+    await expect(page.getByTestId("npl-case-ledger-page")).toBeVisible();
+    await expect(page.getByTestId("npl-ledger-safety-boundary")).toContainText("Append-only evidence");
+    if (await page.getByTestId("open-npl-case-form").isVisible().catch(() => false)) {
+      await page.getByLabel("Opening evidence reference").fill(`E2E-CASE-${Date.now()}`);
+      await page.getByLabel("Opening rationale").fill("E2E controlled at-risk facility case opening evidence.");
+      await page.getByTestId("open-npl-case").click();
+    }
+    await expect(page.getByTestId("append-npl-event-form")).toBeVisible();
+    await page.getByLabel("Evidence note").fill("E2E append-only chronology verification note.");
+    await page.getByTestId("append-npl-event").click();
+    await expect(page.getByTestId("npl-event-timeline")).toContainText("E2E append-only chronology verification note.");
+    const waterfall = await page.request.get("/api/npl-cases/waterfall/summary");
+    expect(waterfall.status()).toBe(200);
+    const waterfallBody = await waterfall.json();
+    expect(waterfallBody).toHaveProperty("consolidated");
+    expect(Array.isArray(waterfallBody.series)).toBe(true);
+    expect(waterfallBody.series[0]).toHaveProperty("authoritativeDifference");
+
+    await page.goto("/npl-early-warning");
     await page.getByTestId("open-loan-tape-reconciliation").click();
     await expect(page).toHaveURL(/\/loan-tape-reconciliation$/);
     await expect(page.getByTestId("loan-tape-reconciliation-page")).toBeVisible();

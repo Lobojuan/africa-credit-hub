@@ -139,6 +139,44 @@ paths:
         '201': { description: Plan and server-calculated baseline submitted for independent approval }
         '400': { description: Invalid target, milestone sequence or Ghana deadline }
         '409': { description: Loan tape absent or reporting currencies not reconciled }
+  /api/npl-cases:
+    get:
+      summary: List facility-linked NPL cases in the authorised scope
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Case projections with account, borrower, owner and immutable-event summary }
+    post:
+      summary: Open one controlled case from an existing at-risk credit account
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '201': { description: Case and server-generated immutable opening event created atomically }
+        '409': { description: Case already exists, facility is not at risk, or exposure/currency/country is not reconciled }
+  /api/npl-cases/{id}/events:
+    get:
+      summary: Read the immutable case chronology
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Newest-first append-only case events }
+    post:
+      summary: Append an observed case event and update the exposure projection atomically
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201': { description: Immutable event created; exposure is calculated by the server }
+        '400': { description: Invalid/backdated event, missing evidence, non-financial amount or recovery exceeding exposure }
+  /api/npl-cases/waterfall/summary:
+    get:
+      summary: Derive the observed NPL exposure waterfall separately by currency
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: start, schema: { type: string, format: date } }
+        - { in: query, name: end, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Opening, inflows, cash/legal recoveries, closing, internal difference and authoritative credit-account difference per currency }
+        '400': { description: Invalid date range or period over 24 months }
   /api/collections/assignments:
     post:
       summary: Assign a flagged facility to a collections workflow

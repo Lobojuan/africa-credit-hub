@@ -83,6 +83,9 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-REG-07 | System shall support versioned bank-specific loan-tape column mappings with maker-checker approval | Implemented baseline | Loan-tape Reconciliation (`bank_mapping_profiles`, `/api/loan-tape-reconciliation/profiles`) | Required canonical fields are enforced; profile maker cannot act as checker; only an approved version can validate a source extract | TC-LTR-001, TC-LTR-002 |
 | FR-REG-08 | System shall fingerprint each controlled loan-tape validation and persist reconciliation exceptions without retaining raw source rows | Implemented baseline | Loan-tape Reconciliation (`loan_tape_imports`, `loan_tape_reconciliation_exceptions`) | Stores SHA-256 source/row fingerprints, masked account references, summaries and exceptions; reconciliation does not update the authoritative credit-account ledger | TC-LTR-003, TC-LTR-004 |
 | FR-REG-09 | System shall block loan-tape evidence runs with critical/high data, classification, staging or collateral-control exceptions | Implemented baseline | `server/loan-tape-reconciliation.ts`, reconciliation workspace | Applies canonical completeness and consistency rules; bank-approved collateral age is optional; UCH does not autonomously assign IFRS stage | TC-LTR-005, TC-LTR-006 |
+| FR-REG-10 | System shall maintain one facility-linked NPL case without duplicating the credit-account or Collections ledgers | Implemented baseline | NPL Case Ledger (`npl_cases`, `/api/npl-cases`) | Opening balance, borrower, organisation, country and currency are derived server-side from the authorised credit account; active Collections assignment is referenced when present | TC-NPL-CASE-001 |
+| FR-REG-11 | System shall preserve an append-only chronology of observed NPL case movements | Implemented baseline | `npl_case_events`, mutation-prevention trigger | Server-calculated exposure before/after, monotonic sequence/date, evidence references and database rejection of updates/deletes | TC-NPL-CASE-002, TC-NPL-CASE-003 |
+| FR-REG-12 | System shall derive a currency-safe NPL exposure waterfall and surface reconciliation differences | Implemented baseline | `/api/npl-cases/waterfall/summary`, NPL Case Ledger UI | Opening plus observed inflows less cash/legal recoveries is compared with the independently derived closing projection; currencies remain separate | TC-NPL-CASE-004 |
 
 ---
 
@@ -224,7 +227,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-COL (Data Collection) | 8 | 8 | 0 | 0 |
 | FR-CR (Credit Reporting) | 8 | 8 | 0 | 0 |
 | FR-CON (Consent & Disputes) | 9 | 9 | 0 | 0 |
-| FR-REG (Regulatory) | 9 | 9 | 0 | 0 |
+| FR-REG (Regulatory) | 12 | 12 | 0 | 0 |
 | FR-SPEC (Special Loans) | 5 | 5 | 0 | 0 |
 | FR-COMM (Commercial) | 5 | 5 | 0 | 0 |
 | FR-DP (Data Providers) | 4 | 4 | 0 | 0 |
@@ -234,7 +237,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | ENT (Enterprise Enhancements) | 21 | 21 | 0 | 0 |
 | PCC (Platform Command Center) | 10 | 10 | 0 | 0 |
 | AI (AI-Powered Features) | 4 | 4 | 0 | 0 |
-| **Total** | **105** | **105** | **0** | **0** |
+| **Total** | **108** | **108** | **0** | **0** |
 
 ---
 

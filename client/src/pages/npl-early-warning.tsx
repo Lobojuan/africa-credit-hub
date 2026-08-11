@@ -206,7 +206,7 @@ export default function NplEarlyWarningPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {item.isAssigned ? <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3.5 w-3.5" />In Collections</Badge> : canAssign ? <Button size="sm" className="gap-2" disabled={assignToCollections.isPending} onClick={() => assignToCollections.mutate(item)}><AlertTriangle className="h-4 w-4" />Assign to Collections</Button> : <Badge variant="outline">Awaiting lender action</Badge>}
-                    <Link href={`/credit-accounts`}><Button size="sm" variant="ghost">Review</Button></Link>
+                    <Link href={`/npl-case-ledger?creditAccountId=${encodeURIComponent(item.credit_account_id)}`}><Button size="sm" variant="ghost" data-testid={`open-npl-case-${item.credit_account_id}`}>Case ledger</Button></Link>
                   </div>
                 </div>
               ))}

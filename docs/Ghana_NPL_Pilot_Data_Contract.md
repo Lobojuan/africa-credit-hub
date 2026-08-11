@@ -55,6 +55,8 @@ Before the risk team uses the watchlist, the bank data owner must use an indepen
 6. Gross NPL numerator and gross-loan denominator reconciled to the bank's signed control totals.
 7. Board plan approved through maker-checker with at least two dated, non-increasing ratio targets.
 8. NPL exposure reduction required, active collections coverage and watchlist inflow reported in the approved reporting currency.
+9. Facility cases opened from reconciled credit-account balances with immutable source/evidence references.
+10. Monthly opening exposure, observed inflows, cash recoveries, legal recoveries and closing exposure reconciled separately for every currency.
 
 ## Board-plan control
 

@@ -1864,6 +1864,51 @@ export const insertCollectionSlaSettingsSchema = createInsertSchema(collectionSl
 export type InsertCollectionSlaSettings = z.infer<typeof insertCollectionSlaSettingsSchema>;
 export type CollectionSlaSettings = typeof collectionSlaSettings.$inferSelect;
 
+// NPL case projection and immutable evidence ledger. Collections remains the
+// operational owner of assignments and contact attempts; these records add a
+// facility-level exposure history without duplicating those workflows.
+export const nplCases = pgTable("npl_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditAccountId: varchar("credit_account_id").notNull().references(() => creditAccounts.id),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  collectionAssignmentId: varchar("collection_assignment_id").references(() => collectionAssignments.id),
+  stage: text("stage").notNull(),
+  status: text("status").notNull().default("open"),
+  baselineExposure: decimal("baseline_exposure", { precision: 15, scale: 2 }).notNull(),
+  currentExposure: decimal("current_exposure", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  ownerId: varchar("owner_id").references(() => users.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  openedAt: timestamp("opened_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nplCaseAccountIdx: uniqueIndex("npl_cases_credit_account_idx").on(table.creditAccountId),
+}));
+
+export const nplCaseEvents = pgTable("npl_case_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull().references(() => nplCases.id, { onDelete: "restrict" }),
+  sequence: integer("sequence").notNull(),
+  eventType: text("event_type").notNull(),
+  eventDate: text("event_date").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }),
+  exposureBefore: decimal("exposure_before", { precision: 15, scale: 2 }).notNull(),
+  exposureAfter: decimal("exposure_after", { precision: 15, scale: 2 }).notNull(),
+  stageBefore: text("stage_before").notNull(),
+  stageAfter: text("stage_after").notNull(),
+  evidenceReference: text("evidence_reference"),
+  notes: text("notes").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  nplCaseEventSequenceIdx: uniqueIndex("npl_case_events_case_sequence_idx").on(table.caseId, table.sequence),
+}));
+
+export type NplCase = typeof nplCases.$inferSelect;
+export type NplCaseEvent = typeof nplCaseEvents.$inferSelect;
+
 // ---------------------------------------------------------------------------
 // XDS Data Ghana — bureau enquiry audit log
 // ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@ The platform can now calculate the scoped gross-NPL target gap, prevent unsafe m
 | Currency | Detects and blocks a portfolio containing several unconverted currencies | Supply approved reporting currency, dated FX rates and conversion controls |
 | Board plan | Executive owner, evidence reference, strategy, milestones and maker-checker approval | Board/Risk Committee approval and named independent checker |
 | Early warning | DPD, account-status, restructuring and controlled macro-risk signals | Bank-approved thresholds, source lineage and back-testing |
-| Collections | Named assignments, SLA, contact evidence and promise-to-pay workflow | OmniBSIC operating model, customer-contact rules and recovery authority |
+| Collections and case ledger | Named assignments, SLA, contact evidence and promise-to-pay workflow plus a facility-linked immutable observed-event chronology and currency-separated exposure waterfall | OmniBSIC operating model, customer-contact rules, authoritative recovery evidence and recovery authority |
 | Collateral | Registry, lien lifecycle and evidence workflows | Legal perfection, valuation, insurance, priority and enforceability validation |
 | IFRS 9 | Approved-policy gate and explainable draft PD/LGD/EAD calculation | OmniBSIC methodology, model validation, scenario data and GL reconciliation |
 | Regulatory evidence | Review and submission-reference records | Bank authorisation; UCH does not file with Bank of Ghana |
@@ -33,6 +33,7 @@ The platform can now calculate the scoped gross-NPL target gap, prevent unsafe m
 6. Assign every NPL and material watchlist exposure to an accountable workflow.
 7. Submit and independently approve dated Board milestones in the NPL Reduction Plan workspace.
 8. Run parallel reporting, UAT and security testing before any production decision.
+9. Reconcile the NPL case waterfall to signed monthly opening exposure, fresh inflows, cash/legal recoveries and closing exposure in each reporting currency.
 
 ## Questions the bank must answer
 
