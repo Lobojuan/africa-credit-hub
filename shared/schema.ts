@@ -1906,8 +1906,36 @@ export const nplCaseEvents = pgTable("npl_case_events", {
   nplCaseEventSequenceIdx: uniqueIndex("npl_case_events_case_sequence_idx").on(table.caseId, table.sequence),
 }));
 
+// Controlled NPL remediation proposals. Approval records authority to proceed;
+// it never mutates the bank's credit account, IFRS 9 stage, provision or GL.
+// Execution is recorded only after a bank evidence reference is supplied.
+export const nplDecisionProposals = pgTable("npl_decision_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull().references(() => nplCases.id, { onDelete: "restrict" }),
+  decisionType: text("decision_type").notNull(),
+  status: text("status").notNull().default("pending"),
+  proposedAmount: decimal("proposed_amount", { precision: 15, scale: 2 }),
+  effectiveDate: text("effective_date").notNull(),
+  rationale: text("rationale").notNull(),
+  policyReference: text("policy_reference").notNull(),
+  evidenceReference: text("evidence_reference").notNull(),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  executionEvidenceReference: text("execution_evidence_reference"),
+  executionNotes: text("execution_notes"),
+  executedBy: varchar("executed_by").references(() => users.id),
+  executedAt: timestamp("executed_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type NplCase = typeof nplCases.$inferSelect;
 export type NplCaseEvent = typeof nplCaseEvents.$inferSelect;
+export type NplDecisionProposal = typeof nplDecisionProposals.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // XDS Data Ghana — bureau enquiry audit log

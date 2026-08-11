@@ -177,6 +177,55 @@ paths:
       responses:
         '200': { description: Opening, inflows, cash/legal recoveries, closing, internal difference and authoritative credit-account difference per currency }
         '400': { description: Invalid date range or period over 24 months }
+  /api/npl-cases/{id}/decisions:
+    get:
+      summary: Read governed remediation proposals for one NPL case
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Case boundary plus scoped decision register }
+        '404': { description: Case not found in the authorised scope }
+    post:
+      summary: Submit a restructure, cure/re-age or write-off proposal for independent review
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decisionType, effectiveDate, rationale, policyReference, evidenceReference]
+              properties:
+                decisionType: { type: string, enum: [restructure, cure_reage, write_off] }
+                proposedAmount: { type: number, minimum: 0.01, description: Required for write-off; prohibited for cure/re-age; cannot exceed case exposure }
+                effectiveDate: { type: string, format: date }
+                rationale: { type: string, minLength: 20, maxLength: 4000 }
+                policyReference: { type: string, minLength: 3, maxLength: 500 }
+                evidenceReference: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '201': { description: Pending proposal and immutable submission event created atomically }
+        '409': { description: A pending proposal of the same type already exists }
+  /api/npl-decisions/{id}/review:
+    post:
+      summary: Independently approve or reject an NPL decision proposal
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Review and immutable case event recorded; no accounting posting permitted }
+        '403': { description: Maker attempted to act as checker }
+  /api/npl-decisions/{id}/execution:
+    post:
+      summary: Record dated evidence that the bank executed an approved decision
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Execution evidence recorded; authoritative account and accounting reconciliation remain required }
+        '400': { description: Proposal is not approved or evidence is invalid }
   /api/collections/assignments:
     post:
       summary: Assign a flagged facility to a collections workflow

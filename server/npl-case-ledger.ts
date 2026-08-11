@@ -8,6 +8,10 @@ export const NPL_EVENT_TYPES = [
   "legal_recovery_observed",
   "workflow_stage_changed",
   "collection_activity_linked",
+  "decision_submitted",
+  "decision_approved",
+  "decision_rejected",
+  "decision_execution_recorded",
   "note",
 ] as const;
 export type NplEventType = typeof NPL_EVENT_TYPES[number];

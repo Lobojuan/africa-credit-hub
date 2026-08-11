@@ -57,12 +57,14 @@ Before the risk team uses the watchlist, the bank data owner must use an indepen
 8. NPL exposure reduction required, active collections coverage and watchlist inflow reported in the approved reporting currency.
 9. Facility cases opened from reconciled credit-account balances with immutable source/evidence references.
 10. Monthly opening exposure, observed inflows, cash recoveries, legal recoveries and closing exposure reconciled separately for every currency.
+11. Percentage of material restructure, cure/re-age and write-off proposals independently reviewed before execution.
+12. Percentage of approved remediation decisions with bank execution evidence and authoritative account/accounting reconciliation.
 
 ## Board-plan control
 
 The **NPL Early Warning Desk** displays the current scoped ratio and the exposure reduction required to reach the approved target. A plan cannot be submitted until a non-empty loan tape is loaded and the portfolio is safe to aggregate. The submission records an executive owner, Board evidence reference, strategy and dated milestones, then routes it to a different authorised reviewer.
 
-Approval of this workflow is approval of the management plan evidence only. It does not approve individual restructures, cures, write-offs, provisions, journals or a Bank of Ghana filing.
+Approval of this workflow is approval of the management plan evidence only. Individual restructures, cures/re-ages and write-offs use the separate case-level Decision Governance workspace. Even there, approval records authority to proceed; it does not post a credit-account update, provision, journal or Bank of Ghana filing.
 
 ## Security and evidence
 

@@ -122,6 +122,47 @@ test.describe("Bank Control Centre pilot journey", () => {
     await page.getByLabel("Evidence note").fill("E2E append-only chronology verification note.");
     await page.getByTestId("append-npl-event").click();
     await expect(page.getByTestId("npl-event-timeline")).toContainText("E2E append-only chronology verification note.");
+    await page.getByTestId("open-npl-decision-governance").click();
+    await expect(page).toHaveURL(/\/npl-decision-governance\?caseId=/);
+    const governedCaseId = new URL(page.url()).searchParams.get("caseId");
+    expect(governedCaseId).toBeTruthy();
+    await expect(page.getByTestId("npl-decision-safety-boundary")).toContainText("No silent accounting");
+    await page.getByLabel("Proposed effective date").fill(new Date().toISOString().slice(0, 10));
+    await page.getByLabel("Policy / committee mandate").fill("E2E-CREDIT-COMMITTEE-POLICY");
+    await page.getByLabel("Source evidence reference").fill(`E2E-DECISION-${Date.now()}`);
+    await page.getByLabel("Rationale").fill("E2E controlled restructure proposal requiring an independent authorised checker before bank execution.");
+    await page.getByTestId("submit-npl-decision").click();
+    const decisionRegister = page.getByTestId("npl-decision-register");
+    await expect(decisionRegister).toContainText("Awaiting a different authorised checker");
+    const decisionResponse = await page.request.get(`/api/npl-cases/${governedCaseId}/decisions`);
+    expect(decisionResponse.status()).toBe(200);
+    const decisionBody = await decisionResponse.json() as { decisions: Array<{ id: string; status: string }> };
+    const proposal = decisionBody.decisions[0];
+    expect(proposal.status).toBe("pending");
+    const selfReview = await page.request.post(`/api/npl-decisions/${proposal.id}/review`, { data: { decision: "approved", reviewNotes: "Maker attempted to approve the same controlled proposal." } });
+    expect(selfReview.status()).toBe(403);
+
+    let checkerSession = await page.request.post("/api/test/set-session", { data: { username: "admin" } });
+    expect(checkerSession.ok()).toBeTruthy();
+    await page.reload();
+    await page.getByLabel(`Review notes ${proposal.id}`).fill("Independent checker confirmed policy authority, evidence and affordability safeguards.");
+    await page.getByTestId(`approve-npl-decision-${proposal.id}`).click();
+    await expect(page.getByTestId(`npl-decision-${proposal.id}`)).toContainText("approved");
+    const checkerExecution = await page.request.post(`/api/npl-decisions/${proposal.id}/execution`, { data: { executionDate: new Date().toISOString().slice(0, 10), executionEvidenceReference: "E2E-CHECKER-EXECUTION", executionNotes: "Checker attempted to execute the same approval and must be blocked." } });
+    expect(checkerExecution.status()).toBe(400);
+
+    checkerSession = await page.request.post("/api/test/set-session", { data: { username: "platform_admin" } });
+    expect(checkerSession.ok()).toBeTruthy();
+    await page.reload();
+    await page.getByLabel(`Execution evidence ${proposal.id}`).fill("E2E-CORE-EXECUTION-REF");
+    await page.getByLabel(`Execution notes ${proposal.id}`).fill("Bank-side restructure execution was evidenced; authoritative account reconciliation remains outstanding.");
+    await page.getByTestId(`execute-npl-decision-${proposal.id}`).click();
+    await expect(page.getByTestId(`npl-decision-${proposal.id}`)).toContainText("execution recorded");
+    const decisionEvents = await page.request.get(`/api/npl-cases/${governedCaseId}/events`);
+    expect(decisionEvents.status()).toBe(200);
+    const decisionEventBody = await decisionEvents.json() as Array<{ eventType: string }>;
+    expect(decisionEventBody.map((item) => item.eventType)).toEqual(expect.arrayContaining(["decision_submitted", "decision_approved", "decision_execution_recorded"]));
+
     const waterfall = await page.request.get("/api/npl-cases/waterfall/summary");
     expect(waterfall.status()).toBe(200);
     const waterfallBody = await waterfall.json();

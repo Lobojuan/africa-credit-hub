@@ -88,6 +88,7 @@ const DisputesPage = lazy(() => import("@/pages/disputes"));
 const BatchUploadPage = lazy(() => import("@/pages/batch-upload"));
 const LoanTapeReconciliationPage = lazy(() => import("@/pages/loan-tape-reconciliation"));
 const NplCaseLedgerPage = lazy(() => import("@/pages/npl-case-ledger"));
+const NplDecisionGovernancePage = lazy(() => import("@/pages/npl-decision-governance"));
 const InstitutionsPage = lazy(() => import("@/pages/institutions"));
 const ConsentManagementPage = lazy(() => import("@/pages/consent-management"));
 const BillingPage = lazy(() => import("@/pages/billing"));
@@ -265,6 +266,7 @@ function Router() {
         <Route path="/batch-upload" component={BatchUploadPage} />
         <Route path="/loan-tape-reconciliation" component={LoanTapeReconciliationPage} />
         <Route path="/npl-case-ledger" component={NplCaseLedgerPage} />
+        <Route path="/npl-decision-governance" component={NplDecisionGovernancePage} />
         <Route path="/institutions" component={InstitutionsPage} />
         <Route path="/consent" component={ConsentManagementPage} />
         <Route path="/billing" component={BillingPage} />
