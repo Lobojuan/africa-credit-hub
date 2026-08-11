@@ -16,14 +16,17 @@ export default defineConfig({
     react(),
     ...(isReplit
       ? [
+          // @ts-ignore – optional Replit plugin, absent outside Replit env
           await import("@replit/vite-plugin-runtime-error-modal").then((m) =>
             m.default(),
           ),
           ...(process.env.NODE_ENV !== "production"
             ? [
+                // @ts-ignore – optional Replit plugin, absent outside Replit env
                 await import("@replit/vite-plugin-cartographer").then((m) =>
                   m.cartographer(),
                 ),
+                // @ts-ignore – optional Replit plugin, absent outside Replit env
                 await import("@replit/vite-plugin-dev-banner").then((m) =>
                   m.devBanner(),
                 ),

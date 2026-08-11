@@ -15,6 +15,7 @@ import os from "os";
 import fs from "fs";
 import path from "path";
 import multer from "multer";
+// @ts-ignore – optional Replit SDK, absent outside Replit environment
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { getOAuthCallbackBase } from "../base-url";
 
