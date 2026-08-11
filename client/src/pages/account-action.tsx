@@ -8,7 +8,7 @@ type Mode = "request" | "reset" | "activate";
 const copy: Record<Mode, { title: string; description: string; submit: string }> = {
   request: {
     title: "Reset your staff password",
-    description: "Enter your work email and we will send a secure reset link if an active account matches it.",
+    description: "Enter your username or work email. If an active account matches, we will send a secure reset link to its registered email.",
     submit: "Send reset link",
   },
   reset: {
@@ -30,7 +30,7 @@ export default function AccountActionPage() {
     return "request";
   }, []);
   const token = useMemo(() => new URLSearchParams(window.location.search).get("token") || "", []);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState(token || mode === "request" ? "" : "This secure link is missing its token. Request a new one from your administrator.");
@@ -48,7 +48,7 @@ export default function AccountActionPage() {
     setLoading(true);
     try {
       const response = mode === "request"
-        ? await apiRequest("POST", "/api/auth/password-reset/request", { email })
+        ? await apiRequest("POST", "/api/auth/password-reset/request", { identifier })
         : await apiRequest(
           "POST",
           mode === "reset" ? "/api/auth/password-reset/confirm" : "/api/auth/staff-invitations/activate",
@@ -94,8 +94,8 @@ export default function AccountActionPage() {
 
             {mode === "request" ? (
               <label className="block text-sm font-medium text-slate-700">
-                Work email
-                <input className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+                Username or work email
+                <input className="mt-1.5 h-11 w-full rounded-lg border border-slate-300 px-3 outline-none focus:border-blue-700 focus:ring-2 focus:ring-blue-100" type="text" autoComplete="username" value={identifier} onChange={(event) => setIdentifier(event.target.value)} required />
               </label>
             ) : (
               <>

@@ -2,7 +2,7 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import * as OTPAuth from "otpauth";
 import crypto from "crypto";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 import { db, pool } from "../db";
 import { authActionTokens, mfaBackupCodes, users } from "@shared/schema";
 import { storage } from "../storage";
@@ -50,11 +50,21 @@ const publicBaseUrl = () => (process.env.CANONICAL_URL || "https://universalcred
 const router = Router();
 
 router.post("/api/auth/password-reset/request", loginLimiter, async (req, res) => {
-  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
-  const reply = { message: "If an active account matches that email, a reset link has been sent." };
-  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return res.json(reply);
+  // Accept either the staff username or work email. The response remains
+  // deliberately generic so this recovery convenience cannot enumerate users.
+  const rawIdentifier = typeof req.body?.identifier === "string"
+    ? req.body.identifier
+    : typeof req.body?.email === "string"
+      ? req.body.email
+      : "";
+  const identifier = rawIdentifier.trim();
+  const reply = { message: "If an active account matches those details, a reset link has been sent." };
+  if (!identifier || identifier.length > 254) return res.json(reply);
   try {
-    const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const [user] = await db.select().from(users).where(or(
+      eq(users.username, identifier),
+      eq(users.email, identifier.toLowerCase()),
+    )).limit(1);
     if (!user || user.status !== "active") return res.json(reply);
     const rawToken = crypto.randomBytes(32).toString("base64url");
     await db.transaction(async (tx) => {

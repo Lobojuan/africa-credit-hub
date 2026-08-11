@@ -60,6 +60,15 @@ test.describe("MFA — login page elements", () => {
     await page.waitForSelector('[data-testid="page-login"]', { timeout: 15000 });
     await page.waitForSelector('[data-testid="form-login"]', { timeout: 8000 });
     await expect(page.locator('[data-testid="button-passkey-login"]')).toBeVisible({ timeout: 8000 });
+    await expect(page.locator('[data-testid="link-forgot-password"]')).toBeVisible();
+  });
+
+  test("staff can start password recovery with a username", async ({ page }) => {
+    await page.goto("/forgot-password");
+    await page.getByLabel("Username or work email").fill("admin");
+    await page.getByRole("button", { name: "Send reset link" }).click();
+    await expect(page.getByRole("heading", { name: "All set" })).toBeVisible();
+    await expect(page.getByText("If an active account matches those details")).toBeVisible();
   });
 });
 
