@@ -52,7 +52,13 @@ test.describe("Bank Control Centre pilot journey", () => {
     await expect(page.getByTestId("npl-early-warning-desk")).toBeVisible();
     await expect(page.getByTestId("npl-pilot-data-quality")).toBeVisible();
     await expect(page.getByTestId("npl-pilot-control-strip")).toBeVisible();
+    await expect(page.getByTestId("npl-reduction-plan")).toBeVisible();
     await expect(page.getByTestId("npl-macro-risk-overlay")).toBeVisible();
+    const nplPlan = await page.request.get("/api/npl-reduction-plan");
+    expect(nplPlan.status()).toBe(200);
+    const nplPlanBody = await nplPlan.json();
+    expect(nplPlanBody).toHaveProperty("methodology");
+    expect(nplPlanBody).toHaveProperty("portfolioReadyForPlan");
     const macroRisk = await page.request.get("/api/npl-early-warning/macro-risk");
     expect(macroRisk.status()).toBe(200);
     const macroRiskBody = await macroRisk.json();

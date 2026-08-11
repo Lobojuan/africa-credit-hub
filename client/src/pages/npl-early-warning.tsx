@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { NplReductionPlanCard } from "@/components/npl-reduction-plan-card";
 
 type WarningCase = {
   collection_assignment_id: string | null;
@@ -165,6 +166,8 @@ export default function NplEarlyWarningPage() {
           <div className="flex flex-wrap gap-2"><Link href="/batch-upload"><Button variant="outline" className="gap-2"><Upload className="size-4" />Data intake</Button></Link><Link href="/regulatory-evidence-packs"><Button variant="outline" className="gap-2"><FileCheck2 className="size-4" />Evidence pack</Button></Link></div>
         </CardContent>
       </Card>
+
+      <NplReductionPlanCard canSubmit={canAssign} />
 
       <Card data-testid="npl-macro-risk-overlay">
         <CardHeader>

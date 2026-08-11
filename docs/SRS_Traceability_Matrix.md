@@ -77,6 +77,9 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-REG-01 | System shall provide regulatory analytics (NPL ratios, portfolio breakdowns) | Implemented | Reports (`reports.tsx`, `/api/reports/regulatory`) | NPL ratios, portfolio breakdowns by institution and loan type, SLA breach tracking | TC-RPT-001, TC-RPT-002 |
 | FR-REG-02 | System shall support regulatory user role with appropriate access | Implemented | RBAC (`userRoleEnum`, route middleware) | Regulator role with access to audit logs, billing, approvals, analytics | TC-AUTH-005 |
 | FR-REG-03 | System shall enforce maker-checker workflow for data changes | Implemented | Pending Approvals (`pending_approvals` table, `pending-approvals.tsx`) | Four-eye principle: different user must approve; self-approval prevention enforced server-side | TC-MC-001 through TC-MC-004 |
+| FR-REG-04 | System shall calculate a scoped gross-NPL target gap using an explicit numerator, denominator and reporting currency | Implemented baseline | NPL Reduction Plan (`/api/npl-reduction-plan`, `npl-reduction-plan-card.tsx`) | Excludes written-off balances, blocks unsafe multi-currency consolidation, and requires bank reconciliation before plan submission | TC-NPL-PLAN-001, TC-NPL-PLAN-002 |
+| FR-REG-05 | System shall govern an NPL reduction plan with dated targets and independent approval | Implemented baseline | NPL Reduction Plan and Pending Approvals | Requires at least two non-increasing milestones, final target at or below 10%, Board evidence reference, executive owner and maker-checker review | TC-NPL-PLAN-003 |
+| FR-REG-06 | System shall distinguish management evidence from regulatory submission | Implemented | NPL Reduction Plan, Regulatory Evidence Packs | UCH records plan and evidence status but does not approve a cure/write-off, post an accounting entry or file with a regulator | TC-NPL-PLAN-004 |
 
 ---
 

@@ -13,6 +13,7 @@ The machine-readable contract is [`../openapi/uch-bank-pilot.openapi.yaml`](../o
 | Synthetic loan-tape load and reconciliation | Live core-banking credentials |
 | Scoped NPL early-warning review | Money movement, payment reversal or credit decision |
 | Collections ownership workflow | Regulator filing or authority connectivity |
+| Board NPL reduction-plan submission and independent review | Automatic cure, restructure, write-off or recovery decision |
 | Maker-checker IFRS 9 policy submission | General-ledger posting or provision journal |
 | Contract/API error testing | Real customer data without approved data processing and hosting controls |
 
@@ -42,7 +43,8 @@ Before approving a connector, the integration owner must prove:
 2. a user cannot retrieve another organisation or country’s data;
 3. invalid fields produce actionable errors without PII leakage;
 4. NPL assignments, policy submissions and approvals create audit evidence;
-5. a draft ECL request is rejected until a different checker approves the bank’s policy;
-6. no test path can post a journal, move funds or send a regulatory filing.
+5. a consolidated NPL plan is blocked until portfolio values use one approved reporting currency;
+6. a draft ECL request is rejected until a different checker approves the bank’s policy;
+7. no test path can post a journal, move funds or send a regulatory filing.
 
 This document does not state that a specific bank connector is live. A connection becomes production-ready only after the bank’s signed contract, security review, UAT and change approval.

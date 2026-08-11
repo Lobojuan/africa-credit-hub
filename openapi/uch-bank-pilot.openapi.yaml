@@ -37,6 +37,45 @@ paths:
       security: [{ sessionCookie: [] }]
       responses:
         '200': { description: Early-warning records; decisions remain human-owned }
+  /api/npl-reduction-plan:
+    get:
+      summary: Read the reconciled NPL target gap and governed plan status
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Scoped management calculation, currency gate and approved/pending plan evidence }
+        '403': { description: Scope or role denied }
+    post:
+      summary: Submit a dated NPL reduction plan for maker-checker approval
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, targetDate, targetNplRatio, executiveOwner, boardEvidenceReference, strategySummary, milestones]
+              properties:
+                title: { type: string, minLength: 5, maxLength: 200 }
+                targetDate: { type: string, format: date }
+                targetNplRatio: { type: number, minimum: 0, maximum: 10 }
+                executiveOwner: { type: string, minLength: 2, maxLength: 200 }
+                boardEvidenceReference: { type: string, minLength: 3, maxLength: 500 }
+                strategySummary: { type: string, minLength: 20, maxLength: 5000 }
+                milestones:
+                  type: array
+                  minItems: 2
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [date, targetNplRatio, actions]
+                    properties:
+                      date: { type: string, format: date }
+                      targetNplRatio: { type: number, minimum: 0, maximum: 100 }
+                      actions: { type: string, minLength: 10, maxLength: 2000 }
+      responses:
+        '201': { description: Plan and server-calculated baseline submitted for independent approval }
+        '400': { description: Invalid target, milestone sequence or Ghana deadline }
+        '409': { description: Loan tape absent or reporting currencies not reconciled }
   /api/collections/assignments:
     post:
       summary: Assign a flagged facility to a collections workflow
