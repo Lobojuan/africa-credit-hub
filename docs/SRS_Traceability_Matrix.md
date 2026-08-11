@@ -77,6 +77,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-REG-01 | System shall provide regulatory analytics (NPL ratios, portfolio breakdowns) | Implemented | Reports (`reports.tsx`, `/api/reports/regulatory`) | NPL ratios, portfolio breakdowns by institution and loan type, SLA breach tracking | TC-RPT-001, TC-RPT-002 |
 | FR-REG-02 | System shall support regulatory user role with appropriate access | Implemented | RBAC (`userRoleEnum`, route middleware) | Regulator role with access to audit logs, billing, approvals, analytics | TC-AUTH-005 |
 | FR-REG-03 | System shall enforce maker-checker workflow for data changes | Implemented | Pending Approvals (`pending_approvals` table, `pending-approvals.tsx`) | Four-eye principle: different user must approve; self-approval prevention enforced server-side | TC-MC-001 through TC-MC-004 |
+| FR-REG-16 | System shall provide transparent NPL recovery priority ranking aligned with BoG prudential classification | Implemented | NPL Priority Engine (`server/npl-recovery-priority.ts`, `server/routes/npl-recovery-priority.ts`) | 0–100 score with 5-factor breakdown; legal-track band overrides score; append-only audit trail in `npl_case_priority_events`; not a credit decision | TC-NPL-PRI-001 through TC-NPL-PRI-023 |
 
 ---
 

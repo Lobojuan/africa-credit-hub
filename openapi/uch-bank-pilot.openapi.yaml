@@ -1,0 +1,311 @@
+openapi: "3.0.3"
+info:
+  title: Universal Credit Hub — Bank Pilot API
+  version: "1.0.0"
+  description: >
+    Pan-African credit bureau platform API.
+    All endpoints require authentication via session cookie or Bearer token.
+    Data-sovereignty middleware enforces per-country and per-organisation scoping.
+  contact:
+    name: UCH Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://app.universalcredithub.com
+    description: Production
+
+tags:
+  - name: npl-priority
+    description: NPL Recovery Priority Ranking Engine
+
+paths:
+
+  /api/npl-priority-queue:
+    get:
+      tags: [npl-priority]
+      summary: Get priority-sorted NPL queue
+      description: >
+        Returns NPL cases sorted by priority band (legal-track → high → medium → low)
+        then by descending score within each band.
+        Scoped to the authenticated user's organisation and country access.
+      operationId: getNplPriorityQueue
+      parameters:
+        - name: band
+          in: query
+          schema:
+            type: string
+            enum: [high, medium, low, legal-track]
+          description: Filter to a specific priority band
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+          description: Maximum number of results
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Pagination offset
+      responses:
+        "200":
+          description: Priority queue retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NplPriorityQueueItem"
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/npl-cases/{id}/priority:
+    post:
+      tags: [npl-priority]
+      summary: Recalculate NPL case priority score
+      description: >
+        Recalculates the recovery priority score for a single NPL case and
+        appends an immutable audit event. Uses FOR UPDATE row lock to prevent
+        concurrent recalculations on the same case.
+        This is NOT a credit decision and does NOT affect the borrower's credit file.
+      operationId: recalculateNplPriority
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: NPL case ID
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                collateralValueMinor:
+                  type: string
+                  description: Override collateral value (decimal string in minor currency units)
+                  example: "120000.00"
+                collateralValuationAgeDays:
+                  type: integer
+                  description: Override age of the collateral valuation in days
+                  example: 180
+      responses:
+        "200":
+          description: Priority score calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NplPriorityResult"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/npl-cases/{id}/priority/history:
+    get:
+      tags: [npl-priority]
+      summary: Get priority recalculation history for a case
+      description: >
+        Returns the append-only audit trail of priority recalculations
+        for a single NPL case, newest first.
+      operationId: getNplPriorityHistory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: NPL case ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Priority history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  caseId:
+                    type: string
+                  events:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/NplPriorityEvent"
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+components:
+
+  schemas:
+
+    NplPriorityFactorBreakdown:
+      type: object
+      required:
+        - arrearsScore
+        - collateralScore
+        - restructureScore
+        - classificationScore
+        - legalScore
+        - collateralStalenessMultiplier
+      properties:
+        arrearsScore:
+          type: integer
+          minimum: 0
+          maximum: 25
+        collateralScore:
+          type: integer
+          minimum: 0
+          maximum: 30
+        restructureScore:
+          type: integer
+          minimum: 0
+          maximum: 20
+        classificationScore:
+          type: integer
+          minimum: 0
+          maximum: 15
+        legalScore:
+          type: integer
+          minimum: 0
+          maximum: 10
+        collateralStalenessMultiplier:
+          type: number
+          minimum: 0.5
+          maximum: 1.0
+          description: Haircut applied to collateral value based on valuation age
+
+    NplPriorityResult:
+      type: object
+      required: [caseId, score, band, factorBreakdown]
+      properties:
+        caseId:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        band:
+          type: string
+          enum: [high, medium, low, legal-track]
+        factorBreakdown:
+          $ref: "#/components/schemas/NplPriorityFactorBreakdown"
+
+    NplPriorityQueueItem:
+      type: object
+      properties:
+        id:
+          type: string
+        borrowerName:
+          type: string
+        outstandingPrincipal:
+          type: string
+        recoveryPriorityScore:
+          type: integer
+          nullable: true
+        recoveryPriorityBand:
+          type: string
+          nullable: true
+          enum: [high, medium, low, legal-track]
+        recoveryPriorityCalculatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        bogClassification:
+          type: string
+          nullable: true
+        hasLegalFlag:
+          type: boolean
+          nullable: true
+        countryCode:
+          type: string
+
+    NplPriorityEvent:
+      type: object
+      required: [id, score, band, factorBreakdown, calculatedAt, calculatedBy]
+      properties:
+        id:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        band:
+          type: string
+          enum: [high, medium, low, legal-track]
+        factorBreakdown:
+          $ref: "#/components/schemas/NplPriorityFactorBreakdown"
+        calculatedAt:
+          type: string
+          format: date-time
+        calculatedBy:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            email:
+              type: string
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    Forbidden:
+      description: Insufficient role or data-sovereignty restriction
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string

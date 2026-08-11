@@ -31,6 +31,7 @@ import lotoMerchantCreditRouter from "./routes/loto-merchant-credit";
 import lotoFiscalRouter from "./routes/loto-fiscal";
 import regulatoryControlsRouter from "./routes/regulatory-controls-router";
 import { registerPlatformControlRoutes } from "./routes/platform-control";
+import { registerNplRecoveryPriorityRoutes } from "./routes/npl-recovery-priority";
 import { registerOAuthRoutes, getGoogleRedirectUri, getMicrosoftRedirectUri } from "./routes/oauth";
 import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
 import { getAggregationCacheStats } from "./utils/aggregation-cache";
@@ -1307,6 +1308,7 @@ export async function registerRoutes(
   app.use("/api/loto", lotoFiscalRouter);
   app.use("/api/regulatory", regulatoryControlsRouter);
   registerPlatformControlRoutes(app);
+  registerNplRecoveryPriorityRoutes(app);
 
 
   app.get("/api/global-search", requireAuth, async (req, res) => {

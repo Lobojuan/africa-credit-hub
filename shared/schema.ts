@@ -2631,3 +2631,36 @@ export const insertPlaybookDownloadSchema = createInsertSchema(playbookDownloads
 export type InsertPlaybookDownload = z.infer<typeof insertPlaybookDownloadSchema>;
 export type PlaybookDownload = typeof playbookDownloads.$inferSelect;
 
+
+// ---------------------------------------------------------------------------
+// NPL Cases & Recovery Priority (migration 0032)
+// ---------------------------------------------------------------------------
+
+export const nplCases = pgTable("npl_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organisationId: varchar("organisation_id").references(() => organizations.id),
+  countryCode: text("country_code").notNull(),
+  borrowerName: text("borrower_name").notNull(),
+  outstandingPrincipal: text("outstanding_principal").default("0"),
+  collateralValue: text("collateral_value").default("0"),
+  collateralValuationAgeDays: integer("collateral_valuation_age_days").default(0),
+  daysSinceLastPayment: integer("days_since_last_payment").default(0),
+  restructureCount: integer("restructure_count").default(0),
+  bogClassification: text("bog_classification").default("OLEM"),
+  hasLegalFlag: boolean("has_legal_flag").default(false),
+  recoveryPriorityScore: integer("recovery_priority_score"),
+  recoveryPriorityBand: text("recovery_priority_band"),
+  recoveryPriorityCalculatedAt: timestamp("recovery_priority_calculated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const nplCasePriorityEvents = pgTable("npl_case_priority_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull().references(() => nplCases.id),
+  score: integer("score").notNull(),
+  band: text("band").notNull(),
+  factorBreakdown: jsonb("factor_breakdown").notNull(),
+  calculatedBy: varchar("calculated_by").notNull().references(() => users.id),
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+});
