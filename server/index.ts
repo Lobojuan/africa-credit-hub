@@ -6,6 +6,7 @@ import compression from "compression";
 import helmet from "helmet";
 import crypto from "crypto";
 import { registerRoutes } from "./routes";
+import { registerNplRecoveryPriorityRoutes } from "./routes/npl-recovery-priority";
 import { serveStatic } from "./static";
 import { deviceFingerprintMiddleware } from "./middleware/device-fingerprint";
 import { botDetectionMiddleware } from "./middleware/bot-detection";
@@ -691,6 +692,7 @@ process.stderr.write = function (...args: any[]) {
   runCrossProductIsolationCheck({ failOnViolation: true });
 
   await registerRoutes(httpServer, app);
+  registerNplRecoveryPriorityRoutes(app);
 
   const { sanitizeErrorForResponse } = await import("./security-hardening");
   const isProductionEnv = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";

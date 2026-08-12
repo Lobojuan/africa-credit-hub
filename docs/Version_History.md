@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `64ee0d2`
+**Current Commit:** `71ff59d`
 **Branch:** `claude/production-check-WFJxR`
-**Generated:** 2026-08-12T10:05:51.081Z
+**Generated:** 2026-08-12T10:17:26.180Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-08-12 | `71ff59d` | chore: refresh generated version history | Claude |
 | 2026-08-12 | `64ee0d2` | chore: refresh generated version history | Claude |
 | 2026-08-11 | `33ed154` | feat(npl): add NPL recovery-priority ranking engine | Claude |
 | 2026-08-11 | `a0405b0` | fix(ts): suppress @replit package type errors outside Replit env | Claude |
@@ -23,4 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-07-10 | `68766f5` | fix(scoring): close 3 HIGH-severity batch/alt-data exploits (B1, B2, F2) | Uffe J Carlson |
 | 2026-07-08 | `c616a95` | chore: refresh generated version history | Claude |
 | 2026-07-08 | `17c299d` | chore: refresh generated version history | Claude |
-| 2026-07-08 | `d021366` | chore: refresh generated version history | Claude |
