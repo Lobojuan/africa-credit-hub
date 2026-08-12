@@ -3,6 +3,9 @@ import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { encryptPII } from "./encryption";
+import { createLogger } from "./logger";
+const security_hardeningLogger = createLogger("security-hardening");
+
 
 const PASSWORD_HISTORY_SIZE = 5;
 
@@ -234,7 +237,7 @@ export async function encryptAllUnencryptedPII(): Promise<{ totalEncrypted: numb
         }
       }
 
-      console.log(`[PII-Encrypt] Encrypted ${rows.rows.length} records in column '${col}'`);
+      security_hardeningLogger.info(`[PII-Encrypt] Encrypted ${rows.rows.length} records in column '${col}'`)
     } catch (err: any) {
       errors.push(`${col}: ${err.message}`);
     }
@@ -326,7 +329,7 @@ let integrityCheckInterval: NodeJS.Timeout | null = null;
 export function startIntegrityScheduler(intervalHours: number = 24): void {
   if (integrityCheckInterval) clearInterval(integrityCheckInterval);
 
-  console.log(`[IntegrityCheck] Scheduler started — runs every ${intervalHours} hours`);
+  security_hardeningLogger.info(`[IntegrityCheck] Scheduler started — runs every ${intervalHours} hours`)
 
   integrityCheckInterval = setInterval(async () => {
     try {
@@ -339,7 +342,7 @@ export function startIntegrityScheduler(intervalHours: number = 24): void {
           [`Unencrypted PII detected: ${result.unencryptedCount} fields. Issues: ${result.sampleIssues.join("; ")}`]
         );
       } else {
-        console.log(`[IntegrityCheck] All PII fields encrypted. Rate: ${result.integrityRate}`);
+        security_hardeningLogger.info(`[IntegrityCheck] All PII fields encrypted. Rate: ${result.integrityRate}`)
       }
     } catch (err) {
       console.error("[IntegrityCheck] Error during integrity check:", err);
@@ -349,7 +352,7 @@ export function startIntegrityScheduler(intervalHours: number = 24): void {
   setTimeout(async () => {
     try {
       const result = await verifyPIIEncryptionIntegrity();
-      console.log(`[IntegrityCheck] Initial check: ${result.integrityRate} encrypted (${result.encryptedCount}/${result.encryptedCount + result.unencryptedCount} fields)`);
+      security_hardeningLogger.info(`[IntegrityCheck] Initial check: ${result.integrityRate} encrypted (${result.encryptedCount}/${result.encryptedCount + result.unencryptedCount} fields)`)
       if (result.sampleIssues.length > 0) {
         console.warn(`[IntegrityCheck] Issues:`, result.sampleIssues);
       }

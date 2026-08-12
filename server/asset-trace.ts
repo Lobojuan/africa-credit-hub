@@ -40,6 +40,9 @@ import { db } from "./db";
 import { assetTraceRecords, registryCredentials as registryCredentialsTable, type AssetTraceRecord } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 import { decryptPII } from "./encryption";
+import { createLogger } from "./logger";
+const asset_traceLogger = createLogger("asset-trace");
+
 
 export type AssetProvider =
   | "ghana_dvla"
@@ -148,7 +151,7 @@ async function getOAuthToken(provider: string, config: OAuthConfig): Promise<str
     accessToken: data.access_token,
     expiresAt: Date.now() + expiresIn * 1000,
   });
-  console.log(`[AssetTrace] OAuth credential refreshed for ${provider}, expires in ${expiresIn}s`);
+  asset_traceLogger.info(`[AssetTrace] OAuth credential refreshed for ${provider}, expires in ${expiresIn}s`)
   return data.access_token;
 }
 

@@ -20426,13 +20426,13 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   setInterval(async () => {
     try {
       const consumerSummary = await refreshAllFiscalReceiptsConsents();
-      console.log(`[loto-credit-pipeline] consumer nightly refresh — processed: ${consumerSummary.processed}, skipped: ${consumerSummary.skipped}, errors: ${consumerSummary.errors}`);
+      routeLogger.info(`[loto-credit-pipeline] consumer nightly refresh — processed: ${consumerSummary.processed}, skipped: ${consumerSummary.skipped}, errors: ${consumerSummary.errors}`)
     } catch (err) {
       console.error("[loto-credit-pipeline] consumer nightly refresh failed:", err);
     }
     try {
       const merchantSummary = await refreshAllMerchantConsents();
-      console.log(`[loto-credit-pipeline] merchant nightly refresh — processed: ${merchantSummary.processed}, skipped: ${merchantSummary.skipped}, errors: ${merchantSummary.errors}`);
+      routeLogger.info(`[loto-credit-pipeline] merchant nightly refresh — processed: ${merchantSummary.processed}, skipped: ${merchantSummary.skipped}, errors: ${merchantSummary.errors}`)
     } catch (err) {
       console.error("[loto-credit-pipeline] merchant nightly refresh failed:", err);
     }
@@ -22100,7 +22100,11 @@ async function ensureRegistryAuthoritySeeded() {
     const countryUsername = `registry_admin_${countrySlug}`;
 
     const bcryptLib = await import("bcryptjs");
-    const devPassword = process.env.REGISTRY_ADMIN_SEED_PASSWORD || "registry123";
+    const devPassword = process.env.REGISTRY_ADMIN_SEED_PASSWORD;
+    if (!devPassword) {
+      routeLogger.warn(`[Seed] REGISTRY_ADMIN_SEED_PASSWORD not set; skipping RA admin seed`);
+      return;
+    }
 
     // Try preferred username first; fall back to country-specific if it's taken by another org
     const preferredUser = await storage.getUserByUsername(preferredUsername);

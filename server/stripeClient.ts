@@ -1,4 +1,7 @@
 import Stripe from 'stripe';
+import { createLogger } from "./logger";
+const stripeLogger = createLogger("stripe");
+
 
 function getCredentials() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -49,7 +52,7 @@ class PortableStripeSync {
       signature,
       webhookSecret,
     );
-    console.log(`[Stripe] Webhook received: ${event.type} (${event.id})`);
+    stripeLogger.info(`[Stripe] Webhook received: ${event.type} (${event.id})`)
   }
 
   async findOrCreateManagedWebhook(url: string) {
@@ -71,7 +74,7 @@ class PortableStripeSync {
   }
 
   async syncBackfill(): Promise<void> {
-    console.log('[Stripe] Backfill sync completed (portable mode)');
+    stripeLogger.info('[Stripe] Backfill sync completed (portable mode)')
   }
 }
 
@@ -92,5 +95,5 @@ export async function getStripeSync() {
 }
 
 export async function runPortableMigrations(_opts: { databaseUrl: string; schema: string }): Promise<void> {
-  console.log(`[Stripe] Schema "${_opts.schema}" — using standard Stripe SDK (no local migration needed)`);
+  stripeLogger.info(`[Stripe] Schema "${_opts.schema}" — using standard Stripe SDK (no local migration needed)`)
 }

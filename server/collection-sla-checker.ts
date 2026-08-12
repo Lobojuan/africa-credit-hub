@@ -3,6 +3,9 @@ import { sql } from "drizzle-orm";
 import { storage } from "./storage";
 import { broadcastEvent } from "./websocket";
 import { sendCollectionSlaBreachEmail } from "./email";
+import { createLogger } from "./logger";
+const collection_slaLogger = createLogger("collection-sla");
+
 
 const DEFAULT_THRESHOLDS: Record<string, number> = {
   urgent: 3,
@@ -144,7 +147,7 @@ export async function checkCollectionSla(scopeOrgId?: string, scopeCountry?: str
   }
 
   if (breaches > 0 || errors > 0) {
-    console.log(`[SLA] Check complete: ${breaches} breaches notified, ${errors} errors`);
+    collection_slaLogger.info(`[SLA] Check complete: ${breaches} breaches notified, ${errors} errors`)
   }
 
   return { breaches, errors };
@@ -155,7 +158,7 @@ let slaCronInterval: ReturnType<typeof setInterval> | null = null;
 export function startCollectionSlaChecker(intervalMs = 60 * 60 * 1000): void {
   if (slaCronInterval) return;
 
-  console.log(`[SLA] Starting collection SLA checker (interval: ${intervalMs / 1000}s)`);
+  collection_slaLogger.info(`[SLA] Starting collection SLA checker (interval: ${intervalMs / 1000}s)`)
 
   checkCollectionSla().catch(e => console.error("[SLA] Initial check failed:", e.message));
 
@@ -168,6 +171,6 @@ export function stopCollectionSlaChecker(): void {
   if (slaCronInterval) {
     clearInterval(slaCronInterval);
     slaCronInterval = null;
-    console.log("[SLA] Collection SLA checker stopped");
+    collection_slaLogger.info("[SLA] Collection SLA checker stopped")
   }
 }

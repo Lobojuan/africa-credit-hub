@@ -2,6 +2,9 @@ import { db } from "./db";
 import { exchangeRates } from "@shared/schema";
 import { sql } from "drizzle-orm";
 import { isGhanaMode } from "./country-mode";
+import { createLogger } from "./logger";
+const exchange_ratesLogger = createLogger("exchange-rates");
+
 
 const AFRICAN_CURRENCY_CODES = [
   "DZD", "AOA", "BWP", "BIF", "CVE", "XAF", "KMF", "CDF", "DJF", "EGP",
@@ -100,7 +103,7 @@ async function fetchAndUpdateRates(): Promise<{ updated: number; failed: number;
       }
     }
 
-    console.log(`[ExchangeRates] Updated ${updated} pairs, ${failed} failed at ${new Date().toISOString()}`);
+    exchange_ratesLogger.info(`[ExchangeRates] Updated ${updated} pairs, ${failed} failed at ${new Date().toISOString()}`)
   } catch (err: any) {
     console.error(`[ExchangeRates] Fetch failed: ${err.message}`);
     errors.push(`Fetch error: ${err.message}`);
@@ -110,7 +113,7 @@ async function fetchAndUpdateRates(): Promise<{ updated: number; failed: number;
 }
 
 export function startExchangeRateScheduler() {
-  console.log(`[ExchangeRates] Scheduler started — fetches every ${FETCH_INTERVAL_MS / 3600000} hours`);
+  exchange_ratesLogger.info(`[ExchangeRates] Scheduler started — fetches every ${FETCH_INTERVAL_MS / 3600000} hours`)
 
   setTimeout(() => {
     fetchAndUpdateRates().catch(console.error);

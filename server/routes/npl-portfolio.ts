@@ -78,7 +78,7 @@ export function registerNplPortfolioRoutes(app: Express) {
         ...result.rows[0],
         methodology: "Gross NPL exposure / gross loan exposure. Written-off balances excluded. Provisions based on BoG-standard rates. Independent bank reconciliation required before posting.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ message: safeErrorMessage(error) });
     }
   });
@@ -97,19 +97,19 @@ export function registerNplPortfolioRoutes(app: Express) {
           COALESCE(SUM(balance_at_migration), 0)::text AS "exposure",
           ROUND(AVG(days_in_arrears_after), 1)::float AS "avgDpdAfter"
         FROM npl_migrations
-        WHERE migrated_at >= NOW() - INTERVAL '${days} days'
+        WHERE migrated_at >= NOW() - INTERVAL '1 day' * $3
           AND ($1::text IS NULL OR organization_id = $1)
           AND country = $2
         GROUP BY from_npl_stage, to_npl_stage
         ORDER BY from_npl_stage, to_npl_stage
-      `, [organizationId || null, country || "Ghana"]);
+      `, [organizationId || null, country || "Ghana", days]);
 
       // Build matrix view
       const stages = ["performing", "watchlist", "substandard", "doubtful", "loss"];
       const matrix = Object.fromEntries(stages.map((from) => [
         from,
         Object.fromEntries(stages.map((to) => {
-          const cell = result.rows.find((r: any) => r.from === from && r.to === to);
+          const cell = result.rows.find((r: { from: string; to: string; count: number; exposure: string; avgDpdAfter: number }) => r.from === from && r.to === to);
           return [to, cell || { count: 0, exposure: "0.00", avgDpdAfter: 0 }];
         })),
       ]));
@@ -119,7 +119,7 @@ export function registerNplPortfolioRoutes(app: Express) {
         WITH stage_counts AS (
           SELECT from_npl_stage, COUNT(*)::float AS total
           FROM npl_migrations
-          WHERE migrated_at >= NOW() - INTERVAL '${days} days'
+          WHERE migrated_at >= NOW() - INTERVAL '1 day' * $3
             AND ($1::text IS NULL OR organization_id = $1)
             AND country = $2
           GROUP BY from_npl_stage
@@ -130,12 +130,12 @@ export function registerNplPortfolioRoutes(app: Express) {
           ROUND(COUNT(*)::numeric / NULLIF(MAX(sc.total), 0), 4)::float AS "flowRate"
         FROM npl_migrations m
         JOIN stage_counts sc ON sc.from_npl_stage = m.from_npl_stage
-        WHERE m.migrated_at >= NOW() - INTERVAL '${days} days'
+        WHERE m.migrated_at >= NOW() - INTERVAL '1 day' * $3
           AND ($1::text IS NULL OR m.organization_id = $1)
           AND m.country = $2
         GROUP BY m.from_npl_stage, m.to_npl_stage
         ORDER BY m.from_npl_stage, m.to_npl_stage
-      `, [organizationId || null, country || "Ghana"]);
+      `, [organizationId || null, country || "Ghana", days]);
 
       res.json({
         periodDays: days,
@@ -144,7 +144,7 @@ export function registerNplPortfolioRoutes(app: Express) {
         flowRates: flowRates.rows,
         methodology: "Migration counts and flow rates based on observed automated classifications. A loan appears in the matrix each time its NPL stage changes.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ message: safeErrorMessage(error) });
     }
   });
@@ -184,7 +184,7 @@ export function registerNplPortfolioRoutes(app: Express) {
         ...result.rows[0],
         disclaimer: "Draft provision calculated from automated classifications using standard rates. Bank-approved IFRS 9 policy and independent review required before GL posting.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ message: safeErrorMessage(error) });
     }
   });
@@ -213,7 +213,7 @@ export function registerNplPortfolioRoutes(app: Express) {
       `, [req.params.creditAccountId, organizationId || null, country || null]);
 
       res.json(result.rows);
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ message: safeErrorMessage(error) });
     }
   });
@@ -245,7 +245,7 @@ export function registerNplPortfolioRoutes(app: Express) {
         durationMs: Date.now() - start,
         ...result,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       res.status(500).json({ message: safeErrorMessage(error) });
     }
   });

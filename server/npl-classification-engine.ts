@@ -497,7 +497,7 @@ export async function generatePortfolioSummary(summaryDate: string, country: str
   return row;
 }
 
-/** Start the daily classification scheduler. */
+/** Start the daily classification scheduler. Returns a handle with stop(). */
 export function startNplClassificationScheduler(intervalHours = 24) {
   engineLogger.info(`NPL classification scheduler starting (every ${intervalHours}h)`);
 
@@ -515,5 +515,12 @@ export function startNplClassificationScheduler(intervalHours = 24) {
   tick();
 
   // Then on interval
-  setInterval(tick, intervalHours * 60 * 60 * 1000);
+  const intervalId = setInterval(tick, intervalHours * 60 * 60 * 1000);
+
+  return {
+    stop: () => {
+      clearInterval(intervalId);
+      engineLogger.info("NPL classification scheduler stopped");
+    },
+  };
 }

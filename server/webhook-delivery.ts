@@ -3,6 +3,9 @@ import { db } from "./db";
 import { webhookSubscriptions, webhookDeliveryLogs } from "@shared/schema";
 import { eq, and, lte, isNull, or } from "drizzle-orm";
 import { isSafeWebhookUrl } from "./lib/url-safety";
+import { createLogger } from "./logger";
+const webhook_deliveryLogger = createLogger("webhook-delivery");
+
 
 export const WEBHOOK_EVENTS = [
   "borrower.created",
@@ -108,7 +111,7 @@ async function attemptDelivery(
       await db.update(webhookSubscriptions)
         .set({ status: "disabled", updatedAt: new Date() })
         .where(eq(webhookSubscriptions.id, sub.id));
-      console.log(`[Webhook] Disabled subscription ${sub.id} after 10 consecutive failures`);
+      webhook_deliveryLogger.info(`[Webhook] Disabled subscription ${sub.id} after 10 consecutive failures`)
     }
   } catch (logErr) {
     console.error("[Webhook] Failed to log delivery:", logErr);

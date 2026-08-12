@@ -3,6 +3,9 @@ import type { Server } from "http";
 import type { IncomingMessage } from "http";
 import { parse as parseCookie } from "cookie";
 import { pool } from "./db";
+import { createLogger } from "./logger";
+const websocketLogger = createLogger("websocket");
+
 
 interface WSClient {
   ws: WebSocket;
@@ -130,7 +133,7 @@ export function initWebSocket(httpServer: Server): void {
     clearInterval(heartbeat);
   });
 
-  console.log("[WebSocket] Server initialized on /ws");
+  websocketLogger.info("[WebSocket] Server initialized on /ws")
 }
 
 export function broadcastEvent(event: WSEvent, filter?: { roles?: string[]; organizationId?: string; userId?: string }): void {
