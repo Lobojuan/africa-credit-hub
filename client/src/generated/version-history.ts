@@ -18,10 +18,31 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-10T22:00:44.066Z",
+  "generatedAt": "2026-08-11T15:20:43.361Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "8b350b7",
+  "currentCommit": "a0405b0",
   "commits": [
+    {
+      "hash": "a0405b08a47990b3056f4715449ed42bdc4e91d8",
+      "shortHash": "a0405b0",
+      "date": "2026-08-11",
+      "author": "Claude",
+      "subject": "fix(ts): suppress @replit package type errors outside Replit env"
+    },
+    {
+      "hash": "f6c2179dc16636a510b3b2cd672a869d7c79a9b2",
+      "shortHash": "f6c2179",
+      "date": "2026-07-10",
+      "author": "Uffe J Carlson",
+      "subject": "fix: full-audit fixes (5 real bugs found + fixed, verified with 814/814 tests + e2e)"
+    },
+    {
+      "hash": "83efc43e520c6cd672c3e57fdd868caeb3aafe26",
+      "shortHash": "83efc43",
+      "date": "2026-07-09",
+      "author": "Uffe J Carlson",
+      "subject": "Fix fresh-clone build failure and startup crash without AI keys"
+    },
     {
       "hash": "8b350b7382ce614775bf12b7533eabb37b27c84e",
       "shortHash": "8b350b7",
@@ -81,27 +102,6 @@ export const repoVersionHistory: RepoVersionHistory = {
     {
       "hash": "58bf120e3f81bdfa022954e75b69131cd4980c02",
       "shortHash": "58bf120",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "chore: refresh generated version history"
-    },
-    {
-      "hash": "742f6c80b15a8b4e12090fba1c1dbce440536ac5",
-      "shortHash": "742f6c8",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "chore: refresh generated version history"
-    },
-    {
-      "hash": "b5dfba31ace5120162a71d41efeb948a63e766eb",
-      "shortHash": "b5dfba3",
-      "date": "2026-07-07",
-      "author": "Claude",
-      "subject": "fix(i18n): translate credit-score-gauge band label (consumer SVG graphic)"
-    },
-    {
-      "hash": "b19991c26864fc64d35e1da1bf9b770885030894",
-      "shortHash": "b19991c",
       "date": "2026-07-07",
       "author": "Claude",
       "subject": "chore: refresh generated version history"
