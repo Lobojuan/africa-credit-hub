@@ -42,6 +42,7 @@ import { registerNplReductionPlanRoutes } from "./routes/npl-reduction-plan";
 import { registerLoanTapeReconciliationRoutes } from "./routes/loan-tape-reconciliation";
 import { registerNplCaseLedgerRoutes } from "./routes/npl-case-ledger";
 import { registerNplDecisionGovernanceRoutes } from "./routes/npl-decision-governance";
+import { registerNplPortfolioRoutes } from "./routes/npl-portfolio";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -17287,6 +17288,7 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   registerNplCaseLedgerRoutes(app);
   registerNplDecisionGovernanceRoutes(app);
   registerNplReductionPlanRoutes(app);
+  registerNplPortfolioRoutes(app);
 
   app.get("/api/npl-early-warning/macro-risk", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
     try {

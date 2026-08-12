@@ -839,6 +839,8 @@ process.stderr.write = function (...args: any[]) {
 
     const { startLotoDrawScheduler } = await import("./services/loto-draw-scheduler");
     startLotoDrawScheduler();
+    const { startNplClassificationScheduler } = await import("./npl-classification-engine");
+    startNplClassificationScheduler();
 
     const { startAnchorScheduler } = await import("./blockchain-anchor");
     startAnchorScheduler(6);
