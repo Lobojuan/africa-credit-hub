@@ -78,9 +78,6 @@ function validateProductionConfig() {
     if (!process.env.TWILIO_ACCOUNT_SID && !process.env.AT_USERNAME) {
       console.warn("[Production] WARNING: No SMS provider configured — OTP and notifications via SMS will not be delivered");
     }
-    if (!process.env.MASTER_CONTROL_PASSWORD) {
-      errors.push('MASTER_CONTROL_PASSWORD is required in production for platform control access');
-    }
   }
 
   if (errors.length > 0) {
@@ -577,7 +574,20 @@ process.stderr.write = function (...args: any[]) {
     }
 
     try {
-      const { seedDemoData } = await import("./seed-demo-data");
+    if (!isProduction) {
+      try {
+        const { seedDemoData } = await import("./seed-demo-data");
+        await seedDemoData();
+      } catch (e) {
+        console.error("Demo data seed error (non-fatal):", e);
+      }
+    } else {
+      console.log("[Production] Skipping demo data seeding");
+    }
+
+    try {
+      const { seedTelcoLending } = await import("./seed-telco-lending");
+      await seedTelcoLending();"./seed-demo-data");
       await seedDemoData();
     } catch (e) {
       console.error("Demo data seed error (non-fatal):", e);
@@ -601,7 +611,24 @@ process.stderr.write = function (...args: any[]) {
   }
 
   try {
-    const { ensureDemoUsers } = await import("./seed");
+  if (!isProductionBoot) {
+    try {
+      const { ensureDemoUsers } = await import("./seed");
+      await ensureDemoUsers();
+    } catch (e) {
+      console.error("[Startup] ensureDemoUsers error (non-fatal):", e);
+    }
+  } else {
+    console.log("[Production] Skipping ensureDemoUsers — demo accounts disabled");
+  }
+
+  try {
+    const { runPortableMigrations } = await import('./stripeClient');
+    const databaseUrl = process.env.DATABASE_URL;
+    if (databaseUrl) {
+      startupLogger.info('Initializing Stripe schema...');
+      await runPortableMigrations({ databaseUrl, schema: 'stripe' });
+      startupLogger.info('Stripe schema ready');"./seed");
     await ensureDemoUsers();
   } catch (e) {
     console.error("[Startup] ensureDemoUsers error (non-fatal):", e);
