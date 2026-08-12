@@ -187,14 +187,30 @@ function isRegistryConfigured(provider: string, urlVar: string, keyVar: string):
   return !!apiKey;
 }
 
-/** Load all DB-stored credentials into the in-memory cache. Call on startup and after each save. */
+/**
+ * Load all DB-stored credentials into the in-memory cache.
+ * Call on startup and after each save.
+ *
+ * SECURITY: Each credential is decrypted individually. A failure in one
+ * credential (wrong key, corrupted data) is logged and skipped rather than
+ * failing the entire load. This prevents a single bad DB row from breaking
+ * all asset-trace integrations.
+ */
 export async function loadRegistryCredentialsFromDb(): Promise<void> {
   try {
     const rows = await db.select().from(registryCredentialsTable);
     _credOverrides.clear();
     for (const row of rows) {
-      const decryptedKey = decryptPII(row.apiKeyEncrypted);
-      _credOverrides.set(row.provider, { url: row.apiUrl, key: decryptedKey });
+      try {
+        const decryptedKey = decryptPII(row.apiKeyEncrypted);
+        _credOverrides.set(row.provider, { url: row.apiUrl, key: decryptedKey });
+      } catch (err: any) {
+        console.error(
+          `[AssetTrace] Skipping credential for ${row.provider}: decryption failed. ` +
+          `Check PII_ENCRYPTION_KEY consistency. Error: ${err.message}`
+        );
+        // Continue loading other credentials rather than failing entirely.
+      }
     }
   } catch (err: any) {
     console.error("[AssetTrace] Failed to load registry credentials from DB:", err.message);
