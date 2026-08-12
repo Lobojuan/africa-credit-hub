@@ -1737,7 +1737,7 @@ function GitHubPanel() {
       <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-center">
         <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-500" />
         <p className="text-sm font-medium">GitHub Not Connected</p>
-        <p className="text-xs text-muted-foreground mt-1">Connect your GitHub account through Replit integrations to manage client repositories.</p>
+        <p className="text-xs text-muted-foreground mt-1">Configure a GitHub App or server token to manage client repositories.</p>
       </div>
     );
   }

@@ -3,7 +3,7 @@ export const PLATFORM_COMPANY_NAME =
 export const PLATFORM_SUPPORT_EMAIL =
   (import.meta.env.VITE_PLATFORM_SUPPORT_EMAIL as string) || "support@universalcredithub.com";
 export const PLATFORM_CONTACT_PHONE =
-  (import.meta.env.VITE_PLATFORM_CONTACT_PHONE as string) || "";
+  (import.meta.env.VITE_PLATFORM_CONTACT_PHONE as string) || "+233552395548";
 export const PLATFORM_CTO_NAME =
   (import.meta.env.VITE_PLATFORM_CTO_NAME as string) || "Platform CTO";
 export const PLATFORM_CTO_EMAIL =

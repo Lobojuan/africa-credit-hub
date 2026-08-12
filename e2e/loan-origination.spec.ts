@@ -1,15 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const SA = { userId: "e2e-loan-sa", userRole: "super_admin" };
-const ADMIN = { userId: "e2e-loan-admin", userRole: "admin" };
-
-const TEST_BORROWER = {
-  firstName: "E2E",
-  lastName: "LoanTestUser",
-  nationalId: `E2E-LOAN-${Date.now()}`,
-  type: "individual",
-  country: "Ghana",
-};
+const SA = { username: "platform_admin" };
+const ADMIN = { username: "credit_admin" };
 
 let testBorrowerId: string;
 let testLoanId: string;
@@ -21,14 +13,27 @@ async function session(page: import("@playwright/test").Page, s = SA) {
 }
 
 test.beforeAll(async ({ browser }) => {
-  const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
+  const ctx = await browser.newContext();
   const pg = await ctx.newPage();
+  // Create fixtures with an explicit fresh session. Saved storage can be
+  // rotated by another parallel E2E fixture and must never be a write setup's
+  // authentication dependency.
+  await session(pg, SA);
 
-  const bRes = await pg.request.post("/api/borrowers", { data: TEST_BORROWER });
-  expect(bRes.status()).toBe(201);
-  testBorrowerId = (await bRes.json()).id;
+  // Loan applications may reference only an approved borrower record. Reuse
+  // a real record rather than a maker-checker borrower proposal.
+  const bRes = await pg.request.get("/api/borrowers?limit=1");
+  expect(bRes.status()).toBe(200);
+  const borrowers = await bRes.json() as { data?: Array<{ id: string }> } | Array<{ id: string }>;
+  const firstBorrower = Array.isArray(borrowers) ? borrowers[0] : borrowers.data?.[0];
+  expect(firstBorrower?.id).toBeTruthy();
+  testBorrowerId = firstBorrower!.id;
 
-  const lRes = await pg.request.post("/api/loans", {
+  // Submit the applications as the institution administrator after choosing
+  // an approved borrower record from the platform registry.
+  await session(pg, ADMIN);
+
+  const lRes = await pg.request.post("/api/loan-applications", {
     data: {
       borrowerId: testBorrowerId,
       loanType: "personal",
@@ -41,7 +46,7 @@ test.beforeAll(async ({ browser }) => {
   expect(lRes.status()).toBe(201);
   testLoanId = (await lRes.json()).id;
 
-  const rRes = await pg.request.post("/api/loans", {
+  const rRes = await pg.request.post("/api/loan-applications", {
     data: {
       borrowerId: testBorrowerId,
       loanType: "business",
@@ -127,7 +132,7 @@ test.describe("Loan Origination — application form", () => {
 test.describe("Loan Origination — maker-checker approval lifecycle", () => {
   test("created loan is in pending status", async ({ page }) => {
     await session(page, SA);
-    const r = await page.request.get(`/api/loans/${testLoanId}`);
+    const r = await page.request.get(`/api/loan-applications/${testLoanId}`);
     expect(r.status()).toBe(200);
     const loan = await r.json();
     expect(["pending", "pending_approval", "submitted"]).toContain(loan.status);
@@ -135,12 +140,12 @@ test.describe("Loan Origination — maker-checker approval lifecycle", () => {
 
   test("approving the loan transitions status to approved", async ({ page }) => {
     await session(page, SA);
-    const r = await page.request.post(`/api/loans/${testLoanId}/approve`, {
+    const r = await page.request.post(`/api/loan-applications/${testLoanId}/approve`, {
       data: { notes: "E2E maker-checker approval" },
     });
     expect(r.status()).toBe(200);
 
-    const after = await page.request.get(`/api/loans/${testLoanId}`);
+    const after = await page.request.get(`/api/loan-applications/${testLoanId}`);
     expect(after.status()).toBe(200);
     expect((await after.json()).status).toBe("approved");
   });
@@ -154,26 +159,26 @@ test.describe("Loan Origination — maker-checker approval lifecycle", () => {
 
   test("rejecting a loan transitions status to rejected", async ({ page }) => {
     await session(page, SA);
-    const r = await page.request.post(`/api/loans/${rejectLoanId}/reject`, {
+    const r = await page.request.post(`/api/loan-applications/${rejectLoanId}/reject`, {
       data: { reason: "E2E test rejection" },
     });
     expect(r.status()).toBe(200);
 
-    const after = await page.request.get(`/api/loans/${rejectLoanId}`);
+    const after = await page.request.get(`/api/loan-applications/${rejectLoanId}`);
     expect(after.status()).toBe(200);
     expect((await after.json()).status).toBe("rejected");
   });
 });
 
 test.describe("Loan Origination — API access control", () => {
-  test("GET /api/loans requires auth", async ({ page }) => {
-    const r = await page.request.get("/api/loans");
+  test("GET /api/loan-applications requires auth", async ({ page }) => {
+    const r = await page.request.get("/api/loan-applications");
     expect([401, 403]).toContain(r.status());
   });
 
-  test("GET /api/loans returns array for super_admin", async ({ page }) => {
+  test("GET /api/loan-applications returns array for super_admin", async ({ page }) => {
     await session(page, SA);
-    const r = await page.request.get("/api/loans");
+    const r = await page.request.get("/api/loan-applications");
     expect(r.status()).toBe(200);
     const body = await r.json();
     expect(Array.isArray(body) || Array.isArray(body?.data)).toBe(true);
@@ -181,7 +186,7 @@ test.describe("Loan Origination — API access control", () => {
 
   test("approve on unknown loan ID returns 400 or 404 not 500", async ({ page }) => {
     await session(page, SA);
-    const r = await page.request.post("/api/loans/nonexistent-xyz/approve", { data: { notes: "t" } });
+    const r = await page.request.post("/api/loan-applications/nonexistent-xyz/approve", { data: { notes: "t" } });
     expect([400, 404]).toContain(r.status());
     expect(r.status()).not.toBe(500);
   });
@@ -190,13 +195,13 @@ test.describe("Loan Origination — API access control", () => {
 // ─── Maker-checker: lender submits → admin approves ───────────────────────────
 
 test.describe("Loan Origination — lender-submit / admin-approve maker-checker separation", () => {
-  const LENDER = { userId: "e2e-loan-lender", userRole: "lender" };
+  const LENDER = { username: "lender_demo" };
 
   let lenderSubmittedLoanId: string;
 
-  test("lender role can submit a loan application (POST /api/loans → 201)", async ({ page }) => {
+  test("lender role can submit a loan application", async ({ page }) => {
     await session(page, LENDER);
-    const resp = await page.request.post("/api/loans", {
+    const resp = await page.request.post("/api/loan-applications", {
       data: {
         borrowerId: testBorrowerId,
         loanType: "personal",
@@ -216,7 +221,7 @@ test.describe("Loan Origination — lender-submit / admin-approve maker-checker 
 
   test("submitted loan is in a pending state — not yet approved by admin", async ({ page }) => {
     await session(page, SA);
-    const resp = await page.request.get(`/api/loans/${lenderSubmittedLoanId}`);
+    const resp = await page.request.get(`/api/loan-applications/${lenderSubmittedLoanId}`);
     expect(resp.status()).toBe(200);
     const loan = await resp.json() as { status: string; submittedBy?: string };
     expect(["pending", "pending_approval", "submitted", "under_review"]).toContain(loan.status);
@@ -225,12 +230,12 @@ test.describe("Loan Origination — lender-submit / admin-approve maker-checker 
   test("admin (maker-checker reviewer) approves lender-submitted loan → status becomes approved", async ({ page }) => {
     // Admin acts as the second signatory in the maker-checker workflow
     await session(page, SA);
-    const resp = await page.request.post(`/api/loans/${lenderSubmittedLoanId}/approve`, {
+    const resp = await page.request.post(`/api/loan-applications/${lenderSubmittedLoanId}/approve`, {
       data: { notes: "E2E maker-checker: admin approves lender submission" },
     });
     expect(resp.status()).toBe(200);
 
-    const after = await page.request.get(`/api/loans/${lenderSubmittedLoanId}`);
+    const after = await page.request.get(`/api/loan-applications/${lenderSubmittedLoanId}`);
     expect(after.status()).toBe(200);
     expect((await after.json() as { status: string }).status).toBe("approved");
   });
@@ -238,7 +243,7 @@ test.describe("Loan Origination — lender-submit / admin-approve maker-checker 
   test("lender cannot self-approve their own submission (separation of duties)", async ({ page }) => {
     // Submit another loan as lender
     await session(page, LENDER);
-    const subResp = await page.request.post("/api/loans", {
+    const subResp = await page.request.post("/api/loan-applications", {
       data: {
         borrowerId: testBorrowerId,
         loanType: "personal",
@@ -252,7 +257,7 @@ test.describe("Loan Origination — lender-submit / admin-approve maker-checker 
     const selfLoanId = (await subResp.json() as { id: string }).id;
 
     // Attempt self-approval as the same lender — separation of duties must prevent this
-    const approveResp = await page.request.post(`/api/loans/${selfLoanId}/approve`, {
+    const approveResp = await page.request.post(`/api/loan-applications/${selfLoanId}/approve`, {
       data: { notes: "Lender self-approve attempt" },
     });
     // Separation of duties: lender must NOT approve their own submission.

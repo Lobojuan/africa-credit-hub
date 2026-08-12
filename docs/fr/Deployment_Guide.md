@@ -10,7 +10,7 @@
 
 ## 1. Aperçu
 
-Ce guide fournit des instructions de déploiement étape par étape pour le Système de Registre de Crédit. L'application se compose d'un frontend React servi par un backend Express.js, avec PostgreSQL comme base de données. Deux scénarios de déploiement sont couverts : le déploiement sur Replit et le déploiement général sur Linux/Docker.
+Ce guide fournit des instructions de déploiement étape par étape pour le Système de Registre de Crédit. L'application se compose d'un frontend React servi par un backend Express.js, avec PostgreSQL comme base de données. Deux scénarios de déploiement sont couverts : le déploiement sur managed cloud platform et le déploiement général sur Linux/Docker.
 
 ---
 
@@ -108,7 +108,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 Le système nécessite une base de données PostgreSQL. Les options incluent :
 
-- **Neon** (PostgreSQL serverless, recommandé pour Replit)
+- **Neon** (PostgreSQL serverless, recommandé pour managed cloud platform)
 - **Amazon RDS** pour les charges de travail en production
 - **PostgreSQL auto-hébergé** sur des serveurs Linux
 - **PostgreSQL Docker** pour les déploiements conteneurisés
@@ -260,11 +260,11 @@ WantedBy=multi-user.target
 
 ---
 
-## 7. Déploiement Spécifique à Replit
+## 7. Déploiement Spécifique à managed cloud platform
 
 ### 7.1 Configuration
 
-L'application est préconfigurée pour le déploiement sur Replit. Le fichier `.replit` définit :
+L'application est préconfigurée pour le déploiement sur managed cloud platform. Le fichier `.managed-cloud` définit :
 
 - Commande de compilation : `npm run build`
 - Commande d'exécution : `node ./dist/index.cjs`
@@ -272,7 +272,7 @@ L'application est préconfigurée pour le déploiement sur Replit. Le fichier `.
 
 ### 7.2 Secrets d'Environnement
 
-Sur Replit, configurez les variables d'environnement via l'onglet Secrets :
+Sur managed cloud platform, configurez les variables d'environnement via l'onglet Secrets :
 1. `DATABASE_URL` - Chaîne de connexion PostgreSQL (Neon recommandé)
 2. `SESSION_SECRET` - Chaîne aléatoire pour le chiffrement des sessions
 
@@ -430,7 +430,7 @@ server {
 Pour la production, utilisez toujours HTTPS. Options :
 - **Let's Encrypt** avec certbot pour des certificats SSL gratuits
 - **SSL du fournisseur cloud** (AWS ACM, Cloudflare, etc.)
-- **Replit** fournit HTTPS automatiquement
+- **managed cloud platform** fournit HTTPS automatiquement
 
 ---
 

@@ -70,6 +70,7 @@ export async function registerSamlRoutes(app: Express, injectedDeps?: SamlDeps):
   const SAML_IDP_ENTRY_POINT = process.env.SAML_IDP_ENTRY_POINT || "";
   const SAML_IDP_CERT = process.env.SAML_IDP_CERT || "";
   const SAML_ISSUER = process.env.SAML_ISSUER || "pan-african-credit-registry";
+  const legacySamlAllowed = process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true";
   const samlUsedResponseIds = new Map<string, number>();
 
   setInterval(() => {
@@ -93,6 +94,12 @@ export async function registerSamlRoutes(app: Express, injectedDeps?: SamlDeps):
   });
 
   app.get("/api/auth/saml/login", (req, res) => {
+    // This legacy parser does not perform XML-DSIG cryptographic validation.
+    // Never accept a bank assertion in production until it is replaced with a
+    // vetted SAML implementation.
+    if (!legacySamlAllowed) {
+      return res.status(503).send("Enterprise SSO is being upgraded. Please use your approved sign-in method.");
+    }
     if (!SAML_IDP_ENTRY_POINT) {
       return res.status(503).send(
         `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Enterprise SSO</title></head>` +
@@ -135,6 +142,7 @@ export async function registerSamlRoutes(app: Express, injectedDeps?: SamlDeps):
 
   app.post("/api/auth/saml/callback", express.urlencoded({ extended: false }), async (req, res) => {
     try {
+      if (!legacySamlAllowed) return res.redirect("/login?error=saml_unavailable");
       const samlResponse = req.body.SAMLResponse;
       if (!samlResponse) return res.redirect("/login?error=missing_saml_response");
 

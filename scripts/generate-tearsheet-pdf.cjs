@@ -84,7 +84,7 @@ const MARKET_CONFIG = {
     tagline:   "West Africa's Digital Credit Vanguard",
     regulator: "Bank of Ghana (BoG)",
     currency:  "GHS",
-    demoUrl:   "https://universalcredithub.replit.app?utm_source=tearsheet&utm_campaign=ghana",
+    demoUrl:   "https://universalcredithub.com?utm_source=tearsheet&utm_campaign=ghana",
     liveStatsEnabled: true,
     stats: [
       { label: "GDP (2024)",          value: "USD 76 B"  },
@@ -113,7 +113,7 @@ const MARKET_CONFIG = {
     tagline:   "Africa's Largest Economy — Largest Credit Opportunity",
     regulator: "Central Bank of Nigeria (CBN)",
     currency:  "NGN",
-    demoUrl:   "https://universalcredithub.replit.app?utm_source=tearsheet&utm_campaign=nigeria",
+    demoUrl:   "https://universalcredithub.com?utm_source=tearsheet&utm_campaign=nigeria",
     liveStatsEnabled: true,
     stats: [
       { label: "GDP (2024)",          value: "USD 363 B" },
@@ -142,7 +142,7 @@ const MARKET_CONFIG = {
     tagline:   "Sub-Saharan Africa's Most Sophisticated Credit Market",
     regulator: "Central Bank of Kenya (CBK)",
     currency:  "KES",
-    demoUrl:   "https://universalcredithub.replit.app?utm_source=tearsheet&utm_campaign=kenya",
+    demoUrl:   "https://universalcredithub.com?utm_source=tearsheet&utm_campaign=kenya",
     liveStatsEnabled: true,
     stats: [
       { label: "GDP (2024)",          value: "USD 118 B" },
@@ -171,7 +171,7 @@ const MARKET_CONFIG = {
     tagline:   "UEMOA's Economic Engine — 120 M People, One Franc",
     regulator: "BCEAO / Centrale des Risques",
     currency:  "XOF",
-    demoUrl:   "https://universalcredithub.replit.app?utm_source=tearsheet&utm_campaign=civ",
+    demoUrl:   "https://universalcredithub.com?utm_source=tearsheet&utm_campaign=civ",
     liveStatsEnabled: true,
     stats: [
       { label: "GDP (2024)",          value: "USD 78 B"  },
@@ -200,7 +200,7 @@ const MARKET_CONFIG = {
     tagline:   "Africa's Most Developed Financial Market",
     regulator: "SARB / National Credit Regulator (NCR)",
     currency:  "ZAR",
-    demoUrl:   "https://universalcredithub.replit.app?utm_source=tearsheet&utm_campaign=southafrica",
+    demoUrl:   "https://universalcredithub.com?utm_source=tearsheet&utm_campaign=southafrica",
     liveStatsEnabled: true,
     stats: [
       { label: "GDP (2024)",         value: "USD 373 B" },

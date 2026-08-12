@@ -1,11 +1,9 @@
-import { lazy, Suspense } from "react";
 import { Link } from "wouter";
-import { Loader2, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 import { Seo } from "@/components/seo";
-
-const InvestorLandingPage = lazy(() => import("@/pages/investor-landing"));
+import MasterLandingPage from "@/pages/master-landing";
 
 export default function CreditLandingPage() {
   const { t } = useTranslation();
@@ -13,8 +11,8 @@ export default function CreditLandingPage() {
   return (
     <div className="relative">
       <Seo
-        title="Universal Credit Hub — Pan-African Credit Registry Platform"
-        description="The only consent-first credit infrastructure covering all 54 African countries. Credit bureau, collateral registry and Loto Fiscal verified-receipt scoring on one platform. 8 languages · regulator-ready."
+        title="Universal Credit Hub — Controlled Bank Risk Operations"
+        description="Credit intelligence, NPL early warning, collateral evidence, consent controls and governed IFRS 9 policy workflows for controlled African bank pilots."
         canonical="https://universalcredithub.com/"
       />
       <div className="bg-slate-100 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 text-xs">
@@ -26,9 +24,7 @@ export default function CreditLandingPage() {
           </span>
         </div>
       </div>
-      <Suspense fallback={<div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-slate-400" /></div>}>
-        <InvestorLandingPage />
-      </Suspense>
+      <MasterLandingPage />
     </div>
   );
 }

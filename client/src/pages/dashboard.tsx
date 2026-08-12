@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "wouter";
@@ -550,10 +550,15 @@ export default function Dashboard() {
     return String.fromCodePoint(...codePoints);
   };
   const [selectedDetail, setSelectedDetail] = useState<DetailType>(null);
-  const [detectedCurrency] = useState(() => detectLocalCurrency());
-  const [displayCurrency, setDisplayCurrency] = useState(() => {
-    return localStorage.getItem("dashboard_currency") || detectedCurrency;
-  });
+  const detectedCurrency = activeConfig?.currency || detectLocalCurrency();
+  const [displayCurrency, setDisplayCurrency] = useState(() => localStorage.getItem("dashboard_currency") || detectedCurrency);
+  useEffect(() => {
+    // A country change is a display-context change, not a currency conversion
+    // of stored facilities. The dashboard therefore defaults to the selected
+    // country's currency while individual records retain their own currency.
+    setDisplayCurrency(detectedCurrency);
+    localStorage.setItem("dashboard_currency", detectedCurrency);
+  }, [detectedCurrency]);
   const currencyOptions = useMemo(() => getDisplayCurrencies(detectedCurrency), [detectedCurrency]);
 
   const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery<{

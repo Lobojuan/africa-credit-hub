@@ -19,6 +19,7 @@ import { InquiryPurposePill, CompetingInquiryBadge, isCompetingInquiry, isStaleI
 // ---------------------------------------------------------------------------
 interface ScoreHistoryPoint { id: string; score: number; scoreModel: string | null; createdAt: string; }
 interface ConsumerDispute { id: string; disputeType: string; description: string; status: string; createdAt: string; updatedAt?: string; slaDeadline?: string; resolvedAt?: string; }
+interface ConsumerTransactionResolutionCase { transaction_reference: string; case_type: "failed_transfer" | "double_debit" | "cash_dispense" | "account_freeze"; channel: string; amount?: string | null; currency?: string | null; status: "new" | "verifying" | "ready_for_core_handoff" | "confirmed_resolved" | "needs_human" | "rejected"; sla_deadline: string; created_at: string; updated_at: string; }
 interface ConsumerInquiry {
   id: string;
   institution: string;
@@ -187,7 +188,7 @@ function DisputeFilingDialog({ preset, trigger, onFiled }: DisputeFilingDialogPr
         {submitted ? (
           <div className="text-center py-6 space-y-3">
             <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
-            <p className="font-medium">Dispute Submitted!</p>
+            <p className="font-medium" data-testid="text-dispute-submitted">Dispute Submitted!</p>
             <p className="text-sm text-muted-foreground">Your dispute has been recorded. We will review it within 5 business days and notify you of the outcome.</p>
             <Button onClick={() => setOpen(false)} className="w-full">Close</Button>
           </div>
@@ -530,6 +531,17 @@ export default function ConsumerPortalPage() {
       const res = await fetch("/api/consumer/my-disputes", { credentials: "include" });
       if (!res.ok) return [];
       return res.json() as Promise<ConsumerDispute[]>;
+    },
+    enabled: !!isLoggedIn,
+    retry: false,
+  });
+
+  const transactionResolutionCasesQuery = useQuery<ConsumerTransactionResolutionCase[]>({
+    queryKey: ["/api/consumer/transaction-resolution-cases"],
+    queryFn: async () => {
+      const res = await fetch("/api/consumer/transaction-resolution-cases", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json() as Promise<ConsumerTransactionResolutionCase[]>;
     },
     enabled: !!isLoggedIn,
     retry: false,
@@ -1428,6 +1440,18 @@ export default function ConsumerPortalPage() {
                 Sign Out
               </Button>
             </div>
+
+            {transactionResolutionCasesQuery.data?.length ? (
+              <Card className="shadow-sm" data-testid="card-consumer-transaction-status">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-5 h-5 text-primary mt-0.5" />
+                    <div><h2 className="font-bold">Transaction support status</h2><p className="text-xs text-muted-foreground mt-0.5">Updates from your bank’s resolution workflow. A status does not itself confirm that money has moved.</p></div>
+                  </div>
+                  <div className="space-y-2">{transactionResolutionCasesQuery.data.slice(0, 5).map((item) => <div key={item.transaction_reference} className="rounded-lg border p-3"><div className="flex items-center justify-between gap-2"><p className="font-mono text-xs font-semibold truncate">{item.transaction_reference}</p><ConsumerResolutionBadge status={item.status}/></div><p className="mt-1 text-xs text-muted-foreground">{consumerCaseType(item.case_type)} · {consumerCaseMessage(item.status)}</p><p className="mt-1 text-[11px] text-muted-foreground">Last updated {new Date(item.updated_at).toLocaleString()}</p></div>)}</div>
+                </CardContent>
+              </Card>
+            ) : null}
 
             {!data && !lookupMutation.isPending && (
               <>
@@ -2470,4 +2494,15 @@ export default function ConsumerPortalPage() {
       </div>
     </div>
   );
+}
+
+function consumerCaseType(type: ConsumerTransactionResolutionCase["case_type"]) {
+  return ({ failed_transfer: "Failed transfer", double_debit: "Double debit", cash_dispense: "Cash dispense", account_freeze: "Account access" })[type];
+}
+function consumerCaseMessage(status: ConsumerTransactionResolutionCase["status"]) {
+  return ({ new: "Your case is waiting to be checked.", verifying: "Your bank is checking the transaction evidence.", ready_for_core_handoff: "The case is ready for your bank’s core-system team.", confirmed_resolved: "Your bank has recorded the case as resolved.", needs_human: "A specialist needs to review this case.", rejected: "Your bank could not confirm this request. Contact support if you need clarification." })[status];
+}
+function ConsumerResolutionBadge({ status }: { status: ConsumerTransactionResolutionCase["status"] }) {
+  const label = status === "confirmed_resolved" ? "Resolved" : status === "needs_human" ? "Specialist review" : status === "ready_for_core_handoff" ? "Bank handoff" : status === "verifying" ? "Checking" : status === "rejected" ? "Closed" : "Received";
+  return <Badge variant={status === "confirmed_resolved" ? "default" : status === "rejected" ? "destructive" : "secondary"} className="text-[10px]">{label}</Badge>;
 }

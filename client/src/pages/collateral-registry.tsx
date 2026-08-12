@@ -2295,7 +2295,7 @@ function LienSearchPanel() {
       {searched && !isLoading && (
         <div>
           {results.length === 0 ? (
-            <div className="p-8 text-center rounded-lg border">
+            <div className="p-8 text-center rounded-lg border" data-testid="lien-search-empty">
               <CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-2" />
               <p className="font-medium text-green-700">No Liens Found</p>
               <p className="text-sm text-muted-foreground">This asset has no registered security interests in your country. It appears to be free from encumbrance.</p>

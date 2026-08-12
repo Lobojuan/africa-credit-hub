@@ -63,29 +63,37 @@ export function encryptPII(plaintext: string): string {
   return `enc:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted}`;
 }
 
+/**
+ * Decrypt PII ciphertext. Fails closed: throws on any decryption failure.
+ * Never returns the raw ciphertext on error — that would leak data.
+ */
 export function decryptPII(ciphertext: string): string {
   if (!ciphertext) return ciphertext;
   if (!ciphertext.startsWith("enc:")) return ciphertext;
 
-  try {
-    const parts = ciphertext.split(":");
-    if (parts.length !== 4) return ciphertext;
-
-    const iv = Buffer.from(parts[1], "hex");
-    const authTag = Buffer.from(parts[2], "hex");
-    const encrypted = parts[3];
-
-    const key = getEncryptionKey();
-    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
-    decipher.setAuthTag(authTag);
-
-    let decrypted = decipher.update(encrypted, "hex", "utf8");
-    decrypted += decipher.final("utf8");
-    return decrypted;
-  } catch (e: any) {
-    console.error("[Encryption] decryptPII failed — returning raw value. Check PII_ENCRYPTION_KEY/SALT:", e?.message);
-    return ciphertext;
+  const parts = ciphertext.split(":");
+  if (parts.length !== 4) {
+    throw new Error("[Encryption] decryptPII failed: malformed ciphertext (expected 4 colon-separated parts).");
   }
+
+  const iv = Buffer.from(parts[1], "hex");
+  const authTag = Buffer.from(parts[2], "hex");
+  const encrypted = parts[3];
+
+  if (iv.length !== IV_LENGTH) {
+    throw new Error("[Encryption] decryptPII failed: invalid IV length.");
+  }
+  if (authTag.length !== AUTH_TAG_LENGTH) {
+    throw new Error("[Encryption] decryptPII failed: invalid auth tag length.");
+  }
+
+  const key = getEncryptionKey();
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv, { authTagLength: AUTH_TAG_LENGTH });
+  decipher.setAuthTag(authTag);
+
+  let decrypted = decipher.update(encrypted, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
 }
 
 const PII_FIELDS = [

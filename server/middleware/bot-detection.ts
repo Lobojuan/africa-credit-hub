@@ -1,17 +1,18 @@
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "../storage";
+import { isPublicSeoPath } from "../seo-public-routes";
 
 const KNOWN_SCRAPERS = [
   "python-requests", "python-urllib", "scrapy", "wget", "curl/",
   "httpie", "go-http-client", "java/", "libwww-perl", "lwp-trivial",
   "mj12bot", "ahrefsbot", "semrushbot", "dotbot", "petalbot",
   "yandexbot", "baiduspider", "ia_archiver", "archive.org",
-  "googlebot", "bingbot", "slurp",
+  "slurp",
 ];
 
 const EXEMPT_PATHS = new Set([
   "/", "/login", "/register", "/consumer-portal",
-  "/health", "/ready", "/live", "/ping", "/robots.txt", "/sitemap.xml",
+  "/health", "/ready", "/live", "/ping", "/api/health", "/robots.txt", "/sitemap.xml",
   "/api/auth/csrf-token", "/api/auth/login", "/api/consumer/login",
   "/api/consumer/register", "/api/loto/ussd/session", "/api/stripe/webhook",
   "/api/platform/status", "/api/monitoring/health",
@@ -44,6 +45,14 @@ export function botDetectionMiddleware(req: Request, res: Response, next: NextFu
   const ua = (req.headers["user-agent"] || "").toLowerCase();
   const accept = req.headers["accept"] || "";
   const acceptLang = req.headers["accept-language"] || "";
+
+  // Public marketing pages are deliberately crawlable. This is not an access
+  // control boundary: those pages contain no account, customer, or bank data.
+  // API and authenticated routes continue through the anti-automation checks.
+  const isSearchCrawler = ua.includes("googlebot") || ua.includes("bingbot");
+  if (isSearchCrawler && isPublicSeoPath(req.path)) {
+    return next();
+  }
 
   const isScraper = ua.length > 0 && KNOWN_SCRAPERS.some(s => ua.includes(s));
   const missingBrowserHeaders = ua.length > 0 && (!accept || !acceptLang);

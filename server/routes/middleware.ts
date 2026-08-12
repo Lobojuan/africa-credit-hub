@@ -197,13 +197,29 @@ export function stripPassword(user: any) {
   return safe;
 }
 
+function enforceMfaEnrollment(req: Request, res: Response): boolean {
+  if (!req.session?.mfaEnrollmentRequired) return false;
+  const allowedPaths = ["/api/auth/me", "/api/auth/logout", "/api/auth/csrf-token"];
+  const isAllowed = allowedPaths.includes(req.path) || req.path.startsWith("/api/auth/mfa/");
+  if (isAllowed) return false;
+  res.status(403).json({ message: "MFA_ENROLLMENT_REQUIRED", reason: "Set up multi-factor authentication before accessing UCH." });
+  return true;
+}
+
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // A USSD aggregator is an external machine client, not a staff browser. Its
+  // route validates the dedicated LOTO_USSD_TOKEN and optional HMAC signature;
+  // do not require a platform session before that validation can run.
+  if (req.method === "POST" && [req.url, req.originalUrl, req.path].some((value) => value.includes("/loto/ussd/session"))) {
+    return next();
+  }
   if ((req.session as any)?.consumerId && !req.session?.userId) {
     return res.status(403).json({ message: "Access denied: consumer accounts cannot access institution endpoints" });
   }
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Authentication required" });
   }
+  if (enforceMfaEnrollment(req, res)) return;
   if (!isPlatformPrivileged(req.session.userRole) && req.session.organizationId) {
     const org = await storage.getOrganization(req.session.organizationId);
     if (org && org.status === "suspended") {
@@ -237,6 +253,7 @@ export function isPlatformPrivileged(role: string | undefined): boolean {
 
 export function requireRole(...roles: string[]) {
   return (req: Request, res: Response, next: NextFunction) => {
+    if (enforceMfaEnrollment(req, res)) return;
     const role = req.session?.userRole;
     if (!role || (!roles.includes(role) && !isPlatformPrivileged(role))) {
       return res.status(403).json({ message: "Insufficient permissions" });

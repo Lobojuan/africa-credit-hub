@@ -429,6 +429,22 @@ export async function sendConsumerVerificationLink(email: string, token: string,
   return sendEmail(email, "Verify Your Account — Universal Credit Hub", createEmailHtml("Email Verification", body));
 }
 
+export async function sendStaffPasswordResetEmail(email: string, token: string, baseUrl: string): Promise<boolean> {
+  const link = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  return sendEmail(email, "Reset your Universal Credit Hub password", createEmailHtml("Password reset", `
+    <p style="color:#333;font-size:14px;line-height:1.6;">A password reset was requested for your staff account.</p>
+    <div style="text-align:center;margin:28px 0;"><a href="${link}" style="display:inline-block;background:#1a1a2e;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Reset password</a></div>
+    <p style="color:#666;font-size:12px;">This single-use link expires in 30 minutes. If you did not request it, contact your bank administrator.</p>`));
+}
+
+export async function sendStaffInvitationEmail(email: string, organizationName: string, token: string, baseUrl: string): Promise<boolean> {
+  const link = `${baseUrl}/activate-account?token=${encodeURIComponent(token)}`;
+  return sendEmail(email, `You're invited to ${organizationName} on Universal Credit Hub`, createEmailHtml("Activate your staff account", `
+    <p style="color:#333;font-size:14px;line-height:1.6;">Your bank administrator invited you to join <strong>${esc(organizationName)}</strong> on Universal Credit Hub.</p>
+    <div style="text-align:center;margin:28px 0;"><a href="${link}" style="display:inline-block;background:#1a1a2e;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Activate account</a></div>
+    <p style="color:#666;font-size:12px;">This single-use link expires in 72 hours. You will set a password and enrol MFA before using sensitive bank workspaces.</p>`));
+}
+
 export async function sendContactSalesEmail(data: { name: string; email: string; phone?: string; organization: string; title?: string; country?: string; tier?: string; message?: string }): Promise<boolean> {
   const adminEmail = process.env.ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
   const tierLabel = data.tier === "commercial" ? "Commercial" : data.tier === "sovereign" ? "Sovereign" : data.tier || "Not specified";

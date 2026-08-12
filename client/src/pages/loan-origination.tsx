@@ -139,10 +139,10 @@ function NewApplicationDialog({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div>
             <Label>Collateral Type (optional)</Label>
-            <Select value={form.collateralType} onValueChange={v => setForm(f => ({ ...f, collateralType: v }))}>
+            <Select value={form.collateralType || "none"} onValueChange={v => setForm(f => ({ ...f, collateralType: v === "none" ? "" : v }))}>
               <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None</SelectItem>
+                <SelectItem value="none">None</SelectItem>
                 <SelectItem value="real_estate">Real Estate</SelectItem>
                 <SelectItem value="vehicle">Vehicle</SelectItem>
                 <SelectItem value="equipment">Equipment</SelectItem>
@@ -345,14 +345,19 @@ export default function LoanOriginationPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
 
-  const { data: loans = [], isLoading, refetch } = useQuery<any[]>({
+  const { data: loanData, isLoading, isError, refetch } = useQuery<any[]>({
     queryKey: ["/api/loan-applications", statusFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter !== "all") params.set("status", statusFilter);
-      return fetch(`/api/loan-applications?${params}`, { credentials: "include" }).then(r => r.json());
+      const response = await fetch(`/api/loan-applications?${params}`, { credentials: "include" });
+      if (!response.ok) throw new Error("Unable to load loan applications");
+      const data = await response.json();
+      if (!Array.isArray(data)) throw new Error("Invalid loan application response");
+      return data;
     },
   });
+  const loans = Array.isArray(loanData) ? loanData : [];
 
   const stats = {
     total: loans.length,
@@ -378,6 +383,14 @@ export default function LoanOriginationPage() {
           <NewApplicationDialog onSuccess={() => queryClient.invalidateQueries({ queryKey: ["/api/loan-applications"] })} />
         </div>
       </div>
+
+      {isError && (
+        <Card data-testid="card-loans-load-error">
+          <CardContent className="pt-6 text-sm text-destructive">
+            Loan applications could not be loaded. Please retry.
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card>

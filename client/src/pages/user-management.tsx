@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Plus, Pencil, Trash2, UserCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, X, CalendarDays, SlidersHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, UserCircle, Search, ArrowUpDown, ArrowUp, ArrowDown, X, CalendarDays, SlidersHorizontal, Send } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +67,7 @@ type SortDir = "desc" | "asc";
 export default function UserManagementPage() {
   const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<User | null>(null);
@@ -91,6 +92,10 @@ export default function UserManagementPage() {
     role: "viewer" as string, status: "active" as string, institution: "",
   });
 
+  const [inviteFormData, setInviteFormData] = useState({
+    username: "", fullName: "", email: "", role: "viewer", division: "",
+  });
+
   const [editFormData, setEditFormData] = useState({
     fullName: "", email: "", role: "", status: "", institution: "", password: "",
   });
@@ -108,6 +113,22 @@ export default function UserManagementPage() {
     },
     onError: (e: Error) => {
       toast({ title: t('common.error'), description: e.message, variant: "destructive" });
+    },
+  });
+
+  const inviteMutation = useMutation({
+    mutationFn: async (data: typeof inviteFormData) => {
+      const res = await apiRequest("POST", "/api/auth/staff-invitations", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setInviteDialogOpen(false);
+      setInviteFormData({ username: "", fullName: "", email: "", role: "viewer", division: "" });
+      toast({ title: "Staff invitation sent", description: "The recipient has 72 hours to set their password and activate their account." });
+    },
+    onError: (e: Error) => {
+      toast({ title: "Could not send invitation", description: e.message, variant: "destructive" });
     },
   });
 
@@ -233,19 +254,58 @@ export default function UserManagementPage() {
           </div>
           <p className="text-sm text-muted-foreground ml-4">{t('users.subtitle')}</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setTimeout(() => { setFormData({ username: "", password: "", fullName: "", email: "", role: "viewer", status: "active", institution: "" }); }, 200); } }}>
-          <DialogTrigger asChild>
-            <Button data-testid="button-add-user">
-              <Plus className="w-4 h-4 mr-2" />
-              {t('users.addUser')}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t('users.addNewUser')}</DialogTitle>
-              <DialogDescription className="sr-only">Dialog form content</DialogDescription>
-            </DialogHeader>
-            <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4" data-testid="form-add-user">
+        <div className="flex flex-wrap gap-2">
+          <Dialog open={inviteDialogOpen} onOpenChange={(open) => { setInviteDialogOpen(open); if (!open) setInviteFormData({ username: "", fullName: "", email: "", role: "viewer", division: "" }); }}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-invite-staff">
+                <Send className="w-4 h-4 mr-2" />
+                Invite staff
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Invite staff member</DialogTitle>
+                <DialogDescription>They receive a one-time link to choose their own password. The link expires after 72 hours.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); inviteMutation.mutate(inviteFormData); }} className="space-y-4" data-testid="form-invite-staff">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div><Label>Full name</Label><Input value={inviteFormData.fullName} onChange={(e) => setInviteFormData({ ...inviteFormData, fullName: e.target.value })} required /></div>
+                  <div><Label>Username</Label><Input value={inviteFormData.username} onChange={(e) => setInviteFormData({ ...inviteFormData, username: e.target.value })} required /></div>
+                </div>
+                <div><Label>Work email</Label><Input type="email" value={inviteFormData.email} onChange={(e) => setInviteFormData({ ...inviteFormData, email: e.target.value })} required /></div>
+                <div><Label>Division (optional)</Label><Input value={inviteFormData.division} onChange={(e) => setInviteFormData({ ...inviteFormData, division: e.target.value })} /></div>
+                <div>
+                  <Label>Role</Label>
+                  <Select value={inviteFormData.role} onValueChange={(role) => setInviteFormData({ ...inviteFormData, role })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">{t('users.roles.admin')}</SelectItem>
+                      <SelectItem value="regulator">{t('users.roles.regulator')}</SelectItem>
+                      <SelectItem value="lender">{t('users.roles.lender')}</SelectItem>
+                      <SelectItem value="viewer">{t('users.roles.viewer')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" className="w-full" disabled={inviteMutation.isPending} data-testid="button-submit-invitation">
+                  <Send className="w-4 h-4 mr-2" />
+                  {inviteMutation.isPending ? "Sending invitation…" : "Send secure invitation"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) { setTimeout(() => { setFormData({ username: "", password: "", fullName: "", email: "", role: "viewer", status: "active", institution: "" }); }, 200); } }}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-add-user">
+                <Plus className="w-4 h-4 mr-2" />
+                {t('users.addUser')}
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{t('users.addNewUser')}</DialogTitle>
+                <DialogDescription className="sr-only">Dialog form content</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(formData); }} className="space-y-4" data-testid="form-add-user">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div><Label>{t('users.username')}</Label><Input data-testid="input-username" value={formData.username} onChange={(e) => setFormData({ ...formData, username: e.target.value })} required /></div>
                 <div><Label>{t('users.password')}</Label><Input data-testid="input-password" type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} required /></div>
@@ -283,9 +343,10 @@ export default function UserManagementPage() {
               <Button type="submit" className="w-full" disabled={createMutation.isPending} data-testid="button-submit-user">
                 {createMutation.isPending ? t('users.creating') : t('users.createUser')}
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Edit dialog */}

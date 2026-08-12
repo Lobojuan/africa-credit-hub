@@ -15,10 +15,21 @@ async function gotoBatch(page: import("@playwright/test").Page) {
   await expect(page).not.toHaveURL(/\/login/, { timeout: 15000 });
 }
 
+async function requireGhanaFormat(page: import("@playwright/test").Page) {
+  if (await page.locator('[data-testid="tab-bog"]').count() === 0) {
+    test.skip(true, "BoG upload format is available only in Ghana country mode");
+  }
+}
+
 test.describe("Batch Upload — page structure", () => {
-  test("page loads XBRL/XML tab and BoG tab", async ({ page }) => {
+  test("page loads the universal XBRL/XML tab", async ({ page }) => {
     await gotoBatch(page);
     await expect(page.locator('[data-testid="tab-xbrl"]')).toBeVisible({ timeout: 12000 });
+  });
+
+  test("Ghana mode exposes the BoG tab", async ({ page }) => {
+    await gotoBatch(page);
+    await requireGhanaFormat(page);
     await expect(page.locator('[data-testid="tab-bog"]')).toBeVisible({ timeout: 12000 });
   });
 
@@ -32,6 +43,7 @@ test.describe("Batch Upload — page structure", () => {
 
   test("BoG tab has sample button, textarea, and submit button", async ({ page }) => {
     await gotoBatch(page);
+    await requireGhanaFormat(page);
     await page.click('[data-testid="tab-bog"]');
     await expect(page.locator('[data-testid="button-use-bog-sample"]')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('[data-testid="input-batch-bog"]')).toBeVisible({ timeout: 10000 });
@@ -79,6 +91,7 @@ test.describe("Batch Upload — XBRL sample fill and validation", () => {
 test.describe("Batch Upload — BoG format sample fill and validation", () => {
   test("use-bog-sample populates the BoG textarea with content", async ({ page }) => {
     await gotoBatch(page);
+    await requireGhanaFormat(page);
     await page.click('[data-testid="tab-bog"]');
     await page.waitForSelector('[data-testid="button-use-bog-sample"]', { timeout: 10000 });
     await page.click('[data-testid="button-use-bog-sample"]');
@@ -89,6 +102,7 @@ test.describe("Batch Upload — BoG format sample fill and validation", () => {
 
   test("submitting BoG sample produces a validation result", async ({ page }) => {
     await gotoBatch(page);
+    await requireGhanaFormat(page);
     await page.click('[data-testid="tab-bog"]');
     await page.waitForSelector('[data-testid="button-use-bog-sample"]', { timeout: 10000 });
     await page.click('[data-testid="button-use-bog-sample"]');

@@ -108,7 +108,7 @@ Once your institution is registered and approved, a CDH administrator will provi
 Verify your setup with the health check endpoint (no authentication required):
 
 ```bash
-curl https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/health
+curl https://universalcredithub.com/api/external/v1/health
 ```
 
 Expected response:
@@ -132,7 +132,7 @@ Include your API key in the `X-API-Key` header with every request:
 
 ```bash
 curl -X GET \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers/search?nationalId=ETH-ID-12345" \
+  "https://universalcredithub.com/api/external/v1/borrowers/search?nationalId=ETH-ID-12345" \
   -H "X-API-Key: sim_a1b2c3d4_e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4"
 ```
 
@@ -142,7 +142,7 @@ curl -X GET \
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/oauth/token" \
+  "https://universalcredithub.com/api/external/oauth/token" \
   -H "Content-Type: application/json" \
   -d '{
     "grant_type": "client_credentials",
@@ -165,7 +165,7 @@ Response:
 
 ```bash
 curl -X GET \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers/search?nationalId=ETH-ID-12345" \
+  "https://universalcredithub.com/api/external/v1/borrowers/search?nationalId=ETH-ID-12345" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIs..."
 ```
 
@@ -181,13 +181,13 @@ curl -X GET \
 ### Base URL
 
 ```
-https://cross-jurisdictional-cdh-v12.replit.app/api/external
+https://universalcredithub.com/api/external
 ```
 
 All versioned endpoints are under `/v1/`:
 
 ```
-https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/
+https://universalcredithub.com/api/external/v1/
 ```
 
 ### Required Headers
@@ -235,7 +235,7 @@ POST /api/external/v1/borrowers
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers" \
+  "https://universalcredithub.com/api/external/v1/borrowers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -261,7 +261,7 @@ curl -X POST \
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers" \
+  "https://universalcredithub.com/api/external/v1/borrowers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -311,7 +311,7 @@ POST /api/external/v1/credit-accounts
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/credit-accounts" \
+  "https://universalcredithub.com/api/external/v1/credit-accounts" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -379,7 +379,7 @@ POST /api/external/v1/payment-history
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/payment-history" \
+  "https://universalcredithub.com/api/external/v1/payment-history" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -415,7 +415,7 @@ POST /api/external/v1/court-judgments
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/court-judgments" \
+  "https://universalcredithub.com/api/external/v1/court-judgments" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{
@@ -459,7 +459,7 @@ GET /api/external/v1/borrowers/search?q=Nairobi+Trading
 
 ```bash
 curl -X GET \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers/search?nationalId=KEN-ID-789456" \
+  "https://universalcredithub.com/api/external/v1/borrowers/search?nationalId=KEN-ID-789456" \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -503,7 +503,7 @@ GET /api/external/v1/borrowers/:borrowerId/credit-report
 
 ```bash
 curl -X GET \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers/a1b2c3d4-e5f6-7890-abcd-ef1234567890/credit-report?purpose=new_credit" \
+  "https://universalcredithub.com/api/external/v1/borrowers/a1b2c3d4-e5f6-7890-abcd-ef1234567890/credit-report?purpose=new_credit" \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -582,7 +582,7 @@ GET /api/external/v1/credit-accounts/:borrowerId
 
 ```bash
 curl -X GET \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/credit-accounts/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  "https://universalcredithub.com/api/external/v1/credit-accounts/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -729,7 +729,7 @@ The borrowers, credit accounts, and payment history endpoints support batch subm
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers" \
+  "https://universalcredithub.com/api/external/v1/borrowers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '[
@@ -895,7 +895,7 @@ For consistency across the pan-African registry, we recommend the following form
 Start with the health check to confirm connectivity:
 
 ```bash
-curl https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/health
+curl https://universalcredithub.com/api/external/v1/health
 ```
 
 ### Test Your API Key
@@ -904,7 +904,7 @@ Try a borrower search to verify authentication:
 
 ```bash
 curl -X GET \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers/search?q=test" \
+  "https://universalcredithub.com/api/external/v1/borrowers/search?q=test" \
   -H "X-API-Key: YOUR_API_KEY"
 ```
 
@@ -914,7 +914,7 @@ Create a test borrower record to verify write access:
 
 ```bash
 curl -X POST \
-  "https://cross-jurisdictional-cdh-v12.replit.app/api/external/v1/borrowers" \
+  "https://universalcredithub.com/api/external/v1/borrowers" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: YOUR_API_KEY" \
   -d '{

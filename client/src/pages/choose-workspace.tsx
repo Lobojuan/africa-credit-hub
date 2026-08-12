@@ -16,13 +16,6 @@ import {
 import { WORKSPACE_STORAGE_KEY } from "@/hooks/use-active-workspace";
 import { writeActiveProduct, type ProductId } from "@/lib/products";
 
-function readStoredWorkspace(): WorkspaceId | null {
-  if (typeof window === "undefined") return null;
-  const v = window.localStorage.getItem(WORKSPACE_STORAGE_KEY);
-  if (v === "credit" || v === "collateral" || v === "loto" || v === "shared") return v;
-  return null;
-}
-
 export default function ChooseWorkspacePage() {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
@@ -39,8 +32,9 @@ export default function ChooseWorkspacePage() {
     document.title = `Choose your workspace — ${brand}`;
   }, [brand]);
 
-  // Auto-redirect: single-workspace users skip the chooser entirely.
-  // Multi-workspace users auto-resume their last chosen workspace.
+  // Single-workspace users skip the chooser. Everyone else arrives here by an
+  // explicit request from Today or the workspace switcher, so never silently
+  // resume a previous choice over the user's current intent.
   useEffect(() => {
     if (!user || accessible.length === 0) return;
     if (accessible.length === 1) {
@@ -51,13 +45,6 @@ export default function ChooseWorkspacePage() {
         window.dispatchEvent(new CustomEvent<WorkspaceId>("ach:active-workspace-changed", { detail: ws.id }));
       }
       if (ws.id !== "shared") writeActiveProduct(ws.id as ProductId);
-      setLocation(ws.landing);
-      return;
-    }
-    // Multi-workspace: resume last chosen workspace if still accessible.
-    const stored = readStoredWorkspace();
-    if (stored && accessibleIds.has(stored)) {
-      const ws = WORKSPACES[stored];
       setLocation(ws.landing);
     }
   }, [user, accessible, accessibleIds, setLocation]);

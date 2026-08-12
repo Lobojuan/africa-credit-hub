@@ -90,6 +90,6 @@ A pan-African infrastructure play priced at a fraction of any of these is asymme
 
 - **Founder:** [Your name]
 - **Email:** [founder@universalcredithub.com]
-- **Demo:** https://universalcredithub.replit.app — `johndoe` / `SecuredCreditor2026!`
-- **Investor walkthrough:** https://universalcredithub.replit.app — book a 30-min live demo
-- **Press kit:** https://universalcredithub.replit.app/press
+- **Demo:** https://universalcredithub.com — `johndoe` / `SecuredCreditor2026!`
+- **Investor walkthrough:** https://universalcredithub.com — book a 30-min live demo
+- **Press kit:** https://universalcredithub.com/press

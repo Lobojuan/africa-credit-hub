@@ -9,7 +9,7 @@ const logger = createLogger("oauth");
 // ─── Return-path sanitiser ────────────────────────────────────────────────────
 
 const ALLOWED_RETURN_PATHS = [
-  "/my-credit", "/start-trial", "/dashboard",
+  "/my-credit", "/start-trial", "/dashboard", "/today",
   "/solutions", "/pricing", "/ai-demo",
 ];
 
@@ -31,6 +31,14 @@ export function getGoogleRedirectUri(req: Request): string {
     return `${base}/api/consumer/auth/google/callback`;
   const protocol = req.get("x-forwarded-proto") || req.protocol || "https";
   return `${protocol}://${req.get("host")}/api/consumer/auth/google/callback`;
+}
+
+export function getInstitutionalGoogleRedirectUri(req: Request): string {
+  const base = getOAuthCallbackBase();
+  if (process.env.CANONICAL_URL || !req.get("host"))
+    return `${base}/api/auth/google/callback`;
+  const protocol = req.get("x-forwarded-proto") || req.protocol || "https";
+  return `${protocol}://${req.get("host")}/api/auth/google/callback`;
 }
 
 export function getMicrosoftRedirectUri(req: Request): string {
@@ -198,11 +206,23 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || "";
   const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || "";
   const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || "common";
+  const legacySamlAvailable = process.env.NODE_ENV !== "production" && process.env.PRODUCTION_MODE !== "true";
+
+  // This public, deliberately minimal status endpoint lets the login screen
+  // avoid advertising a provider that has not been configured. It exposes no
+  // client IDs, tenant IDs, or other credential material.
+  app.get("/api/auth/provider-status", (_req: Request, res: Response) => {
+    res.set("Cache-Control", "no-store");
+    res.json({
+      google: !!(GOOGLE_CLIENT_ID && GOOGLE_CLIENT_SECRET),
+      microsoft: !!(MICROSOFT_CLIENT_ID && MICROSOFT_CLIENT_SECRET),
+    });
+  });
 
   // ─── Google OAuth — consumer portal ─────────────────────────────────────────
 
   app.get("/api/consumer/auth/google", (req: Request, res: Response) => {
-    const returnTo = sanitizeReturnPath(req.query.from as string);
+    const returnTo = sanitizeReturnPath(req.query.from as string || "/today");
     if (!GOOGLE_CLIENT_ID) {
       return res.status(503).send(
         `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Google Sign-In</title></head>` +
@@ -303,32 +323,6 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
       const googleUser = await userResp.json() as Record<string, unknown>;
       if (!googleUser.email) return res.redirect(`${returnTo}?error=no_email`);
 
-      // Admin / institutional user path
-      const adminUser = await deps.findUserByEmail(googleUser.email as string);
-      if (adminUser && adminUser.status !== "suspended") {
-        const organization = adminUser.organizationId
-          ? await deps.getOrganization(adminUser.organizationId)
-          : null;
-        return req.session.regenerate((err) => {
-          if (err) return res.redirect("/login?error=session_error");
-          req.session.userId = adminUser.id;
-          req.session.userRole = adminUser.role;
-          req.session.organizationId = adminUser.organizationId || undefined;
-          req.session.lastActivity = Date.now();
-          if (isPlatformPrivileged(adminUser.role)) {
-            delete (req.session as unknown as Record<string, unknown>).viewingCountry;
-          } else if (organization?.country) {
-            req.session.userCountry = organization.country;
-          }
-          const dest = isPlatformPrivileged(adminUser.role) ? "/command-center" : "/dashboard";
-          logger.info(`[Admin][Google] Login user ${adminUser.id.slice(0, 8)}... role=${adminUser.role} → ${dest}`);
-          req.session.save((saveErr) => {
-            if (saveErr) return res.redirect("/login?error=session_error");
-            res.redirect(dest);
-          });
-        });
-      }
-
       // Consumer path
       let account = await deps.findConsumerByGoogleId(googleUser.id as string);
       if (!account) {
@@ -373,6 +367,94 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
     }
   });
 
+  // ─── Google OAuth — institutional staff only ────────────────────────────────
+  // This route deliberately never creates consumer accounts. A Google identity
+  // must map to an active, pre-provisioned UCH user before it receives a bank
+  // session.
+  app.get("/api/auth/google", (req: Request, res: Response) => {
+    const returnTo = sanitizeReturnPath(req.query.from as string);
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(503).send("Google workspace sign-in is not configured. Please use your bank credentials.");
+    }
+    const state = crypto.randomBytes(16).toString("hex");
+    const session = req.session as unknown as Record<string, unknown>;
+    session.institutionalGoogleOAuthState = state;
+    session.institutionalGoogleOAuthReturnTo = returnTo;
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: getInstitutionalGoogleRedirectUri(req),
+      response_type: "code",
+      scope: "openid email profile",
+      state,
+      prompt: "select_account",
+    });
+    req.session.save((err) => {
+      if (err) return res.status(500).send("Unable to start Google sign-in.");
+      res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+    });
+  });
+
+  app.get("/api/auth/google/callback", async (req: Request, res: Response) => {
+    const session = req.session as unknown as Record<string, unknown>;
+    const returnTo = session.institutionalGoogleOAuthReturnTo as string || "/today";
+    try {
+      const { code, state, error: oauthError } = req.query;
+      if (oauthError) return res.redirect(`/login?error=${oauthError}`);
+      if (!code || !state) return res.redirect(`/login?error=missing_params`);
+      if (state !== session.institutionalGoogleOAuthState) return res.redirect(`/login?error=invalid_state`);
+      delete session.institutionalGoogleOAuthState;
+
+      const tokenResp = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          code: code as string,
+          client_id: GOOGLE_CLIENT_ID,
+          client_secret: GOOGLE_CLIENT_SECRET,
+          redirect_uri: getInstitutionalGoogleRedirectUri(req),
+          grant_type: "authorization_code",
+        }).toString(),
+      });
+      const tokenData = await tokenResp.json() as Record<string, unknown>;
+      if (!tokenData.access_token) return res.redirect(`/login?error=token_failed`);
+
+      const userResp = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      });
+      const googleUser = await userResp.json() as Record<string, unknown>;
+      const email = googleUser.email as string | undefined;
+      if (!email) return res.redirect(`/login?error=no_email`);
+
+      const user = await deps.findUserByEmail(email);
+      if (!user || user.status !== "active") {
+        logger.warn("[Institutional][Google] Rejected unprovisioned or inactive identity", { email });
+        return res.redirect(`/login?error=not_authorized`);
+      }
+      const organization = user.organizationId ? await deps.getOrganization(user.organizationId) : null;
+      return req.session.regenerate((err) => {
+        if (err) return res.redirect("/login?error=session_error");
+        req.session.userId = user.id;
+        req.session.userRole = user.role;
+        req.session.organizationId = user.organizationId || undefined;
+        req.session.lastActivity = Date.now();
+        if (isPlatformPrivileged(user.role)) {
+          delete req.session.viewingCountry;
+        } else if (organization?.country) {
+          req.session.userCountry = organization.country;
+        }
+        const destination = isPlatformPrivileged(user.role) ? "/command-center" : returnTo;
+        req.session.save((saveErr) => {
+          if (saveErr) return res.redirect("/login?error=session_error");
+          logger.info(`[Institutional][Google] Login user ${user.id.slice(0, 8)}... role=${user.role} → ${destination}`);
+          res.redirect(destination);
+        });
+      });
+    } catch (e: unknown) {
+      logger.error("[Institutional][Google] OAuth error", { detail: (e as Error).message });
+      res.redirect("/login?error=auth_failed");
+    }
+  });
+
   app.get("/api/consumer/auth/apple", (_req: Request, res: Response) => {
     res.status(503).send(
       `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Apple Sign-In</title></head>` +
@@ -385,10 +467,10 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
     );
   });
 
-  // ─── Microsoft SSO ───────────────────────────────────────────────────────────
+  // ─── Microsoft Entra ID — institutional staff only ───────────────────────────
 
   app.get("/api/auth/microsoft", (req: Request, res: Response) => {
-    const returnTo = sanitizeReturnPath(req.query.from as string);
+    const returnTo = sanitizeReturnPath(req.query.from as string || "/today");
     if (!MICROSOFT_CLIENT_ID) {
       return res.status(503).send(
         `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Microsoft Sign-In</title></head>` +
@@ -417,7 +499,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
   });
 
   app.get("/api/auth/microsoft/callback", async (req: Request, res: Response) => {
-    const returnTo = (req.session as unknown as Record<string, unknown>).microsoftOAuthReturnTo as string || "/dashboard";
+    const returnTo = (req.session as unknown as Record<string, unknown>).microsoftOAuthReturnTo as string || "/today";
     try {
       const { code, state } = req.query;
       if (!code || !state) return res.redirect(`${returnTo}?error=missing_params`);
@@ -442,6 +524,10 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
           if (regenerateErr) return res.redirect("/login?error=session_error");
           req.session.userId = "e2e-ms-admin-test-user";
           req.session.userRole = "admin";
+          // Keep this mock identity out of audit_logs: unlike normal staff
+          // sessions it deliberately has no users-table row, and this marker
+          // is honored only by the non-production E2E guard.
+          req.session._testRole = "admin";
           req.session.lastActivity = Date.now();
           req.session.save((saveErr) => {
             if (saveErr) return res.redirect("/login?error=session_error");
@@ -507,19 +593,6 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
         });
       }
 
-      // Consumer path
-      const consumer = await deps.findMsConsumerByEmail(email);
-      if (consumer) {
-        return req.session.regenerate((err) => {
-          if (err) return res.redirect("/login?error=session_error");
-          (req.session as unknown as Record<string, unknown>).consumerId = consumer.id;
-          (req.session as unknown as Record<string, unknown>).consumerNationalId = consumer.nationalId;
-          req.session.lastActivity = Date.now();
-          logger.info(`[Consumer][Microsoft] Login consumer ${consumer.id.slice(0, 8)}...`);
-          req.session.save(() => res.redirect("/my-credit"));
-        });
-      }
-
       res.redirect(`/login?error=no_account&provider=microsoft&email=${encodeURIComponent(email)}`);
     } catch (e: unknown) {
       logger.error("[Microsoft] Callback error:", { detail: (e as Error).message });
@@ -538,9 +611,7 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
         value: base,
         source: canonicalConfigured
           ? "CANONICAL_URL env var"
-          : process.env.REPLIT_DOMAINS
-            ? "REPLIT_DOMAINS env var (fallback)"
-            : "hardcoded production default (fallback)",
+          : "hardcoded production default (fallback)",
         configured: canonicalConfigured,
         warning: !canonicalConfigured
           ? "Set CANONICAL_URL=https://universalcredithub.com in production secrets for stable OAuth callbacks."
@@ -567,7 +638,10 @@ export async function registerOAuthRoutes(app: Express, injectedDeps?: OAuthDeps
           callbackUrl: `${base}/api/auth/saml/callback`,
           metadataUrl: `${base}/api/auth/saml/metadata`,
           registerAt: "Your SAML IdP admin console → Service Provider ACS URL",
-          ready: !!(process.env.SAML_IDP_ENTRY_POINT && process.env.SAML_ISSUER),
+          ready: legacySamlAvailable && !!(process.env.SAML_IDP_ENTRY_POINT && process.env.SAML_ISSUER),
+          warning: legacySamlAvailable
+            ? null
+            : "SAML sign-in is deliberately disabled in production until its legacy parser is replaced with a cryptographically validated implementation.",
         },
       },
       smokeTestChecklist: [

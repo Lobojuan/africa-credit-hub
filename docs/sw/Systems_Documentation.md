@@ -763,7 +763,7 @@ Usanidi wa API ya nje kwa usimamizi wa kati.
 
 ### 7.1 Mazingira
 
-Mfumo umewekwa kama programu moja ya monolithic kwenye Replit:
+Mfumo umewekwa kama programu moja ya monolithic kwenye managed cloud platform:
 
 - **Mazingira ya Maendeleo:** Vite HMR kwa frontend, Express na nodemon kwa backend
 - **Mazingira ya Uzalishaji:** Vite build kwa frontend, esbuild kwa bundling ya backend

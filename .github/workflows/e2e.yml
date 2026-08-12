@@ -21,7 +21,9 @@ env:
   # Shared DB/env defaults used by all jobs
   DB_USER: postgres
   DB_PASSWORD: postgres
-  DB_NAME: testdb
+  # The name is intentionally explicit: Playwright refuses to use a database
+  # unless it is clearly isolated from developer and production data.
+  DB_NAME: universal_credit_hub_e2e
   DB_HOST: localhost
   DB_PORT: 5432
 
@@ -40,6 +42,11 @@ jobs:
     name: "Quality / TypeScript and Unit Tests"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # `test:e2e:list` loads Playwright configuration but does not start a
+    # server or connect to Postgres. Keep the URL explicit so the same
+    # isolated-database guard is exercised in this fast job.
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
 
     steps:
       - uses: actions/checkout@v5
@@ -76,7 +83,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
       SESSION_SECRET: ci-e2e-session-secret-2026-07-25-0123456789abcdef0123456789abcdef
       PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
       PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
@@ -142,7 +149,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
       SESSION_SECRET: ci-e2e-session-secret-2026-07-25-0123456789abcdef0123456789abcdef
       PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
       PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
@@ -208,7 +215,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
       SESSION_SECRET: ci-e2e-session-secret-2026-07-25-0123456789abcdef0123456789abcdef
       PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
       PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
@@ -243,14 +250,17 @@ jobs:
         run: npx playwright install-deps chromium firefox webkit
       - run: npm run db:push
       - run: npx playwright test --project=authenticated-firefox
-      - run: npx playwright test --project=authenticated-webkit
+      # WebKit is the Safari-engine compatibility gate. Run it serially: this
+      # avoids cross-test session and rendering interference while preserving
+      # deterministic evidence for a browser engine that is slower in CI.
+      - run: npx playwright test --project=authenticated-webkit --workers=1
       - if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-report-authenticated-cross-browser
           path: |
-            e2e/report/
-            e2e/test-results-artifacts/
+            test-results/
+            playwright-report/
           retention-days: 14
 
   # ──────────────────────────────────────────────────────────────────────────
@@ -277,7 +287,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
       SESSION_SECRET: ci-e2e-session-secret-2026-07-25-0123456789abcdef0123456789abcdef
       PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
       PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}
@@ -349,7 +359,7 @@ jobs:
           --health-retries 5
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/testdb
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/universal_credit_hub_e2e
       SESSION_SECRET: ci-e2e-session-secret-2026-07-25-0123456789abcdef0123456789abcdef
       PII_ENCRYPTION_KEY: ${{ secrets.PII_ENCRYPTION_KEY || 'Y2ktcGlpLWVuY3J5cHRpb24ta2V5LWZvci10ZXN0aW5n' }}
       PII_ENCRYPTION_SALT: ${{ secrets.PII_ENCRYPTION_SALT || 'Y2ktcGlpLXNhbHQtZm9yLXRlc3Rpbmctb25seQ==' }}

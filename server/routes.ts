@@ -35,6 +35,13 @@ import { registerOAuthRoutes, getGoogleRedirectUri, getMicrosoftRedirectUri } fr
 import { registerSamlRoutes, getSamlAcsUrl } from "./routes/saml";
 import { getAggregationCacheStats } from "./utils/aggregation-cache";
 import { getScoreCacheStats } from "./utils/score-cache";
+import { getBankIntegrationReadiness } from "./bank-integration-catalog";
+import { getNplMacroRiskProfile, getSectorSensitivity } from "./npl-macro-risk";
+import { calculateDraftEcl, type EclExposure, type EclScenario, type Ifrs9Policy } from "./ifrs9-provisioning";
+import { registerNplReductionPlanRoutes } from "./routes/npl-reduction-plan";
+import { registerLoanTapeReconciliationRoutes } from "./routes/loan-tape-reconciliation";
+import { registerNplCaseLedgerRoutes } from "./routes/npl-case-ledger";
+import { registerNplDecisionGovernanceRoutes } from "./routes/npl-decision-governance";
 import { storage, requireCountryScope, GLOBAL_SCOPE } from "./storage";
 import { db, pool } from "./db";
 import { sql, eq, and, or, desc, inArray, ilike, count, gte, min, max } from "drizzle-orm";
@@ -548,6 +555,10 @@ export async function registerRoutes(
       if (!ip.includes("127.0.0.1") && !ip.includes("::1") && !ip.includes("::ffff:127.0.0.1")) {
         return res.status(403).json({ message: "Test endpoint only accessible from localhost" });
       }
+      // Authenticated Playwright projects start from the same saved cookie.
+      // Always rotate it before assigning a test identity so parallel workers
+      // cannot overwrite one another's server-side session state.
+      const establishIsolatedTestSession = async () => {
       // Optional `username`: resolve a real seeded user's id/role/org server-side instead of
       // trusting a caller-supplied userId. A synthetic, non-existent userId passes this
       // endpoint fine but silently fails downstream at any route that loads the real user
@@ -560,6 +571,12 @@ export async function registerRoutes(
           userId: user.id,
           userRole: user.role,
           organizationId: user.organizationId ?? undefined,
+          // A fixture may intentionally use an inactive or expired seeded account
+          // to exercise role-specific UI. Keep that browser session focused on the
+          // requested screen instead of opening a real user's password/MFA prompt.
+          // This flag exists only behind the local, non-production E2E guard above.
+          e2eBypassSecurityPrompts: true,
+          mfaEnrollmentRequired: false,
         });
         // Test fixtures make a protected request immediately after this one.
         // Explicitly persist the session first so that behavior is identical
@@ -568,6 +585,39 @@ export async function registerRoutes(
         return req.session.save((err) => {
           if (err) return res.status(500).json({ message: "Failed to save test session" });
           res.json({ ok: true });
+        });
+      }
+      // Consumer portal routes intentionally require a real consumer-account
+      // record, not merely a shaped session. Create or reuse an isolated
+      // verified account for E2E fixtures so they exercise that same contract.
+      if (typeof req.body?.consumerNationalId === "string") {
+        const nationalId = req.body.consumerNationalId;
+        let [consumer] = await db.select().from(consumerAccounts)
+          .where(eq(consumerAccounts.nationalId, nationalId)).limit(1);
+        if (!consumer) {
+          [consumer] = await db.insert(consumerAccounts).values({
+            nationalId,
+            phone: `+233${crypto.randomInt(200000000, 999999999)}`,
+            passwordHash: await bcrypt.hash(crypto.randomBytes(24).toString("hex"), 10),
+            dateOfBirth: "1990-01-01",
+            fullName: "E2E Consumer",
+            country: "Ghana",
+            consentGiven: true,
+            verified: true,
+          }).returning();
+        }
+        Object.assign(req.session, {
+          ...req.body,
+          userId: null,
+          userRole: null,
+          organizationId: null,
+          consumerId: consumer.id,
+          consumerNationalId: nationalId,
+          _testRole: undefined,
+        });
+        return req.session.save((err) => {
+          if (err) return res.status(500).json({ message: "Failed to save test consumer session" });
+          res.json({ ok: true, consumerId: consumer.id });
         });
       }
       Object.assign(req.session, {
@@ -581,6 +631,15 @@ export async function registerRoutes(
       req.session.save((err) => {
         if (err) return res.status(500).json({ message: "Failed to save test session" });
         res.json({ ok: true });
+      });
+      };
+
+      req.session.regenerate((err) => {
+        if (err) return res.status(500).json({ message: "Failed to initialize isolated test session" });
+        void establishIsolatedTestSession().catch((error) => {
+          console.error("Failed to establish isolated test session", error);
+          if (!res.headersSent) res.status(500).json({ message: "Failed to establish test session" });
+        });
       });
     });
 
@@ -642,27 +701,84 @@ export async function registerRoutes(
     });
   }, 30000);
 
-  app.get("/api/health", async (_req, res) => {
-    let dbStatus = "ok";
-    try {
-      await pool.query("SELECT 1");
-    } catch {
-      dbStatus = "error";
+  // Safe, staff-visible integration inventory. This returns capability status
+  // only: never credentials, endpoints, or a means to activate a live bank.
+  app.get("/api/bank-integration-readiness", requireRole("admin", "super_admin", "lender", "regulator"), (_req, res) => {
+    res.json({ integrations: getBankIntegrationReadiness() });
+  });
+
+  // IFRS 9 policies are versioned evidence, never automatic accounting instructions.
+  // They use the existing maker-checker control: a maker submits a policy and a
+  // different authorised checker approves it through Pending Approvals.
+  const ifrs9PolicySchema = z.object({
+    id: z.string().min(3).max(100).regex(/^[a-z0-9][a-z0-9-]*$/),
+    version: z.string().min(1).max(100),
+    country: z.string().min(2).max(100),
+    effectiveDate: z.string().datetime(),
+    owner: z.string().min(2).max(200),
+    modelVersion: z.string().min(1).max(100),
+    sicrDaysPastDue: z.number().int().min(1).max(365),
+    defaultDaysPastDue: z.number().int().min(1).max(365),
+    cureMonthsRequired: z.number().int().min(1).max(60),
+    creditImpairedStatuses: z.array(z.string().min(1).max(80)).min(1).max(20),
+  }).superRefine((policy, ctx) => {
+    if (policy.defaultDaysPastDue <= policy.sicrDaysPastDue) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "defaultDaysPastDue must be greater than sicrDaysPastDue" });
     }
-    const uptimeSec = Math.round(process.uptime());
-    const totalChecks = uptimeChecks.length;
-    const okChecks = uptimeChecks.filter(c => c.status === "ok").length;
-    const uptimePct = totalChecks > 0 ? ((okChecks / totalChecks) * 100).toFixed(2) : "100.00";
-    res.json({
-      status: dbStatus === "ok" ? "healthy" : "degraded",
-      version: "2.8.0",
-      uptime: {
-        seconds: uptimeSec,
-        formatted: `${Math.floor(uptimeSec / 86400)}d ${Math.floor((uptimeSec % 86400) / 3600)}h ${Math.floor((uptimeSec % 3600) / 60)}m`,
-        slaPercentage: Number(uptimePct),
-      },
-      timestamp: new Date().toISOString(),
-    });
+  });
+  const ifrs9ScenariosSchema = z.array(z.object({
+    id: z.string().min(1).max(80), label: z.string().min(1).max(160),
+    weight: z.number().min(0).max(1), pdMultiplier: z.number().min(0).max(10), lgdMultiplier: z.number().min(0).max(10),
+  })).min(1).max(10).superRefine((scenarios, ctx) => {
+    const total = scenarios.reduce((sum, scenario) => sum + scenario.weight, 0);
+    if (Math.abs(total - 1) > 0.000001) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Scenario weights must total 1" });
+  });
+  const ifrs9SubmissionSchema = z.object({ policy: ifrs9PolicySchema, scenarios: ifrs9ScenariosSchema, evidenceReference: z.string().min(3).max(500) });
+  const ifrs9ExposureSchema = z.object({
+    grossCarryingAmount: z.number().nonnegative(), undrawnCommitment: z.number().nonnegative().optional(), creditConversionFactor: z.number().min(0).max(1).optional(),
+    effectiveInterestRateAnnual: z.number().min(0).max(1), pd12Month: z.number().min(0).max(1), lifetimePd: z.number().min(0).max(1), lgd: z.number().min(0).max(1),
+    lifetimeMonths: z.number().int().positive(), daysPastDue: z.number().int().nonnegative(), accountStatus: z.string().min(1).max(80),
+    restructured: z.boolean().optional(), previouslyCreditImpaired: z.boolean().optional(), monthsPerformingAfterCure: z.number().int().nonnegative().optional(),
+  });
+  type ApprovedIfrs9Policy = { policy: Ifrs9Policy & { effectiveDate: string; owner: string; modelVersion: string }; scenarios: EclScenario[]; evidenceReference: string };
+  const parseIfrs9Payload = (payload: string): ApprovedIfrs9Policy | null => {
+    try { return ifrs9SubmissionSchema.parse(JSON.parse(payload)); } catch { return null; }
+  };
+  const scopedIfrs9Approvals = async (req: Request) => {
+    const approvals = await storage.getPendingApprovals(getOrgScope(req), getCountryFilter(req));
+    return approvals.filter((approval) => approval.entityType === "ifrs9_policy" && approval.action === "SUBMIT_POLICY");
+  };
+
+  app.get("/api/ifrs9/policy-workspace", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const approvals = await scopedIfrs9Approvals(req);
+      const policies = approvals.map((approval) => ({ approval, payload: parseIfrs9Payload(approval.payload) })).filter((item): item is { approval: typeof approvals[number]; payload: ApprovedIfrs9Policy } => Boolean(item.payload));
+      const active = policies.filter(({ approval }) => approval.status === "approved").sort((a, b) => String(b.approval.reviewedAt || b.approval.createdAt).localeCompare(String(a.approval.reviewedAt || a.approval.createdAt)))[0] || null;
+      res.json({ active: active && { approvalId: active.approval.id, approvedAt: active.approval.reviewedAt, policy: active.payload.policy, scenarios: active.payload.scenarios, evidenceReference: active.payload.evidenceReference }, pending: policies.filter(({ approval }) => approval.status === "pending").map(({ approval, payload }) => ({ approvalId: approval.id, createdAt: approval.createdAt, policy: payload.policy, evidenceReference: payload.evidenceReference })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/ifrs9/policy-workspace", requireRole("admin", "lender"), async (req, res) => {
+    try {
+      const submission = ifrs9SubmissionSchema.parse(req.body);
+      const country = requireWriteCountry(getCountryFilter(req), "submit_ifrs9_policy");
+      if (submission.policy.country !== country) return res.status(400).json({ message: "Policy country must match your active country scope" });
+      const approval = await storage.createPendingApproval({ entityType: "ifrs9_policy", entityId: submission.policy.id, action: "SUBMIT_POLICY", payload: JSON.stringify(submission), requestedBy: req.session!.userId!, organizationId: getOrgScope(req), country });
+      await storage.createAuditLog({ action: "SUBMIT_IFRS9_POLICY", entity: "ifrs9_policy", entityId: approval.id, userId: req.session?.userId, organizationId: getOrgScope(req), details: `Submitted IFRS 9 policy ${submission.policy.id}@${submission.policy.version} for independent approval; evidence: ${submission.evidenceReference}`, ipAddress: req.ip || null });
+      res.status(201).json({ approvalId: approval.id, status: approval.status });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.post("/api/ifrs9/draft-ecl", requireRole("admin", "super_admin", "lender", "regulator"), async (req, res) => {
+    try {
+      const exposure = ifrs9ExposureSchema.parse(req.body);
+      const approvals = await scopedIfrs9Approvals(req);
+      const active = approvals.filter((approval) => approval.status === "approved").map((approval) => ({ approval, payload: parseIfrs9Payload(approval.payload) })).filter((item): item is { approval: typeof approvals[number]; payload: ApprovedIfrs9Policy } => Boolean(item.payload)).sort((a, b) => String(b.approval.reviewedAt || b.approval.createdAt).localeCompare(String(a.approval.reviewedAt || a.approval.createdAt)))[0];
+      if (!active) return res.status(409).json({ message: "A bank-approved IFRS 9 policy is required before draft ECL can be calculated" });
+      const result = calculateDraftEcl(exposure as EclExposure, active.payload.policy, active.payload.scenarios);
+      await storage.createAuditLog({ action: "CALCULATE_DRAFT_ECL", entity: "ifrs9_policy", entityId: active.approval.id, userId: req.session?.userId, organizationId: getOrgScope(req), details: `Draft ECL calculated using approved policy ${active.payload.policy.id}@${active.payload.policy.version}; no journal was posted`, ipAddress: req.ip || null });
+      res.json({ policy: { id: active.payload.policy.id, version: active.payload.policy.version, approvalId: active.approval.id }, result, postingPermitted: false });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.get("/api/heartbeat", async (_req, res) => {
@@ -2367,7 +2483,7 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.get("/api/compliance/queue", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const isSuper = isPlatformPrivileged(req.session?.userRole);
       const orgId = isSuper ? undefined : req.session?.organizationId;
@@ -2392,6 +2508,18 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/forgery-review", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const country = getCountryFilter(req) === GLOBAL_SCOPE ? null : getCountryFilter(req) || null;
+      const [identity, consent] = await Promise.all([
+        pool.query(`SELECT iv.id, iv.borrower_id, iv.provider, iv.method, iv.result, iv.confidence_score, iv.error_message, iv.created_at, b.first_name, b.last_name, b.company_name FROM identity_verifications iv JOIN borrowers b ON b.id=iv.borrower_id WHERE iv.result IN ('failed','manual_review','error') AND ($1::text IS NULL OR iv.organization_id=$1) AND ($2::text IS NULL OR b.country=$2) ORDER BY iv.created_at DESC LIMIT 100`, [orgId, country]),
+        pool.query(`SELECT c.id, c.borrower_id, c.granted_to, c.purpose, c.consent_method, c.data_subject_confirmed, c.expires_at, c.created_at, b.first_name, b.last_name, b.company_name FROM consent_records c JOIN borrowers b ON b.id=c.borrower_id WHERE c.status='active' AND (c.data_subject_confirmed=FALSE OR (c.expires_at IS NOT NULL AND c.expires_at <= NOW())) AND ($1::text IS NULL OR c.organization_id=$1) AND ($2::text IS NULL OR b.country=$2) ORDER BY c.created_at DESC LIMIT 100`, [orgId, country]),
+      ]);
+      res.json({ identity: identity.rows, consent: consent.rows });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
   // Helper: verify that the current session may access/modify a compliance record tied to a borrower
   const assertComplianceAccess = async (req: any, borrowerId: string): Promise<{ ok: true } | { ok: false; status: number; message: string }> => {
     const isSuper = req.session?.userRole === "super_admin";
@@ -2405,7 +2533,7 @@ export async function registerRoutes(
     return { ok: true };
   };
 
-  app.post("/api/compliance/watchlist-hits/:id/resolve", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.post("/api/compliance/watchlist-hits/:id/resolve", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const { status, notes } = req.body || {};
       if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
@@ -2432,7 +2560,7 @@ export async function registerRoutes(
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
-  app.post("/api/compliance/fraud-alerts/:id/resolve", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.post("/api/compliance/fraud-alerts/:id/resolve", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const { status, notes } = req.body || {};
       if (!["resolved", "false_positive", "investigating", "escalated"].includes(status)) {
@@ -2460,7 +2588,7 @@ export async function registerRoutes(
   });
 
   // Assign a fraud alert to a reviewer (assignment workflow)
-  app.post("/api/compliance/fraud-alerts/:id/assign", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+  app.post("/api/compliance/fraud-alerts/:id/assign", requireRole("admin", "super_admin", "regulator", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const { assigneeUserId } = req.body || {};
       if (!assigneeUserId || typeof assigneeUserId !== "string") {
@@ -2491,6 +2619,273 @@ export async function registerRoutes(
       } as any);
       res.json(updated);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Real-time transaction fraud screening ───────────────────────────────
+  // This endpoint is designed for a bank core/channel integration. The action
+  // is advisory: UCH records the risk decision and opens a human-review alert;
+  // it never settles, blocks, or reverses funds by itself.
+  const transactionFraudScreenSchema = z.object({
+    borrowerId: z.string().uuid(),
+    transactionReference: z.string().trim().min(4).max(200),
+    channel: z.string().trim().min(1).max(80),
+    amount: z.coerce.number().positive().max(999999999999),
+    currency: z.string().trim().length(3),
+    newBeneficiary: z.boolean().default(false),
+    deviceChanged: z.boolean().default(false),
+    unusualLocation: z.boolean().default(false),
+    failedAttempts: z.coerce.number().int().min(0).max(100).default(0),
+  });
+
+  app.get("/api/transaction-fraud-events", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT tfe.*, b.first_name, b.last_name, b.company_name
+        FROM transaction_fraud_events tfe JOIN borrowers b ON b.id = tfe.borrower_id
+        WHERE ($1::text IS NULL OR tfe.organization_id = $1) AND ($2::text IS NULL OR tfe.country = $2)
+        ORDER BY tfe.created_at DESC LIMIT 200
+      `, [orgId, country]);
+      res.json({ events: result.rows });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/transaction-fraud-events/screen", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const input = transactionFraudScreenSchema.parse(req.body);
+      const acl = await ensureBorrowerAccess(req, input.borrowerId);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const borrower = acl.borrower;
+      const signals: string[] = [];
+      let riskScore = 0;
+      if (input.amount >= 100000) { riskScore += 35; signals.push("High-value transaction"); }
+      else if (input.amount >= 25000) { riskScore += 15; signals.push("Elevated transaction value"); }
+      if (input.newBeneficiary) { riskScore += 20; signals.push("New beneficiary"); }
+      if (input.deviceChanged) { riskScore += 20; signals.push("New or changed device"); }
+      if (input.unusualLocation) { riskScore += 25; signals.push("Unusual location"); }
+      if (input.failedAttempts >= 5) { riskScore += 35; signals.push(`${input.failedAttempts} failed attempts`); }
+      else if (input.failedAttempts >= 3) { riskScore += 15; signals.push(`${input.failedAttempts} failed attempts`); }
+      riskScore = Math.min(100, riskScore);
+      const action = riskScore >= 60 ? "hold_for_review" : riskScore >= 30 ? "step_up_authentication" : "allow";
+      const eventResult = await pool.query(`
+        INSERT INTO transaction_fraud_events
+          (borrower_id, transaction_reference, channel, amount, currency, new_beneficiary, device_changed, unusual_location, failed_attempts, risk_score, action, signals, organization_id, country)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,$14)
+        ON CONFLICT (organization_id, transaction_reference) DO UPDATE SET risk_score=EXCLUDED.risk_score, action=EXCLUDED.action, signals=EXCLUDED.signals, created_at=NOW()
+        RETURNING *
+      `, [input.borrowerId, input.transactionReference, input.channel, input.amount, input.currency.toUpperCase(), input.newBeneficiary, input.deviceChanged, input.unusualLocation, input.failedAttempts, riskScore, action, JSON.stringify(signals), borrower.organizationId ?? null, borrower.country]);
+      const event = eventResult.rows[0];
+      let alertId: string | null = null;
+      if (action === "hold_for_review") {
+        const existing = await pool.query(`SELECT id FROM fraud_alerts WHERE organization_id IS NOT DISTINCT FROM $1 AND rule_code=$2 LIMIT 1`, [borrower.organizationId ?? null, `TXN_${input.transactionReference}`]);
+        if (existing.rows[0]) alertId = existing.rows[0].id;
+        else {
+          const alert = await db.insert(fraudAlerts).values({
+            borrowerId: input.borrowerId, organizationId: borrower.organizationId ?? null,
+            ruleCode: `TXN_${input.transactionReference}`,
+            ruleDescription: `Transaction held for human fraud review: ${signals.join(", ") || "risk threshold exceeded"}`,
+            severity: riskScore >= 80 ? "critical" : "high",
+            evidence: JSON.stringify({ transactionReference: input.transactionReference, channel: input.channel, amount: input.amount, currency: input.currency.toUpperCase(), riskScore, signals, eventId: event.id }),
+          }).returning({ id: fraudAlerts.id });
+          alertId = alert[0]?.id ?? null;
+        }
+      }
+      await storage.createAuditLog({ action: "SCREEN_TRANSACTION_FRAUD", entity: "transaction_fraud_event", entityId: event.id, userId: req.session?.userId, details: JSON.stringify({ transactionReference: input.transactionReference, riskScore, action, signals, alertId }), ipAddress: req.ip || null });
+      res.status(201).json({ event, decision: { riskScore, action, signals, humanReviewAlertId: alertId } });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  // ─── Funding & prudential radar ─────────────────────────────────────────
+  // UCH does not fabricate CAR/LCR information from the credit portfolio. A
+  // treasury/finance user submits the source values, then a separate reviewer
+  // approves or rejects the snapshot before it is treated as bank-health data.
+  const prudentialSnapshotSchema = z.object({
+    reportingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Reporting date must use YYYY-MM-DD"),
+    regulatoryCapital: z.coerce.number().min(0).max(999999999999999),
+    riskWeightedAssets: z.coerce.number().positive().max(999999999999999),
+    liquidAssets: z.coerce.number().min(0).max(999999999999999),
+    netCashOutflows30d: z.coerce.number().positive().max(999999999999999),
+    totalDeposits: z.coerce.number().positive().max(999999999999999),
+    top20Deposits: z.coerce.number().min(0).max(999999999999999),
+    impairedExposure: z.coerce.number().min(0).max(999999999999999),
+    totalCreditExposure: z.coerce.number().positive().max(999999999999999),
+    capitalMinimumPct: z.coerce.number().min(0).max(100).optional(),
+    liquidityMinimumPct: z.coerce.number().min(0).max(100).optional(),
+    sourceReference: z.string().trim().max(200).optional(),
+    notes: z.string().trim().max(2000).optional(),
+  }).superRefine((data, ctx) => {
+    if (data.top20Deposits > data.totalDeposits) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["top20Deposits"], message: "Top-20 deposits cannot exceed total deposits" });
+    if (data.impairedExposure > data.totalCreditExposure) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["impairedExposure"], message: "Impaired exposure cannot exceed total credit exposure" });
+  });
+  const prudentialReviewSchema = z.object({ status: z.enum(["approved", "rejected"]), reviewNotes: z.string().trim().min(3).max(2000) });
+  const prudentialMetrics = (row: any) => {
+    const ratio = (numerator: unknown, denominator: unknown) => Math.round((Number(numerator) / Number(denominator)) * 10000) / 100;
+    const car = ratio(row.regulatory_capital, row.risk_weighted_assets);
+    const liquidity = ratio(row.liquid_assets, row.net_cash_outflows_30d);
+    const depositConcentration = ratio(row.top_20_deposits, row.total_deposits);
+    const impairment = ratio(row.impaired_exposure, row.total_credit_exposure);
+    const signals = [
+      row.capital_minimum_pct !== null && row.capital_minimum_pct !== undefined && car < Number(row.capital_minimum_pct) ? "Capital ratio below the institution policy limit" : null,
+      row.liquidity_minimum_pct !== null && row.liquidity_minimum_pct !== undefined && liquidity < Number(row.liquidity_minimum_pct) ? "Liquidity ratio below the institution policy limit" : null,
+      depositConcentration >= 40 ? "Top-20 deposit concentration requires treasury review" : null,
+      impairment >= 10 ? "Impaired-exposure ratio requires credit-risk review" : null,
+    ].filter(Boolean);
+    return { car, liquidity, depositConcentration, impairment, signals };
+  };
+
+  app.get("/api/prudential-snapshots", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT ps.*, submitter.full_name AS submitted_by_name, reviewer.full_name AS reviewed_by_name
+        FROM prudential_snapshots ps
+        JOIN users submitter ON submitter.id = ps.submitted_by
+        LEFT JOIN users reviewer ON reviewer.id = ps.reviewed_by
+        WHERE ($1::text IS NULL OR ps.organization_id = $1) AND ($2::text IS NULL OR ps.country = $2)
+        ORDER BY ps.reporting_date DESC, ps.created_at DESC LIMIT 180
+      `, [orgId, country]);
+      res.json({ snapshots: result.rows.map(row => ({ ...row, metrics: prudentialMetrics(row) })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/prudential-snapshots", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const organizationId = getOrgScope(req);
+      const requestedCountry = getCountryFilter(req);
+      if (!organizationId) return res.status(400).json({ message: "Select an institution before submitting a prudential snapshot" });
+      if (requestedCountry === GLOBAL_SCOPE) return res.status(400).json({ message: "Select a country before submitting a prudential snapshot" });
+      const country = requireWriteCountry(requestedCountry, "createPrudentialSnapshot");
+      const input = prudentialSnapshotSchema.parse(req.body);
+      const submittedBy = req.session?.userId;
+      if (!submittedBy) return res.status(401).json({ message: "Not authenticated" });
+      const result = await pool.query(`
+        INSERT INTO prudential_snapshots
+          (organization_id, country, reporting_date, regulatory_capital, risk_weighted_assets, liquid_assets, net_cash_outflows_30d, total_deposits, top_20_deposits, impaired_exposure, total_credit_exposure, capital_minimum_pct, liquidity_minimum_pct, source_reference, notes, submitted_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *
+      `, [organizationId, country, input.reportingDate, input.regulatoryCapital, input.riskWeightedAssets, input.liquidAssets, input.netCashOutflows30d, input.totalDeposits, input.top20Deposits, input.impairedExposure, input.totalCreditExposure, input.capitalMinimumPct ?? null, input.liquidityMinimumPct ?? null, input.sourceReference || null, input.notes || null, submittedBy]);
+      const snapshot = result.rows[0];
+      await storage.createAuditLog({ action: "SUBMIT_PRUDENTIAL_SNAPSHOT", entity: "prudential_snapshot", entityId: snapshot.id, userId: submittedBy, details: JSON.stringify({ reportingDate: input.reportingDate, sourceReference: input.sourceReference || null }), ipAddress: req.ip || null, organizationId });
+      res.status(201).json({ snapshot: { ...snapshot, metrics: prudentialMetrics(snapshot) } });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/prudential-snapshots/:id/review", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const reviewerId = req.session?.userId;
+      if (!reviewerId) return res.status(401).json({ message: "Not authenticated" });
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM prudential_snapshots WHERE id=$1 AND ($2::text IS NULL OR organization_id=$2) AND ($3::text IS NULL OR country=$3)`, [req.params.id, orgId, country]);
+      const snapshot = existing.rows[0];
+      if (!snapshot) return res.status(404).json({ message: "Prudential snapshot not found" });
+      if (snapshot.status !== "submitted") return res.status(409).json({ message: "Only submitted snapshots can be reviewed" });
+      if (snapshot.submitted_by === reviewerId) return res.status(403).json({ message: "Maker-checker control: the submitter cannot review this snapshot" });
+      const review = prudentialReviewSchema.parse(req.body);
+      const result = await pool.query(`UPDATE prudential_snapshots SET status=$1, reviewed_by=$2, review_notes=$3, reviewed_at=NOW(), updated_at=NOW() WHERE id=$4 RETURNING *`, [review.status, reviewerId, review.reviewNotes, snapshot.id]);
+      const updated = result.rows[0];
+      await storage.createAuditLog({ action: "REVIEW_PRUDENTIAL_SNAPSHOT", entity: "prudential_snapshot", entityId: updated.id, userId: reviewerId, details: JSON.stringify({ status: review.status, reportingDate: updated.reporting_date }), ipAddress: req.ip || null, organizationId: updated.organization_id });
+      res.json({ snapshot: { ...updated, metrics: prudentialMetrics(updated) } });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  // ─── RegTech evidence packs ─────────────────────────────────────────────
+  // This is a filing-control record, not a regulator connection. A recorded
+  // submission reference is evidence supplied by staff and must not be read as
+  // proof that UCH transmitted a filing or that the authority accepted it.
+  const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD");
+  const evidencePackSchema = z.object({
+    title: z.string().trim().min(4).max(160),
+    regulator: z.string().trim().min(2).max(120),
+    directiveReference: z.string().trim().max(160).optional(),
+    reportingPeriodStart: isoDate,
+    reportingPeriodEnd: isoDate,
+    dueDate: isoDate,
+    evidenceReferences: z.array(z.string().trim().min(2).max(300)).min(1).max(30),
+  }).superRefine((data, ctx) => {
+    if (data.reportingPeriodStart > data.reportingPeriodEnd) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["reportingPeriodEnd"], message: "Reporting-period end must be on or after its start" });
+  });
+  const evidencePackReviewSchema = z.object({ status: z.enum(["approved", "rejected"]), reviewNotes: z.string().trim().min(3).max(2000) });
+  const evidencePackSubmissionSchema = z.object({ submissionReference: z.string().trim().min(3).max(240) });
+
+  app.get("/api/regulatory-evidence-packs", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT rep.*, preparer.full_name AS prepared_by_name, reviewer.full_name AS reviewed_by_name, recorder.full_name AS submission_recorded_by_name
+        FROM regulatory_evidence_packs rep
+        JOIN users preparer ON preparer.id = rep.prepared_by
+        LEFT JOIN users reviewer ON reviewer.id = rep.reviewed_by
+        LEFT JOIN users recorder ON recorder.id = rep.submission_recorded_by
+        WHERE ($1::text IS NULL OR rep.organization_id=$1) AND ($2::text IS NULL OR rep.country=$2)
+        ORDER BY rep.due_date ASC, rep.created_at DESC LIMIT 200
+      `, [orgId, country]);
+      const today = new Date().toISOString().slice(0, 10);
+      res.json({ packs: result.rows.map(row => ({ ...row, deadlineState: row.status === "submission_recorded" ? "recorded" : row.due_date < today ? "overdue" : row.due_date <= new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10) ? "due_soon" : "scheduled" })) });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/regulatory-evidence-packs", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const organizationId = getOrgScope(req);
+      const requestedCountry = getCountryFilter(req);
+      if (!organizationId) return res.status(400).json({ message: "Select an institution before preparing an evidence pack" });
+      if (requestedCountry === GLOBAL_SCOPE) return res.status(400).json({ message: "Select a country before preparing an evidence pack" });
+      const country = requireWriteCountry(requestedCountry, "createRegulatoryEvidencePack");
+      const input = evidencePackSchema.parse(req.body);
+      const preparedBy = req.session?.userId;
+      if (!preparedBy) return res.status(401).json({ message: "Not authenticated" });
+      const result = await pool.query(`
+        INSERT INTO regulatory_evidence_packs (organization_id,country,title,regulator,directive_reference,reporting_period_start,reporting_period_end,due_date,evidence_references,prepared_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10) RETURNING *
+      `, [organizationId, country, input.title, input.regulator, input.directiveReference || null, input.reportingPeriodStart, input.reportingPeriodEnd, input.dueDate, JSON.stringify(input.evidenceReferences), preparedBy]);
+      const pack = result.rows[0];
+      await storage.createAuditLog({ action: "PREPARE_REGULATORY_EVIDENCE_PACK", entity: "regulatory_evidence_pack", entityId: pack.id, userId: preparedBy, details: JSON.stringify({ title: input.title, dueDate: input.dueDate, evidenceCount: input.evidenceReferences.length }), ipAddress: req.ip || null, organizationId });
+      res.status(201).json({ pack });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/regulatory-evidence-packs/:id/review", requireRole("admin", "super_admin", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const reviewerId = req.session?.userId;
+      if (!reviewerId) return res.status(401).json({ message: "Not authenticated" });
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM regulatory_evidence_packs WHERE id=$1 AND ($2::text IS NULL OR organization_id=$2) AND ($3::text IS NULL OR country=$3)`, [req.params.id, orgId, country]);
+      const pack = existing.rows[0];
+      if (!pack) return res.status(404).json({ message: "Evidence pack not found" });
+      if (pack.status !== "ready_for_review") return res.status(409).json({ message: "Only packs ready for review can be reviewed" });
+      if (pack.prepared_by === reviewerId) return res.status(403).json({ message: "Maker-checker control: the preparer cannot review this evidence pack" });
+      const review = evidencePackReviewSchema.parse(req.body);
+      const result = await pool.query(`UPDATE regulatory_evidence_packs SET status=$1, reviewed_by=$2, review_notes=$3, reviewed_at=NOW(), updated_at=NOW() WHERE id=$4 RETURNING *`, [review.status, reviewerId, review.reviewNotes, pack.id]);
+      await storage.createAuditLog({ action: "REVIEW_REGULATORY_EVIDENCE_PACK", entity: "regulatory_evidence_pack", entityId: pack.id, userId: reviewerId, details: JSON.stringify({ title: pack.title, status: review.status }), ipAddress: req.ip || null, organizationId: pack.organization_id });
+      res.json({ pack: result.rows[0] });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/regulatory-evidence-packs/:id/record-submission", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const recorderId = req.session?.userId;
+      if (!recorderId) return res.status(401).json({ message: "Not authenticated" });
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM regulatory_evidence_packs WHERE id=$1 AND ($2::text IS NULL OR organization_id=$2) AND ($3::text IS NULL OR country=$3)`, [req.params.id, orgId, country]);
+      const pack = existing.rows[0];
+      if (!pack) return res.status(404).json({ message: "Evidence pack not found" });
+      if (pack.status !== "approved") return res.status(409).json({ message: "Only an approved evidence pack can have a submission recorded" });
+      const input = evidencePackSubmissionSchema.parse(req.body);
+      const result = await pool.query(`UPDATE regulatory_evidence_packs SET status='submission_recorded', submission_reference=$1, submission_recorded_by=$2, submission_recorded_at=NOW(), updated_at=NOW() WHERE id=$3 RETURNING *`, [input.submissionReference, recorderId, pack.id]);
+      await storage.createAuditLog({ action: "RECORD_REGULATORY_SUBMISSION", entity: "regulatory_evidence_pack", entityId: pack.id, userId: recorderId, details: JSON.stringify({ title: pack.title, submissionReference: input.submissionReference, assertion: "Recorded by staff; no regulator-delivery claim" }), ipAddress: req.ip || null, organizationId: pack.organization_id });
+      res.json({ pack: result.rows[0] });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
   });
 
   app.get("/api/borrowers/:id/alternative-data", requireRole("admin", "super_admin", "regulator", "lender"), async (req, res) => {
@@ -3571,6 +3966,47 @@ export async function registerRoutes(
     } catch (e: any) {
       res.status(500).json({ message: safeErrorMessage(e) });
     }
+  });
+
+  // An explainable triage view over the tamper-evident audit trail. It flags
+  // review signals only; it deliberately does not label a staff member as
+  // fraudulent or take any employment/access action automatically.
+  app.get("/api/insider-risk-review", requireRole("admin", "regulator", "super_admin"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const country = getCountryFilter(req);
+      const scopedCountry = country === GLOBAL_SCOPE ? null : country || null;
+      const result = await pool.query(`
+        WITH scoped_logs AS (
+          SELECT al.* FROM audit_logs al
+          LEFT JOIN users u ON u.id = al.user_id
+          WHERE al.created_at >= NOW() - INTERVAL '24 hours'
+            AND ($1::text IS NULL OR al.organization_id = $1 OR u.organization_id = $1)
+            AND ($2::text IS NULL OR u.organization_id IS NULL OR EXISTS (SELECT 1 FROM organizations o WHERE o.id = u.organization_id AND o.country = $2))
+        )
+        SELECT sl.user_id, COALESCE(u.full_name, 'System or removed user') AS full_name, u.email, u.role,
+               COUNT(*)::int AS activity_count,
+               COUNT(DISTINCT sl.ip_address)::int AS ip_count,
+               COUNT(*) FILTER (WHERE sl.action ~* '(DELETE|ERASURE|EXPORT|PASSWORD|USER|CHAIN_REPAIR|APPROVE)')::int AS sensitive_count,
+               ARRAY_AGG(DISTINCT sl.action ORDER BY sl.action) AS actions,
+               MAX(sl.created_at) AS last_activity
+        FROM scoped_logs sl LEFT JOIN users u ON u.id = sl.user_id
+        GROUP BY sl.user_id, u.full_name, u.email, u.role
+        HAVING COUNT(*) >= 5 OR COUNT(*) FILTER (WHERE sl.action ~* '(DELETE|ERASURE|EXPORT|PASSWORD|USER|CHAIN_REPAIR|APPROVE)') >= 1 OR COUNT(DISTINCT sl.ip_address) >= 3
+        ORDER BY (COUNT(*) FILTER (WHERE sl.action ~* '(DELETE|ERASURE|EXPORT|PASSWORD|USER|CHAIN_REPAIR|APPROVE)')) DESC, COUNT(*) DESC
+        LIMIT 100
+      `, [orgId, scopedCountry]);
+      const reviewers = result.rows.map((row: any) => {
+        const signals = [
+          Number(row.sensitive_count) > 0 ? `${row.sensitive_count} sensitive action(s)` : null,
+          Number(row.activity_count) >= 20 ? `${row.activity_count} actions in 24 hours` : null,
+          Number(row.ip_count) >= 3 ? `${row.ip_count} source IPs in 24 hours` : null,
+        ].filter(Boolean);
+        const score = Math.min(100, Number(row.sensitive_count) * 30 + Math.min(Number(row.activity_count), 30) + Math.max(0, Number(row.ip_count) - 1) * 10);
+        return { ...row, score, severity: score >= 70 ? "high" : score >= 40 ? "elevated" : "review", signals };
+      });
+      res.json({ generatedAt: new Date().toISOString(), reviewers });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 
   app.get("/api/pending-approvals", requireAuth, async (req, res) => {
@@ -6038,7 +6474,7 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
       const getBaseUrl = (r: Request) => {
         if (process.env.CANONICAL_URL) return process.env.CANONICAL_URL;
         const protocol = r.headers["x-forwarded-proto"] || r.protocol || "https";
-        const host = r.headers["x-forwarded-host"] || r.headers.host || "universalcredithub.replit.app";
+        const host = r.headers["x-forwarded-host"] || r.headers.host || "universalcredithub.com";
         return `${protocol}://${host}`;
       };
       const baseUrl = getBaseUrl(req);
@@ -8575,7 +9011,12 @@ USD-2025-002,Diana Moore,LP-C2345678,PASSPORT,"Buchanan, Grand Bassa",5000,22.00
 
   app.post("/api/backups/:id/restore", requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-      const { restoreBackup } = await import("./backup-service");
+      const { restoreBackup, isProductionRestoreBlocked } = await import("./backup-service");
+      if (isProductionRestoreBlocked()) {
+        return res.status(409).json({
+          message: "Production database restores are disabled in the web application. Use the approved disaster-recovery runbook.",
+        });
+      }
       const userId = req.session?.userId || "unknown";
       const result = await restoreBackup(req.params.id as string, String(userId));
       res.json(result);
@@ -16623,6 +17064,347 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
   });
 
   // ─── Collections workflow ────────────────────────────────────────────────
+  // ─── Transaction complaint resolution ────────────────────────────────────
+  // This is an operational queue, not a payment rail. "Confirmed resolved" is
+  // only selectable after an analyst has obtained the bank-core confirmation.
+  const transactionResolutionCreateSchema = z.object({
+    borrowerId: z.string().uuid(),
+    transactionReference: z.string().trim().min(4).max(200),
+    caseType: z.enum(["failed_transfer", "double_debit", "cash_dispense", "account_freeze"]),
+    channel: z.string().trim().min(1).max(80).default("unknown"),
+    amount: z.coerce.number().nonnegative().optional(),
+    currency: z.string().trim().min(3).max(3).optional(),
+    customerMessage: z.string().trim().max(4000).optional(),
+  });
+  const transactionResolutionUpdateSchema = z.object({
+    status: z.enum(["new", "verifying", "ready_for_core_handoff", "confirmed_resolved", "needs_human", "rejected"]),
+    resolutionNotes: z.string().trim().min(3).max(4000),
+  });
+
+  app.get("/api/transaction-resolution-cases", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT trc.*, b.first_name, b.last_name, b.company_name
+        FROM transaction_resolution_cases trc
+        INNER JOIN borrowers b ON b.id = trc.borrower_id
+        WHERE ($1::text IS NULL OR trc.organization_id = $1)
+          AND ($2::text IS NULL OR trc.country = $2)
+        ORDER BY CASE WHEN trc.sla_deadline < NOW() AND trc.status NOT IN ('confirmed_resolved', 'rejected') THEN 0 ELSE 1 END,
+                 trc.sla_deadline ASC, trc.created_at DESC
+        LIMIT 200
+      `, [orgId, country]);
+      res.json({ cases: result.rows });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/transaction-resolution-cases", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const body = transactionResolutionCreateSchema.parse(req.body);
+      const acl = await ensureBorrowerAccess(req, body.borrowerId);
+      if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
+      const borrower = acl.borrower;
+      const result = await pool.query(`
+        INSERT INTO transaction_resolution_cases
+          (borrower_id, transaction_reference, case_type, channel, amount, currency, customer_message, sla_deadline, organization_id, country)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW() + INTERVAL '72 hours', $8, $9)
+        RETURNING *
+      `, [body.borrowerId, body.transactionReference, body.caseType, body.channel, body.amount ?? null, body.currency?.toUpperCase() ?? null, body.customerMessage ?? null, borrower.organizationId ?? null, borrower.country]);
+      const created = result.rows[0];
+      await storage.createAuditLog({
+        action: "CREATE_TRANSACTION_RESOLUTION_CASE", entity: "transaction_resolution_case", entityId: created.id, userId: req.session?.userId,
+        details: `Opened ${body.caseType} case for reference ${body.transactionReference}; core-banking action is not automated.`, ipAddress: req.ip || null,
+      });
+      res.status(201).json(created);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  app.patch("/api/transaction-resolution-cases/:id", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const body = transactionResolutionUpdateSchema.parse(req.body);
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const existing = await pool.query(`SELECT * FROM transaction_resolution_cases WHERE id = $1 AND ($2::text IS NULL OR organization_id = $2) AND ($3::text IS NULL OR country = $3)`, [req.params.id, orgId, country]);
+      if (!existing.rows[0]) return res.status(404).json({ message: "Resolution case not found" });
+      // A case record must not be used to silently skip the bank's reconciliation
+      // and core-banking handoff. The funds movement itself remains outside UCH,
+      // but the evidence trail must show each operational decision in order.
+      const allowedTransitions: Record<string, string[]> = {
+        new: ["verifying", "needs_human", "rejected"],
+        verifying: ["ready_for_core_handoff", "needs_human", "rejected"],
+        ready_for_core_handoff: ["confirmed_resolved", "needs_human", "rejected"],
+        needs_human: ["verifying", "rejected"],
+        confirmed_resolved: [],
+        rejected: [],
+      };
+      const currentStatus = existing.rows[0].status as string;
+      if (!allowedTransitions[currentStatus]?.includes(body.status)) {
+        return res.status(409).json({
+          message: `Cannot move a transaction case from ${currentStatus} to ${body.status}. Complete the required review stage first.`,
+        });
+      }
+      const result = await pool.query(`
+        UPDATE transaction_resolution_cases
+        SET status = $1::transaction_resolution_status, resolution_notes = $2, reviewed_by = $3,
+            resolved_at = CASE WHEN $1::text IN ('confirmed_resolved', 'rejected') THEN NOW() ELSE NULL END,
+            updated_at = NOW()
+        WHERE id = $4 RETURNING *
+      `, [body.status, body.resolutionNotes, req.session?.userId || null, req.params.id]);
+      await storage.createAuditLog({
+        action: "UPDATE_TRANSACTION_RESOLUTION_CASE", entity: "transaction_resolution_case", entityId: req.params.id as string, userId: req.session?.userId,
+        details: `Status set to ${body.status}. ${body.resolutionNotes}`, ipAddress: req.ip || null,
+      });
+      res.json(result.rows[0]);
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
+  // ─── NPL Early Warning Desk ──────────────────────────────────────────────
+  // A deterministic queue for facilities already showing repayment stress.
+  // It deliberately uses live account data and the existing collections
+  // assignment workflow instead of creating another disconnected risk store.
+  app.get("/api/npl-early-warning", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        SELECT
+          c.id AS credit_account_id,
+          c.borrower_id,
+          c.account_number,
+          c.account_type,
+          c.current_balance,
+          c.amount_overdue,
+          c.currency,
+          c.status AS account_status,
+          c.days_in_arrears,
+          c.restructure_count,
+          c.next_payment_date,
+          b.first_name,
+          b.last_name,
+          b.company_name,
+          b.country,
+          EXISTS (
+            SELECT 1
+            FROM collection_assignments active_assignment
+            WHERE active_assignment.credit_account_id = c.id
+              AND active_assignment.status IN ('open', 'in_progress', 'promised')
+          ) AS is_assigned
+        FROM credit_accounts c
+        INNER JOIN borrowers b ON b.id = c.borrower_id
+        WHERE (c.days_in_arrears > 0 OR c.status IN ('delinquent', 'default', 'written_off'))
+          AND ($1::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $1)
+          AND ($2::text IS NULL OR b.country = $2)
+        ORDER BY
+          CASE WHEN c.status IN ('default', 'written_off') OR c.days_in_arrears >= 90 THEN 4
+               WHEN c.days_in_arrears >= 60 THEN 3
+               WHEN c.days_in_arrears >= 30 THEN 2 ELSE 1 END DESC,
+          c.days_in_arrears DESC,
+          c.current_balance DESC
+        LIMIT 100
+      `, [orgId, country]);
+
+      const cases = result.rows.map((row) => {
+        const daysInArrears = Number(row.days_in_arrears || 0);
+        const status = String(row.account_status || "current");
+        const severity = status === "default" || status === "written_off" || daysInArrears >= 90
+          ? "critical"
+          : daysInArrears >= 60 ? "high" : daysInArrears >= 30 ? "elevated" : "watch";
+        const signals = [
+          daysInArrears > 0 ? `${daysInArrears} days past due` : null,
+          status !== "current" ? `Account status: ${status.replace("_", " ")}` : null,
+          Number(row.restructure_count || 0) > 0 ? `${row.restructure_count} restructure(s)` : null,
+        ].filter(Boolean);
+        return {
+          ...row,
+          severity,
+          signals,
+          isAssigned: Boolean(row.is_assigned),
+        };
+      });
+      res.json({ generatedAt: new Date().toISOString(), cases });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── NPL pilot readiness ─────────────────────────────────────────────────
+  // A bank pilot begins with a controlled loan-tape extract, not a model claim.
+  // This endpoint exposes only aggregate quality and workflow coverage so risk
+  // owners can stop a pilot before acting on incomplete account data.
+  app.get("/api/npl-early-warning/pilot-readiness", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE ? null : requestedCountry || null;
+      const result = await pool.query(`
+        WITH scoped_accounts AS (
+          SELECT c.id, c.account_number, c.current_balance, c.status, c.days_in_arrears, c.next_payment_date
+          FROM credit_accounts c
+          INNER JOIN borrowers b ON b.id = c.borrower_id
+          WHERE ($1::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $1)
+            AND ($2::text IS NULL OR b.country = $2)
+        ), warning_accounts AS (
+          SELECT id FROM scoped_accounts
+          WHERE days_in_arrears > 0 OR status IN ('delinquent', 'default', 'written_off')
+        )
+        SELECT
+          (SELECT COUNT(*) FROM scoped_accounts)::int AS facilities_loaded,
+          (SELECT COUNT(*) FROM warning_accounts)::int AS at_risk_facilities,
+          (SELECT COUNT(DISTINCT ca.credit_account_id)
+             FROM collection_assignments ca
+             INNER JOIN warning_accounts wa ON wa.id = ca.credit_account_id
+             WHERE ca.status IN ('open', 'in_progress', 'promised'))::int AS assigned_facilities,
+          (SELECT COUNT(*) FROM scoped_accounts
+             WHERE account_number IS NULL OR BTRIM(account_number) = ''
+                OR current_balance IS NULL OR status IS NULL OR days_in_arrears IS NULL
+                OR next_payment_date IS NULL)::int AS incomplete_facilities
+      `, [orgId, country]);
+      const metrics = result.rows[0] || {};
+      const facilitiesLoaded = Number(metrics.facilities_loaded || 0);
+      const incompleteFacilities = Number(metrics.incomplete_facilities || 0);
+      const dataCompletenessPct = facilitiesLoaded === 0
+        ? 0
+        : Math.round(((facilitiesLoaded - incompleteFacilities) / facilitiesLoaded) * 10000) / 100;
+      res.json({
+        generatedAt: new Date().toISOString(),
+        facilitiesLoaded,
+        atRiskFacilities: Number(metrics.at_risk_facilities || 0),
+        assignedFacilities: Number(metrics.assigned_facilities || 0),
+        incompleteFacilities,
+        dataCompletenessPct,
+        readyForRiskReview: facilitiesLoaded > 0 && incompleteFacilities === 0,
+      });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── NPL macro-risk overlay ──────────────────────────────────────────────
+  // This is intentionally an explainable portfolio view. It does not consume
+  // unaudited public data or make a credit/provisioning decision. The bank must
+  // first connect and approve the dated macro series described by the profile.
+  registerLoanTapeReconciliationRoutes(app);
+  registerNplCaseLedgerRoutes(app);
+  registerNplDecisionGovernanceRoutes(app);
+  registerNplReductionPlanRoutes(app);
+
+  app.get("/api/npl-early-warning/macro-risk", requireRole("admin", "super_admin", "lender", "regulator"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const orgId = getOrgScope(req) || null;
+      const requestedCountry = getCountryFilter(req);
+      // Ghana is the first controlled profile. A platform-wide view defaults to
+      // it so a super-admin can prepare the Ghana pilot without exposing data
+      // from another country.
+      const country = requestedCountry === GLOBAL_SCOPE || !requestedCountry ? "Ghana" : requestedCountry;
+      const profile = getNplMacroRiskProfile(country);
+      if (!profile) {
+        return res.json({
+          generatedAt: new Date().toISOString(),
+          country,
+          profile: null,
+          message: `No approved macro-risk profile is configured for ${country}.`,
+        });
+      }
+
+      // Macro observations are retained as approved maker-checker records. This
+      // avoids a parallel configuration store and preserves the submitter,
+      // reviewer, source and review time alongside every value used in the view.
+      const approvedObservationResult = await pool.query(`
+        SELECT payload, reviewed_at, created_at
+        FROM pending_approvals
+        WHERE entity_type = 'npl_macro_observation'
+          AND action = 'SUBMIT_MACRO_RISK_OBSERVATION'
+          AND status = 'approved'
+          AND country = $1
+          AND ($2::text IS NULL OR organization_id = $2)
+        ORDER BY reviewed_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      `, [country, orgId]);
+      let approvedObservation: Record<string, unknown> | null = null;
+      const approvedRow = approvedObservationResult.rows[0];
+      if (approvedRow) {
+        try {
+          approvedObservation = {
+            ...JSON.parse(String(approvedRow.payload)),
+            approvedAt: approvedRow.reviewed_at || approvedRow.created_at,
+          };
+        } catch {
+          routeLogger.warn("Ignoring unreadable approved NPL macro observation");
+        }
+      }
+
+      const result = await pool.query(`
+        WITH scoped_accounts AS (
+          SELECT c.id, c.current_balance, c.status, c.days_in_arrears,
+                 COALESCE(NULLIF(BTRIM(b.sector), ''), 'Unclassified') AS sector
+          FROM credit_accounts c
+          INNER JOIN borrowers b ON b.id = c.borrower_id
+          WHERE b.country = $1
+            AND ($2::text IS NULL OR COALESCE(c.organization_id, b.organization_id) = $2)
+        )
+        SELECT sector,
+          COUNT(*)::int AS facilities,
+          COUNT(*) FILTER (WHERE days_in_arrears > 0 OR status IN ('delinquent', 'default', 'written_off'))::int AS at_risk_facilities,
+          COALESCE(SUM(current_balance), 0)::text AS total_exposure,
+          COALESCE(SUM(current_balance) FILTER (WHERE days_in_arrears > 0 OR status IN ('delinquent', 'default', 'written_off')), 0)::text AS at_risk_exposure
+        FROM scoped_accounts
+        GROUP BY sector
+        ORDER BY at_risk_exposure DESC, total_exposure DESC
+        LIMIT 12
+      `, [country, orgId]);
+
+      const sectorExposure = result.rows.map((row) => {
+        const sensitivity = getSectorSensitivity(profile, row.sector);
+        return {
+          sector: row.sector,
+          facilities: Number(row.facilities || 0),
+          atRiskFacilities: Number(row.at_risk_facilities || 0),
+          totalExposure: String(row.total_exposure || "0"),
+          atRiskExposure: String(row.at_risk_exposure || "0"),
+          sensitivity: sensitivity?.sensitivity || "not_mapped",
+          rationale: sensitivity?.rationale || "Map this sector to a bank-approved Ghana macro scenario before relying on it.",
+        };
+      });
+
+      res.json({ generatedAt: new Date().toISOString(), country, profile, sectorExposure, approvedObservation });
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  app.post("/api/npl-early-warning/macro-observations", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
+    try {
+      const requestedCountry = getCountryFilter(req);
+      const country = requestedCountry === GLOBAL_SCOPE || !requestedCountry ? "Ghana" : requestedCountry;
+      if (country !== "Ghana") {
+        return res.status(400).json({ message: "Macro-risk observations are currently controlled for the Ghana pilot only." });
+      }
+      const input = z.object({
+        observedAt: z.string().date(),
+        source: z.string().trim().min(3).max(500),
+        inflationAnnualPct: z.coerce.number().min(-10).max(200),
+        policyRatePct: z.coerce.number().min(0).max(200),
+        currencyDepreciationYtdPct: z.coerce.number().min(-100).max(500),
+        sectorCashflowRisk: z.enum(["low", "elevated", "high"]),
+        notes: z.string().trim().max(2_000).optional(),
+      }).parse(req.body);
+      const requesterId = req.session?.userId;
+      if (!requesterId) return res.status(401).json({ message: "Not authenticated" });
+      const approval = await storage.createPendingApproval({
+        entityType: "npl_macro_observation",
+        entityId: null,
+        action: "SUBMIT_MACRO_RISK_OBSERVATION",
+        payload: JSON.stringify({ ...input, country, schemaVersion: 1 }),
+        requestedBy: requesterId,
+        organizationId: getOrgScope(req) || null,
+        country: requireWriteCountry(country, "submitNplMacroObservation"),
+      });
+      await storage.createAuditLog({
+        action: "SUBMIT_NPL_MACRO_OBSERVATION", entity: "npl_macro_observation", entityId: approval.id,
+        userId: requesterId, details: `Submitted Ghana macro-risk observation dated ${input.observedAt} for maker-checker review`, ipAddress: req.ip || null,
+      });
+      res.status(201).json({ approval, message: "Macro-risk observation submitted for independent approval." });
+    } catch (e: any) { res.status(400).json({ message: safeErrorMessage(e, 400) }); }
+  });
+
   app.get("/api/collections/assignments", requireRole("admin", "super_admin", "lender"), enforceDataSovereignty, async (req, res) => {
     try {
       const orgId = getOrgScope(req);
@@ -16646,6 +17428,24 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       const acl = await ensureBorrowerAccess(req, body.borrowerId);
       if (!acl.ok) return res.status(acl.status).json({ message: acl.message });
       const borrower = acl.borrower;
+      if (body.creditAccountId) {
+        const account = await pool.query(
+          `SELECT id FROM credit_accounts WHERE id = $1 AND borrower_id = $2`,
+          [body.creditAccountId, borrower.id],
+        );
+        if (account.rowCount === 0) {
+          return res.status(404).json({ message: "Credit account not found for this borrower" });
+        }
+        const active = await pool.query(
+          `SELECT id FROM collection_assignments
+           WHERE credit_account_id = $1 AND status IN ('open', 'in_progress', 'promised')
+           LIMIT 1`,
+          [body.creditAccountId],
+        );
+        if ((active.rowCount ?? 0) > 0) {
+          return res.status(409).json({ message: "An active collections assignment already exists for this credit account" });
+        }
+      }
       // Tenant integrity: ALWAYS derive organizationId/country from the
       // authorized borrower record. Ignore any client-supplied values to
       // prevent cross-tenant assignment writes (e.g., a lender writing into
@@ -18870,6 +19670,26 @@ Lagging: DRC 6% | South Sudan ~10% | Central African Republic ~15% | Chad ~12%
       if (!borrower) return res.json([]);
       const myDisputes = await db.select().from(disputes).where(eq(disputes.borrowerId, borrower.id)).orderBy(desc(disputes.createdAt)).limit(20);
       res.json(myDisputes);
+    } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
+  });
+
+  // ─── Consumer transaction-resolution status ───────────────────────────────
+  // Consumers may only see cases tied to their own verified credit identity.
+  // Do not return internal review notes, staff names, or any bank-core data.
+  app.get("/api/consumer/transaction-resolution-cases", requireConsumer, async (req, res) => {
+    try {
+      const consumerNationalId = (req.session as any).consumerNationalId;
+      const borrowerResult = await db.select({ id: borrowers.id }).from(borrowers).where(
+        or(ilike(borrowers.nationalId, consumerNationalId), ilike(borrowers.ghanaCardNumber, consumerNationalId), ilike(borrowers.passportNumber, consumerNationalId))
+      ).limit(1);
+      const borrower = borrowerResult[0];
+      if (!borrower) return res.json([]);
+      const result = await pool.query(`
+        SELECT transaction_reference, case_type, channel, amount, currency, status, sla_deadline, created_at, updated_at
+        FROM transaction_resolution_cases
+        WHERE borrower_id=$1 ORDER BY created_at DESC LIMIT 20
+      `, [borrower.id]);
+      res.json(result.rows);
     } catch (e: any) { res.status(500).json({ message: safeErrorMessage(e) }); }
   });
 

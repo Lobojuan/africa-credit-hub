@@ -1,0 +1,23 @@
+name: UCH uptime monitor
+
+on:
+  schedule:
+    # GitHub schedules are best-effort; this is an independent public-route
+    # signal, not a substitute for an on-call monitoring service.
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-public-health:
+    name: Check public UCH health
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    env:
+      UCH_PUBLIC_BASE_URL: ${{ vars.UCH_PUBLIC_BASE_URL || 'https://universalcredithub.com' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm application and database readiness
+        run: scripts/check-production-health.sh

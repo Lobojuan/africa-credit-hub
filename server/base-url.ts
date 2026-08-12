@@ -1,7 +1,7 @@
 const PRODUCTION_DOMAIN = "https://universalcredithub.com";
 
 export function getBaseUrl(): string {
-  return process.env.CANONICAL_URL || (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000');
+  return process.env.CANONICAL_URL || 'http://localhost:5000';
 }
 
 export function getCanonicalDomain(): string {
@@ -10,7 +10,6 @@ export function getCanonicalDomain(): string {
 
 export function getOAuthCallbackBase(): string {
   if (process.env.CANONICAL_URL) return process.env.CANONICAL_URL.replace(/\/+$/, "");
-  if (process.env.REPLIT_DOMAINS) return `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`;
   return PRODUCTION_DOMAIN;
 }
 

@@ -10,7 +10,7 @@
 
 ## 1. Overview
 
-This guide provides step-by-step deployment instructions for the Credit Registry System. The application consists of a React frontend served by an Express.js backend, with PostgreSQL as the database. Two deployment scenarios are covered: Replit deployment and general Linux/Docker deployment.
+This guide provides step-by-step deployment instructions for the Credit Registry System. The application consists of a React frontend served by an Express.js backend, with PostgreSQL as the database. It supports managed cloud and general Linux/Docker deployment.
 
 ---
 
@@ -85,7 +85,7 @@ The CDH platform can be deployed at different scales depending on borrower volum
 
 #### 2.2.5 Minimum Quick-Start (Development Only)
 
-For local development, testing, or Replit deployment:
+For local development, testing, or managed cloud platform deployment:
 
 | Resource | Minimum |
 |----------|---------|
@@ -146,13 +146,34 @@ All deployments require 64-bit architecture. ARM64 (aarch64) and x86_64 are both
 | `PORT` | No | Application port (default: 5000) | `5000` |
 | `NODE_ENV` | No | Environment mode (development/production) | `production` |
 | `AI_INTEGRATIONS_OPENAI_API_KEY` | No | OpenAI API key for AI-powered features (credit risk analysis, report summaries, chatbot, compliance reports) | `sk-...` |
-| `AI_INTEGRATIONS_OPENAI_BASE_URL` | No | OpenAI API base URL (provided by Replit AI Integrations) | `https://ai.replit.dev/v1` |
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | No | OpenAI API base URL (provided by OpenAI-compatible integration) | `https://api.openai.com/v1` |
+| `CANONICAL_URL` | Yes for production OAuth | Public HTTPS origin used to build OAuth callback URIs | `https://app.example-bank.com` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Only for Google Workspace sign-in | Bank-owned Google OAuth application credentials | Store in the server secret manager; never commit |
+| `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` / `MICROSOFT_TENANT_ID` | Only for Microsoft Entra sign-in | Bank-owned Entra application and tenant configuration | Store in the server secret manager; never commit |
 
 ### 3.1 Generating a Session Secret
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
+
+### 3.2 Institutional SSO go-live checklist
+
+Google Workspace and Microsoft Entra support staff sign-in only; neither flow creates a bank staff account. Before enabling a provider, the bank must:
+
+1. Set `CANONICAL_URL` to the public HTTPS origin and register the exact callback URI: `/api/auth/google/callback` or `/api/auth/microsoft/callback`.
+2. Store client credentials only in the production secret manager/environment; do not put them in source, browser configuration, screenshots, or tickets.
+3. Pre-provision active UCH users for the bank email addresses and assign least-privilege roles and organisation/country scope.
+4. Run acceptance tests for successful login, inactive/unprovisioned identity rejection, logout, lockout, MFA/passkey recovery and the correct landing destination for every role.
+5. Review the authenticated, super-admin OAuth status endpoint after configuration; it does not expose secrets.
+
+SAML enterprise SSO is intentionally unavailable in production until its implementation is replaced with a vetted, signature-validating solution and the bank has supplied IdP metadata/certificates. Do not enable legacy SAML merely to bypass this gate.
+
+### 3.3 GitHub deployment boundary
+
+Every push to `main` verifies TypeScript, unit tests and the production build. It updates the server **only** when the GitHub repository variable `UCH_DEPLOY_ENABLED` is `true` and the production environment contains `UCH_PROD_SSH_KEY`, `UCH_PROD_KNOWN_HOSTS`, `UCH_PROD_HOST` and `UCH_PROD_USER`.
+
+When deployment is not configured, the workflow now publishes an explicit successful warning job: **Production deployment not configured**. This means the release was verified but no server changed. Once configured, the guarded server script validates both loopback and public HTTPS/database health and rolls back the code release if either check fails.
 
 ---
 
@@ -162,7 +183,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 The system requires a PostgreSQL database. Options include:
 
-- **Neon** (serverless PostgreSQL, recommended for Replit)
+- **Neon** (serverless PostgreSQL, recommended for managed cloud platform)
 - **Amazon RDS** for production workloads
 - **Self-hosted PostgreSQL** on Linux servers
 - **Docker PostgreSQL** for containerized deployments
@@ -321,11 +342,11 @@ WantedBy=multi-user.target
 
 ---
 
-## 7. Replit-Specific Deployment
+## 7. managed cloud platform-Specific Deployment
 
 ### 7.1 Configuration
 
-The application is pre-configured for Replit deployment. The `.replit` file defines:
+The application is pre-configured for managed cloud platform deployment. The `.managed-cloud` file defines:
 
 - Build command: `npm run build`
 - Run command: `node ./dist/index.cjs`
@@ -333,7 +354,7 @@ The application is pre-configured for Replit deployment. The `.replit` file defi
 
 ### 7.2 Environment Secrets
 
-In Replit, set environment variables via the Secrets tab:
+In managed cloud platform, set environment variables via the Secrets tab:
 1. `DATABASE_URL` - PostgreSQL connection string (Neon recommended)
 2. `SESSION_SECRET` - Random string for session encryption
 
@@ -494,7 +515,7 @@ server {
 For production, always use HTTPS. Options:
 - **Let's Encrypt** with certbot for free SSL certificates
 - **Cloud provider SSL** (AWS ACM, Cloudflare, etc.)
-- **Replit** provides HTTPS automatically
+- **managed cloud platform** provides HTTPS automatically
 
 ---
 
@@ -615,6 +636,7 @@ psql $DATABASE_URL -c "\dt"
 - [ ] Set up monitoring and alerting
 - [ ] Conduct security audit before go-live
 - [ ] Enforce MFA (ENT-01) for admin and regulator accounts
+- [ ] Configure and acceptance-test exactly one bank-owned identity provider before advertising SSO (Google Workspace or Microsoft Entra); SAML remains unavailable until the vetted replacement is approved
 - [ ] Rotate OAuth JWT signing keys periodically (ENT-04)
 - [ ] Verify audit log integrity (ENT-07) as part of routine security checks
 - [ ] Ensure `pg_trgm` extension (ENT-02) is available in production PostgreSQL

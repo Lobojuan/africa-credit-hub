@@ -1,14 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { isGhanaMode } from "@/lib/country-mode";
 import {
   Shield, Globe, Users, CreditCard, BarChart3, Zap,
   CheckCircle2, ArrowRight, Building2, Scale, Lock,
   Languages, MapPin, TrendingUp, Bot, Upload,
   ChevronDown, Star, Eye, FileText, Clock,
   Database, Layers, AlertTriangle, Target, Workflow,
-  Search, Gavel, Settings, Key, RefreshCw, Landmark,
+  Search, Gavel, Settings, Key, RefreshCw, Landmark, Radar,
   PieChart, LineChart, Map, Fingerprint, ShieldCheck,
   UserCheck, FileCheck, Timer, BadgeCheck, Network,
   BookOpen, Headphones, Receipt, ServerCog, Banknote,
@@ -19,14 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useTheme } from "@/components/theme-provider";
 import { useBrandColors, withAlpha } from "@/hooks/use-brand-colors";
 import { useTranslation } from "react-i18next";
+import DOMPurify from "isomorphic-dompurify";
 const heroImage = "/marketing/investor-hero.png";
-const dashboardImage = "/marketing/app-dashboard.png";
 const mobileImage = "/marketing/app-consumer-portal.png";
 const networkImage = "/marketing/app-command-center.png";
 const borrowersImage = "/marketing/app-borrowers.png";
@@ -37,45 +34,6 @@ const aiPortfolioImage = "/marketing/app-ai-portfolio.png";
 const platformDemoVideo = "/marketing/platform-demo.mp4";
 import { PLATFORM_COMPANY_NAME, PLATFORM_SUPPORT_EMAIL, supportEmailHref } from "@/lib/platform-config";
 
-function AnimatedCounter({ end, duration = 2000, suffix = "", prefix = "" }: { end: number; duration?: number; suffix?: string; prefix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    if ("scrollRestoration" in history) {
-      history.scrollRestoration = "manual";
-    }
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" as ScrollBehavior });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  }, []);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          const startTime = Date.now();
-          const tick = () => {
-            const elapsed = Date.now() - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const eased = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.round(end * eased));
-            if (progress < 1) requestAnimationFrame(tick);
-          };
-          requestAnimationFrame(tick);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [end, duration]);
-
-  return <div ref={ref}>{prefix}{count.toLocaleString()}{suffix}</div>;
-}
-
 function SectionDivider() {
   return (
     <div className="flex items-center justify-center py-2">
@@ -84,96 +42,13 @@ function SectionDivider() {
   );
 }
 
-const MARKET_FALLBACKS: Record<string, { borrowers: number; institutions: number; avgScore: number | null; flag: string; label: string }> = {
-  ghana:       { borrowers: 15200, institutions: 12, avgScore: 622, flag: "🇬🇭", label: "Ghana" },
-  nigeria:     { borrowers: 34800, institutions: 27, avgScore: 589, flag: "🇳🇬", label: "Nigeria" },
-  kenya:       { borrowers: 27400, institutions: 21, avgScore: 638, flag: "🇰🇪", label: "Kenya" },
-  civ:         { borrowers: 8100,  institutions: 6,  avgScore: 604, flag: "🇨🇮", label: "Côte d'Ivoire" },
-  southafrica: { borrowers: 17600, institutions: 14, avgScore: 651, flag: "🇿🇦", label: "South Africa" },
-};
-
-interface TearsheetStats {
-  market: string;
-  country: string;
-  totalBorrowers: number;
-  totalInstitutions: number;
-  avgCreditScore: number | null;
-  generatedAt: string;
-}
-
-function MarketStatCard({ market }: { market: string }) {
-  const fallback = MARKET_FALLBACKS[market];
-  const { data, isLoading } = useQuery<TearsheetStats>({
-    queryKey: ["/api/admin/tearsheet-stats", market],
-    queryFn: async () => {
-      const res = await fetch(`/api/admin/tearsheet-stats/${market}`);
-      if (!res.ok) throw new Error("not available");
-      return res.json();
-    },
-    retry: false,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const borrowers    = data?.totalBorrowers    ?? fallback.borrowers;
-  const institutions = data?.totalInstitutions ?? fallback.institutions;
-  const avgScore     = data?.avgCreditScore    ?? fallback.avgScore;
-  const isLive       = !!data;
-
-  return (
-    <Card className="relative overflow-hidden" data-testid={`market-card-${market}`}>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{fallback.flag}</span>
-            <div>
-              <p className="text-sm font-semibold leading-tight">{fallback.label}</p>
-              {isLive && (
-                <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                  Live
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Registered Borrowers</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className="text-xl font-bold text-primary">{borrowers.toLocaleString()}</p>
-            )}
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Member Institutions</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-16" />
-            ) : (
-              <p className="text-xl font-bold text-primary">{institutions.toLocaleString()}</p>
-            )}
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium mb-0.5">Avg Credit Score</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-20" />
-            ) : (
-              <p className="text-xl font-bold text-primary">{avgScore != null ? avgScore.toLocaleString() : "—"}</p>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-const HERO_STATS = [
-  { value: 54, suffix: "", label: "African Countries", icon: Globe },
-  { value: 102, suffix: "K+", label: "Borrower Records", icon: Users },
-  { value: 172, suffix: "K+", label: "Credit Accounts", icon: CreditCard },
-  { value: 42, suffix: "+", label: "Currencies Supported", icon: Banknote },
-  { value: 79, suffix: "+", label: "SRS Requirements", icon: ShieldCheck },
-  { value: 8, suffix: "", label: "Languages", icon: Languages },
+const RELEASE_HIGHLIGHTS = [
+  { key: "npl", icon: AlertTriangle },
+  { key: "ifrs9", icon: Landmark },
+  { key: "credit", icon: CreditCard },
+  { key: "collateral", icon: ShieldCheck },
+  { key: "loto", icon: Receipt },
+  { key: "governance", icon: FileCheck },
 ];
 
 const PROBLEM_STATEMENTS = [
@@ -583,11 +458,9 @@ export default function InvestorLandingPage() {
   }, [lightboxImg]);
 
   useEffect(() => {
-    document.title = isGhanaMode() 
-      ? `Ghana Credit Registry System | Universal Credit Hub v2.8 — ${PLATFORM_COMPANY_NAME}`
-      : "Pan-African Credit Registry | Universal Credit Hub v2.8 — Modernize Your Credit Infrastructure";
+    document.title = `Universal Credit Hub v2.8 — Controlled Bank Risk Operations | ${PLATFORM_COMPANY_NAME}`;
     const meta = document.querySelector('meta[name="description"]');
-    const content = "The only SRS-compliant credit registry platform covering all 54 African countries. Built for central banks, commercial banks, MFIs, and fintechs to manage credit risk, ensure compliance, and expand financial inclusion.";
+    const content = "Universal Credit Hub provides controlled credit-risk, NPL early-warning, collateral, consent and evidence workflows for African financial institutions. Bank pilots use governed policy, data-quality and maker-checker controls before any production connection.";
     if (meta) {
       meta.setAttribute("content", content);
     } else {
@@ -737,17 +610,17 @@ export default function InvestorLandingPage() {
               </h1>
 
               <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mb-4 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: t('landing.heroDesc') }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('landing.heroDesc'), { ALLOWED_TAGS: ["strong", "em", "br"], ALLOWED_ATTR: [] }) }}
               />
 
               <p className="text-sm text-muted-foreground/80 max-w-xl mb-8"
-                dangerouslySetInnerHTML={{ __html: t('landing.heroSubDesc') }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(t('landing.heroSubDesc'), { ALLOWED_TAGS: ["strong", "em", "br"], ALLOWED_ATTR: [] }) }}
               />
 
               <div className="flex flex-col sm:flex-row items-center lg:items-end justify-center lg:justify-end gap-3 mb-8">
-                <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/start-trial")} data-testid="cta-try-trial">
+                <Button size="lg" className="text-sm px-8 gap-2 shadow-lg" onClick={() => navigate("/demo")} data-testid="cta-explore-demo">
                   <ArrowRight className="w-4 h-4" />
-                  {t('landing.startTrial')}
+                  Explore the interactive demo
                 </Button>
                 <Button
                   variant="outline"
@@ -795,56 +668,22 @@ export default function InvestorLandingPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 sm:gap-4 max-w-4xl mx-auto mt-12 lg:mt-16">
-            {HERO_STATS.map((stat) => (
+          <div className="mt-12 lg:mt-16 max-w-5xl mx-auto" data-testid="current-release-highlights">
+            <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">{t("landing.releaseTitle")}</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+            {RELEASE_HIGHLIGHTS.map((highlight) => (
               <div
-                key={stat.label}
+                key={highlight.key}
                 className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-3 text-center"
-                data-testid={`stat-${stat.label.toLowerCase().replace(/\s/g, "-")}`}
+                data-testid={`release-highlight-${highlight.key}`}
               >
-                <stat.icon className="w-4 h-4 mx-auto mb-1.5 text-primary/70" />
-                <div className="text-xl sm:text-2xl font-bold tracking-tight">
-                  <AnimatedCounter end={stat.value} suffix={stat.suffix} />
-                </div>
-                <div className="text-[10px] text-muted-foreground mt-0.5">{stat.label}</div>
+                <highlight.icon className="w-4 h-4 mx-auto mb-1.5 text-primary/70" />
+                <div className="text-xs font-semibold tracking-tight">{t(`landing.release.${highlight.key}.title`)}</div>
+                <div className="text-[10px] text-muted-foreground mt-1 leading-relaxed">{t(`landing.release.${highlight.key}.body`)}</div>
               </div>
             ))}
-          </div>
-
-          {/* Bureau Coverage Comparison Strip */}
-          <div className="mt-10 max-w-3xl mx-auto">
-            <p className="text-center text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">African Country Coverage — Side by Side</p>
-            <div className="grid grid-cols-4 gap-2 sm:gap-3">
-              {[
-                { name: "Universal Credit Hub", count: "54 / 54", bar: 100, color: "bg-green-500", textColor: "text-green-600 dark:text-green-400", badge: "✓ Full Continent", highlight: true },
-                { name: "Experian", count: "~12 / 54", bar: 22, color: "bg-red-400", textColor: "text-red-500", badge: "22% Coverage" },
-                { name: "TransUnion", count: "8 / 54", bar: 15, color: "bg-amber-400", textColor: "text-amber-500", badge: "15% Coverage" },
-                { name: "Equifax", count: "0 / 54", bar: 0, color: "bg-muted", textColor: "text-muted-foreground", badge: "Not in Africa" },
-              ].map((b) => (
-                <div
-                  key={b.name}
-                  className={`rounded-xl border p-3 text-center transition-all ${b.highlight ? "border-green-500/30 bg-green-500/5 shadow-sm" : "border-border/50 bg-card/40"}`}
-                  data-testid={`bureau-bar-${b.name.toLowerCase().replace(/\s/g, "-")}`}
-                >
-                  <p className={`text-[10px] font-bold mb-1.5 ${b.textColor}`}>{b.name}</p>
-                  <div className="text-lg sm:text-xl font-extrabold mb-1.5">{b.count}</div>
-                  <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden mb-1.5">
-                    <div className={`h-full rounded-full ${b.color} transition-all`} style={{ width: `${b.bar}%` }} />
-                  </div>
-                  <span className={`text-[9px] font-semibold ${b.textColor}`}>{b.badge}</span>
-                </div>
-              ))}
             </div>
-            <p className="text-center text-[9px] text-muted-foreground mt-2">
-              Sources: Experian FY2025 Annual Report · TransUnion 2024 Investor Day · Equifax 10-K 2024 ·{" "}
-              <button
-                className="underline hover:text-primary transition-colors"
-                onClick={() => document.getElementById("vs-global")?.scrollIntoView({ behavior: "smooth" })}
-                data-testid="link-see-full-comparison"
-              >
-                See full comparison ↓
-              </button>
-            </p>
+            <p className="text-center text-[10px] text-muted-foreground mt-4">{t("landing.releaseBoundary")}</p>
           </div>
 
           <div className="mt-8 animate-bounce">
@@ -924,13 +763,10 @@ export default function InvestorLandingPage() {
               </Button>
             </div>
             <div className="relative">
-              <div className="rounded-2xl overflow-hidden border border-border/50 shadow-2xl">
-                <img
-                  src={dashboardImage}
-                  alt="Universal Credit Hub v2.8 dashboard showing borrowers, credit accounts, and portfolio analytics"
-                  className="w-full h-auto"
-                  loading="lazy"
-                />
+              <div className="rounded-2xl border border-border/50 bg-card p-5 shadow-2xl" data-testid="current-demo-preview">
+                <div className="flex items-center justify-between border-b pb-4"><div className="flex items-center gap-2"><span className="flex size-9 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Radar className="size-4" /></span><div><p className="text-sm font-semibold">Current UCH Demo Board</p><p className="text-xs text-muted-foreground">Synthetic data · no registration</p></div></div><Badge variant="outline">v2.8</Badge></div>
+                <div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl border bg-amber-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">NPL &amp; IFRS 9</p><p className="mt-2 text-sm font-semibold">Early warnings &amp; evidence</p></div><div className="rounded-xl border bg-violet-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Consent &amp; collateral</p><p className="mt-2 text-sm font-semibold">Reviewable control trail</p></div><div className="rounded-xl border bg-rose-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Operations</p><p className="mt-2 text-sm font-semibold">Fraud &amp; resolution</p></div><div className="rounded-xl border bg-emerald-500/5 p-3"><p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Reporting</p><p className="mt-2 text-sm font-semibold">Evidence-ready controls</p></div></div>
+                <Button className="mt-5 w-full" onClick={() => navigate("/demo")} data-testid="button-open-current-demo">Explore the live demo board <ArrowRight className="size-4" /></Button>
               </div>
             </div>
           </div>
@@ -2056,24 +1892,6 @@ export default function InvestorLandingPage() {
                 <p className="text-[10px] text-muted-foreground/60 mt-1">Source: World Bank Findex 2024</p>
               </CardContent>
             </Card>
-          </div>
-
-          {/* ── Live Platform Stats by Market ──────────────────────────────── */}
-          <div className="mb-12">
-            <div className="text-center mb-6">
-              <h3 className="font-bold text-sm flex items-center justify-center gap-2 mb-1">
-                <Activity className="w-4 h-4 text-primary" />
-                Live Platform Data — By Market
-              </h3>
-              <p className="text-[11px] text-muted-foreground">
-                Registry stats updated in real time from the production database.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4" data-testid="market-stats-grid">
-              {["ghana", "nigeria", "kenya", "civ", "southafrica"].map((market) => (
-                <MarketStatCard key={market} market={market} />
-              ))}
-            </div>
           </div>
 
           <div className="mb-10">

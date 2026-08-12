@@ -77,6 +77,18 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-REG-01 | System shall provide regulatory analytics (NPL ratios, portfolio breakdowns) | Implemented | Reports (`reports.tsx`, `/api/reports/regulatory`) | NPL ratios, portfolio breakdowns by institution and loan type, SLA breach tracking | TC-RPT-001, TC-RPT-002 |
 | FR-REG-02 | System shall support regulatory user role with appropriate access | Implemented | RBAC (`userRoleEnum`, route middleware) | Regulator role with access to audit logs, billing, approvals, analytics | TC-AUTH-005 |
 | FR-REG-03 | System shall enforce maker-checker workflow for data changes | Implemented | Pending Approvals (`pending_approvals` table, `pending-approvals.tsx`) | Four-eye principle: different user must approve; self-approval prevention enforced server-side | TC-MC-001 through TC-MC-004 |
+| FR-REG-04 | System shall calculate a scoped gross-NPL target gap using an explicit numerator, denominator and reporting currency | Implemented baseline | NPL Reduction Plan (`/api/npl-reduction-plan`, `npl-reduction-plan-card.tsx`) | Excludes written-off balances, blocks unsafe multi-currency consolidation, and requires bank reconciliation before plan submission | TC-NPL-PLAN-001, TC-NPL-PLAN-002 |
+| FR-REG-05 | System shall govern an NPL reduction plan with dated targets and independent approval | Implemented baseline | NPL Reduction Plan and Pending Approvals | Requires at least two non-increasing milestones, final target at or below 10%, Board evidence reference, executive owner and maker-checker review | TC-NPL-PLAN-003 |
+| FR-REG-06 | System shall distinguish management evidence from regulatory submission | Implemented | NPL Reduction Plan, Regulatory Evidence Packs | UCH records plan and evidence status but does not approve a cure/write-off, post an accounting entry or file with a regulator | TC-NPL-PLAN-004 |
+| FR-REG-07 | System shall support versioned bank-specific loan-tape column mappings with maker-checker approval | Implemented baseline | Loan-tape Reconciliation (`bank_mapping_profiles`, `/api/loan-tape-reconciliation/profiles`) | Required canonical fields are enforced; profile maker cannot act as checker; only an approved version can validate a source extract | TC-LTR-001, TC-LTR-002 |
+| FR-REG-08 | System shall fingerprint each controlled loan-tape validation and persist reconciliation exceptions without retaining raw source rows | Implemented baseline | Loan-tape Reconciliation (`loan_tape_imports`, `loan_tape_reconciliation_exceptions`) | Stores SHA-256 source/row fingerprints, masked account references, summaries and exceptions; reconciliation does not update the authoritative credit-account ledger | TC-LTR-003, TC-LTR-004 |
+| FR-REG-09 | System shall block loan-tape evidence runs with critical/high data, classification, staging or collateral-control exceptions | Implemented baseline | `server/loan-tape-reconciliation.ts`, reconciliation workspace | Applies canonical completeness and consistency rules; bank-approved collateral age is optional; UCH does not autonomously assign IFRS stage | TC-LTR-005, TC-LTR-006 |
+| FR-REG-10 | System shall maintain one facility-linked NPL case without duplicating the credit-account or Collections ledgers | Implemented baseline | NPL Case Ledger (`npl_cases`, `/api/npl-cases`) | Opening balance, borrower, organisation, country and currency are derived server-side from the authorised credit account; active Collections assignment is referenced when present | TC-NPL-CASE-001 |
+| FR-REG-11 | System shall preserve an append-only chronology of observed NPL case movements | Implemented baseline | `npl_case_events`, mutation-prevention trigger | Server-calculated exposure before/after, monotonic sequence/date, evidence references and database rejection of updates/deletes | TC-NPL-CASE-002, TC-NPL-CASE-003 |
+| FR-REG-12 | System shall derive a currency-safe NPL exposure waterfall and surface reconciliation differences | Implemented baseline | `/api/npl-cases/waterfall/summary`, NPL Case Ledger UI | Opening plus observed inflows less cash/legal recoveries is compared with the independently derived closing projection; currencies remain separate | TC-NPL-CASE-004 |
+| FR-REG-13 | System shall govern restructure, cure/re-age and write-off proposals at facility-case level | Implemented baseline | NPL Decision Governance (`npl_decision_proposals`, `/api/npl-cases/:id/decisions`) | Requires policy authority, evidence, rationale and effective date; amount rules are decision-specific and bounded by current exposure | TC-NPL-DEC-001, TC-NPL-DEC-002 |
+| FR-REG-14 | System shall enforce independent review of material NPL decisions and preserve the outcome immutably | Implemented baseline | `/api/npl-decisions/:id/review`, `npl_case_events` | Server blocks maker self-approval; submit/approve/reject transitions append protected case events without changing exposure | TC-NPL-DEC-003, TC-NPL-DEC-004 |
+| FR-REG-15 | System shall distinguish decision approval, bank execution evidence and authoritative accounting reconciliation | Implemented baseline | `/api/npl-decisions/:id/execution`, Decision Governance UI | Approval never updates the credit account, IFRS 9 stage, provision or GL; execution evidence is recorded while reconciliation remains explicit | TC-NPL-DEC-005 |
 
 ---
 
@@ -218,7 +230,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | FR-COL (Data Collection) | 8 | 8 | 0 | 0 |
 | FR-CR (Credit Reporting) | 8 | 8 | 0 | 0 |
 | FR-CON (Consent & Disputes) | 9 | 9 | 0 | 0 |
-| FR-REG (Regulatory) | 3 | 3 | 0 | 0 |
+| FR-REG (Regulatory) | 15 | 15 | 0 | 0 |
 | FR-SPEC (Special Loans) | 5 | 5 | 0 | 0 |
 | FR-COMM (Commercial) | 5 | 5 | 0 | 0 |
 | FR-DP (Data Providers) | 4 | 4 | 0 | 0 |
@@ -228,7 +240,7 @@ This document maps every Software Requirements Specification (SRS) requirement t
 | ENT (Enterprise Enhancements) | 21 | 21 | 0 | 0 |
 | PCC (Platform Command Center) | 10 | 10 | 0 | 0 |
 | AI (AI-Powered Features) | 4 | 4 | 0 | 0 |
-| **Total** | **99** | **99** | **0** | **0** |
+| **Total** | **111** | **111** | **0** | **0** |
 
 ---
 

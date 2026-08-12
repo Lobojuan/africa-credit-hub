@@ -2,7 +2,7 @@
 
 > Use this script for: investor calls, sales demos, regulator briefings, conference lightning talks, and the LinkedIn launch video. Adjust pacing to your audience.
 
-**Demo URL:** https://universalcredithub.replit.app
+**Demo URL:** https://universalcredithub.com
 **Demo credentials:** `johndoe` / `SecuredCreditor2026!`
 **Recommended browser zoom:** 110%
 

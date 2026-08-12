@@ -8,6 +8,15 @@ const BACKUP_DIR = path.resolve(process.cwd(), "backups");
 const MAX_BACKUPS = 30;
 const BACKUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * A production restore changes every tenant's data and must not be executable
+ * from a browser session. It belongs to the controlled DR runbook, where a
+ * verified backup is restored into an isolated target before any cutover.
+ */
+export function isProductionRestoreBlocked(): boolean {
+  return process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+}
+
 function safeBackupPath(filename: string): string {
   const resolved = path.resolve(BACKUP_DIR, filename);
   if (!resolved.startsWith(BACKUP_DIR + path.sep)) throw new Error("Invalid backup path");
@@ -168,6 +177,10 @@ export async function createBackup(
 }
 
 export async function restoreBackup(backupId: string, restoredBy: string): Promise<{ success: boolean; message: string }> {
+  if (isProductionRestoreBlocked()) {
+    throw new Error("Production database restores are disabled in the web application. Use the approved disaster-recovery runbook.");
+  }
+
   const manifest = loadManifest();
   const record = manifest.find((r) => r.id === backupId);
   if (!record) throw new Error("Backup not found");
@@ -283,12 +296,15 @@ async function uploadToS3IfConfigured(filepath: string, filename: string): Promi
   }
 }
 
-async function logBackupAudit(userId: string, action: string, details: string) {
+async function logBackupAudit(userId: string | null, action: string, details: string) {
   try {
     await pool.query(
       `INSERT INTO audit_logs (id, user_id, action, entity, details, ip_address, created_at)
        VALUES (gen_random_uuid(), $1, $2, 'backup', $3, 'system', NOW())`,
-      [userId, action, details]
+      // Scheduled jobs are system events, not actions by a fictional user.
+      // audit_logs.user_id is a foreign key, so "system" must be represented
+      // as null rather than a value that cannot exist in users.
+      [userId === "system" ? null : userId, action, details]
     );
   } catch {}
 }
@@ -300,6 +316,8 @@ export function getBackupStatus(): {
   totalBackups: number;
   totalSizeMB: number;
   backupDir: string;
+  productionRestoreEnabled: boolean;
+  offsiteDestinationConfigured: boolean;
 } {
   const manifest = loadManifest();
   const completed = manifest.filter((r) => r.status === "completed");
@@ -317,6 +335,15 @@ export function getBackupStatus(): {
     totalBackups: completed.length,
     totalSizeMB: parseFloat(totalSizeMB.toFixed(2)),
     backupDir: BACKUP_DIR,
+    productionRestoreEnabled: !isProductionRestoreBlocked(),
+    // Configuration is intentionally reported separately from a successful
+    // upload. This prevents the UI from presenting a local-only copy as an
+    // off-site recovery capability.
+    offsiteDestinationConfigured: Boolean(
+      process.env.BACKUP_S3_BUCKET &&
+      process.env.AWS_ACCESS_KEY_ID &&
+      process.env.AWS_SECRET_ACCESS_KEY,
+    ),
   };
 }
 
@@ -366,7 +393,7 @@ export async function verifyBackupIntegrity(backupId?: string): Promise<{ valid:
       ageHours: Math.round((Date.now() - new Date(record.createdAt).getTime()) / 3600000),
     };
 
-    await logBackupAudit("system", "BACKUP_VERIFIED", `Integrity check passed: ${record.filename} (${details.sqlLines} SQL lines, ${record.sizeMB}MB)`);
+    await logBackupAudit(null, "BACKUP_VERIFIED", `Integrity check passed: ${record.filename} (${details.sqlLines} SQL lines, ${record.sizeMB}MB)`);
 
     return { valid: true, message: `Backup verified: ${record.filename}`, details };
   } catch (err: any) {

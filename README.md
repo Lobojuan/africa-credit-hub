@@ -2,7 +2,7 @@
   <h1 align="center">Universal Credit Hub (UCH v2.8)</h1>
   <p align="center"><strong>Pan-African Credit Registry Infrastructure</strong></p>
   <p align="center">
-    Enterprise-grade, multi-tenant SaaS credit data hub serving all 54 African countries,<br/>
+    Enterprise-grade, multi-tenant credit data hub designed for African financial institutions,<br/>
     42+ currencies, and 8 languages (EN, FR, PT, AR, SW, ES, zh-CN, zh-TW).
   </p>
 </p>
@@ -19,6 +19,9 @@
 | **Loto POS & Devices** | /loto-pos and /loto/admin/devices pages live |
 | **Security** | PII_ENCRYPTION_KEY + PII_ENCRYPTION_SALT validated at startup. MASTER_CONTROL_PASSWORD required in production |
 | **Migrations** | Sequential journal 0000–0018, no duplicate prefixes |
+| **2026-07 hardening** | Encrypted borrower-ID search repaired, deterministic authenticated E2E fixtures, WebKit HTTP/CSP regression fixed, and Ghana macro-risk observations now use maker-checker approval and audit evidence |
+| **Public Demo Board** | Outcome-led, no-registration `/demo` shows synthetic NPL/IFRS 9, consent/collateral, fraud/resolution, reporting/prudential and core credit-intelligence scenarios. Its hands-on Banker Shift routes a fictional event from role-based ownership to the matching work desk, with controlled numeric reviews and a browser-only virtual management report. It is not a bank environment, audit or regulatory filing. See [Public Demo Board](docs/Public_Demo_Board.md). |
+| **Bank Diagnostic & Forensics** | Public `/forensics` explains the controlled offer and lets a bank request a diagnostic. Authenticated `/bank-risk-diagnostic` guides a file-first, read-only management diagnostic from engagement authority through bank-validated findings and a measurable pilot path. See [Bank Diagnostic & Forensics](docs/Bank_Risk_Diagnostic.md). |
 
 ## Overview
 
@@ -30,7 +33,7 @@ The platform is developed by **Universal Credit Hub** in partnership with **Syst
 
 | Capability | Description |
 |---|---|
-| **54-Country Coverage** | Full country registry with jurisdiction-specific data retention, local currencies, and national ID formats |
+| **Pan-African country framework** | Country-scoped data and policy framework; real-data activation is country- and bank-specific. See [Country Clearance and Safety Matrix](docs/Country_Clearance_and_Safety_Matrix.md). |
 | **Data Sovereignty** | Backend middleware enforces organisation- and country-scoped isolation on every database query |
 | **AI Portfolio Intelligence** | GPT-4o / Claude Opus powered risk analysis, concentration alerts, and natural-language querying |
 | **Cross-Border Entity Resolution** | Bilateral data-sharing agreements with institutional-level access control |
@@ -72,6 +75,8 @@ The platform is developed by **Universal Credit Hub** in partnership with **Syst
 - HMAC-SHA256 signed webhook delivery with dual-header verification
 - Helmet security headers, CORS policy, and rate limiting (6 tiers)
 - Google OAuth 2.0 integration
+
+> **Institutional SSO status:** Google Workspace and Microsoft Entra sign-in are supported only after a bank configures its client credentials, approved callback URI, and pre-provisioned active staff identities. SAML enterprise SSO is deliberately unavailable in production pending a vetted implementation and bank IdP metadata/certificate validation. See [Bank Meeting Readiness](docs/Bank_Meeting_Readiness_2026-07-29.md).
 
 ### Consumer Portal
 - Self-service credit report access with PDF generation
@@ -117,7 +122,7 @@ The platform is developed by **Universal Credit Hub** in partnership with **Syst
 ## Project Structure
 
 ```
-africa-credit-hub/
+universal-credit-hub/
 ├── client/
 │   └── src/
 │       ├── components/      # Reusable UI components (sidebar, charts, forms)
@@ -255,7 +260,7 @@ Use `PERF_MONITOR_PAUSED=true`, `AGG_CACHE_PAUSED=true`, or `SCORE_CACHE_PAUSED=
 
 ## Deployment
 
-The platform is designed for deployment on Replit with built-in PostgreSQL, TLS, and health checks. For production:
+The platform supports deployment to a managed cloud environment with PostgreSQL, TLS, and health checks. For production:
 
 1. Set `PRODUCTION_MODE=true` to disable demo data seeding
 2. Set `NODE_ENV=production` for optimised builds

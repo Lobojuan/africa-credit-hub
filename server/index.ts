@@ -15,6 +15,7 @@ import { createServer } from "http";
 import { pool, startPoolHealthCheck } from "./db";
 import { createLogger } from "./logger";
 import { warnIfCanonicalUrlMissing, logOAuthCallbackUrls } from "./base-url";
+import { getPublicSitemapXml, isPublicSeoPath } from "./seo-public-routes";
 
 const port = parseInt(process.env.PORT || "5000", 10);
 
@@ -42,6 +43,11 @@ if (!process.env.DATABASE_URL) {
 }
 
 const isProductionBoot = process.env.NODE_ENV === "production" || process.env.PRODUCTION_MODE === "true";
+// E2E runs start an isolated, short-lived server. Keeping their sessions in
+// process avoids a race with the PostgreSQL-backed session-table bootstrap and
+// has no effect on development or production session persistence.
+const isE2ETestBoot =
+  process.env.ENABLE_E2E_TEST_AUTH === "true" && !isProductionBoot;
 
 function validateProductionConfig() {
   const errors: string[] = [];
@@ -95,6 +101,7 @@ warnIfCanonicalUrlMissing();
 logOAuthCallbackUrls();
 
 const app = express();
+app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.set("etag", false);
 
@@ -156,10 +163,12 @@ app.use(helmet({
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       formAction: ["'self'"],
-      frameAncestors: isProductionBoot
-        ? ["'none'"]
-        : ["'self'", "https://*.replit.dev", "https://*.replit.app", "https://*.repl.co"],
-      ...(isProductionBoot ? { upgradeInsecureRequests: [] } : {}),
+      frameAncestors: isProductionBoot ? ["'none'"] : ["'self'"],
+      // Helmet supplies this directive by default unless it is explicitly
+      // disabled. Keep HTTPS upgrading in production, but never upgrade the
+      // isolated HTTP E2E server: WebKit otherwise turns Vite asset requests
+      // into https://localhost and the application cannot boot.
+      upgradeInsecureRequests: isProductionBoot ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false,
@@ -175,11 +184,9 @@ app.use(compression());
 app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   res.setHeader("X-Permitted-Cross-Domain-Policies", "none");
-  if (!req.path.startsWith("/api")) {
+  if (isPublicSeoPath(req.path)) {
     res.setHeader("X-Robots-Tag", "index, follow");
-  }
-
-  if (req.path.startsWith("/api")) {
+  } else {
     res.setHeader("X-Robots-Tag", "noindex, noarchive, nosnippet");
   }
 
@@ -217,6 +224,7 @@ declare module "express-session" {
     lastActivity: number;
     mfaPendingUserId: string;
     mfaChallengeComplete: boolean;
+    mfaEnrollmentRequired?: boolean;
     viewingCountry: string;
     webauthnChallenge: string;
     webauthnUserId: string;
@@ -228,6 +236,8 @@ declare module "express-session" {
     consumerNationalId?: string;
     /** Non-production only: e2e test bypass role set via /api/test/set-session */
     _testRole?: string;
+    /** Non-production only: prevents test fixtures from being blocked by account-security prompts. */
+    e2eBypassSecurityPrompts?: boolean;
   }
 }
 
@@ -265,6 +275,7 @@ app.use(
 
 app.use(express.urlencoded({
   extended: false,
+  parameterLimit: 100,
   verify: (req: any, _res, buf) => {
     // Capture raw body bytes for HMAC verification (e.g. USSD HMAC gate).
     // The JSON verify callback above handles JSON bodies; this handles form-
@@ -276,12 +287,15 @@ app.use(express.urlencoded({
 const PgStore = pgSession(session);
 app.use(
   session({
-    store: new PgStore({
-      pool: pool,
-      tableName: "user_sessions",
-      createTableIfMissing: true,
-      pruneSessionInterval: 300,
-    }),
+    name: "uch.sid",
+    store: isE2ETestBoot
+      ? new session.MemoryStore()
+      : new PgStore({
+          pool: pool,
+          tableName: "user_sessions",
+          createTableIfMissing: true,
+          pruneSessionInterval: 300,
+        }),
     secret: process.env.SESSION_SECRET!,
     resave: false,
     saveUninitialized: false,
@@ -352,11 +366,37 @@ export const maintenanceState = {
   message: "We are working hard to improve your experience. The platform will be back shortly.",
 };
 
-app.get("/api/health", (_req, res) => {
+app.get("/api/health", async (_req, res) => {
   if (maintenanceState.enabled) {
     return res.status(503).json({ status: "maintenance", version: "2.8.0", message: maintenanceState.message });
   }
-  res.json({ status: "ok", version: "2.8.0", uptime: Math.round(process.uptime()) });
+
+  // This is the endpoint used by the release runner and the reverse proxy.
+  // A running Node process is not sufficient evidence of a usable banking
+  // platform: the database must be reachable too.
+  const startedAt = Date.now();
+  let databaseLatencyMs = 0;
+  try {
+    const databaseStartedAt = Date.now();
+    await pool.query("SELECT 1");
+    databaseLatencyMs = Date.now() - databaseStartedAt;
+  } catch {
+    return res.status(503).json({
+      status: "degraded",
+      version: "2.8.0",
+      uptime: Math.round(process.uptime()),
+      checks: { database: { status: "error" } },
+      responseMs: Date.now() - startedAt,
+    });
+  }
+
+  res.json({
+    status: "healthy",
+    version: "2.8.0",
+    uptime: Math.round(process.uptime()),
+    checks: { database: { status: "ok", latencyMs: databaseLatencyMs } },
+    responseMs: Date.now() - startedAt,
+  });
 });
 
 app.get("/api/maintenance/status", (req, res) => {
@@ -547,11 +587,15 @@ process.stderr.write = function (...args: any[]) {
   }
 
   if (process.env.RUN_SEED === "true") {
-    try {
-      const { cleanupNonGhanaData } = await import("./ghana-cleanup");
-      await cleanupNonGhanaData();
-    } catch (e) {
-      console.error("[Ghana Cleanup] Error (non-fatal):", e);
+    if (process.env.SKIP_GHANA_CLEANUP === "true") {
+      console.log("[Ghana Cleanup] Skipped for isolated test data");
+    } else {
+      try {
+        const { cleanupNonGhanaData } = await import("./ghana-cleanup");
+        await cleanupNonGhanaData();
+      } catch (e) {
+        console.error("[Ghana Cleanup] Error (non-fatal):", e);
+      }
     }
 
     const { seedDatabase } = await import("./seed");
@@ -710,8 +754,15 @@ process.stderr.write = function (...args: any[]) {
     console.error("[Schema] Constraint migration error (non-fatal):", e.message);
   }
 
-  const { initWebSocket } = await import("./websocket");
-  initWebSocket(httpServer);
+  // Browser E2E uses an in-memory session store by design. The WebSocket
+  // authenticator reads production sessions from PostgreSQL, so starting it
+  // here would generate misleading database errors without testing a real
+  // browser notification flow. Production and normal development still start
+  // the socket server.
+  if (!isE2ETestBoot) {
+    const { initWebSocket } = await import("./websocket");
+    initWebSocket(httpServer);
+  }
 
   app.use("/api/v1", (req, res, next) => {
     req.url = "/api" + req.url;
@@ -751,30 +802,21 @@ process.stderr.write = function (...args: any[]) {
     res.setHeader("Content-Type", "text/plain");
     res.setHeader("Cache-Control", "public, max-age=86400");
     res.send(
-      "# Universal Credit Hub — Automated access strictly prohibited.\n" +
-      "# © 2026 Universal Credit Hub Ltd. Registered in Ghana.\n" +
-      "# Unauthorised scraping, crawling, or data extraction is prohibited\n" +
-      "# under the Ghana Copyright Act 2005 (Act 690) and international IP treaties.\n" +
-      "# Legal: uffe.carlson@gmail.com | +233 552 395548\n\n" +
+      "# Universal Credit Hub — public marketing pages only.\n" +
+      "# Customer, bank, administrative and API routes are not crawlable.\n\n" +
       "User-agent: *\n" +
-      "Disallow: /\n" +
-      "Allow: /.well-known/\n" +
-      "Allow: /sitemap.xml\n"
+      "Allow: /\n" +
+      "Disallow: /api/\n" +
+      "Disallow: /admin/\n" +
+      "Disallow: /master-control/\n" +
+      "Sitemap: https://universalcredithub.com/sitemap.xml\n"
     );
   });
 
   app.get("/sitemap.xml", (_req, res) => {
     res.setHeader("Content-Type", "application/xml");
     res.setHeader("Cache-Control", "public, max-age=86400");
-    res.send(
-      `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://universalcredithub.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
-  <url><loc>https://universalcredithub.com/login</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://universalcredithub.com/register</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
-  <url><loc>https://universalcredithub.com/consumer-portal</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
-</urlset>`
-    );
+    res.send(getPublicSitemapXml("https://universalcredithub.com"));
   });
 
   if (process.env.NODE_ENV === "production") {
@@ -866,8 +908,13 @@ process.stderr.write = function (...args: any[]) {
     const { startLotoFraudScheduler } = await import("./loto-fraud-scheduler");
     startLotoFraudScheduler();
 
-    const { startBackupScheduler } = await import("./backup-service");
-    startBackupScheduler();
+    // Backup jobs invoke pg_dump and create audit records. They are not part
+    // of request-level E2E coverage and must not run against an ephemeral CI
+    // database as an accidental background side effect.
+    if (!isE2ETestBoot) {
+      const { startBackupScheduler } = await import("./backup-service");
+      startBackupScheduler();
+    }
 
     const { startTearsheetScheduler } = await import("./tearsheet-scheduler");
     const tearsheetIntervalHours = parseInt(process.env.TEARSHEET_REGEN_INTERVAL_HOURS || "168", 10);

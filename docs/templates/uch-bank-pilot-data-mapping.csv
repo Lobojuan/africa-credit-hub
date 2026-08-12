@@ -1,0 +1,11 @@
+source_field,UCH_target_field,required_for_pilot,source_system,format,owner,validation_rule,transform_or_exception
+customer_identifier,borrowerId,yes,CORE_BANKING,string,Data Owner,unique within legal entity,document any synthetic substitution
+account_identifier,accountNumber,yes,CORE_BANKING,string,Data Owner,unique per facility,no production account numbers in sandbox
+reporting_date,reportingDate,yes,CORE_BANKING,YYYY-MM-DD,Finance,one agreed as-of date,reject mixed reporting dates
+outstanding_principal,currentBalance,yes,CORE_BANKING,decimal,Finance,non-negative,reconcile to source extract total
+facility_status,status,yes,CORE_BANKING,controlled value,Credit Risk,map values before import,unmapped values are exceptions
+days_past_due,daysInArrears,yes,CORE_BANKING,integer,Credit Risk,integer >= 0,reconcile to collections source
+next_due_date,nextPaymentDate,yes,CORE_BANKING,YYYY-MM-DD,Collections,valid date,missing value is a data-quality exception
+restructure_indicator,restructureCount,recommended,CORE_BANKING,integer,Credit Risk,integer >= 0,map restructure event count
+collateral_value,collateralValue,recommended,COLLATERAL_SYSTEM,decimal,Collateral Team,non-negative,record valuation date separately
+ifrs9_stage,assetClassification,recommended,IFRS9_ENGINE,controlled value,Finance,bank-approved mapping,do not infer from UCH output

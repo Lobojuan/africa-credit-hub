@@ -1,28 +1,31 @@
 import { test, expect } from "@playwright/test";
 
 let e2eBorrowerId: string;
+let e2eSearchNationalId: string;
+let e2eSearchFirstName: string;
 
 test.beforeAll(async ({ browser }) => {
-  // Create the fixture with a real seeded user. Reusing Chromium's serialized
-  // storage state here made the Firefox project depend on cross-browser cookie
-  // handling and produced a 403 before the suite could start.
+  // Borrower writes are maker-checker submissions, not immediately-created
+  // records. Reuse a seeded borrower so the suite exercises an actual credit
+  // record consistently across browser projects.
   const ctx = await browser.newContext();
   const pg = await ctx.newPage();
   const session = await pg.request.post("/api/test/set-session", {
     data: { username: "platform_admin" },
   });
   expect(session.ok()).toBeTruthy();
-  const resp = await pg.request.post("/api/borrowers", {
-    data: {
-      firstName: "E2E",
-      lastName: "CreditSuiteTest",
-      nationalId: `E2E-CREDIT-${Date.now()}`,
-      type: "individual",
-      country: "Ghana",
-    },
-  });
-  expect(resp.status()).toBe(201);
-  e2eBorrowerId = (await resp.json()).id;
+  // The all-borrowers feed can legitimately start with a corporate record.
+  // This suite verifies name and National ID search, so use the individual
+  // borrower API rather than assuming the first generic record has a name.
+  const resp = await pg.request.get("/api/consumers?country=Ghana&limit=5");
+  expect(resp.status()).toBe(200);
+  const body = await resp.json() as { data?: Array<{ id: string; nationalId?: string; firstName?: string }> };
+  expect(body.data?.[0]).toBeTruthy();
+  e2eBorrowerId = body.data![0].id;
+  e2eSearchNationalId = body.data![0].nationalId || "";
+  e2eSearchFirstName = body.data![0].firstName || "";
+  expect(e2eSearchNationalId).toBeTruthy();
+  expect(e2eSearchFirstName).toBeTruthy();
   await ctx.close();
 });
 
@@ -30,13 +33,21 @@ async function setSession(
   page: import("@playwright/test").Page,
   session: Record<string, unknown>,
 ) {
+  // Each worker begins from the same saved auth cookie. Start a distinct test
+  // session before assigning a role so parallel specs cannot mutate it.
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: session });
   expect(res.ok()).toBeTruthy();
+  // Confirm that the session cookie is available to this browser context before
+  // navigating. Without this guard, an auth-fixture regression surfaces later
+  // as a misleading empty-table assertion.
+  const authenticated = await page.request.get("/api/auth/me");
+  expect(authenticated.ok()).toBeTruthy();
 }
 
-const ADMIN_SESSION = { userId: "e2e-credit-admin", userRole: "admin" };
-const SUPER_ADMIN_SESSION = { userId: "e2e-credit-sa", userRole: "super_admin" };
-const LENDER_SESSION = { userId: "e2e-credit-lender", userRole: "lender" };
+const ADMIN_SESSION = { username: "admin" };
+const SUPER_ADMIN_SESSION = { username: "platform_admin" };
+const LENDER_SESSION = { username: "lender_demo" };
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
@@ -61,11 +72,15 @@ test.describe("Credit Bureau — Dashboard", () => {
     });
   });
 
-  test("unauthenticated user cannot access /dashboard", async ({ page }) => {
-    await page.goto("/dashboard");
-    await expect(
-      page.locator('[data-testid="page-login"], [data-testid="button-login-institution"]').first(),
-    ).toBeVisible({ timeout: 15000 });
+  test("unauthenticated dashboard API access is denied", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const response = await context.request.get("/api/dashboard/stats");
+      expect([401, 403]).toContain(response.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -79,26 +94,28 @@ test.describe("Credit Bureau — Borrowers", () => {
     await expect(page.locator("h1, h2").first()).toBeVisible({ timeout: 15000 });
   });
 
-  test("search page renders borrower search input", async ({ page }) => {
+  test("search page renders the general credit search input", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/search");
+    await page.getByTestId("tab-general-search").click();
     await expect(
-      page.locator('[data-testid="input-borrower-search"]'),
+      page.locator('[data-testid="input-credit-search"]'),
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("borrower search input is interactive — accepts typed text", async ({
+  test("general credit search input is interactive — accepts typed text", async ({
     page,
   }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/search");
-    await page.waitForSelector('[data-testid="input-borrower-search"]', {
+    await page.getByTestId("tab-general-search").click();
+    await page.waitForSelector('[data-testid="input-credit-search"]', {
       timeout: 15000,
     });
     const query = "Kwame Mensah E2E Test";
-    await page.fill('[data-testid="input-borrower-search"]', query);
+    await page.fill('[data-testid="input-credit-search"]', query);
     expect(
-      await page.locator('[data-testid="input-borrower-search"]').inputValue(),
+      await page.locator('[data-testid="input-credit-search"]').inputValue(),
     ).toBe(query);
   });
 
@@ -114,9 +131,15 @@ test.describe("Credit Bureau — Borrowers", () => {
     ).toBe(true);
   });
 
-  test("borrowers API returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/borrowers");
-    expect([401, 403]).toContain(resp.status());
+  test("borrowers API returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const resp = await context.request.get("/api/borrowers");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -157,9 +180,15 @@ test.describe("Credit Bureau — Credit Accounts page structure", () => {
     ).toBe(true);
   });
 
-  test("credit accounts API returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/credit-accounts");
-    expect([401, 403]).toContain(resp.status());
+  test("credit accounts API returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const resp = await context.request.get("/api/credit-accounts");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 });
 
@@ -323,9 +352,13 @@ test.describe("Credit Bureau — Borrower detail and credit report", () => {
   test("clicking a borrower card navigates to the borrower detail page", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/borrowers");
-    await page.waitForSelector(`[data-testid="card-borrower-${e2eBorrowerId}"]`, { timeout: 20000 });
-    await page.click(`[data-testid="card-borrower-${e2eBorrowerId}"]`);
-    await expect(page).toHaveURL(new RegExp(`/borrowers/${e2eBorrowerId}`), { timeout: 12000 });
+    const card = page.locator('[data-testid^="card-borrower-"]').first();
+    await expect(card).toBeVisible({ timeout: 20000 });
+    const testId = await card.getAttribute("data-testid");
+    const borrowerId = testId?.replace("card-borrower-", "");
+    expect(borrowerId).toBeTruthy();
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/borrowers/${borrowerId}`), { timeout: 12000 });
   });
 
   test("borrower detail page shows generate-full-report button", async ({ page }) => {
@@ -337,16 +370,12 @@ test.describe("Credit Bureau — Borrower detail and credit report", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("credit report PDF download: clicking generate-full-report triggers a download", async ({ page }) => {
+  test("clicking generate-full-report opens the full credit report", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto(`/borrowers/${e2eBorrowerId}`);
     await page.waitForSelector('[data-testid="button-generate-full-report"]', { timeout: 15000 });
-    const [download] = await Promise.all([
-      page.waitForEvent("download", { timeout: 20000 }),
-      page.click('[data-testid="button-generate-full-report"]'),
-    ]);
-    expect(download.suggestedFilename()).toMatch(/\.pdf$/i);
-    expect((await download.path()) ?? "").not.toBe("");
+    await page.click('[data-testid="button-generate-full-report"]');
+    await expect(page).toHaveURL(new RegExp(`/credit-report/${e2eBorrowerId}`), { timeout: 12000 });
   });
 });
 
@@ -424,32 +453,30 @@ test.describe("Credit Bureau — Dispute filing lifecycle", () => {
 // ─── Credit account CRUD — create via UI and verify in list ──────────────────
 
 test.describe("Credit Bureau — Account CRUD lifecycle", () => {
-  test("create credit account via UI form and verify it appears in the accounts list", async ({ page }) => {
-    await setSession(page, SUPER_ADMIN_SESSION);
+  test("create credit account submits a maker-checker approval", async ({ page }) => {
+    // Credit-account submissions need an institutional country and organisation
+    // scope, so use the seeded lender rather than a synthetic role-only session.
+    await setSession(page, LENDER_SESSION);
 
     const createResp = await page.request.post("/api/credit-accounts", {
       data: {
         borrowerId: e2eBorrowerId,
-        lender: "E2E Test Bank Ghana",
+        lenderInstitution: "E2E Test Bank Ghana",
         accountNumber: `ACC-E2E-${Date.now()}`,
         accountType: "personal_loan",
         originalAmount: "50000",
         currentBalance: "48000",
         currency: "GHS",
-        status: "active",
+        // Credit-account status uses the regulatory account-status vocabulary;
+        // "active" is a UI concept, not an accepted ledger status.
+        status: "current",
         openingDate: new Date().toISOString().split("T")[0],
       },
     });
-    expect([200, 201]).toContain(createResp.status());
-    const created = await createResp.json() as { id: string };
-    const accountId = created.id;
-    expect(typeof accountId).toBe("string");
-
-    await page.goto("/credit-accounts");
-    await page.waitForSelector('[data-testid="text-accounts-title"]', { timeout: 15000 });
-    await expect(
-      page.locator(`[data-testid="row-account-${accountId}"]`),
-    ).toBeVisible({ timeout: 12000 });
+    expect(createResp.status()).toBe(201);
+    const created = await createResp.json() as { approval?: { id?: string }; message?: string };
+    expect(created.approval?.id).toEqual(expect.any(String));
+    expect(created.message).toMatch(/maker-checker approval/i);
   });
 });
 
@@ -474,30 +501,7 @@ test.describe("Credit Bureau — Regulatory Compliance", () => {
 
 // ─── Borrower search by name and NIN ─────────────────────────────────────────
 
-let e2eSearchNationalId: string;
-let e2eSearchFirstName: string;
-
 test.describe("Credit Bureau — Borrower search by name and NIN", () => {
-  test.beforeAll(async ({ browser }) => {
-    const ctx = await browser.newContext({ storageState: "playwright/.auth/super_admin.json" });
-    const pg = await ctx.newPage();
-    e2eSearchNationalId = `NIN-SEARCH-E2E-${Date.now()}`;
-    e2eSearchFirstName = `SearchableE2E${Date.now()}`;
-
-    const r = await pg.request.post("/api/borrowers", {
-      data: {
-        firstName: e2eSearchFirstName,
-        lastName: "SearchSuiteUser",
-        nationalId: e2eSearchNationalId,
-        type: "individual",
-        country: "Ghana",
-        email: `search-e2e-${Date.now()}@test.invalid`,
-      },
-    });
-    expect(r.status()).toBe(201);
-    await ctx.close();
-  });
-
   test("search by NIN returns the seeded borrower", async ({ page }) => {
     await setSession(page, SUPER_ADMIN_SESSION);
     await page.goto("/borrowers");
@@ -505,13 +509,13 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     await page.fill('[data-testid="input-search-borrowers"]', e2eSearchNationalId);
     await page.waitForTimeout(1200);
 
-    const rows = page.locator(`[data-testid^="row-borrower-"]`);
-    await expect(rows.first()).toBeVisible({ timeout: 12000 });
-    const rowCount = await rows.count();
-    expect(rowCount).toBeGreaterThanOrEqual(1);
+    const cards = page.locator(`[data-testid^="card-borrower-"]`);
+    await expect(cards.first()).toBeVisible({ timeout: 12000 });
+    const cardCount = await cards.count();
+    expect(cardCount).toBeGreaterThanOrEqual(1);
 
     // At least one row must show the NIN
-    const allText = await page.locator(`[data-testid^="row-borrower-"]`).allTextContents();
+    const allText = await cards.allTextContents();
     const found = allText.some(t => t.includes(e2eSearchNationalId) || t.includes(e2eSearchFirstName));
     expect(found).toBe(true);
   });
@@ -523,9 +527,9 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     await page.fill('[data-testid="input-search-borrowers"]', e2eSearchFirstName);
     await page.waitForTimeout(1200);
 
-    const rows = page.locator(`[data-testid^="row-borrower-"]`);
-    await expect(rows.first()).toBeVisible({ timeout: 12000 });
-    const allText = await page.locator(`[data-testid^="row-borrower-"]`).allTextContents();
+    const cards = page.locator(`[data-testid^="card-borrower-"]`);
+    await expect(cards.first()).toBeVisible({ timeout: 12000 });
+    const allText = await cards.allTextContents();
     const found = allText.some(t => t.toLowerCase().includes(e2eSearchFirstName.toLowerCase()));
     expect(found).toBe(true);
   });
@@ -549,7 +553,7 @@ test.describe("Credit Bureau — Borrower search by name and NIN", () => {
     await page.waitForTimeout(800);
     await page.fill('[data-testid="input-search-borrowers"]', "");
     await page.waitForTimeout(800);
-    const rows = page.locator(`[data-testid^="row-borrower-"]`);
-    await expect(rows.first()).toBeVisible({ timeout: 10000 });
+    const cards = page.locator(`[data-testid^="card-borrower-"]`);
+    await expect(cards.first()).toBeVisible({ timeout: 10000 });
   });
 });

@@ -8,7 +8,7 @@ async function setSession(
   expect(res.ok()).toBeTruthy();
 }
 
-const SUPER_ADMIN_SESSION = { userId: "e2e-rpt-sa", userRole: "super_admin" };
+const SUPER_ADMIN_SESSION = { username: "platform_admin" };
 const LENDER_SESSION = { userId: "e2e-rpt-lender", userRole: "lender" };
 
 async function gotoReports(

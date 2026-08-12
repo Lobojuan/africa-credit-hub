@@ -22,7 +22,7 @@ The fiscal-receipt piece is the unlock — it lets you safely lend to thin-file 
 30-day free pilot, sandbox + production keys, no setup fee. Can I send you a 90-second demo video and your sandbox login?
 
 [Your name]
-https://universalcredithub.replit.app/for-lenders
+https://universalcredithub.com/for-lenders
 
 ---
 
@@ -42,7 +42,7 @@ May I send a one-page brief and a 20-minute walkthrough slot?
 
 [Your name]
 [Title]
-https://universalcredithub.replit.app/for-regulators
+https://universalcredithub.com/for-regulators
 
 ---
 
@@ -63,7 +63,7 @@ Live, deployed, six regulator export templates already shipped (BoG, CBN, BCEAO,
 Open to a 20-min intro?
 
 [Your name]
-https://universalcredithub.replit.app — full walkthrough on request
+https://universalcredithub.com — full walkthrough on request
 
 ---
 
@@ -82,7 +82,7 @@ We've built one that does — Universal Credit Hub — and we're publicly launch
 Happy to give you exclusive access to the platform, founder time, and figures before the broader announcement. Interested?
 
 [Your name]
-Press kit: https://universalcredithub.replit.app/press
+Press kit: https://universalcredithub.com/press
 
 ---
 
@@ -101,7 +101,7 @@ Two ways we'd love to work together:
 Worth a 15-min call?
 
 [Your name]
-https://universalcredithub.replit.app
+https://universalcredithub.com
 
 ---
 
@@ -115,7 +115,7 @@ Been heads-down for [X] months building Universal Credit Hub. Just shipped publi
 
 You've thought hard about [their domain]. Would mean a lot to get your honest read on the demo. 10 minutes max?
 
-Demo: https://universalcredithub.replit.app — `johndoe` / `SecuredCreditor2026!`
+Demo: https://universalcredithub.com — `johndoe` / `SecuredCreditor2026!`
 
 [Your name]
 

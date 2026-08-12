@@ -163,6 +163,7 @@ interface BackupStatus {
   nextAutoBackup: string | null;
   totalBackups: number;
   totalSizeMB: number;
+  productionRestoreEnabled: boolean;
 }
 
 function PendingRegistrations() {
@@ -484,7 +485,7 @@ function BackupManagement() {
                     <Download className="w-3 h-3" />
                   </Button>
 
-                  {confirmRestore === backup.id ? (
+                  {status?.productionRestoreEnabled !== false && confirmRestore === backup.id ? (
                     <div className="flex items-center gap-1">
                       <Button
                         variant="destructive"
@@ -505,7 +506,7 @@ function BackupManagement() {
                         Cancel
                       </Button>
                     </div>
-                  ) : (
+                  ) : status?.productionRestoreEnabled !== false ? (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -516,7 +517,7 @@ function BackupManagement() {
                     >
                       <Upload className="w-3 h-3" />
                     </Button>
-                  )}
+                  ) : null}
 
                   <Button
                     variant="ghost"

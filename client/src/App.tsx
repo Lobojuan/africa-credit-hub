@@ -39,12 +39,15 @@ import { CountrySelector } from "@/components/country-selector";
 import { QuickAccessBar } from "@/components/quick-access-bar";
 import { SessionTimeoutDialog } from "@/components/session-timeout-dialog";
 import { AppFooter } from "@/components/app-footer";
+import { PublicPageFrame } from "@/components/public-page-frame";
 import { MfaSetupDialog } from "@/components/mfa-setup";
 import { useToast } from "@/hooks/use-toast";
+import { changeAppLanguage } from "@/lib/i18n";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "@/components/error-boundary";
 import LoginPage from "@/pages/login";
+const AccountActionPage = lazy(() => import("@/pages/account-action"));
 import NotFound from "@/pages/not-found";
 import { ProductSwitcher } from "@/components/product-switcher";
 import { WorkspaceThemeProvider } from "@/components/workspace-theme-provider";
@@ -57,8 +60,8 @@ const CreditLandingPage = lazy(() => import("@/pages/credit-landing"));
 const CollateralLandingPage = lazy(() => import("@/pages/collateral-landing"));
 const LotoLandingPage = lazy(() => import("@/pages/loto-landing"));
 const LotoVerifyDrawPage = lazy(() => import("@/pages/loto-verify-draw"));
-const ProductChooserPage = lazy(() => import("@/pages/product-chooser"));
 const ChooseWorkspacePage = lazy(() => import("@/pages/choose-workspace"));
+const TodayPage = lazy(() => import("@/pages/today"));
 const CountrySelectionPage = lazy(() => import("@/pages/country-selection"));
 const MobileSearchPage = lazy(() => import("@/pages/mobile-search"));
 
@@ -83,6 +86,9 @@ const UserManagementPage = lazy(() => import("@/pages/user-management"));
 const PendingApprovalsPage = lazy(() => import("@/pages/pending-approvals"));
 const DisputesPage = lazy(() => import("@/pages/disputes"));
 const BatchUploadPage = lazy(() => import("@/pages/batch-upload"));
+const LoanTapeReconciliationPage = lazy(() => import("@/pages/loan-tape-reconciliation"));
+const NplCaseLedgerPage = lazy(() => import("@/pages/npl-case-ledger"));
+const NplDecisionGovernancePage = lazy(() => import("@/pages/npl-decision-governance"));
 const InstitutionsPage = lazy(() => import("@/pages/institutions"));
 const ConsentManagementPage = lazy(() => import("@/pages/consent-management"));
 const BillingPage = lazy(() => import("@/pages/billing"));
@@ -121,6 +127,18 @@ const AboutPage = lazy(() => import("@/pages/about"));
 const LegalCopyrightPage = lazy(() => import("@/pages/legal-copyright"));
 const PortfolioIntelligencePage = lazy(() => import("@/pages/portfolio-intelligence"));
 const PortfolioTriggersPage = lazy(() => import("@/pages/portfolio-triggers"));
+const NplEarlyWarningPage = lazy(() => import("@/pages/npl-early-warning"));
+const ForgeryReviewPage = lazy(() => import("@/pages/forgery-review"));
+const TransactionResolutionPage = lazy(() => import("@/pages/transaction-resolution"));
+const TransactionFraudMonitorPage = lazy(() => import("@/pages/transaction-fraud-monitor"));
+const BankControlCenterPage = lazy(() => import("@/pages/bank-control-center"));
+const BankRiskDiagnosticPage = lazy(() => import("@/pages/bank-risk-diagnostic"));
+const BankPilotReadinessPage = lazy(() => import("@/pages/bank-pilot-readiness"));
+const BankIntegrationReadinessPage = lazy(() => import("@/pages/bank-integration-readiness"));
+const Ifrs9PolicyWorkspacePage = lazy(() => import("@/pages/ifrs9-policy-workspace"));
+const InsiderRiskReviewPage = lazy(() => import("@/pages/insider-risk-review"));
+const PrudentialRadarPage = lazy(() => import("@/pages/prudential-radar"));
+const RegulatoryEvidencePacksPage = lazy(() => import("@/pages/regulatory-evidence-packs"));
 const AICommandCenterPage = lazy(() => import("@/pages/ai-command-center"));
 const CommandCenterSystemPage = lazy(() => import("@/pages/command-center-system"));
 const CommandCenterSettingsPage = lazy(() => import("@/pages/command-center-settings"));
@@ -134,6 +152,7 @@ const CommandCenterRevenueSplitPage = lazy(() => import("@/pages/command-center-
 const CommandCenterSettlementsPage = lazy(() => import("@/pages/command-center-settlements"));
 const CommandCenterWalletsPage = lazy(() => import("@/pages/command-center-wallets"));
 const AIDemoPage = lazy(() => import("@/pages/ai-demo"));
+const DemoBoardPage = lazy(() => import("@/pages/demo-board"));
 const BorrowerAlertsPage = lazy(() => import("@/pages/borrower-alerts"));
 const RegulatoryDashboardPage = lazy(() => import("@/pages/regulatory-dashboard"));
 const CreditScoreMethodologyPage = lazy(() => import("@/pages/credit-score-methodology"));
@@ -174,6 +193,7 @@ const FinancialInclusionPage = lazy(() => import("@/pages/financial-inclusion"))
 const PressKitPage = lazy(() => import("@/pages/press-kit"));
 const ForLendersPage = lazy(() => import("@/pages/for-lenders"));
 const ForRegulatorsPage = lazy(() => import("@/pages/for-regulators"));
+const ForensicsPage = lazy(() => import("@/pages/forensics"));
 const PlatformMapPage = lazy(() => import("@/pages/platform-map"));
 const RegistryAuthorityPortalPage = lazy(() => import("@/pages/registry-authority-portal"));
 const CollateralVerifyPage = lazy(() => import("@/pages/collateral-verify"));
@@ -244,6 +264,9 @@ function Router() {
         <Route path="/approvals" component={PendingApprovalsPage} />
         <Route path="/disputes" component={DisputesPage} />
         <Route path="/batch-upload" component={BatchUploadPage} />
+        <Route path="/loan-tape-reconciliation" component={LoanTapeReconciliationPage} />
+        <Route path="/npl-case-ledger" component={NplCaseLedgerPage} />
+        <Route path="/npl-decision-governance" component={NplDecisionGovernancePage} />
         <Route path="/institutions" component={InstitutionsPage} />
         <Route path="/consent" component={ConsentManagementPage} />
         <Route path="/billing" component={BillingPage} />
@@ -296,6 +319,18 @@ function Router() {
         <Route path="/legal" component={LegalCopyrightPage} />
         <Route path="/portfolio-intelligence" component={PortfolioIntelligencePage} />
         <Route path="/portfolio-triggers" component={PortfolioTriggersPage} />
+        <Route path="/npl-early-warning" component={NplEarlyWarningPage} />
+        <Route path="/forgery-review" component={ForgeryReviewPage} />
+        <Route path="/transaction-resolution" component={TransactionResolutionPage} />
+        <Route path="/transaction-fraud-monitor" component={TransactionFraudMonitorPage} />
+        <Route path="/bank-control-center" component={BankControlCenterPage} />
+        <Route path="/bank-risk-diagnostic" component={BankRiskDiagnosticPage} />
+        <Route path="/bank-pilot-readiness" component={BankPilotReadinessPage} />
+        <Route path="/bank-integration-readiness" component={BankIntegrationReadinessPage} />
+        <Route path="/ifrs9-policy-workspace" component={Ifrs9PolicyWorkspacePage} />
+        <Route path="/insider-risk-review" component={InsiderRiskReviewPage} />
+        <Route path="/prudential-radar" component={PrudentialRadarPage} />
+        <Route path="/regulatory-evidence-packs" component={RegulatoryEvidencePacksPage} />
         <Route path="/ai-command-center" component={AICommandCenterPage} />
         <Route path="/command-center" component={() => <Redirect to="/command-center-system" />} />
         <Route path="/command-center-system" component={CommandCenterSystemPage} />
@@ -331,8 +366,9 @@ function Router() {
             </Suspense>
           )}
         </Route>
-        <Route path="/choose-product" component={ProductChooserPage} />
+        <Route path="/choose-product" component={ChooseWorkspacePage} />
         <Route path="/choose-workspace" component={ChooseWorkspacePage} />
+        <Route path="/today" component={TodayPage} />
         <Route component={NotFound} />
       </Switch>
     </Suspense>
@@ -381,6 +417,7 @@ function AuthenticatedApp() {
   const [passkeyRegistering, setPasskeyRegistering] = useState(false);
   const [passkeyBanner, setPasskeyBanner] = useState(false);
   const [passkeyRegistered, setPasskeyRegistered] = useState(false);
+  const mfaEnrollmentRequired = !!(user && (user as any).mfaRequired && !user.mfaEnabled);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -512,7 +549,7 @@ function AuthenticatedApp() {
     return <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>;
   }
 
-  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
+  const publicPaths = ["/", "/investor", "/solutions", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/score-guide", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!user) {
     if (currentPath === "/login") {
       return <LoginPage />;
@@ -524,8 +561,9 @@ function AuthenticatedApp() {
   }
 
   if (currentPath === "/login") {
-    const availableWorkspaces = workspacesForRole(user?.role, (user as any)?.allowedProducts);
-    return doRedirect(availableWorkspaces.length === 1 ? availableWorkspaces[0].landing : "/choose-workspace");
+    // Staff sign-in starts at the outcome-led control centre. The generic
+    // dashboard and specialist tools stay available through the sidebar.
+    return doRedirect("/bank-control-center");
   }
 
   if (accountSuspended) {
@@ -806,7 +844,7 @@ function AuthenticatedApp() {
           </main>
           <DemoTour />
           {passwordExpired && <PasswordChangeDialog open={true} forced={true} />}
-          <MfaSetupDialog open={mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} />
+          <MfaSetupDialog open={mfaEnrollmentRequired || mfaOpen} onOpenChange={setMfaOpen} mfaEnabled={!!user.mfaEnabled} mfaRequired={!!user.mfaRequired} forced={mfaEnrollmentRequired} />
         </div>
       </div>
       {isMobile && <MobileBottomNav />}
@@ -921,9 +959,26 @@ function AuthenticatedApp() {
 
 function PublicChatbotWrapper() {
   const [location] = useLocation();
-  const publicPaths = ["/", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
+  const publicPaths = ["/", "/fr", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion"];
   if (!publicPaths.includes(location)) return null;
   return <PublicChatbot />;
+}
+
+function TrialBannerWrapper() {
+  const [location] = useLocation();
+  // Public and account-entry pages do not have a session by design. Avoid a
+  // needless `/api/auth/me` request (and its expected 401) on every marketing
+  // page while keeping the banner available throughout the signed-in app.
+  const publicOrEntryPaths = ["/", "/fr", "/solutions", "/investor", "/credit", "/collateral", "/loto", "/ai-demo", "/demo", "/forensics", "/pricing", "/security", "/security-compliance", "/terms", "/privacy", "/market-validation", "/start-trial", "/signup", "/my-credit", "/consumer-portal", "/api-docs", "/consumer/register", "/contact-sales", "/portal", "/partner-docs", "/press", "/for-lenders", "/for-regulators", "/financial-inclusion", "/login", "/forgot-password", "/reset-password", "/activate-account"];
+  return publicOrEntryPaths.includes(location) ? null : <TrialBanner />;
+}
+
+function FrenchLandingPage() {
+  useEffect(() => {
+    void changeAppLanguage("fr");
+  }, []);
+
+  return <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>;
 }
 
 function App() {
@@ -932,32 +987,40 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <Switch>
+            <Route path="/fr" component={FrenchLandingPage} />
             <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
             <Route path="/investor" component={() => <Redirect to="/" />} />
             <Route path="/solutions" component={() => <Redirect to="/" />} />
             <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
-            <Route path="/collateral" component={() => <Redirect to="/" />} />
-            <Route path="/loto" component={() => <Redirect to="/" />} />
-            <Route path="/financial-inclusion" component={() => <Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense>} />
+            <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
+            <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
+            <Route path="/financial-inclusion" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense></PublicPageFrame>} />
             <Route path="/press" component={() => <Suspense fallback={<LazyFallback />}><PressKitPage /></Suspense>} />
             <Route path="/for-lenders" component={() => <Suspense fallback={<LazyFallback />}><ForLendersPage /></Suspense>} />
             <Route path="/for-regulators" component={() => <Suspense fallback={<LazyFallback />}><ForRegulatorsPage /></Suspense>} />
+            <Route path="/forensics" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><ForensicsPage /></Suspense></PublicPageFrame>} />
 
             <Route path="/ai-demo" component={() => <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin" /></div>}><AIDemoPage /></Suspense>} />
-            <Route path="/pricing" component={() => <Suspense fallback={<LazyFallback />}><PricingPage /></Suspense>} />
+            <Route path="/demo" component={() => <Suspense fallback={<LazyFallback />}><DemoBoardPage /></Suspense>} />
+            <Route path="/pricing" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><PricingPage /></Suspense></PublicPageFrame>} />
             <Route path="/contact-sales" component={() => <Suspense fallback={<LazyFallback />}><ContactSalesPage /></Suspense>} />
-            <Route path="/security" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
-            <Route path="/security-compliance" component={() => <Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense>} />
+            <Route path="/security" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense></PublicPageFrame>} />
+            <Route path="/security-compliance" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><SecurityCompliancePage /></Suspense></PublicPageFrame>} />
             <Route path="/terms" component={() => <Suspense fallback={<LazyFallback />}><TermsOfServicePage /></Suspense>} />
             <Route path="/privacy" component={() => <Suspense fallback={<LazyFallback />}><PrivacyPolicyPage /></Suspense>} />
-            <Route path="/market-validation" component={() => <Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense>} />
-            <Route path="/start-trial" component={() => <Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense>} />
+            <Route path="/market-validation" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><MarketValidationPage /></Suspense></PublicPageFrame>} />
+            <Route path="/start-trial" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><StartTrialPage /></Suspense></PublicPageFrame>} />
             <Route path="/signup" component={() => <Suspense fallback={<LazyFallback />}><SignUpPage /></Suspense>} />
-            <Route path="/score-guide" component={() => <Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense>} />
+            <Route path="/score-guide" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><ScoreGuidePage /></Suspense></PublicPageFrame>} />
             <Route path="/api-docs" component={() => <Suspense fallback={<LazyFallback />}><ApiDocsPage /></Suspense>} />
             <Route path="/partner-docs" component={() => <Suspense fallback={<LazyFallback />}><PartnerDocsPage /></Suspense>} />
-            <Route path="/portal" component={() => <Suspense fallback={<LazyFallback />}><PortalPage /></Suspense>} />
+            <Route path="/portal" component={() => <PublicPageFrame mode="compact"><Suspense fallback={<LazyFallback />}><PortalPage /></Suspense></PublicPageFrame>} />
             <Route path="/platform-control-9x7k" component={() => <Suspense fallback={<LazyFallback />}><PlatformMasterControlPage /></Suspense>} />
+            <Route path="/verify">
+              <Suspense fallback={<LazyFallback />}>
+                <CollateralVerifyPage />
+              </Suspense>
+            </Route>
             <Route path="/verify/:code">
               <Suspense fallback={<LazyFallback />}>
                 <CollateralVerifyPage />
@@ -973,6 +1036,9 @@ function App() {
                 <ConsumerPortalPage />
               </Suspense>
             </Route>
+            <Route path="/forgot-password" component={() => <Suspense fallback={<LazyFallback />}><AccountActionPage /></Suspense>} />
+            <Route path="/reset-password" component={() => <Suspense fallback={<LazyFallback />}><AccountActionPage /></Suspense>} />
+            <Route path="/activate-account" component={() => <Suspense fallback={<LazyFallback />}><AccountActionPage /></Suspense>} />
             <Route path="/login">
               <AuthProvider>
                 <OrgSwitcherProvider>
@@ -983,6 +1049,11 @@ function App() {
               </AuthProvider>
             </Route>
             <Route path="/my-credit">
+              <Suspense fallback={<LazyFallback />}>
+                <ConsumerPortalPage />
+              </Suspense>
+            </Route>
+            <Route path="/consumer-portal">
               <Suspense fallback={<LazyFallback />}>
                 <ConsumerPortalPage />
               </Suspense>
@@ -1007,7 +1078,7 @@ function App() {
             </Route>
           </Switch>
           <Toaster />
-          <TrialBanner />
+          <TrialBannerWrapper />
           <PWAInstallPrompt />
           <PublicChatbotWrapper />
         </TooltipProvider>

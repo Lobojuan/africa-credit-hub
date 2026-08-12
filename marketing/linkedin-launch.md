@@ -26,7 +26,7 @@
 >
 > Built for banks, MFIs, fintechs, regulators — and most importantly, the merchant who rings up sales on a POS in Abidjan and now has a credit history she owns.
 >
-> 👉 https://universalcredithub.replit.app
+> 👉 https://universalcredithub.com
 >
 > #FinTech #Africa #FinancialInclusion #CreditBureau #OpenBanking
 
@@ -123,13 +123,13 @@
 >
 > What's next:
 >
-> → If you run a **bank, MFI, or fintech** in Africa: we're onboarding the next 10 pilot lenders this quarter. https://universalcredithub.replit.app/for-lenders
+> → If you run a **bank, MFI, or fintech** in Africa: we're onboarding the next 10 pilot lenders this quarter. https://universalcredithub.com/for-lenders
 >
-> → If you work in **regulation or policy**: we'll set up a sandbox for you in 5 days, no commitment. https://universalcredithub.replit.app/for-regulators
+> → If you work in **regulation or policy**: we'll set up a sandbox for you in 5 days, no commitment. https://universalcredithub.com/for-regulators
 >
 > → If you're an **investor** in fintech infrastructure: DM me — happy to send the deck and book a 30-min walkthrough.
 >
-> → If you cover **African fintech as a journalist or analyst**: press kit is here. https://universalcredithub.replit.app/press
+> → If you cover **African fintech as a journalist or analyst**: press kit is here. https://universalcredithub.com/press
 >
 > Forward this to one person who should see it. That's how this gets built.
 

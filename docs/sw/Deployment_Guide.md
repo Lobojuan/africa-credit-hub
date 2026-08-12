@@ -10,7 +10,7 @@
 
 ## 1. Muhtasari
 
-Mwongozo huu unatoa maelekezo ya hatua kwa hatua ya kupeleka Mfumo wa Rejista ya Mikopo. Programu hii inajumuisha kiolesura cha React kinachohudumwa na seva ya Express.js, pamoja na PostgreSQL kama hifadhidata. Hali mbili za kupeleka zinashughulikiwa: kupeleka kwa Replit na kupeleka kwa Linux/Docker kwa ujumla.
+Mwongozo huu unatoa maelekezo ya hatua kwa hatua ya kupeleka Mfumo wa Rejista ya Mikopo. Programu hii inajumuisha kiolesura cha React kinachohudumwa na seva ya Express.js, pamoja na PostgreSQL kama hifadhidata. Hali mbili za kupeleka zinashughulikiwa: kupeleka kwa managed cloud platform na kupeleka kwa Linux/Docker kwa ujumla.
 
 ---
 
@@ -108,7 +108,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 Mfumo unahitaji hifadhidata ya PostgreSQL. Chaguzi ni pamoja na:
 
-- **Neon** (PostgreSQL isiyo na seva, inayopendekezwa kwa Replit)
+- **Neon** (PostgreSQL isiyo na seva, inayopendekezwa kwa managed cloud platform)
 - **Amazon RDS** kwa kazi za uzalishaji
 - **PostgreSQL inayojihifadhi** kwenye seva za Linux
 - **Docker PostgreSQL** kwa kupeleka kwa kontena
@@ -265,11 +265,11 @@ WantedBy=multi-user.target
 
 ---
 
-## 7. Kupeleka Mahususi kwa Replit
+## 7. Kupeleka Mahususi kwa managed cloud platform
 
 ### 7.1 Usanidi
 
-Programu imesanidiwa mapema kwa kupeleka kwa Replit. Faili ya `.replit` inafafanua:
+Programu imesanidiwa mapema kwa kupeleka kwa managed cloud platform. Faili ya `.managed-cloud` inafafanua:
 
 - Amri ya ujenzi: `npm run build`
 - Amri ya kuendesha: `node ./dist/index.cjs`
@@ -277,7 +277,7 @@ Programu imesanidiwa mapema kwa kupeleka kwa Replit. Faili ya `.replit` inafafan
 
 ### 7.2 Siri za Mazingira (Environment Secrets)
 
-Katika Replit, weka vigezo vya mazingira kupitia kichupo cha Secrets:
+Katika managed cloud platform, weka vigezo vya mazingira kupitia kichupo cha Secrets:
 1. `DATABASE_URL` - Mfuatano wa muunganisho wa PostgreSQL (Neon inapendekezwa)
 2. `SESSION_SECRET` - Mfuatano wa nasibu kwa usimbaji wa kikao
 
@@ -438,7 +438,7 @@ server {
 Kwa uzalishaji, tumia HTTPS kila wakati. Chaguzi:
 - **Let's Encrypt** na certbot kwa vyeti vya SSL vya bure
 - **SSL ya mtoa huduma wa wingu** (AWS ACM, Cloudflare, n.k.)
-- **Replit** inatoa HTTPS kiotomatiki
+- **managed cloud platform** inatoa HTTPS kiotomatiki
 
 ---
 

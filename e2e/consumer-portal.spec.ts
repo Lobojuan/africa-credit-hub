@@ -27,11 +27,18 @@ test.beforeAll(async ({ browser }) => {
 });
 
 async function setConsumerSession(page: import("@playwright/test").Page, session: Record<string, unknown>) {
-  const res = await page.request.post("/api/test/set-session", { data: session });
+  // Authenticated browser projects start with a saved institution cookie. A
+  // consumer session must explicitly clear that identity: mixed institution +
+  // consumer sessions are correctly rejected by the production API.
+  await page.context().clearCookies();
+  const res = await page.request.post("/api/test/set-session", {
+    data: { userId: null, userRole: null, organizationId: null, ...session },
+  });
   expect(res.ok()).toBeTruthy();
 }
 
 async function setAdminSession(page: import("@playwright/test").Page) {
+  await page.context().clearCookies();
   const res = await page.request.post("/api/test/set-session", { data: { userId: "e2e-sa", userRole: "super_admin" } });
   expect(res.ok()).toBeTruthy();
 }
@@ -57,14 +64,14 @@ async function findConsumerWithCreditFile(page: import("@playwright/test").Page)
 
 test.describe("Consumer Portal — landing page", () => {
   test("consumer portal renders at /consumer-portal", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await expect(
       page.locator('[data-testid="badge-consumer-portal"], [data-testid="tab-password-login"]').first(),
     ).toBeVisible({ timeout: 15000 });
   });
 
   test("password login tab shows consumer-id and password inputs", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="tab-password-login"]', { timeout: 15000 });
     await page.click('[data-testid="tab-password-login"]');
 
@@ -74,12 +81,12 @@ test.describe("Consumer Portal — landing page", () => {
   });
 
   test("SMS login tab is visible", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await expect(page.locator('[data-testid="tab-sms-login"]')).toBeVisible({ timeout: 15000 });
   });
 
   test("wrong credentials show consumer portal error message", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="tab-password-login"]', { timeout: 15000 });
     await page.click('[data-testid="tab-password-login"]');
     await page.waitForSelector('[data-testid="input-consumer-id"]', { timeout: 10000 });
@@ -92,7 +99,7 @@ test.describe("Consumer Portal — landing page", () => {
   });
 
   test("register link is visible", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await expect(page.locator('[data-testid="link-to-register"]')).toBeVisible({ timeout: 15000 });
   });
 });
@@ -101,7 +108,7 @@ test.describe("Consumer Portal — landing page", () => {
 
 test.describe("Consumer Portal — registration form", () => {
   test("clicking register link shows registration fields", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="link-to-register"]', { timeout: 15000 });
     await page.click('[data-testid="link-to-register"]');
 
@@ -110,7 +117,7 @@ test.describe("Consumer Portal — registration form", () => {
   });
 
   test("registration form accepts input values", async ({ page }) => {
-    await page.goto("/consumer-portal");
+    await page.goto("/my-credit");
     await page.waitForSelector('[data-testid="link-to-register"]', { timeout: 15000 });
     await page.click('[data-testid="link-to-register"]');
     await page.waitForSelector('[data-testid="input-register-fullname"]', { timeout: 10000 });
@@ -218,7 +225,7 @@ test.describe("Consumer Portal — authenticated (real borrower session)", () =>
 
   test("credit score lookup API returns numeric score for seeded consumer", async ({ page }) => {
     await setConsumerSession(page, { consumerId: e2eConsumerId, consumerNationalId: e2eConsumerNationalId });
-    const resp = await page.request.get(`/api/consumer/credit-score?borrowerId=${e2eConsumerId}`);
+    const resp = await page.request.post("/api/consumer/lookup");
     // 200 = score found; 404 = consumer not scored yet (credit accounts may not be scored immediately)
     // Both are valid. What must not happen: 401 (auth failure) or 500 (crash).
     expect(resp.status()).not.toBe(401);
@@ -238,24 +245,42 @@ test.describe("Consumer Portal — authenticated (real borrower session)", () =>
 // ─── Consumer API protection ──────────────────────────────────────────────────
 
 test.describe("Consumer Portal — API protection", () => {
-  test("GET /api/consumer/credit-score returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/consumer/credit-score");
-    expect([401, 403]).toContain(resp.status());
+  test("POST /api/consumer/lookup returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const resp = await context.request.post("/api/consumer/lookup");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
-  test("GET /api/consumer/disputes returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.get("/api/consumer/disputes");
-    expect([401, 403]).toContain(resp.status());
+  test("GET /api/consumer/my-disputes returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const resp = await context.request.get("/api/consumer/my-disputes");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
-  test("POST /api/consumer/credit-freeze returns 401 without auth", async ({ page }) => {
-    const resp = await page.request.post("/api/consumer/credit-freeze");
-    expect([401, 403]).toContain(resp.status());
+  test("POST /api/consumer/credit-freeze returns 401 without auth", async ({ browser }) => {
+    const context = await browser.newContext();
+    try {
+      await context.clearCookies();
+      const resp = await context.request.post("/api/consumer/credit-freeze");
+      expect([401, 403]).toContain(resp.status());
+    } finally {
+      await context.close();
+    }
   });
 
   test("consumer credit-score endpoint returns 200 or 404 with valid session", async ({ page }) => {
     await setConsumerSession(page, { consumerId: "e2e-cs-001", consumerNationalId: "GH-E2E-CS-001" });
-    const resp = await page.request.get("/api/consumer/credit-score");
+    const resp = await page.request.post("/api/consumer/lookup");
     expect([200, 404]).toContain(resp.status());
     expect(resp.status()).not.toBe(401);
   });
@@ -316,8 +341,9 @@ test.describe("Consumer Portal — SMS OTP dual-channel verification", () => {
 // ─── Main app consumer login path ─────────────────────────────────────────────
 
 test.describe("Main app — consumer login path", () => {
-  test("consumer portal button leads to consumer login form", async ({ page }) => {
-    await page.goto("/");
+  test("consumer login mode opens from the public login page", async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto("/login");
     await page.waitForSelector('[data-testid="button-login-consumer"]', { timeout: 15000 });
     await page.click('[data-testid="button-login-consumer"]');
     await expect(page.locator('[data-testid="form-consumer-login"]')).toBeVisible({ timeout: 10000 });
@@ -328,8 +354,11 @@ test.describe("Main app — consumer login path", () => {
 
 test.describe("Consumer Portal — registration form submission", () => {
   test("registration form fields accept input and submit initiates verification", async ({ page }) => {
-    await page.goto("/consumer-portal");
-    await page.waitForSelector('[data-testid="page-consumer-portal"], [data-testid="tab-register"]', { timeout: 15000 });
+    // Registration is part of the public consumer journey. `/consumer-portal`
+    // is the authenticated workspace and correctly redirects anonymous users
+    // to the institution sign-in screen.
+    await page.goto("/my-credit");
+    await page.waitForSelector('[data-testid="link-to-register"]', { timeout: 15000 });
 
     const regTab = page.locator('[data-testid="link-to-register"], [data-testid="tab-register"]').first();
     if (await regTab.isVisible({ timeout: 3000 }).catch(() => false)) {
@@ -348,13 +377,7 @@ test.describe("Consumer Portal — registration form submission", () => {
 
     const countrySelect = page.locator('[data-testid="select-register-country"]');
     if (await countrySelect.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await countrySelect.click();
-      const ghana = page.locator('[role="option"]:has-text("Ghana"), [data-value="Ghana"]').first();
-      if (await ghana.isVisible({ timeout: 2000 }).catch(() => false)) {
-        await ghana.click();
-      } else {
-        await page.keyboard.press("Escape");
-      }
+      await countrySelect.selectOption({ label: "Ghana" });
     }
 
     // Verify fields have values
@@ -362,7 +385,8 @@ test.describe("Consumer Portal — registration form submission", () => {
     expect(await page.locator('[data-testid="input-register-id"]').inputValue()).toMatch(/GH-REG-E2E/);
 
     // Submit — expect verification step or success/error toast (never a crash)
-    const submitBtn = page.locator('button[type="submit"], [data-testid="button-register-submit"]').first();
+    await page.getByRole("checkbox", { name: /I consent to Universal Credit Hub/i }).check();
+    const submitBtn = page.getByRole("button", { name: "Create Account" });
     await submitBtn.waitFor({ timeout: 8000 });
     await submitBtn.click();
 

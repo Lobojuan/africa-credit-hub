@@ -794,26 +794,13 @@ export class DatabaseStorage implements IStorage {
       return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
     }
 
-    const searchPattern = `%${query}%`;
-    const searchCondition = or(
-      ilike(borrowers.firstName, searchPattern),
-      ilike(borrowers.lastName, searchPattern),
-      ilike(borrowers.companyName, searchPattern),
-      ilike(borrowers.nationalId, searchPattern),
-      ilike(borrowers.tinNumber, searchPattern),
-      ilike(borrowers.phone, searchPattern),
-      ilike(borrowers.email, searchPattern),
-      ilike(borrowers.city, searchPattern),
-      ilike(borrowers.sector, searchPattern),
-      ilike(borrowers.occupation, searchPattern),
-      ilike(borrowers.employerName, searchPattern),
-      ilike(borrowers.businessRegNumber, searchPattern),
-    );
-
+    // PII is encrypted at rest. Apply the tenancy and country scope in SQL first,
+    // then search the authorised, decrypted records so National ID and other PII
+    // remain searchable without weakening at-rest encryption.
     const results = await db.select().from(borrowers)
-      .where(and(...baseFilters, searchCondition))
-      .orderBy(desc(borrowers.createdAt)).limit(200);
-    return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
+      .where(and(...baseFilters))
+      .orderBy(desc(borrowers.createdAt)).limit(1_000);
+    return this.filterBorrowerSearchResults(results as Record<string, any>[], query);
   }
 
   async searchBorrowers(query: string, organizationId?: string, country?: string | string[]): Promise<Borrower[]> {
@@ -831,29 +818,31 @@ export class DatabaseStorage implements IStorage {
       return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
     }
 
-    const searchPattern = `%${query}%`;
-    const searchCondition = or(
-      ilike(borrowers.firstName, searchPattern),
-      ilike(borrowers.lastName, searchPattern),
-      ilike(borrowers.companyName, searchPattern),
-      ilike(borrowers.nationalId, searchPattern),
-      ilike(borrowers.tinNumber, searchPattern),
-      ilike(borrowers.phone, searchPattern),
-      ilike(borrowers.email, searchPattern),
-      ilike(borrowers.city, searchPattern),
-      ilike(borrowers.region, searchPattern),
-      ilike(borrowers.address, searchPattern),
-      ilike(borrowers.sector, searchPattern),
-      ilike(borrowers.occupation, searchPattern),
-      ilike(borrowers.employerName, searchPattern),
-      ilike(borrowers.businessRegNumber, searchPattern),
-      ilike(borrowers.country, searchPattern),
-      ilike(borrowers.passportNumber, searchPattern),
-    );
-    const filters = [searchCondition, ...baseFilters].filter(Boolean);
-    const conditions = filters.length > 1 ? and(...filters) : filters[0];
-    const results = await db.select().from(borrowers).where(conditions!).orderBy(desc(borrowers.createdAt)).limit(200);
-    return decryptBorrowerArray(results as Record<string, any>[]) as Borrower[];
+    // See searchBorrowersByType: sensitive borrower fields are encrypted and must
+    // only be matched after authorised records have been decrypted.
+    const where = baseFilters.length > 1 ? and(...baseFilters) : baseFilters[0];
+    const results = await db.select().from(borrowers)
+      .where(where)
+      .orderBy(desc(borrowers.createdAt)).limit(1_000);
+    return this.filterBorrowerSearchResults(results as Record<string, any>[], query);
+  }
+
+  private filterBorrowerSearchResults(records: Record<string, any>[], query: string): Borrower[] {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return decryptBorrowerArray(records) as Borrower[];
+
+    const searchableFields = [
+      "firstName", "lastName", "companyName", "nationalId", "tinNumber",
+      "phone", "email", "city", "region", "address", "sector", "occupation",
+      "employerName", "businessRegNumber", "country", "passportNumber",
+    ] as const;
+
+    return (decryptBorrowerArray(records) as Borrower[])
+      .filter((borrower) => searchableFields.some((field) => {
+        const value = borrower[field];
+        return typeof value === "string" && value.toLocaleLowerCase().includes(normalizedQuery);
+      }))
+      .slice(0, 200);
   }
 
   async countBorrowersByNationalId(nationalId: string | null): Promise<number> {
@@ -883,6 +872,22 @@ export class DatabaseStorage implements IStorage {
     return sql`${table.organizationId} IN (SELECT id FROM organizations WHERE country = ${country})`;
   }
 
+  /**
+   * Credit facilities inherit jurisdiction from their borrower. Older and
+   * imported facilities legitimately have no organisation_id, so filtering
+   * them through organisations hides valid country data from platform and
+   * regulator views. An explicit organisation scope is still applied by the
+   * calling query when the signed-in user belongs to one.
+   */
+  private creditAccountCountryFilter(country?: string | string[]) {
+    if (!country || (country as string) === GLOBAL_SCOPE) return undefined;
+    if (Array.isArray(country)) {
+      if (country.length === 0) return undefined;
+      return sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE ${inArray(borrowers.country, country)})`;
+    }
+    return sql`${creditAccounts.borrowerId} IN (SELECT id FROM borrowers WHERE ${eq(borrowers.country, country)})`;
+  }
+
   async globalSearch(query: string, organizationId?: string, country?: string | string[]): Promise<{ borrowers: Borrower[]; institutions: Institution[]; creditAccounts: CreditAccount[]; telcoProfiles: TelcoProfile[] }> {
     requireCountryScope(country, "globalSearch");
     const orgBorrowerFilter = organizationId ? eq(borrowers.organizationId, organizationId) : undefined;
@@ -891,7 +896,7 @@ export class DatabaseStorage implements IStorage {
     const orgTelcoFilter = organizationId ? eq(telcoProfiles.organizationId, organizationId) : undefined;
     const countryBorrowerFilter = this.buildCountryCondition(borrowers, country);
     const countryInstFilter = this.buildCountryCondition(institutions, country);
-    const countryAccFilter = country ? this.countryOrgFilter(creditAccounts, country) : undefined;
+    const countryAccFilter = country ? this.creditAccountCountryFilter(country) : undefined;
     const countryTelcoFilter = this.buildCountryCondition(telcoProfiles, country);
 
     let borrowerResults: Borrower[] = [];
@@ -1280,7 +1285,7 @@ export class DatabaseStorage implements IStorage {
     const safeLimit = capListLimit(limit);
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.creditAccountCountryFilter(country));
     if (recentDays && recentDays > 0) {
       const cutoff = new Date(Date.now() - recentDays * 24 * 60 * 60 * 1000);
       filters.push(or(gte(creditAccounts.createdAt, cutoff), gte(creditAccounts.updatedAt, cutoff)));
@@ -1986,7 +1991,7 @@ export class DatabaseStorage implements IStorage {
 
     const accFilters: any[] = [];
     if (organizationId) accFilters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country) accFilters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country) accFilters.push(this.creditAccountCountryFilter(country));
     const accFilter = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
 
     const approvalFilters: any[] = [];
@@ -2119,7 +2124,7 @@ export class DatabaseStorage implements IStorage {
 
     const accFilters: any[] = [];
     if (organizationId) accFilters.push(eq(creditAccounts.organizationId, organizationId));
-    if (scopedCountry) accFilters.push(this.countryOrgFilter(creditAccounts, scopedCountry));
+    if (scopedCountry) accFilters.push(this.creditAccountCountryFilter(scopedCountry));
     const accFilter = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
 
     const approvalFilters: any[] = [];
@@ -2183,7 +2188,7 @@ export class DatabaseStorage implements IStorage {
   async getPortfolioAggregates(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.creditAccountCountryFilter(country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [[totals], statusBreakdown, typeBreakdown, institutionCount] = await Promise.all([
@@ -2264,7 +2269,7 @@ export class DatabaseStorage implements IStorage {
   async getConcentrationData(organizationId?: string, country?: string) {
     const filters: any[] = [];
     if (organizationId) filters.push(eq(creditAccounts.organizationId, organizationId));
-    if (country && !isGlobalScope(country)) filters.push(this.countryOrgFilter(creditAccounts, country));
+    if (country && !isGlobalScope(country)) filters.push(this.creditAccountCountryFilter(country));
     const where = filters.length > 1 ? and(...filters) : filters[0];
 
     const [totalRow] = await db.select({
@@ -2452,7 +2457,7 @@ export class DatabaseStorage implements IStorage {
   async getGuarantorsByBorrower(borrowerId: string, country?: string): Promise<Guarantor[]> {
     requireCountryScope(country, "getGuarantorsByBorrower");
     const accFilters: any[] = [eq(creditAccounts.borrowerId, borrowerId)];
-    accFilters.push(this.countryOrgFilter(creditAccounts, country!));
+    accFilters.push(this.creditAccountCountryFilter(country!));
     const accWhere = accFilters.length > 1 ? and(...accFilters) : accFilters[0];
     const accounts = await db.select({ id: creditAccounts.id }).from(creditAccounts).where(accWhere);
     if (accounts.length === 0) return [];

@@ -24,6 +24,7 @@ import {
   XCircle,
   Clock,
 } from "lucide-react";
+import { detectLocalCurrency } from "@/lib/currency";
 import {
   BarChart,
   Bar,
@@ -90,12 +91,13 @@ const PIE_COLORS = [
 ];
 
 function formatCurrency(val: string | number): string {
+  const currency = detectLocalCurrency();
   const num = typeof val === "string" ? parseFloat(val) : val;
-  if (isNaN(num) || num === null || num === undefined) return "GHS 0";
-  if (num >= 1_000_000_000) return `GHS ${(num / 1_000_000_000).toFixed(1)}B`;
-  if (num >= 1_000_000) return `GHS ${(num / 1_000_000).toFixed(1)}M`;
-  if (num >= 1_000) return `GHS ${(num / 1_000).toFixed(1)}K`;
-  return `GHS ${num.toFixed(0)}`;
+  if (isNaN(num) || num === null || num === undefined) return `${currency} 0`;
+  if (num >= 1_000_000_000) return `${currency} ${(num / 1_000_000_000).toFixed(1)}B`;
+  if (num >= 1_000_000) return `${currency} ${(num / 1_000_000).toFixed(1)}M`;
+  if (num >= 1_000) return `${currency} ${(num / 1_000).toFixed(1)}K`;
+  return `${currency} ${num.toFixed(0)}`;
 }
 
 function getNplColor(ratio: string): string {

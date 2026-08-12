@@ -10,7 +10,7 @@
 
 ## 1. نظرة عامة
 
-يقدم هذا الدليل تعليمات خطوة بخطوة لنشر نظام سجل الائتمان. يتكون التطبيق من واجهة أمامية React يقدمها خادم Express.js خلفي، مع PostgreSQL كقاعدة بيانات. يغطي هذا الدليل سيناريوهين للنشر: النشر على Replit والنشر العام على Linux/Docker.
+يقدم هذا الدليل تعليمات خطوة بخطوة لنشر نظام سجل الائتمان. يتكون التطبيق من واجهة أمامية React يقدمها خادم Express.js خلفي، مع PostgreSQL كقاعدة بيانات. يغطي هذا الدليل سيناريوهين للنشر: النشر على managed cloud platform والنشر العام على Linux/Docker.
 
 ---
 
@@ -108,7 +108,7 @@ node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 
 يتطلب النظام قاعدة بيانات PostgreSQL. تشمل الخيارات:
 
-- **Neon** (PostgreSQL بدون خادم، موصى به لـ Replit)
+- **Neon** (PostgreSQL بدون خادم، موصى به لـ managed cloud platform)
 - **Amazon RDS** لأعباء العمل الإنتاجية
 - **PostgreSQL مستضاف ذاتياً** على خوادم Linux
 - **Docker PostgreSQL** للنشر في حاويات
@@ -265,11 +265,11 @@ WantedBy=multi-user.target
 
 ---
 
-## 7. النشر الخاص بـ Replit
+## 7. النشر الخاص بـ managed cloud platform
 
 ### 7.1 التكوين
 
-التطبيق مُكوّن مسبقاً للنشر على Replit. يحدد ملف `.replit`:
+التطبيق مُكوّن مسبقاً للنشر على managed cloud platform. يحدد ملف `.managed-cloud`:
 
 - أمر البناء: `npm run build`
 - أمر التشغيل: `node ./dist/index.cjs`
@@ -277,7 +277,7 @@ WantedBy=multi-user.target
 
 ### 7.2 الأسرار البيئية
 
-في Replit، قم بتعيين متغيرات البيئة عبر علامة التبويب Secrets:
+في managed cloud platform، قم بتعيين متغيرات البيئة عبر علامة التبويب Secrets:
 1. `DATABASE_URL` - سلسلة اتصال PostgreSQL (يُوصى بـ Neon)
 2. `SESSION_SECRET` - سلسلة عشوائية لتشفير الجلسة
 
@@ -438,7 +438,7 @@ server {
 للإنتاج، استخدم دائماً HTTPS. تشمل الخيارات:
 - **Let's Encrypt** مع certbot لشهادات SSL مجانية
 - **SSL من مزود السحابة** (AWS ACM، Cloudflare، إلخ.)
-- **Replit** يوفر HTTPS تلقائياً
+- **managed cloud platform** يوفر HTTPS تلقائياً
 
 ---
 

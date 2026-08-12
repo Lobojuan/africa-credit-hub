@@ -1,0 +1,269 @@
+openapi: 3.1.0
+info:
+  title: Universal Credit Hub Bank Pilot API
+  version: 1.0.0-pilot
+  description: |
+    A controlled integration contract for a bank-owned UCH pilot. It is not a
+    production activation or authority to move money, submit a regulatory return,
+    make a lending decision, or post accounting entries.
+servers:
+  - url: https://{bank-approved-host}
+    variables:
+      bank-approved-host:
+        default: sandbox.example-bank.invalid
+paths:
+  /api/health:
+    get:
+      summary: Service health
+      responses:
+        '200': { description: Service responded }
+  /api/bank-integration-readiness:
+    get:
+      summary: Staff-only connector readiness inventory
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Capability status only; no secrets or connector activation }
+        '401': { description: Not authenticated }
+        '403': { description: Insufficient role }
+  /api/npl-early-warning/pilot-readiness:
+    get:
+      summary: Read portfolio-data quality gate before NPL use
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Data-completeness and exception summary }
+  /api/npl-early-warning:
+    get:
+      summary: Read the scoped NPL early-warning queue
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Early-warning records; decisions remain human-owned }
+  /api/loan-tape-reconciliation/profiles:
+    get:
+      summary: List bank-scoped, versioned loan-tape mapping profiles
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Mapping governance register in the authorised organisation and country scope }
+    post:
+      summary: Submit a bank source-column mapping for independent review
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '201': { description: Pending mapping version created; maker cannot approve it }
+        '409': { description: Mapping name/version already exists in the scope }
+  /api/loan-tape-reconciliation/profiles/{id}/review:
+    patch:
+      summary: Approve or reject a mapping as an independent checker
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Review decision and evidence recorded }
+        '409': { description: Self-review or non-pending version blocked }
+  /api/loan-tape-reconciliation/validate:
+    post:
+      summary: Fingerprint and validate a controlled CSV without updating the loan ledger
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mappingProfileId, reportingDate, originalFilename, csvData]
+              properties:
+                mappingProfileId: { type: string, format: uuid }
+                reportingDate: { type: string, format: date }
+                originalFilename: { type: string, pattern: '\\.csv$' }
+                csvData: { type: string, maxLength: 4500000, description: Processed in memory; raw rows are not retained in reconciliation tables }
+      responses:
+        '201': { description: Immutable ready/blocked run summary and exception evidence recorded }
+        '409': { description: Mapping has not passed independent approval }
+  /api/loan-tape-reconciliation/imports:
+    get:
+      summary: List immutable reconciliation evidence runs
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Scoped run summaries and source SHA-256 fingerprints }
+  /api/loan-tape-reconciliation/imports/{id}/exceptions:
+    get:
+      summary: List persistent, masked reconciliation exceptions for a run
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Exceptions contain masked account references and no raw source rows }
+  /api/loan-tape-reconciliation/exceptions/{id}:
+    patch:
+      summary: Record a corrected or governed-waiver exception disposition
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Resolution identity, note and timestamp recorded }
+        '403': { description: Waiver requires administrator authority }
+  /api/npl-reduction-plan:
+    get:
+      summary: Read the reconciled NPL target gap and governed plan status
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Scoped management calculation, currency gate and approved/pending plan evidence }
+        '403': { description: Scope or role denied }
+    post:
+      summary: Submit a dated NPL reduction plan for maker-checker approval
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, targetDate, targetNplRatio, executiveOwner, boardEvidenceReference, strategySummary, milestones]
+              properties:
+                title: { type: string, minLength: 5, maxLength: 200 }
+                targetDate: { type: string, format: date }
+                targetNplRatio: { type: number, minimum: 0, maximum: 10 }
+                executiveOwner: { type: string, minLength: 2, maxLength: 200 }
+                boardEvidenceReference: { type: string, minLength: 3, maxLength: 500 }
+                strategySummary: { type: string, minLength: 20, maxLength: 5000 }
+                milestones:
+                  type: array
+                  minItems: 2
+                  maxItems: 24
+                  items:
+                    type: object
+                    required: [date, targetNplRatio, actions]
+                    properties:
+                      date: { type: string, format: date }
+                      targetNplRatio: { type: number, minimum: 0, maximum: 100 }
+                      actions: { type: string, minLength: 10, maxLength: 2000 }
+      responses:
+        '201': { description: Plan and server-calculated baseline submitted for independent approval }
+        '400': { description: Invalid target, milestone sequence or Ghana deadline }
+        '409': { description: Loan tape absent or reporting currencies not reconciled }
+  /api/npl-cases:
+    get:
+      summary: List facility-linked NPL cases in the authorised scope
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Case projections with account, borrower, owner and immutable-event summary }
+    post:
+      summary: Open one controlled case from an existing at-risk credit account
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '201': { description: Case and server-generated immutable opening event created atomically }
+        '409': { description: Case already exists, facility is not at risk, or exposure/currency/country is not reconciled }
+  /api/npl-cases/{id}/events:
+    get:
+      summary: Read the immutable case chronology
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Newest-first append-only case events }
+    post:
+      summary: Append an observed case event and update the exposure projection atomically
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201': { description: Immutable event created; exposure is calculated by the server }
+        '400': { description: Invalid/backdated event, missing evidence, non-financial amount or recovery exceeding exposure }
+  /api/npl-cases/waterfall/summary:
+    get:
+      summary: Derive the observed NPL exposure waterfall separately by currency
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: query, name: start, schema: { type: string, format: date } }
+        - { in: query, name: end, schema: { type: string, format: date } }
+      responses:
+        '200': { description: Opening, inflows, cash/legal recoveries, closing, internal difference and authoritative credit-account difference per currency }
+        '400': { description: Invalid date range or period over 24 months }
+  /api/npl-cases/{id}/decisions:
+    get:
+      summary: Read governed remediation proposals for one NPL case
+      security: [{ sessionCookie: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Case boundary plus scoped decision register }
+        '404': { description: Case not found in the authorised scope }
+    post:
+      summary: Submit a restructure, cure/re-age or write-off proposal for independent review
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decisionType, effectiveDate, rationale, policyReference, evidenceReference]
+              properties:
+                decisionType: { type: string, enum: [restructure, cure_reage, write_off] }
+                proposedAmount: { type: number, minimum: 0.01, description: Required for write-off; prohibited for cure/re-age; cannot exceed case exposure }
+                effectiveDate: { type: string, format: date }
+                rationale: { type: string, minLength: 20, maxLength: 4000 }
+                policyReference: { type: string, minLength: 3, maxLength: 500 }
+                evidenceReference: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        '201': { description: Pending proposal and immutable submission event created atomically }
+        '409': { description: A pending proposal of the same type already exists }
+  /api/npl-decisions/{id}/review:
+    post:
+      summary: Independently approve or reject an NPL decision proposal
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Review and immutable case event recorded; no accounting posting permitted }
+        '403': { description: Maker attempted to act as checker }
+  /api/npl-decisions/{id}/execution:
+    post:
+      summary: Record dated evidence that the bank executed an approved decision
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Execution evidence recorded; authoritative account and accounting reconciliation remain required }
+        '400': { description: Proposal is not approved or evidence is invalid }
+  /api/collections/assignments:
+    post:
+      summary: Assign a flagged facility to a collections workflow
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [creditAccountId, assignedTo]
+              properties:
+                creditAccountId: { type: string }
+                assignedTo: { type: string }
+                notes: { type: string, maxLength: 2000 }
+      responses:
+        '201': { description: Assignment recorded and auditable }
+        '400': { description: Invalid input }
+        '403': { description: Scope or role denied }
+  /api/ifrs9/policy-workspace:
+    get:
+      summary: Read approved and pending IFRS 9 policy versions
+      security: [{ sessionCookie: [] }]
+      responses:
+        '200': { description: Scoped policy workspace }
+    post:
+      summary: Submit a bank IFRS 9 policy for maker-checker approval
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '201': { description: Policy submitted; it is not active until independently approved }
+  /api/ifrs9/draft-ecl:
+    post:
+      summary: Calculate an explainable draft ECL using an approved policy
+      security: [{ sessionCookie: [] }, { csrfToken: [] }]
+      responses:
+        '200': { description: Draft calculation; no journal or regulatory filing is created }
+        '409': { description: No independently approved policy exists in this scope }
+components:
+  securitySchemes:
+    sessionCookie: { type: apiKey, in: cookie, name: connect.sid }
+    csrfToken: { type: apiKey, in: header, name: X-CSRF-Token }

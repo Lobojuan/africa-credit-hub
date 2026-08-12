@@ -37,6 +37,11 @@ export const accountStatusEnum = pgEnum("account_status", ["current", "delinquen
 export const inquiryPurposeEnum = pgEnum("inquiry_purpose", ["new_credit", "review", "collection", "regulatory", "portfolio_monitoring"]);
 export const approvalStatusEnum = pgEnum("approval_status", ["pending", "approved", "rejected"]);
 export const disputeStatusEnum = pgEnum("dispute_status", ["open", "under_review", "resolved", "rejected"]);
+// A bank-operations workflow for electronic-transaction complaints.  These
+// statuses intentionally stop at a core-banking handoff: UCH must never claim
+// that funds moved unless the connected bank system confirms it.
+export const transactionResolutionCaseTypeEnum = pgEnum("transaction_resolution_case_type", ["failed_transfer", "double_debit", "cash_dispense", "account_freeze"]);
+export const transactionResolutionStatusEnum = pgEnum("transaction_resolution_status", ["new", "verifying", "ready_for_core_handoff", "confirmed_resolved", "needs_human", "rejected"]);
 export const judgmentTypeEnum = pgEnum("judgment_type", ["lien", "bankruptcy", "lawsuit", "civil_judgment", "criminal_conviction"]);
 export const judgmentStatusEnum = pgEnum("judgment_status", ["active", "resolved", "appealed"]);
 export const consentStatusEnum = pgEnum("consent_status", ["active", "revoked"]);
@@ -67,6 +72,9 @@ export const users = pgTable("users", {
   knownIps: text("known_ips").array().default([]),
   mfaSecret: text("mfa_secret"),
   mfaEnabled: boolean("mfa_enabled").default(false),
+  // New staff accounts are held at the MFA enrolment gate until their first
+  // authenticator has been verified. Existing accounts remain unaffected.
+  mfaRequired: boolean("mfa_required").default(false),
   // Phone verification gate (consumer onboarding marks this when an SMS/USSD
   // OTP is successfully entered). Used by Loto Fiscal eligibility (Task #283)
   // so only consumers who proved control of a real phone number can win.
@@ -332,6 +340,28 @@ export const disputes = pgTable("disputes", {
   resolvedAt: timestamp("resolved_at"),
 });
 
+export const transactionResolutionCases = pgTable("transaction_resolution_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  transactionReference: text("transaction_reference").notNull(),
+  caseType: transactionResolutionCaseTypeEnum("case_type").notNull(),
+  channel: text("channel").notNull().default("unknown"),
+  amount: decimal("amount", { precision: 18, scale: 2 }),
+  currency: text("currency"),
+  customerMessage: text("customer_message"),
+  status: transactionResolutionStatusEnum("status").notNull().default("new"),
+  resolutionNotes: text("resolution_notes"),
+  slaDeadline: timestamp("sla_deadline").notNull(),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("transaction_resolution_cases_org_reference_idx").on(table.organizationId, table.transactionReference),
+]);
+
 export const notifications = pgTable("notifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id),
@@ -457,6 +487,72 @@ export const batchJobs = pgTable("batch_jobs", {
   completedAt: timestamp("completed_at"),
 });
 export type BatchJob = typeof batchJobs.$inferSelect;
+
+// Bank loan-tape control plane. These tables preserve mapping, validation and
+// exception evidence without creating a second loan ledger or retaining raw
+// source rows. `credit_accounts` remains the authoritative UCH facility record.
+export const bankMappingProfiles = pgTable("bank_mapping_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  name: text("name").notNull(),
+  bankName: text("bank_name").notNull(),
+  sourceSystem: text("source_system").notNull(),
+  version: text("version").notNull(),
+  fieldMappings: jsonb("field_mappings").notNull().$type<Record<string, string>>(),
+  validationRules: jsonb("validation_rules").notNull().default(sql`'{}'::jsonb`).$type<Record<string, unknown>>(),
+  status: text("status").notNull().default("pending"),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  mappingProfileVersionIdx: uniqueIndex("bank_mapping_profiles_org_country_name_version_idx")
+    .on(table.organizationId, table.country, table.name, table.version),
+}));
+
+export const loanTapeImports = pgTable("loan_tape_imports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mappingProfileId: varchar("mapping_profile_id").notNull().references(() => bankMappingProfiles.id),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  reportingDate: text("reporting_date").notNull(),
+  originalFilename: text("original_filename").notNull(),
+  sourceSha256: text("source_sha256").notNull(),
+  status: text("status").notNull().default("validating"),
+  totalRecords: integer("total_records").notNull().default(0),
+  cleanRecords: integer("clean_records").notNull().default(0),
+  exceptionCount: integer("exception_count").notNull().default(0),
+  criticalExceptionCount: integer("critical_exception_count").notNull().default(0),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
+export const loanTapeReconciliationExceptions = pgTable("loan_tape_reconciliation_exceptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  importId: varchar("import_id").notNull().references(() => loanTapeImports.id, { onDelete: "cascade" }),
+  sourceRowNumber: integer("source_row_number").notNull(),
+  accountReference: text("account_reference"),
+  rowFingerprint: text("row_fingerprint").notNull(),
+  exceptionType: text("exception_type").notNull(),
+  severity: text("severity").notNull(),
+  fieldName: text("field_name"),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("open"),
+  resolutionNote: text("resolution_note"),
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertBankMappingProfileSchema = createInsertSchema(bankMappingProfiles).omit({ id: true, reviewedBy: true, reviewNotes: true, reviewedAt: true, createdAt: true, updatedAt: true });
+export type InsertBankMappingProfile = z.infer<typeof insertBankMappingProfileSchema>;
+export type BankMappingProfile = typeof bankMappingProfiles.$inferSelect;
+export type LoanTapeImport = typeof loanTapeImports.$inferSelect;
+export type LoanTapeReconciliationException = typeof loanTapeReconciliationExceptions.$inferSelect;
 
 export const billingRecords = pgTable("billing_records", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -636,6 +732,11 @@ export const verificationResultEnum = pgEnum("verification_result", ["passed", "
 export const watchlistSourceEnum = pgEnum("watchlist_source", ["sanctions_un", "sanctions_ofac", "sanctions_eu", "pep", "adverse_media", "internal_block"]);
 export const fraudSeverityEnum = pgEnum("fraud_severity", ["low", "medium", "high", "critical"]);
 export const fraudReviewStatusEnum = pgEnum("fraud_review_status", ["open", "investigating", "resolved", "false_positive", "escalated"]);
+export const transactionFraudActionEnum = pgEnum("transaction_fraud_action", ["allow", "step_up_authentication", "hold_for_review"]);
+// A finance/treasury submission is deliberately reviewed by a different user
+// before it can be relied upon in a bank-health view.
+export const prudentialSnapshotStatusEnum = pgEnum("prudential_snapshot_status", ["submitted", "approved", "rejected"]);
+export const regulatoryEvidencePackStatusEnum = pgEnum("regulatory_evidence_pack_status", ["ready_for_review", "approved", "rejected", "submission_recorded"]);
 
 export const identityVerifications = pgTable("identity_verifications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -685,6 +786,61 @@ export const fraudAlerts = pgTable("fraud_alerts", {
   createdAt: timestamp("created_at").defaultNow(),
   resolvedAt: timestamp("resolved_at"),
 });
+
+// Captures a bank-core or channel screening decision. It does not initiate or
+// reverse a payment; any high-risk decision is escalated to fraud_alerts for a
+// human reviewer.
+export const transactionFraudEvents = pgTable("transaction_fraud_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  transactionReference: text("transaction_reference").notNull(),
+  channel: text("channel").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  newBeneficiary: boolean("new_beneficiary").notNull().default(false),
+  deviceChanged: boolean("device_changed").notNull().default(false),
+  unusualLocation: boolean("unusual_location").notNull().default(false),
+  failedAttempts: integer("failed_attempts").notNull().default(0),
+  riskScore: integer("risk_score").notNull(),
+  action: transactionFraudActionEnum("action").notNull(),
+  signals: jsonb("signals").notNull().default(sql`'[]'::jsonb`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("transaction_fraud_events_org_reference_idx").on(table.organizationId, table.transactionReference),
+]);
+
+// Source values are retained, rather than treating an unverified dashboard
+// calculation as regulatory truth. Ratios are calculated by the API from these
+// values and are only presented as approved after maker-checker review.
+export const prudentialSnapshots = pgTable("prudential_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  reportingDate: text("reporting_date").notNull(),
+  regulatoryCapital: decimal("regulatory_capital", { precision: 18, scale: 2 }).notNull(),
+  riskWeightedAssets: decimal("risk_weighted_assets", { precision: 18, scale: 2 }).notNull(),
+  liquidAssets: decimal("liquid_assets", { precision: 18, scale: 2 }).notNull(),
+  netCashOutflows30d: decimal("net_cash_outflows_30d", { precision: 18, scale: 2 }).notNull(),
+  totalDeposits: decimal("total_deposits", { precision: 18, scale: 2 }).notNull(),
+  top20Deposits: decimal("top_20_deposits", { precision: 18, scale: 2 }).notNull(),
+  impairedExposure: decimal("impaired_exposure", { precision: 18, scale: 2 }).notNull(),
+  totalCreditExposure: decimal("total_credit_exposure", { precision: 18, scale: 2 }).notNull(),
+  capitalMinimumPct: decimal("capital_minimum_pct", { precision: 6, scale: 2 }),
+  liquidityMinimumPct: decimal("liquidity_minimum_pct", { precision: 6, scale: 2 }),
+  sourceReference: text("source_reference"),
+  notes: text("notes"),
+  status: prudentialSnapshotStatusEnum("status").notNull().default("submitted"),
+  submittedBy: varchar("submitted_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("prudential_snapshots_org_country_date_idx").on(table.organizationId, table.country, table.reportingDate),
+]);
 
 export const insertIdentityVerificationSchema = createInsertSchema(identityVerifications).omit({ id: true, createdAt: true });
 export const insertWatchlistHitSchema = createInsertSchema(watchlistHits).omit({ id: true, createdAt: true, resolvedAt: true });
@@ -790,6 +946,34 @@ export const usageMetering = pgTable("usage_metering", {
   billingRecordId: varchar("billing_record_id").references(() => billingRecords.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// An evidence pack records the internal control trail around a regulatory
+// filing. "submission_recorded" means a staff member recorded a reference; it
+// never represents an electronic delivery confirmation from a regulator.
+export const regulatoryEvidencePacks = pgTable("regulatory_evidence_packs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").notNull().references(() => organizations.id),
+  country: text("country").notNull(),
+  title: text("title").notNull(),
+  regulator: text("regulator").notNull(),
+  directiveReference: text("directive_reference"),
+  reportingPeriodStart: text("reporting_period_start").notNull(),
+  reportingPeriodEnd: text("reporting_period_end").notNull(),
+  dueDate: text("due_date").notNull(),
+  evidenceReferences: jsonb("evidence_references").notNull().default(sql`'[]'::jsonb`),
+  status: regulatoryEvidencePackStatusEnum("status").notNull().default("ready_for_review"),
+  preparedBy: varchar("prepared_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  submissionReference: text("submission_reference"),
+  submissionRecordedBy: varchar("submission_recorded_by").references(() => users.id),
+  submissionRecordedAt: timestamp("submission_recorded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("regulatory_evidence_packs_org_title_period_idx").on(table.organizationId, table.title, table.reportingPeriodEnd),
+]);
 
 export const insertUsageMeteringSchema = createInsertSchema(usageMetering).omit({ id: true, createdAt: true });
 export type InsertUsageMetering = z.infer<typeof insertUsageMeteringSchema>;
@@ -926,6 +1110,33 @@ export const webauthnCredentials = pgTable("webauthn_credentials", {
 export const insertWebauthnCredentialSchema = createInsertSchema(webauthnCredentials).omit({ id: true, createdAt: true });
 export type InsertWebauthnCredential = z.infer<typeof insertWebauthnCredentialSchema>;
 export type WebauthnCredential = typeof webauthnCredentials.$inferSelect;
+
+// Recovery codes are stored one-way hashed. A database breach must never
+// reveal a usable second-factor recovery code for a bank user.
+export const mfaBackupCodes = pgTable("mfa_backup_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  codeHash: text("code_hash").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("mfa_backup_codes_user_code_unique").on(table.userId, table.codeHash),
+]);
+export type MfaBackupCode = typeof mfaBackupCodes.$inferSelect;
+
+// One-time action tokens are hashed, short-lived, and consumed atomically.
+// They support staff invitations and password recovery without storing a link
+// that could be used after a database disclosure.
+export const authActionTokens = pgTable("auth_action_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  purpose: text("purpose").notNull(),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
 
 export const blockchainAnchors = pgTable("blockchain_anchors", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -1652,6 +1863,79 @@ export const collectionSlaSettings = pgTable("collection_sla_settings", {
 export const insertCollectionSlaSettingsSchema = createInsertSchema(collectionSlaSettings).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCollectionSlaSettings = z.infer<typeof insertCollectionSlaSettingsSchema>;
 export type CollectionSlaSettings = typeof collectionSlaSettings.$inferSelect;
+
+// NPL case projection and immutable evidence ledger. Collections remains the
+// operational owner of assignments and contact attempts; these records add a
+// facility-level exposure history without duplicating those workflows.
+export const nplCases = pgTable("npl_cases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditAccountId: varchar("credit_account_id").notNull().references(() => creditAccounts.id),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  collectionAssignmentId: varchar("collection_assignment_id").references(() => collectionAssignments.id),
+  stage: text("stage").notNull(),
+  status: text("status").notNull().default("open"),
+  baselineExposure: decimal("baseline_exposure", { precision: 15, scale: 2 }).notNull(),
+  currentExposure: decimal("current_exposure", { precision: 15, scale: 2 }).notNull(),
+  currency: text("currency").notNull(),
+  ownerId: varchar("owner_id").references(() => users.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  openedAt: timestamp("opened_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nplCaseAccountIdx: uniqueIndex("npl_cases_credit_account_idx").on(table.creditAccountId),
+}));
+
+export const nplCaseEvents = pgTable("npl_case_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull().references(() => nplCases.id, { onDelete: "restrict" }),
+  sequence: integer("sequence").notNull(),
+  eventType: text("event_type").notNull(),
+  eventDate: text("event_date").notNull(),
+  amount: decimal("amount", { precision: 15, scale: 2 }),
+  exposureBefore: decimal("exposure_before", { precision: 15, scale: 2 }).notNull(),
+  exposureAfter: decimal("exposure_after", { precision: 15, scale: 2 }).notNull(),
+  stageBefore: text("stage_before").notNull(),
+  stageAfter: text("stage_after").notNull(),
+  evidenceReference: text("evidence_reference"),
+  notes: text("notes").notNull(),
+  createdBy: varchar("created_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  nplCaseEventSequenceIdx: uniqueIndex("npl_case_events_case_sequence_idx").on(table.caseId, table.sequence),
+}));
+
+// Controlled NPL remediation proposals. Approval records authority to proceed;
+// it never mutates the bank's credit account, IFRS 9 stage, provision or GL.
+// Execution is recorded only after a bank evidence reference is supplied.
+export const nplDecisionProposals = pgTable("npl_decision_proposals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  caseId: varchar("case_id").notNull().references(() => nplCases.id, { onDelete: "restrict" }),
+  decisionType: text("decision_type").notNull(),
+  status: text("status").notNull().default("pending"),
+  proposedAmount: decimal("proposed_amount", { precision: 15, scale: 2 }),
+  effectiveDate: text("effective_date").notNull(),
+  rationale: text("rationale").notNull(),
+  policyReference: text("policy_reference").notNull(),
+  evidenceReference: text("evidence_reference").notNull(),
+  requestedBy: varchar("requested_by").notNull().references(() => users.id),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewNotes: text("review_notes"),
+  reviewedAt: timestamp("reviewed_at"),
+  executionEvidenceReference: text("execution_evidence_reference"),
+  executionNotes: text("execution_notes"),
+  executedBy: varchar("executed_by").references(() => users.id),
+  executedAt: timestamp("executed_at"),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type NplCase = typeof nplCases.$inferSelect;
+export type NplCaseEvent = typeof nplCaseEvents.$inferSelect;
+export type NplDecisionProposal = typeof nplDecisionProposals.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // XDS Data Ghana — bureau enquiry audit log
@@ -2630,4 +2914,3 @@ export const playbookDownloads = pgTable("playbook_downloads", {
 export const insertPlaybookDownloadSchema = createInsertSchema(playbookDownloads).omit({ id: true, downloadedAt: true });
 export type InsertPlaybookDownload = z.infer<typeof insertPlaybookDownloadSchema>;
 export type PlaybookDownload = typeof playbookDownloads.$inferSelect;
-

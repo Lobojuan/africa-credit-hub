@@ -51,6 +51,7 @@ export async function cleanupNonGhanaData() {
   await execSql(sql`DELETE FROM court_judgments WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
   await execSql(sql`DELETE FROM dishonoured_cheques WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
   await execSql(sql`DELETE FROM credit_report_logs WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
+  await execSql(sql`DELETE FROM contact_events WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
   await execSql(sql`DELETE FROM credit_accounts WHERE borrower_id IN (SELECT id FROM borrowers WHERE country != 'Ghana')`);
   await execSql(sql`DELETE FROM borrowers WHERE country != 'Ghana'`);
 

@@ -18,93 +18,93 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-07-25T17:04:57.822Z",
+  "generatedAt": "2026-08-03T09:46:57.973Z",
   "branch": "main",
-  "currentCommit": "3cf2cd6",
+  "currentCommit": "cf1f155",
   "commits": [
     {
-      "hash": "3cf2cd6122f04ea6f06a1866e0125f3bf75208bd",
-      "shortHash": "3cf2cd6",
-      "date": "2026-07-25",
+      "hash": "cf1f15583627a723e4dcfb27daa955d722357cd3",
+      "shortHash": "cf1f155",
+      "date": "2026-08-03",
       "author": "Uffe J Carlson",
-      "subject": "fix: use valid portal login controls"
+      "subject": "fix: render public SEO metadata server-side"
     },
     {
-      "hash": "4f2a7e5a0d1b3674d14b6dab07ae74918b7d48ef",
-      "shortHash": "4f2a7e5",
-      "date": "2026-07-25",
+      "hash": "32413634587ba6e1ef0824d0a68b740ce9eb5f9f",
+      "shortHash": "3241363",
+      "date": "2026-08-03",
       "author": "Uffe J Carlson",
-      "subject": "test: remove stale consumer portal login click"
+      "subject": "fix: make public pages crawlable and searchable"
     },
     {
-      "hash": "5ad4c75005ddab80e223cf8887baaf6d5ec6614e",
-      "shortHash": "5ad4c75",
-      "date": "2026-07-25",
+      "hash": "71cd7fa20637e1133157d69909fc256c04bf77a1",
+      "shortHash": "71cd7fa",
+      "date": "2026-07-31",
       "author": "Uffe J Carlson",
-      "subject": "test: remove stale MFA login portal clicks"
+      "subject": "feat: add public bank diagnostic and navigation"
     },
     {
-      "hash": "b2a7b551344a3f0b584bf6e065d21a9c962e83a0",
-      "shortHash": "b2a7b55",
-      "date": "2026-07-25",
+      "hash": "45e6b491973fb7c58992d7273baa1b703ae0ac37",
+      "shortHash": "45e6b49",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "test: align login E2E flow with portal selector"
+      "subject": "docs: add two-week delivery report"
     },
     {
-      "hash": "8d28bd82d254af010d4cfb484638a2cdcaa7cfbc",
-      "shortHash": "8d28bd8",
-      "date": "2026-07-25",
+      "hash": "4910ca39d0aad6b5653a9dd504cffa69d2c7f777",
+      "shortHash": "4910ca3",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "docs: add v3 SRS review and UAT sign-off baseline"
+      "subject": "fix: retire unsafe public landing claims"
     },
     {
-      "hash": "5be274bd9ca294c84150f576e2d670580c10c70f",
-      "shortHash": "5be274b",
-      "date": "2026-07-25",
+      "hash": "c71c8d285998efd69d0f43cac7eaca19259ca691",
+      "shortHash": "c71c8d2",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "test: allow guarded E2E mutations and current login route"
+      "subject": "docs: define country clearance safety matrix"
     },
     {
-      "hash": "e42e50c7d27d24bd21382ce57c6a59009ca7cccc",
-      "shortHash": "e42e50c",
-      "date": "2026-07-25",
+      "hash": "e08ac22310b5ca143bea1da1b5d2f2787bd13621",
+      "shortHash": "e08ac22",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "test: isolate authenticated E2E session states"
+      "subject": "docs: establish controlled release baseline"
     },
     {
-      "hash": "11c77919f8af5e4d88accc18b2e88c93d8349fe9",
-      "shortHash": "11c7791",
-      "date": "2026-07-25",
+      "hash": "965b01f7008af89e723fd0d8e307f38a564f3451",
+      "shortHash": "965b01f",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "test: mark synthetic E2E sessions consistently"
+      "subject": "docs: describe banker shift demo"
     },
     {
-      "hash": "16a52875c035d3907f0cd311ec36dacf7d9d1c02",
-      "shortHash": "16a5287",
-      "date": "2026-07-25",
+      "hash": "02793156c74e48f3c2fbbd34a0cd825d5f43c580",
+      "shortHash": "0279315",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "test: skip fingerprint audit for synthetic E2E sessions"
+      "subject": "feat: show governed demo journey"
     },
     {
-      "hash": "fed609d3162f8773cdd177045506465625f82bad",
-      "shortHash": "fed609d",
-      "date": "2026-07-25",
+      "hash": "906b94e736f36fde590e5f8196a01fa5bb9b5853",
+      "shortHash": "906b94e",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "test: align Loto E2E routes and auth isolation"
+      "subject": "feat: add governed banker shift demo"
     },
     {
-      "hash": "87ebe6f77a223822340236ab5158a0f98d3f9984",
-      "shortHash": "87ebe6f",
-      "date": "2026-07-25",
+      "hash": "257a3fadca7b363251e5c1d3e8af1ea87f8ac945",
+      "shortHash": "257a3fa",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "fix: allow guarded E2E session fixture through CSRF"
+      "subject": "feat: add hands-on banker demo workflows"
     },
     {
-      "hash": "50f1d1545dc796d0a5d9618432c254e223f7d34e",
-      "shortHash": "50f1d15",
-      "date": "2026-07-25",
+      "hash": "baf5663215b12aeace9481d0c60b53cfa6ef9e11",
+      "shortHash": "baf5663",
+      "date": "2026-07-30",
       "author": "Uffe J Carlson",
-      "subject": "fix: install shared auth browser in Firefox E2E job"
+      "subject": "fix: focus demo scenario selection"
     }
   ]
 };

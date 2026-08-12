@@ -1,19 +1,40 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Building2, Layers, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Building2, Layers, Play, Shield, ShieldCheck, Sparkles, Landmark, Banknote, CheckCircle2, FileSearch, LockKeyhole, UserCheck, FileCheck2 } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PRODUCT_ORDER, PRODUCT_REGISTRY } from "@/lib/products";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 
+const platformDemoVideo = "/marketing/platform-demo.mp4";
+
 export default function MasterLandingPage() {
   const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const year = new Date().getFullYear();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoUnavailable, setVideoUnavailable] = useState(false);
+  const pillars = [
+    ...PRODUCT_ORDER.map((id) => ({ ...PRODUCT_REGISTRY[id], kind: "product" as const })),
+    {
+      id: "forensics",
+      kind: "service" as const,
+      name: t("landingShell.forensics.name"),
+      tagline: t("landingShell.forensics.tagline"),
+      description: t("landingShell.forensics.description"),
+      action: t("landingShell.forensics.action"),
+      href: "/forensics",
+      icon: FileSearch,
+      accentFrom: "hsl(340 70% 48%)",
+      accentTo: "hsl(12 85% 52%)",
+      accentText: "hsl(340 62% 38%)",
+    },
+  ];
 
   useEffect(() => {
     document.title = `${brand} — ${t("platform.brand.tagline")}`;
@@ -35,19 +56,23 @@ export default function MasterLandingPage() {
           <nav className="flex items-center gap-1.5 md:gap-2">
             <Link href="/for-lenders" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-lenders">For Lenders</Button></Link>
             <Link href="/for-regulators" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-regulators">For Regulators</Button></Link>
+            <Link href="/forensics" className="hidden xl:inline-flex"><Button variant="ghost" size="sm" data-testid="link-forensics">Diagnostic</Button></Link>
             <Link href="/financial-inclusion" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-impact">Impact</Button></Link>
             <Link href="/pricing" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-pricing">Pricing</Button></Link>
             <Link href="/press" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-press">Press</Button></Link>
             <ThemeToggle />
             <LanguageSwitcher />
+            <Link href="/contact-sales" className="hidden sm:inline-flex"><Button variant="outline" size="sm" data-testid="button-header-diagnostic">{t("landingShell.ctaDiagnostic")}</Button></Link>
             <Link href="/login"><Button size="sm" data-testid="button-signin">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
           </nav>
         </div>
       </header>
 
-      <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-24 pb-12 md:pb-16">
-        <div className="text-center max-w-3xl mx-auto">
-          <Badge variant="secondary" className="mb-5 text-xs font-medium" data-testid="badge-eyebrow">
+      <main>
+      <section className="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-20 pb-12 md:pb-16">
+        <div className="grid items-center gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-12">
+          <div className="text-center lg:text-left">
+            <Badge variant="secondary" className="mb-5 text-xs font-medium" data-testid="badge-eyebrow">
             <Sparkles className="w-3 h-3 mr-1.5" />
             {t("landingShell.masterHero.eyebrow")}
           </Badge>
@@ -60,9 +85,55 @@ export default function MasterLandingPage() {
           <p className="mt-5 md:mt-7 text-base md:text-lg text-slate-600 dark:text-slate-300 leading-relaxed" data-testid="text-hero-subtitle">
             {t("landingShell.masterHero.subtitle", { brand })}
           </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/login"><Button size="lg" className="gap-2" data-testid="button-cta-primary">{t("landingShell.masterHero.ctaPrimary")} <ArrowRight className="w-4 h-4" /></Button></Link>
-            <Link href="/pricing"><Button size="lg" variant="outline" data-testid="button-cta-secondary">{t("landingShell.masterHero.ctaSecondary")}</Button></Link>
+          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+            <Link href="/contact-sales"><Button size="lg" className="gap-2" data-testid="cta-request-diagnostic">{t("landingShell.ctaDiagnostic")} <ArrowRight className="w-4 h-4" /></Button></Link>
+            <Link href="/demo"><Button size="lg" variant="outline" className="gap-2" data-testid="cta-explore-demo">{t("landingShell.ctaDemo")} <ArrowRight className="w-4 h-4" /></Button></Link>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-medium text-slate-600 dark:text-slate-300 lg:justify-start" data-testid="landing-trust-signals">
+            <span className="inline-flex items-center gap-1.5"><LockKeyhole className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal1")}</span>
+            <span className="inline-flex items-center gap-1.5"><UserCheck className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal2")}</span>
+            <span className="inline-flex items-center gap-1.5"><FileCheck2 className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal3")}</span>
+          </div>
+          </div>
+
+          <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-2xl dark:border-slate-700" data-testid="landing-video-panel">
+            {!videoUnavailable ? (
+              <>
+                <video
+                  ref={videoRef}
+                  src={platformDemoVideo}
+                  playsInline
+                  preload="metadata"
+                  controls={videoPlaying}
+                  className="aspect-video w-full bg-slate-950 object-cover"
+                  data-testid="video-platform-demo"
+                  onEnded={() => setVideoPlaying(false)}
+                  onError={() => setVideoUnavailable(true)}
+                />
+                {!videoPlaying && (
+                  <button
+                    type="button"
+                    className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center transition-colors hover:bg-slate-950/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
+                    onClick={() => {
+                      setVideoPlaying(true);
+                      videoRef.current?.play().catch(() => setVideoPlaying(false));
+                    }}
+                    aria-label={t("landingShell.video.play")}
+                    data-testid="button-play-landing-video"
+                  >
+                    <span className="flex size-16 items-center justify-center rounded-full bg-white/95 text-slate-950 shadow-xl transition-transform group-hover:scale-105"><Play className="ml-1 size-7" /></span>
+                    <span className="mt-4 text-base font-semibold text-white">{t("landingShell.video.title")}</span>
+                    <span className="mt-1 max-w-sm text-sm text-slate-200">{t("landingShell.video.subtitle")}</span>
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex aspect-video flex-col items-center justify-center p-8 text-center text-white">
+                <Play className="size-8 text-slate-300" />
+                <p className="mt-3 font-semibold">{t("landingShell.video.unavailable")}</p>
+                <p className="mt-1 text-sm text-slate-300">{t("landingShell.video.unavailableDetail")}</p>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -71,16 +142,15 @@ export default function MasterLandingPage() {
         <h2 className="text-xs uppercase tracking-widest font-semibold text-slate-500 dark:text-slate-400 text-center mb-6" data-testid="text-pillars-title">
           {t("landingShell.pillarsTitle")}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {PRODUCT_ORDER.map((id) => {
-            const p = PRODUCT_REGISTRY[id];
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          {pillars.map((p) => {
             const Icon = p.icon;
-            const isPilot = p.status !== "live";
+            const isPilot = p.kind === "product" && p.status !== "live";
             return (
               <Card
-                key={id}
+                key={p.id}
                 className="relative overflow-hidden border-slate-200/80 dark:border-slate-800 hover-elevate transition-all"
-                data-testid={`card-product-${id}`}
+                data-testid={`card-product-${p.id}`}
               >
                 <div
                   className="h-1.5 w-full"
@@ -95,28 +165,28 @@ export default function MasterLandingPage() {
                       <Icon className="w-6 h-6" />
                     </div>
                     {isPilot && (
-                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider" data-testid={`badge-status-${id}`}>
+                      <Badge variant="outline" className="text-[10px] uppercase tracking-wider" data-testid={`badge-status-${p.id}`}>
                         {t("products.loto.comingSoon")}
                       </Badge>
                     )}
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-1" data-testid={`text-product-name-${id}`}>
-                    {t(p.nameKey, p.englishName)}
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-1" data-testid={`text-product-name-${p.id}`}>
+                    {p.kind === "product" ? t(p.nameKey, p.englishName) : p.name}
                   </h3>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3" data-testid={`text-product-tagline-${id}`}>
-                    {t(p.taglineKey, p.englishTagline)}
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3" data-testid={`text-product-tagline-${p.id}`}>
+                    {p.kind === "product" ? t(p.taglineKey, p.englishTagline) : p.tagline}
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-1" data-testid={`text-product-desc-${id}`}>
-                    {t(p.descKey, p.englishDesc)}
+                  <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-1" data-testid={`text-product-desc-${p.id}`}>
+                    {p.kind === "product" ? t(p.descKey, p.englishDesc) : p.description}
                   </p>
-                  <Link href={p.publicLanding}>
+                  <Link href={p.kind === "product" ? p.publicLanding : p.href}>
                     <Button
                       variant="ghost"
                       className="mt-5 -ml-3 self-start gap-1.5 font-semibold"
                       style={{ color: p.accentText }}
-                      data-testid={`button-learn-${id}`}
+                      data-testid={`button-learn-${p.id}`}
                     >
-                      {t(`products.${id}.learnMore`, `Learn about ${p.englishName}`)}
+                      {p.kind === "product" ? t(`products.${p.id}.learnMore`, `Learn about ${p.englishName}`) : p.action}
                       <ArrowRight className="w-4 h-4" />
                     </Button>
                   </Link>
@@ -124,6 +194,25 @@ export default function MasterLandingPage() {
               </Card>
             );
           })}
+        </div>
+      </section>
+
+      <section className="bg-slate-950 text-white">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-14 md:py-16">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-widest text-emerald-300">{t("landingShell.adoptionEyebrow")}</p>
+            <h2 className="mt-3 text-2xl md:text-3xl font-bold tracking-tight" data-testid="text-adoption-title">{t("landingShell.adoptionTitle")}</h2>
+            <p className="mt-3 text-slate-300" data-testid="text-adoption-subtitle">{t("landingShell.adoptionSubtitle")}</p>
+          </div>
+          <div className="mt-9 grid grid-cols-1 gap-5 md:grid-cols-3">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="rounded-xl border border-white/15 bg-white/5 p-5" data-testid={`card-adoption-${n}`}>
+                <div className="flex size-8 items-center justify-center rounded-full bg-emerald-400 font-bold text-slate-950">{n}</div>
+                <h3 className="mt-4 font-bold">{t(`landingShell.adoptionStep${n}Title`)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-300">{t(`landingShell.adoptionStep${n}Body`)}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -228,6 +317,24 @@ export default function MasterLandingPage() {
         </div>
       </section>
 
+      <section className="max-w-6xl mx-auto px-4 md:px-6 pb-16 md:pb-20">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-50" data-testid="text-faq-title">{t("landingShell.faqTitle")}</h2>
+          <p className="mt-3 text-slate-600 dark:text-slate-300">{t("landingShell.faqSubtitle")}</p>
+        </div>
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <Card key={n} className="border-slate-200/80 dark:border-slate-800" data-testid={`card-faq-${n}`}>
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-slate-900 dark:text-slate-50">{t(`landingShell.faq${n}Question`)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{t(`landingShell.faq${n}Answer`)}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
+
+      </main>
       <footer className="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
         <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">

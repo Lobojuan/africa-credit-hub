@@ -52,6 +52,7 @@ interface BackupStatus {
   totalBackups: number;
   totalSizeMB: number;
   backupDir: string;
+  productionRestoreEnabled: boolean;
 }
 
 function BackupManagementPanel() {
@@ -242,16 +243,18 @@ function BackupManagementPanel() {
                       >
                         <Download className="w-3.5 h-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-amber-500 hover:text-amber-600"
-                        onClick={() => setConfirmRestore(backup.id)}
-                        title="Restore"
-                        data-testid={`button-restore-${backup.id}`}
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                      </Button>
+                      {status?.productionRestoreEnabled !== false && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-amber-500 hover:text-amber-600"
+                          onClick={() => setConfirmRestore(backup.id)}
+                          title="Restore"
+                          data-testid={`button-restore-${backup.id}`}
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
                     </>
                   )}
                   <Button

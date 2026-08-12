@@ -83,7 +83,7 @@ Verified VAT-receipt platform. Each receipt is signed by the tax authority. Merc
 
 ## Demo access (for journalists)
 
-- **URL:** https://universalcredithub.replit.app
+- **URL:** https://universalcredithub.com
 - **Credentials:** `johndoe` / `SecuredCreditor2026!`
 - **What to try:** Open the dashboard hero animation, then `/loto-workspace` for the merchant flow, then `/financial-inclusion` for the live impact dashboard, then `/audit` for the cross-product audit trail.
 

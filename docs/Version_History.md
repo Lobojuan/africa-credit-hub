@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `3cf2cd6`
+**Current Commit:** `cf1f155`
 **Branch:** `main`
-**Generated:** 2026-07-25T17:04:57.822Z
+**Generated:** 2026-08-03T09:46:57.973Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,15 +12,15 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
-| 2026-07-25 | `3cf2cd6` | fix: use valid portal login controls | Uffe J Carlson |
-| 2026-07-25 | `4f2a7e5` | test: remove stale consumer portal login click | Uffe J Carlson |
-| 2026-07-25 | `5ad4c75` | test: remove stale MFA login portal clicks | Uffe J Carlson |
-| 2026-07-25 | `b2a7b55` | test: align login E2E flow with portal selector | Uffe J Carlson |
-| 2026-07-25 | `8d28bd8` | docs: add v3 SRS review and UAT sign-off baseline | Uffe J Carlson |
-| 2026-07-25 | `5be274b` | test: allow guarded E2E mutations and current login route | Uffe J Carlson |
-| 2026-07-25 | `e42e50c` | test: isolate authenticated E2E session states | Uffe J Carlson |
-| 2026-07-25 | `11c7791` | test: mark synthetic E2E sessions consistently | Uffe J Carlson |
-| 2026-07-25 | `16a5287` | test: skip fingerprint audit for synthetic E2E sessions | Uffe J Carlson |
-| 2026-07-25 | `fed609d` | test: align Loto E2E routes and auth isolation | Uffe J Carlson |
-| 2026-07-25 | `87ebe6f` | fix: allow guarded E2E session fixture through CSRF | Uffe J Carlson |
-| 2026-07-25 | `50f1d15` | fix: install shared auth browser in Firefox E2E job | Uffe J Carlson |
+| 2026-08-03 | `cf1f155` | fix: render public SEO metadata server-side | Uffe J Carlson |
+| 2026-08-03 | `3241363` | fix: make public pages crawlable and searchable | Uffe J Carlson |
+| 2026-07-31 | `71cd7fa` | feat: add public bank diagnostic and navigation | Uffe J Carlson |
+| 2026-07-30 | `45e6b49` | docs: add two-week delivery report | Uffe J Carlson |
+| 2026-07-30 | `4910ca3` | fix: retire unsafe public landing claims | Uffe J Carlson |
+| 2026-07-30 | `c71c8d2` | docs: define country clearance safety matrix | Uffe J Carlson |
+| 2026-07-30 | `e08ac22` | docs: establish controlled release baseline | Uffe J Carlson |
+| 2026-07-30 | `965b01f` | docs: describe banker shift demo | Uffe J Carlson |
+| 2026-07-30 | `0279315` | feat: show governed demo journey | Uffe J Carlson |
+| 2026-07-30 | `906b94e` | feat: add governed banker shift demo | Uffe J Carlson |
+| 2026-07-30 | `257a3fa` | feat: add hands-on banker demo workflows | Uffe J Carlson |
+| 2026-07-30 | `baf5663` | fix: focus demo scenario selection | Uffe J Carlson |

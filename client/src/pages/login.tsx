@@ -12,9 +12,16 @@ import { isGhanaMode } from "@/lib/country-mode";
 import { PLATFORM_COMPANY_NAME, PLATFORM_COPYRIGHT_YEAR } from "@/lib/platform-config";
 
 type LoginMode = "chooser" | "institution" | "consumer";
+type ProviderStatus = { google: boolean; microsoft: boolean };
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<LoginMode>("chooser");
+  // A direct staff-login link prevents local operators from accidentally
+  // landing in the consumer National-ID form. The chooser remains the default
+  // for public visitors.
+  const [mode, setMode] = useState<LoginMode>(() => {
+    const requestedMode = new URLSearchParams(window.location.search).get("mode");
+    return requestedMode === "institution" ? "institution" : requestedMode === "consumer" ? "consumer" : "chooser";
+  });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,10 +42,31 @@ export default function LoginPage() {
 
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeySetupNeeded, setPasskeySetupNeeded] = useState(false);
+  const [providerStatus, setProviderStatus] = useState<ProviderStatus>({ google: false, microsoft: false });
 
   const { login } = useAuth();
   const { toast } = useToast();
   const { t } = useTranslation();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/auth/provider-status", { signal: controller.signal })
+      .then(async (response) => response.ok ? response.json() as Promise<ProviderStatus> : null)
+      .then((status) => {
+        if (status && typeof status.google === "boolean" && typeof status.microsoft === "boolean") {
+          setProviderStatus(status);
+        }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, []);
+
+  const unavailableProviderStyle = {
+    background: "hsl(215 20% 97%)",
+    border: "1px solid hsl(215 20% 91%)",
+    color: "hsl(215 15% 60%)",
+    cursor: "not-allowed",
+  };
 
   const handlePasskeyLogin = async () => {
     setPasskeyLoading(true);
@@ -97,7 +125,7 @@ export default function LoginPage() {
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
       // Explicit redirect — same as password login; don't rely on React re-render alone
       sessionStorage.setItem("passkey_prompt", "1");
-      window.location.replace("/choose-product");
+      window.location.replace("/bank-control-center");
     } catch (e: any) {
       const msg = e.name === "NotAllowedError"
         ? "Fingerprint prompt was dismissed. Try again or use your password."
@@ -132,16 +160,7 @@ export default function LoginPage() {
       toast({ title: t('login.success') });
       sessionStorage.setItem("passkey_prompt", "1");
       if (window.location.pathname === "/login") {
-        const allowedProducts = (result as any)?.allowedProducts as string[] | null | undefined;
-        const singleWorkspaceLanding: Record<string, string> = {
-          credit: "/dashboard",
-          collateral: "/collateral-registry",
-          loto: "/loto-fiscal",
-        };
-        const destination = allowedProducts?.length === 1
-          ? singleWorkspaceLanding[allowedProducts[0]] ?? "/choose-workspace"
-          : "/choose-workspace";
-        window.location.replace(destination);
+        window.location.replace("/bank-control-center");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -172,7 +191,7 @@ export default function LoginPage() {
       queryClient.setQueryData(["/api/auth/me"], userData);
       toast({ title: t('login.success') });
       if (window.location.pathname === "/login") {
-        window.location.replace("/choose-product");
+        window.location.replace("/bank-control-center");
       }
     } catch (err: any) {
       const msg = err.message || t('common.error');
@@ -547,14 +566,18 @@ export default function LoginPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <button
+                disabled={!providerStatus.google}
                 className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
                 style={{
-                  background: "rgba(255,255,255,0.9)",
-                  border: "1px solid hsl(215 25% 88%)",
-                  color: "hsl(215 25% 30%)",
+                  ...(providerStatus.google ? {
+                    background: "rgba(255,255,255,0.9)",
+                    border: "1px solid hsl(215 25% 88%)",
+                    color: "hsl(215 25% 30%)",
+                  } : unavailableProviderStyle),
                 }}
-                onClick={() => window.location.href = "/api/consumer/auth/google?from=/my-credit"}
+                onClick={() => { if (providerStatus.google) window.location.href = "/api/consumer/auth/google?from=/my-credit"; }}
                 data-testid="button-google-login-consumer"
+                title={providerStatus.google ? "Continue with Google" : "Google sign-in is not configured"}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
@@ -562,7 +585,7 @@ export default function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Google
+                {providerStatus.google ? "Google" : "Google (not configured)"}
               </button>
               <button
                 className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
@@ -654,6 +677,15 @@ export default function LoginPage() {
                         autoFocus
                         required
                       />
+                    </div>
+                    <div className="text-right">
+                      <a
+                        href="/forgot-password"
+                        className="text-xs font-medium text-blue-700 hover:underline"
+                        data-testid="link-forgot-password"
+                      >
+                        Forgot your password?
+                      </a>
                     </div>
                   </div>
                   <button
@@ -810,6 +842,15 @@ export default function LoginPage() {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+                    <div className="text-right">
+                      <a
+                        href="/forgot-password"
+                        className="text-xs font-medium text-blue-700 hover:underline"
+                        data-testid="link-forgot-password"
+                      >
+                        Forgot your password?
+                      </a>
+                    </div>
                   </div>
                   <button
                     type="submit"
@@ -846,14 +887,18 @@ export default function LoginPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <button
+                disabled={!providerStatus.google}
                 className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
                 style={{
-                  background: "rgba(255,255,255,0.9)",
-                  border: "1px solid hsl(215 25% 88%)",
-                  color: "hsl(215 25% 30%)",
+                  ...(providerStatus.google ? {
+                    background: "rgba(255,255,255,0.9)",
+                    border: "1px solid hsl(215 25% 88%)",
+                    color: "hsl(215 25% 30%)",
+                  } : unavailableProviderStyle),
                 }}
-                onClick={() => window.location.href = "/api/consumer/auth/google?from=/dashboard"}
+                onClick={() => { if (providerStatus.google) window.location.href = "/api/auth/google?from=/today"; }}
                 data-testid="button-google-login-institutional"
+                title={providerStatus.google ? "Continue with Google" : "Google Workspace sign-in is not configured"}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" fill="#4285F4"/>
@@ -861,18 +906,22 @@ export default function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Google
+                {providerStatus.google ? "Google" : "Google (not configured)"}
               </button>
 
               <button
+                disabled={!providerStatus.microsoft}
                 className="h-11 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition-all"
                 style={{
-                  background: "rgba(255,255,255,0.9)",
-                  border: "1px solid hsl(215 25% 88%)",
-                  color: "hsl(215 25% 30%)",
+                  ...(providerStatus.microsoft ? {
+                    background: "rgba(255,255,255,0.9)",
+                    border: "1px solid hsl(215 25% 88%)",
+                    color: "hsl(215 25% 30%)",
+                  } : unavailableProviderStyle),
                 }}
-                onClick={() => window.location.href = "/api/auth/microsoft?returnTo=/dashboard"}
+                onClick={() => { if (providerStatus.microsoft) window.location.href = "/api/auth/microsoft?from=/today"; }}
                 data-testid="button-microsoft-login"
+                title={providerStatus.microsoft ? "Continue with Microsoft" : "Microsoft sign-in is not configured"}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <rect x="1" y="1" width="10" height="10" fill="#F25022"/>
@@ -880,7 +929,7 @@ export default function LoginPage() {
                   <rect x="1" y="13" width="10" height="10" fill="#00A4EF"/>
                   <rect x="13" y="13" width="10" height="10" fill="#FFB900"/>
                 </svg>
-                Microsoft
+                {providerStatus.microsoft ? "Microsoft" : "Microsoft (not configured)"}
               </button>
 
               {[

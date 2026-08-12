@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
@@ -7,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldCheck, Receipt, TrendingUp, Banknote, ArrowRight, Lock, Globe, FileCheck, Activity, CheckCircle2, XCircle, type LucideIcon } from "lucide-react";
+import { Seo } from "@/components/seo";
 
 interface ImpactPayload {
   merchantsRegistered: number;
@@ -81,14 +81,6 @@ function humanizeDenialReason(reason: string): string {
 export default function FinancialInclusionPage() {
   const { t } = useTranslation();
 
-  useEffect(() => {
-    document.title = t("financialInclusion.docTitle", "Financial Inclusion Impact — Universal Credit Hub");
-    const meta = document.querySelector('meta[name="description"]') ?? (() => {
-      const m = document.createElement("meta"); m.setAttribute("name", "description"); document.head.appendChild(m); return m;
-    })();
-    meta.setAttribute("content", t("financialInclusion.metaDescription", "How verified VAT receipts unlock credit access for African merchants — privacy-first, consent-bounded, fully audited."));
-  }, [t]);
-
   const { data, isLoading } = useQuery<ImpactPayload>({
     queryKey: ["/api/public/financial-inclusion-impact"],
     refetchInterval: TICKER_REFRESH_MS,
@@ -101,6 +93,7 @@ export default function FinancialInclusionPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-white dark:from-emerald-950/30 dark:via-background dark:to-background" data-testid="page-financial-inclusion">
+      <Seo title="Financial Inclusion & Verified Receipt Credit Data | Universal Credit Hub" description="See how consent-controlled verified receipts can help African merchants build a credit profile while preserving privacy, purpose limitation and audit evidence." canonical="/financial-inclusion" />
       {/* Hero */}
       <section className="px-4 md:px-8 py-12 md:py-20 max-w-6xl mx-auto text-center">
         <Badge className="mb-4 bg-emerald-600" data-testid="badge-hero">{t("financialInclusion.heroBadge", "Financial Inclusion Impact")}</Badge>
@@ -111,7 +104,7 @@ export default function FinancialInclusionPage() {
           {t("financialInclusion.heroSubtitle", "Universal Credit Hub turns verified VAT receipts — Loto Fiscal in Côte d'Ivoire and Francophone markets, Verified Receipts everywhere else — into a credit profile that unlocks loans for previously invisible merchants in all 54 African countries, entirely on the merchant's terms.")}
         </p>
         <div className="flex flex-wrap justify-center gap-3">
-          <Link href="/loto-fiscal">
+          <Link href="/loto">
             <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700" data-testid="button-cta-loto">
               {t("financialInclusion.ctaLoto", "Open Loto Fiscal")}
               <ArrowRight className="w-4 h-4 ml-2" />
