@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-11T15:20:43.361Z",
+  "generatedAt": "2026-08-12T10:05:51.081Z",
   "branch": "claude/production-check-WFJxR",
-  "currentCommit": "a0405b0",
+  "currentCommit": "64ee0d2",
   "commits": [
+    {
+      "hash": "64ee0d233773573ace8d8004ec6a08cee90c86b7",
+      "shortHash": "64ee0d2",
+      "date": "2026-08-12",
+      "author": "Claude",
+      "subject": "chore: refresh generated version history"
+    },
+    {
+      "hash": "33ed15435645e29c2500db922b5bca7a305ae416",
+      "shortHash": "33ed154",
+      "date": "2026-08-11",
+      "author": "Claude",
+      "subject": "feat(npl): add NPL recovery-priority ranking engine"
+    },
     {
       "hash": "a0405b08a47990b3056f4715449ed42bdc4e91d8",
       "shortHash": "a0405b0",
@@ -89,20 +103,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "hash": "d021366bd10f243f9bb8301093c29f6f23f7f713",
       "shortHash": "d021366",
       "date": "2026-07-08",
-      "author": "Claude",
-      "subject": "chore: refresh generated version history"
-    },
-    {
-      "hash": "5dbf3f09294a9fb7003459737c2b082aa8606906",
-      "shortHash": "5dbf3f0",
-      "date": "2026-07-08",
-      "author": "Claude",
-      "subject": "chore: refresh generated version history"
-    },
-    {
-      "hash": "58bf120e3f81bdfa022954e75b69131cd4980c02",
-      "shortHash": "58bf120",
-      "date": "2026-07-07",
       "author": "Claude",
       "subject": "chore: refresh generated version history"
     }
