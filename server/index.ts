@@ -618,64 +618,50 @@ process.stderr.write = function (...args: any[]) {
     }
 
     try {
-    if (!isProduction) {
-      try {
-        const { seedDemoData } = await import("./seed-demo-data");
-        await seedDemoData();
-      } catch (e) {
-        console.error("Demo data seed error (non-fatal):", e);
+      if (!isProduction) {
+        try {
+          const { seedDemoData } = await import("./seed-demo-data");
+          await seedDemoData();
+        } catch (e) {
+          console.error("Demo data seed error (non-fatal):", e);
+        }
+      } else {
+        console.log("[Production] Skipping demo data seeding");
       }
-    } else {
-      console.log("[Production] Skipping demo data seeding");
-    }
 
-    try {
-      const { seedTelcoLending } = await import("./seed-telco-lending");
-      await seedTelcoLending();"./seed-demo-data");
-      await seedDemoData();
-    } catch (e) {
-      console.error("Demo data seed error (non-fatal):", e);
-    }
+      try {
+        const { seedTelcoLending } = await import("./seed-telco-lending");
+        await seedTelcoLending();
+      } catch (e) {
+        console.error("Telco lending seed error (non-fatal):", e);
+      }
 
-    try {
-      const { seedTelcoLending } = await import("./seed-telco-lending");
-      await seedTelcoLending();
+      try {
+        const { distributeCreatedAtTimestamps } = await import("./distribute-timestamps");
+        await distributeCreatedAtTimestamps();
+      } catch (e) {
+        console.error("Timestamp distribution error (non-fatal):", e);
+      }
     } catch (e) {
-      console.error("Telco lending seed error (non-fatal):", e);
-    }
-
-    try {
-      const { distributeCreatedAtTimestamps } = await import("./distribute-timestamps");
-      await distributeCreatedAtTimestamps();
-    } catch (e) {
-      console.error("Timestamp distribution error (non-fatal):", e);
+      console.error("Post-seed block error (non-fatal):", e);
     }
   } else {
     console.log("[Startup] Skipping seed — set RUN_SEED=true to seed");
   }
 
   try {
-  if (!isProductionBoot) {
-    try {
-      const { ensureDemoUsers } = await import("./seed");
-      await ensureDemoUsers();
-    } catch (e) {
-      console.error("[Startup] ensureDemoUsers error (non-fatal):", e);
+    if (!isProductionBoot) {
+      try {
+        const { ensureDemoUsers } = await import("./seed");
+        await ensureDemoUsers();
+      } catch (e) {
+        console.error("[Startup] ensureDemoUsers error (non-fatal):", e);
+      }
+    } else {
+      console.log("[Production] Skipping ensureDemoUsers — demo accounts disabled");
     }
-  } else {
-    console.log("[Production] Skipping ensureDemoUsers — demo accounts disabled");
-  }
-
-  try {
-    const { runPortableMigrations } = await import('./stripeClient');
-    const databaseUrl = process.env.DATABASE_URL;
-    if (databaseUrl) {
-      startupLogger.info('Initializing Stripe schema...');
-      await runPortableMigrations({ databaseUrl, schema: 'stripe' });
-      startupLogger.info('Stripe schema ready');"./seed");
-    await ensureDemoUsers();
   } catch (e) {
-    console.error("[Startup] ensureDemoUsers error (non-fatal):", e);
+    console.error("[Startup] ensureDemoUsers outer error (non-fatal):", e);
   }
 
   try {

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, FileCheck2, ShieldAlert, Upload } from "lucide-react";
+import { AlertTriangle, ArrowRight, BarChart3, CheckCircle2, FileCheck2, Play, ShieldAlert, Upload } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
@@ -124,6 +124,18 @@ export default function NplEarlyWarningPage() {
     onError: (error: Error) => toast({ title: "Could not assign case", description: error.message, variant: "destructive" }),
   });
 
+  const classifyNow = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/npl/classify-now");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/npl-early-warning"] });
+      toast({ title: "Classification complete", description: "NPL portfolio classifications have been refreshed." });
+    },
+    onError: (error: Error) => toast({ title: "Classification failed", description: error.message, variant: "destructive" }),
+  });
+
   const submitMacroObservation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/npl-early-warning/macro-observations", {
@@ -150,7 +162,12 @@ export default function NplEarlyWarningPage() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight">NPL Early Warning Desk</h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">Live arrears and account-status signals that need an owner before they become losses.</p>
         </div>
-        <Link href="/collections"><Button variant="outline" className="gap-2">Open Collections <ArrowRight className="h-4 w-4" /></Button></Link>
+        <div className="flex flex-col gap-2 md:flex-row md:items-end">
+          <Link href="/collections"><Button variant="outline" className="gap-2">Open Collections <ArrowRight className="h-4 w-4" /></Button></Link>
+          <Button variant="default" className="gap-2" disabled={classifyNow.isPending} onClick={() => classifyNow.mutate()} data-testid="npl-classify-now-btn">
+            <Play className="h-4 w-4" />{classifyNow.isPending ? "Classifying…" : "Run classification now"}
+          </Button>
+        </div>
       </header>
 
       <section className="grid gap-4 md:grid-cols-4">

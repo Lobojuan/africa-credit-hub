@@ -18,93 +18,93 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-03T09:46:57.973Z",
+  "generatedAt": "2026-08-13T10:58:29.786Z",
   "branch": "main",
-  "currentCommit": "cf1f155",
+  "currentCommit": "e031530",
   "commits": [
     {
-      "hash": "cf1f15583627a723e4dcfb27daa955d722357cd3",
-      "shortHash": "cf1f155",
-      "date": "2026-08-03",
-      "author": "Uffe J Carlson",
-      "subject": "fix: render public SEO metadata server-side"
+      "hash": "e031530cd5d00ba961938ce345d9f53558acaed4",
+      "shortHash": "e031530",
+      "date": "2026-08-12",
+      "author": "UCH Dev",
+      "subject": "security: enable RLS on all 108 tables with org-scoped and restrictive policies for bank pilot"
     },
     {
-      "hash": "32413634587ba6e1ef0824d0a68b740ce9eb5f9f",
-      "shortHash": "3241363",
-      "date": "2026-08-03",
-      "author": "Uffe J Carlson",
-      "subject": "fix: make public pages crawlable and searchable"
+      "hash": "f38c37435a89772e6a3ebf3dabaf4bfa2440428f",
+      "shortHash": "f38c374",
+      "date": "2026-08-12",
+      "author": "UCH Dev",
+      "subject": "security: remove hardcoded registry123 fallback, fix NPL SQL injection, replace console.log with structured logging, fix scheduler leak"
     },
     {
-      "hash": "71cd7fa20637e1133157d69909fc256c04bf77a1",
-      "shortHash": "71cd7fa",
-      "date": "2026-07-31",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add public bank diagnostic and navigation"
+      "hash": "3984ad8c155248660d3f1b8f7475426790ea4e8c",
+      "shortHash": "3984ad8",
+      "date": "2026-08-12",
+      "author": "UCH Dev",
+      "subject": "feat: NPL classification engine with auto-provisioning and migration tracking"
     },
     {
-      "hash": "45e6b491973fb7c58992d7273baa1b703ae0ac37",
-      "shortHash": "45e6b49",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "docs: add two-week delivery report"
+      "hash": "d9bc4adfc06feb8f438c40bb1f04598c4265d3fd",
+      "shortHash": "d9bc4ad",
+      "date": "2026-08-12",
+      "author": "UCH Dev",
+      "subject": "Merge remote: keep auto-login removal for pilot security"
     },
     {
-      "hash": "4910ca39d0aad6b5653a9dd504cffa69d2c7f777",
-      "shortHash": "4910ca3",
-      "date": "2026-07-30",
-      "author": "Uffe J Carlson",
-      "subject": "fix: retire unsafe public landing claims"
+      "hash": "665cb9c3112a777725c1574301d350f1ee124638",
+      "shortHash": "665cb9c",
+      "date": "2026-08-12",
+      "author": "UCH Dev",
+      "subject": "security: remove pre-pilot backdoors and gate demo data"
     },
     {
-      "hash": "c71c8d285998efd69d0f43cac7eaca19259ca691",
-      "shortHash": "c71c8d2",
-      "date": "2026-07-30",
+      "hash": "91f2255ad876d03b6be65dc0c050f9f7efabe9d1",
+      "shortHash": "91f2255",
+      "date": "2026-08-12",
       "author": "Uffe J Carlson",
-      "subject": "docs: define country clearance safety matrix"
+      "subject": "fix(asset-trace): isolate per-credential decryption failures"
     },
     {
-      "hash": "e08ac22310b5ca143bea1da1b5d2f2787bd13621",
-      "shortHash": "e08ac22",
-      "date": "2026-07-30",
+      "hash": "7f9543ec3941d61285e0a0c3140a231487135d4f",
+      "shortHash": "7f9543e",
+      "date": "2026-08-12",
       "author": "Uffe J Carlson",
-      "subject": "docs: establish controlled release baseline"
+      "subject": "security: fail-closed on PII decryption errors"
     },
     {
-      "hash": "965b01f7008af89e723fd0d8e307f38a564f3451",
-      "shortHash": "965b01f",
-      "date": "2026-07-30",
+      "hash": "901e38ccf6d792cad5633b6f427943c0b8efb89c",
+      "shortHash": "901e38c",
+      "date": "2026-08-11",
       "author": "Uffe J Carlson",
-      "subject": "docs: describe banker shift demo"
+      "subject": "fix: make staff login recovery accessible"
     },
     {
-      "hash": "02793156c74e48f3c2fbbd34a0cd825d5f43c580",
-      "shortHash": "0279315",
-      "date": "2026-07-30",
+      "hash": "ebd4bb80f7f765441b7db9fb2f881b1afb4670b3",
+      "shortHash": "ebd4bb8",
+      "date": "2026-08-11",
       "author": "Uffe J Carlson",
-      "subject": "feat: show governed demo journey"
+      "subject": "feat: govern NPL remediation decisions"
     },
     {
-      "hash": "906b94e736f36fde590e5f8196a01fa5bb9b5853",
-      "shortHash": "906b94e",
-      "date": "2026-07-30",
+      "hash": "14110d517f8a58092789bf9aad00aaa37ec3ba67",
+      "shortHash": "14110d5",
+      "date": "2026-08-11",
       "author": "Uffe J Carlson",
-      "subject": "feat: add governed banker shift demo"
+      "subject": "feat: add immutable NPL case ledger"
     },
     {
-      "hash": "257a3fadca7b363251e5c1d3e8af1ea87f8ac945",
-      "shortHash": "257a3fa",
-      "date": "2026-07-30",
+      "hash": "41825c3ae5b580a634232e013b393c4b8f3ec2ab",
+      "shortHash": "41825c3",
+      "date": "2026-08-11",
       "author": "Uffe J Carlson",
-      "subject": "feat: add hands-on banker demo workflows"
+      "subject": "feat: govern loan tape reconciliation"
     },
     {
-      "hash": "baf5663215b12aeace9481d0c60b53cfa6ef9e11",
-      "shortHash": "baf5663",
-      "date": "2026-07-30",
+      "hash": "eb2c2451dfecbd564188a4e52f4e7901dccb620b",
+      "shortHash": "eb2c245",
+      "date": "2026-08-11",
       "author": "Uffe J Carlson",
-      "subject": "fix: focus demo scenario selection"
+      "subject": "feat: govern Ghana NPL reduction plans"
     }
   ]
 };
