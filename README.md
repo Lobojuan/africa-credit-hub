@@ -166,8 +166,10 @@ Create a `.env` file or configure the following secrets:
 | `TWILIO_ACCOUNT_SID` | No | Twilio account SID for SMS |
 | `TWILIO_AUTH_TOKEN` | No | Twilio auth token |
 | `TWILIO_PHONE_NUMBER` | No | Twilio sender phone number |
-| `SMTP_USER` | No | Gmail address for SMTP email |
-| `SMTP_PASS` | No | Gmail app password |
+| `SMTP_USER` | No | SMTP mailbox username, e.g. Zoho `sales@universalcredithub.com` |
+| `SMTP_PASS` | No | Provider app password; store only as a deployment secret |
+| `SMTP_FROM` | No | Verified sender address for transactional email, e.g. `sales@universalcredithub.com` |
+| `SALES_INQUIRY_TO` | No | Comma-separated public Contact Sales recipients; use the stable shared `sales@universalcredithub.com` mailbox |
 | `GOOGLE_CLIENT_ID` | No | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | No | Google OAuth client secret |
 | `STRIPE_SECRET_KEY` | No | Stripe secret key for billing |

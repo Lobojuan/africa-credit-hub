@@ -3098,7 +3098,10 @@ export async function registerRoutes(
       if (!name || !email || !organization) {
         return res.status(400).json({ message: "Name, email, and organization are required" });
       }
-      await sendContactSalesEmail({ name, email, phone, organization, title, country, tier, message });
+      const delivered = await sendContactSalesEmail({ name, email, phone, organization, title, country, tier, message });
+      if (!delivered) {
+        return res.status(503).json({ message: "Contact delivery is not configured. Please email sales@universalcredithub.com directly." });
+      }
       await storage.createAuditLog({
         action: "contact_sales",
         entity: "inquiry",

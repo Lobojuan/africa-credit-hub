@@ -6,35 +6,43 @@ _For institutional and angel investors. Print to PDF as needed._
 
 ## The opportunity
 
-**Total addressable market:** 1.4 billion Africans. ~300 million adults with no formal credit file. SME financing gap estimated at **$331 billion annually** (IFC). Mobile-money penetration crossed **50% of adults** in Sub-Saharan Africa in 2024 — the digital paper trail finally exists.
+African lenders face fragmented credit information, weak early-warning operations,
+manual evidence trails and expensive country-by-country integration. UCH is building
+a controlled operating layer for those workflows, beginning with Ghana.
 
-**Where the money sits today:** TransUnion Africa, CRC Credit Bureau, CRIF Africa, Compuscan — all retrofitted from Western architectures, none consent-first, none combine credit + collateral + fiscal data.
+UCH is not represented as a licensed credit bureau, regulator-approved filing service
+or replacement for a bank's core systems. The immediate commercial opportunity is a
+controlled diagnostic and pilot platform that can prove value before production use.
 
 ## The product
 
-A **single platform** combining three systems that have never been together:
+A **single platform** demonstrating three connected work areas:
 
 1. **Credit Bureau** — pan-African consumer & business credit reporting
 2. **Collateral Registry** — movable-asset liens across 4 legal regimes
 3. **Loto Fiscal** — verified VAT receipts as alternative-data scoring
 
-Wired by a **consent-bounded gateway** with blockchain-anchored audit. Real-time supervisory window for regulators. 7 languages. 54 countries.
+The current product includes consent, role-based access, maker-checker controls,
+audit evidence, country configuration and regulator-oriented export templates.
+Country configuration is not the same as legal or regulatory clearance.
 
-## The unlock
+## Initial customer value
 
-A merchant in Côte d'Ivoire who has six years of verified VAT receipts but no bank loan can flip one toggle and become fundable. The lender sees a 300–850 VAT Activity Score with reason codes, alongside the standard credit report.
+UCH can help a bank assess credit and NPL workflows, identify data and control gaps,
+and test governed remediation using bank-approved synthetic or isolated pilot data.
+Alternative-data and fiscal-scoring capabilities require a contracted, authorized
+source before they can be used with real customer data.
 
-That's not a feature. That's a market expansion.
+## Current evidence
 
-## Traction (current)
-
-- ✅ Three production systems, all live
-- ✅ Cross-product gateway operational, audit chain anchored
-- ✅ 54 country configs, 7 locales, 4 legal regimes
-- ✅ 6 regulator export templates (BoG, CBN, BCEAO, BEAC, CBK, BSL)
-- ✅ Demo platform deployed; investor walkthroughs and regulator briefings in progress
-- 🔜 Pilot lender onboarding (Q3 2026)
-- 🔜 First central-bank sandbox deployment (Q4 2026)
+- ✅ Public product and interactive synthetic-data demonstration deployed
+- ✅ Credit, NPL early-warning, governed IFRS 9, collateral, consent, reporting and diagnostic workflows implemented for demonstration and controlled pilot preparation
+- ✅ Role-based access, MFA/passkey flows, maker-checker controls and audit records implemented
+- ✅ Country configurations and regulator-oriented export templates available for validation
+- ✅ Bank diagnostic and pilot documentation prepared
+- 🔜 Independent penetration test and bank security acceptance
+- 🔜 First contracted Ghanaian bank diagnostic or controlled pilot
+- 🔜 Independent Ghana regulatory and IFRS 9 policy validation
 
 ## Business model
 
@@ -43,53 +51,57 @@ That's not a feature. That's a market expansion.
 | Bureau report API | $0.45–2.00 per report (volume tiers) | Recurring, high-margin |
 | Collateral filing | $5–50 per filing | Statutory in many jurisdictions |
 | Loto Fiscal SaaS | Subscription per merchant | Path to consumer-side flywheel |
-| Regulator licence | Annual contract | Sticky, multi-year |
+| Regulator/supervisory deployment | Annual contract | Subject to procurement, approval and country validation |
 | Enterprise tier | Custom | Annual + SLA + dedicated CSM |
 
-**Unit economics:** at scale a single mid-tier lender (~10K reports/month) generates ~$54K/year ARR at near-zero marginal cost.
+Pricing and unit economics remain hypotheses until validated through contracted pilots.
 
 ## Defensibility
 
-1. **Network effects** — every new participating lender enriches the bureau for all the others
-2. **Regulatory moat** — central-bank licences and regulator-formatted exports are slow for competitors to replicate
-3. **Consent infrastructure** — a Western bureau can't bolt this on without rebuilding their architecture
-4. **Cross-product data bridge** — credit + collateral + fiscal in one consent record is structurally hard for a single-product incumbent to copy
+1. **Connected workflow** — credit, NPL, collateral, consent and evidence in one operating model
+2. **Country-validation framework** — a repeatable process for local policy, legal and regulatory review
+3. **Governed decisions** — reason codes, maker-checker approval and auditable human ownership
+4. **Diagnostic entry point** — banks can evaluate data and controls before committing to integration
 
 ## What we're raising and why
 
-> [Customise to your round.]
-> Seed of $X million to: (1) onboard 25 pilot lenders across Ghana, Nigeria, Côte d'Ivoire, Kenya; (2) close two central-bank sandbox deployments; (3) hire VP Sales (Africa) and VP Engineering; (4) extend runway to 24 months.
+> Raising **US$1 million** for approximately 18 months to complete independent
+> security and Ghana regulatory validation, execute two controlled Ghanaian bank
+> pilots, hire the core implementation team and prepare two additional African
+> markets based on signed demand.
+
+Target dilution is 15–20%, subject to company, cap-table and legal review.
 
 ## Why we'll win
 
-- Built from day one for African legal regimes, not retrofitted
-- Consent-first when GDPR-aligned data laws are now mandatory
-- Three systems on one platform = one sales conversation, three revenue lines
-- Founder-led with on-the-ground operating experience in West Africa
+- Ghana beachhead with a disciplined, evidence-led expansion model
+- Multiple bank-risk workflows presented through one controlled user experience
+- Diagnostic engagement creates a lower-risk route into software pilots
+- Founder-led and operating from Ghana
 
 ## Risks (and how we manage them)
 
 | Risk | Mitigation |
 |---|---|
-| Regulator approval timeline | Sandbox-first deployments; existing relationships in Ghana, Nigeria |
-| Lender adoption | 30-day free pilots; measurable approval-rate uplift drives renewal |
+| Regulator and bank approval timeline | Controlled pilots; no claim of approval before written acceptance |
+| Lender adoption | Diagnostic-first entry and measurable pilot success criteria |
 | Data sovereignty | On-prem option; in-country deployments for sensitive jurisdictions |
 | Incumbent retaliation | Speed; consent infrastructure is hard to retrofit |
 
-## Comparable outcomes
+## 18-month milestones
 
-- **Experian** (mature Western bureau): ~$6.6B revenue, ~$30B market cap
-- **Equifax**: ~$5.7B revenue
-- **TransUnion**: ~$3.9B revenue
-- **CRIF** (private, European, multi-product): ~€800M revenue
-- **TymeBank** (African neobank, ~6 yrs old): valued ~$1.5B in 2023
-
-A pan-African infrastructure play priced at a fraction of any of these is asymmetric upside.
+- Two contracted Ghanaian bank pilots
+- At least one paid diagnostic engagement
+- Independent penetration test completed and material findings remediated
+- Ghana control mapping reviewed by qualified local specialists
+- IFRS 9 governance reviewed against each pilot bank's approved policy
+- Repeatable integration, implementation and evidence package
+- Two subsequent markets selected from documented customer demand
 
 ## Contact
 
-- **Founder:** [Your name]
-- **Email:** [founder@universalcredithub.com]
-- **Demo:** https://universalcredithub.com — `johndoe` / `SecuredCreditor2026!`
-- **Investor walkthrough:** https://universalcredithub.com — book a 30-min live demo
+- **Co-founder:** Uffe Carlson
+- **Email:** uffe.carlson@universalcredithub.com
+- **Demo:** https://universalcredithub.com/demo
+- **Investor walkthrough:** https://universalcredithub.com/contact-sales
 - **Press kit:** https://universalcredithub.com/press

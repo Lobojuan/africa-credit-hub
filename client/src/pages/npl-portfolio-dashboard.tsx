@@ -32,11 +32,11 @@ const IFRS9_COLORS = {
   stage_3: "#ef4444",
 };
 
-function money(value: string | number | null) {
+function money(value: string | number | null | undefined) {
   return Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function pct(value: string | number | null) {
+function pct(value: string | number | null | undefined) {
   return `${(Number(value || 0) * 100).toFixed(2)}%`;
 }
 

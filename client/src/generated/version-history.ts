@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-15T21:25:53.872Z",
+  "generatedAt": "2026-08-16T18:05:12.166Z",
   "branch": "main",
-  "currentCommit": "0e58b29",
+  "currentCommit": "0b65e15",
   "commits": [
+    {
+      "hash": "0b65e15fe30fe6be5069f7d2036eb1d3231e0082",
+      "shortHash": "0b65e15",
+      "date": "2026-08-13",
+      "author": "Uffe J Carlson",
+      "subject": "fix: integrate NPL security updates and sales delivery"
+    },
+    {
+      "hash": "23ac249dd2db418cf9cfb3720c24217c69081d28",
+      "shortHash": "23ac249",
+      "date": "2026-08-15",
+      "author": "UCH Dev",
+      "subject": "fix: TypeScript strict errors in NPL engine, websocket logger, and portfolio dashboard"
+    },
     {
       "hash": "0e58b29b920afe92d6561a291363b4293a4662c3",
       "shortHash": "0e58b29",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-08-12",
       "author": "UCH Dev",
       "subject": "security: remove hardcoded registry123 fallback, fix NPL SQL injection, replace console.log with structured logging, fix scheduler leak"
-    },
-    {
-      "hash": "3984ad8c155248660d3f1b8f7475426790ea4e8c",
-      "shortHash": "3984ad8",
-      "date": "2026-08-12",
-      "author": "UCH Dev",
-      "subject": "feat: NPL classification engine with auto-provisioning and migration tracking"
-    },
-    {
-      "hash": "d9bc4adfc06feb8f438c40bb1f04598c4265d3fd",
-      "shortHash": "d9bc4ad",
-      "date": "2026-08-12",
-      "author": "UCH Dev",
-      "subject": "Merge remote: keep auto-login removal for pilot security"
     }
   ]
 };

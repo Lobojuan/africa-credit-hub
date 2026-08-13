@@ -446,7 +446,12 @@ export async function sendStaffInvitationEmail(email: string, organizationName: 
 }
 
 export async function sendContactSalesEmail(data: { name: string; email: string; phone?: string; organization: string; title?: string; country?: string; tier?: string; message?: string }): Promise<boolean> {
-  const adminEmail = process.env.ADMIN_EMAIL || process.env.PLATFORM_SUPPORT_EMAIL || "support@universalcredithub.com";
+  // Sales enquiries have their own recipient setting. Keep platform/admin alert
+  // routing separate so a public lead never depends on an owner's mailbox.
+  const recipients = (process.env.SALES_INQUIRY_TO || "sales@universalcredithub.com")
+    .split(",")
+    .map((recipient) => recipient.trim())
+    .filter(Boolean);
   const tierLabel = data.tier === "commercial" ? "Commercial" : data.tier === "sovereign" ? "Sovereign" : data.tier || "Not specified";
   const body = `
     <h2 style="color:#0d9488;">New Enterprise Inquiry</h2>
@@ -462,7 +467,10 @@ export async function sendContactSalesEmail(data: { name: string; email: string;
     ${data.message ? `<h3 style="margin-top:20px;">Message</h3><p style="background:#f8f9fa;padding:16px;border-radius:8px;white-space:pre-wrap;">${esc(data.message)}</p>` : ""}
     <p style="color:#888;font-size:12px;margin-top:24px;">This inquiry was submitted via the Universal Credit Hub Contact Sales page.</p>
   `;
-  return sendEmail(adminEmail, `[Universal Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`, createEmailHtml("New Sales Inquiry", body));
+  const subject = `[Universal Credit Hub Sales Inquiry] ${data.organization} — ${tierLabel}`;
+  const html = createEmailHtml("New Sales Inquiry", body);
+  const results = await Promise.all(recipients.map((recipient) => sendEmail(recipient, subject, html)));
+  return results.length > 0 && results.every(Boolean);
 }
 
 export async function sendConsentRequestEmail(

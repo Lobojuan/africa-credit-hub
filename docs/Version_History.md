@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `0e58b29`
+**Current Commit:** `0b65e15`
 **Branch:** `main`
-**Generated:** 2026-08-15T21:25:53.872Z
+**Generated:** 2026-08-16T18:05:12.166Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,6 +12,8 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
+| 2026-08-13 | `0b65e15` | fix: integrate NPL security updates and sales delivery | Uffe J Carlson |
+| 2026-08-15 | `23ac249` | fix: TypeScript strict errors in NPL engine, websocket logger, and portfolio dashboard | UCH Dev |
 | 2026-08-15 | `0e58b29` | fix: JSON.stringify reason arrays for PostgreSQL jsonb columns | UCH Dev |
 | 2026-08-15 | `84e9093` | feat: add NPL classification tables to schema + migration | UCH Dev |
 | 2026-08-15 | `cf98ee9` | fix: remove invalid settled enum from NPL classification query | UCH Dev |
@@ -22,5 +24,3 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 | 2026-08-13 | `30d3e6d` | feat(npl): add portfolio dashboard, manual classify trigger, fix server corruption | UCH Dev |
 | 2026-08-12 | `e031530` | security: enable RLS on all 108 tables with org-scoped and restrictive policies for bank pilot | UCH Dev |
 | 2026-08-12 | `f38c374` | security: remove hardcoded registry123 fallback, fix NPL SQL injection, replace console.log with structured logging, fix scheduler leak | UCH Dev |
-| 2026-08-12 | `3984ad8` | feat: NPL classification engine with auto-provisioning and migration tracking | UCH Dev |
-| 2026-08-12 | `d9bc4ad` | Merge remote: keep auto-login removal for pilot security | UCH Dev |
