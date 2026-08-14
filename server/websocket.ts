@@ -80,6 +80,17 @@ async function extractSessionFromRequest(req: IncomingMessage): Promise<{ userId
       organizationId: sess.organizationId,
     };
   } catch (e) {
+    websocketLogger.error("WebSocket session extraction failed", e);
+    return null;
+  }
+}
+
+    return {
+      userId: sess.userId,
+      userRole: sess.userRole || "viewer",
+      organizationId: sess.organizationId,
+    };
+  } catch (e) {
     return null;
   }
 }
@@ -151,6 +162,10 @@ export function broadcastEvent(event: WSEvent, filter?: { roles?: string[]; orga
     }
 
     try {
+      client.ws.send(payload);
+    } catch (e) {
+      websocketLogger.error("WebSocket broadcast send failed", e);
+    }
       client.ws.send(payload);
     } catch (e) {}
   });

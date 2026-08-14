@@ -75,7 +75,7 @@ export type ClassifiedAccount = {
   collectionTriggered: boolean;
 };
 
-function classifyAccount(
+export function classifyAccount(
   row: {
     id: string;
     borrower_id: string;
