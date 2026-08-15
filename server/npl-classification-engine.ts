@@ -296,7 +296,7 @@ export async function runNplClassification(options: {
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       `, [
         c.creditAccountId, c.borrowerId, c.organizationId, c.country, c.daysInArrears, c.currentBalance,
-        c.accountStatus, c.assetClassification, c.ifrs9Stage, c.ifrs9Reasons, c.nplStage, c.nplReasons,
+        c.accountStatus, c.assetClassification, c.ifrs9Stage, JSON.stringify(c.ifrs9Reasons), c.nplStage, JSON.stringify(c.nplReasons),
         c.provisionAmount, c.provisionRate, c.collectionTriggered,
       ]);
       insertedClassifications++;
