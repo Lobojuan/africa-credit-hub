@@ -242,8 +242,8 @@ export function registerNplPortfolioRoutes(app: Express) {
 
       res.json({
         triggeredBy: userId,
-        durationMs: Date.now() - start,
         ...result,
+        durationMs: Date.now() - start,
       });
     } catch (error: unknown) {
       res.status(500).json({ message: safeErrorMessage(error) });

@@ -18,10 +18,38 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-14T12:50:56.148Z",
+  "generatedAt": "2026-08-15T21:25:53.872Z",
   "branch": "main",
-  "currentCommit": "a6573bc",
+  "currentCommit": "0e58b29",
   "commits": [
+    {
+      "hash": "0e58b29b920afe92d6561a291363b4293a4662c3",
+      "shortHash": "0e58b29",
+      "date": "2026-08-15",
+      "author": "UCH Dev",
+      "subject": "fix: JSON.stringify reason arrays for PostgreSQL jsonb columns"
+    },
+    {
+      "hash": "84e9093f17452169c8e4570a967daad7ae87cf6f",
+      "shortHash": "84e9093",
+      "date": "2026-08-15",
+      "author": "UCH Dev",
+      "subject": "feat: add NPL classification tables to schema + migration"
+    },
+    {
+      "hash": "cf98ee9cf961a10690e4b791c9711e5933a68081",
+      "shortHash": "cf98ee9",
+      "date": "2026-08-15",
+      "author": "UCH Dev",
+      "subject": "fix: remove invalid settled enum from NPL classification query"
+    },
+    {
+      "hash": "f74435b05f950abab9f27628ca0e72f5db783cc0",
+      "shortHash": "f74435b",
+      "date": "2026-08-15",
+      "author": "UCH Dev",
+      "subject": "fix: remove duplicate code blocks from websocket.ts catch fixes"
+    },
     {
       "hash": "a6573bca0962d4415068a33568bb9a26c60b17fe",
       "shortHash": "a6573bc",
@@ -77,34 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-08-12",
       "author": "UCH Dev",
       "subject": "Merge remote: keep auto-login removal for pilot security"
-    },
-    {
-      "hash": "665cb9c3112a777725c1574301d350f1ee124638",
-      "shortHash": "665cb9c",
-      "date": "2026-08-12",
-      "author": "UCH Dev",
-      "subject": "security: remove pre-pilot backdoors and gate demo data"
-    },
-    {
-      "hash": "91f2255ad876d03b6be65dc0c050f9f7efabe9d1",
-      "shortHash": "91f2255",
-      "date": "2026-08-12",
-      "author": "Uffe J Carlson",
-      "subject": "fix(asset-trace): isolate per-credential decryption failures"
-    },
-    {
-      "hash": "7f9543ec3941d61285e0a0c3140a231487135d4f",
-      "shortHash": "7f9543e",
-      "date": "2026-08-12",
-      "author": "Uffe J Carlson",
-      "subject": "security: fail-closed on PII decryption errors"
-    },
-    {
-      "hash": "901e38ccf6d792cad5633b6f427943c0b8efb89c",
-      "shortHash": "901e38c",
-      "date": "2026-08-11",
-      "author": "Uffe J Carlson",
-      "subject": "fix: make staff login recovery accessible"
     }
   ]
 };

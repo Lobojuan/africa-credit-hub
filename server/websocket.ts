@@ -80,7 +80,7 @@ async function extractSessionFromRequest(req: IncomingMessage): Promise<{ userId
       organizationId: sess.organizationId,
     };
   } catch (e) {
-    websocketLogger.error("WebSocket session extraction failed", e);
+    websocketLogger.error("WebSocket session extraction failed", { error: String(e) });
     return null;
   }
 }
@@ -154,7 +154,7 @@ export function broadcastEvent(event: WSEvent, filter?: { roles?: string[]; orga
     try {
       client.ws.send(payload);
     } catch (e) {
-      websocketLogger.error("WebSocket broadcast send failed", e);
+      websocketLogger.error("WebSocket broadcast send failed", { error: String(e) });
     }
   });
 }

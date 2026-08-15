@@ -210,7 +210,7 @@ export default function NplPortfolioDashboardPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Gross loan exposure</CardDescription>
-            <CardTitle className="text-2xl">{summaryLoading ? "—" : summaryError ? "Error" : `GHS ${money(summary?.grossLoanExposure)}`}</CardTitle>
+            <CardTitle className="text-2xl">{summaryLoading ? "—" : summaryError ? "Error" : `GHS ${money(summary?.grossLoanExposure ?? null)}`}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             {summaryLoading ? "Loading…" : `${summary?.totalFacilities || 0} facilities · Written-off excluded`}
@@ -221,11 +221,11 @@ export default function NplPortfolioDashboardPage() {
           <CardHeader className="pb-2">
             <CardDescription>NPL ratio</CardDescription>
             <CardTitle className={`text-2xl ${Number(summary?.nplRatio || 0) > 0.1 ? "text-red-600" : "text-emerald-600"}`}>
-              {summaryLoading ? "—" : summaryError ? "Error" : pct(summary?.nplRatio)}
+              {summaryLoading ? "—" : summaryError ? "Error" : pct(summary?.nplRatio ?? null)}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {summaryLoading ? "Loading…" : `GHS ${money(summary?.nplExposure)} NPL exposure · ${summary?.nplFacilities || 0} facilities`}
+            {summaryLoading ? "Loading…" : `GHS ${money(summary?.nplExposure ?? null)} NPL exposure · ${summary?.nplFacilities || 0} facilities`}
           </CardContent>
         </Card>
 
@@ -233,11 +233,11 @@ export default function NplPortfolioDashboardPage() {
           <CardHeader className="pb-2">
             <CardDescription>Coverage ratio</CardDescription>
             <CardTitle className="text-2xl">
-              {summaryLoading ? "—" : summaryError ? "Error" : pct(summary?.coverageRatio)}
+              {summaryLoading ? "—" : summaryError ? "Error" : pct(summary?.coverageRatio ?? null)}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {summaryLoading ? "Loading…" : `Provisions / NPL exposure · GHS ${money(summary?.stage1Provision)} + ${money(summary?.stage2Provision)} + ${money(summary?.stage3Provision)}`}
+            {summaryLoading ? "Loading…" : `Provisions / NPL exposure · GHS ${money(summary?.stage1Provision ?? null)} + ${money(summary?.stage2Provision ?? null)} + ${money(summary?.stage3Provision ?? null)}`}
           </CardContent>
         </Card>
 
@@ -245,11 +245,11 @@ export default function NplPortfolioDashboardPage() {
           <CardHeader className="pb-2">
             <CardDescription>Watchlist ratio</CardDescription>
             <CardTitle className="text-2xl text-amber-600">
-              {summaryLoading ? "—" : summaryError ? "Error" : pct(summary?.watchlistRatio)}
+              {summaryLoading ? "—" : summaryError ? "Error" : pct(summary?.watchlistRatio ?? null)}
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            {summaryLoading ? "Loading…" : `GHS ${money(summary?.watchlistExposure)} · ${summary?.watchlistFacilities || 0} facilities`}
+            {summaryLoading ? "Loading…" : `GHS ${money(summary?.watchlistExposure ?? null)} · ${summary?.watchlistFacilities || 0} facilities`}
           </CardContent>
         </Card>
       </section>
@@ -445,7 +445,7 @@ export default function NplPortfolioDashboardPage() {
                 </div>
                 <p className="mt-2 text-2xl font-bold">GHS {money(summary.stage1Exposure)}</p>
                 <p className="text-sm text-muted-foreground">Provision: GHS {money(summary.stage1Provision)}</p>
-                <p className="text-sm text-muted-foreground">Rate: {summary.stage1Exposure > 0 ? ((Number(summary.stage1Provision) / Number(summary.stage1Exposure)) * 100).toFixed(2) : "0.00"}%</p>
+                <p className="text-sm text-muted-foreground">Rate: {Number(summary.stage1Exposure) > 0 ? ((Number(summary.stage1Provision) / Number(summary.stage1Exposure)) * 100).toFixed(2) : "0.00"}%</p>
               </div>
               <div className="rounded-xl border p-4">
                 <div className="flex items-center gap-2">
@@ -454,7 +454,7 @@ export default function NplPortfolioDashboardPage() {
                 </div>
                 <p className="mt-2 text-2xl font-bold">GHS {money(summary.stage2Exposure)}</p>
                 <p className="text-sm text-muted-foreground">Provision: GHS {money(summary.stage2Provision)}</p>
-                <p className="text-sm text-muted-foreground">Rate: {summary.stage2Exposure > 0 ? ((Number(summary.stage2Provision) / Number(summary.stage2Exposure)) * 100).toFixed(2) : "0.00"}%</p>
+                <p className="text-sm text-muted-foreground">Rate: {Number(summary.stage2Exposure) > 0 ? ((Number(summary.stage2Provision) / Number(summary.stage2Exposure)) * 100).toFixed(2) : "0.00"}%</p>
               </div>
               <div className="rounded-xl border p-4">
                 <div className="flex items-center gap-2">
@@ -463,7 +463,7 @@ export default function NplPortfolioDashboardPage() {
                 </div>
                 <p className="mt-2 text-2xl font-bold">GHS {money(summary.stage3Exposure)}</p>
                 <p className="text-sm text-muted-foreground">Provision: GHS {money(summary.stage3Provision)}</p>
-                <p className="text-sm text-muted-foreground">Rate: {summary.stage3Exposure > 0 ? ((Number(summary.stage3Provision) / Number(summary.stage3Exposure)) * 100).toFixed(2) : "0.00"}%</p>
+                <p className="text-sm text-muted-foreground">Rate: {Number(summary.stage3Exposure) > 0 ? ((Number(summary.stage3Provision) / Number(summary.stage3Exposure)) * 100).toFixed(2) : "0.00"}%</p>
               </div>
             </div>
           )}

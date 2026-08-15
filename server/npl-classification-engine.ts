@@ -354,7 +354,7 @@ export async function runNplClassification(options: {
     await client.query("COMMIT");
   } catch (e) {
     await client.query("ROLLBACK").catch(() => {});
-    engineLogger.error("Classification run failed", e);
+    engineLogger.error("Classification run failed", { error: String(e) });
     throw e;
   } finally {
     client.release();
@@ -507,7 +507,7 @@ export function startNplClassificationScheduler(intervalHours = 24) {
       const today = new Date().toISOString().slice(0, 10);
       await generatePortfolioSummary(today, "Ghana");
     } catch (e) {
-      engineLogger.error("Scheduled NPL classification failed", e);
+      engineLogger.error("Scheduled NPL classification failed", { error: String(e) });
     }
   }
 
