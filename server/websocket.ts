@@ -85,16 +85,6 @@ async function extractSessionFromRequest(req: IncomingMessage): Promise<{ userId
   }
 }
 
-    return {
-      userId: sess.userId,
-      userRole: sess.userRole || "viewer",
-      organizationId: sess.organizationId,
-    };
-  } catch (e) {
-    return null;
-  }
-}
-
 export function initWebSocket(httpServer: Server): void {
   wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
@@ -166,8 +156,6 @@ export function broadcastEvent(event: WSEvent, filter?: { roles?: string[]; orga
     } catch (e) {
       websocketLogger.error("WebSocket broadcast send failed", e);
     }
-      client.ws.send(payload);
-    } catch (e) {}
   });
 }
 
