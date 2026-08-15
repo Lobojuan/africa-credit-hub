@@ -18,10 +18,38 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-13T10:58:29.786Z",
+  "generatedAt": "2026-08-14T12:50:56.148Z",
   "branch": "main",
-  "currentCommit": "e031530",
+  "currentCommit": "a6573bc",
   "commits": [
+    {
+      "hash": "a6573bca0962d4415068a33568bb9a26c60b17fe",
+      "shortHash": "a6573bc",
+      "date": "2026-08-14",
+      "author": "UCH Dev",
+      "subject": "docs: NPL engine docs + unit tests + websocket fixes + routes refactor plan"
+    },
+    {
+      "hash": "437ba0321df1230d2313d5c2da89773e1badb101",
+      "shortHash": "437ba03",
+      "date": "2026-08-13",
+      "author": "UCH Dev",
+      "subject": "security: fix 3 high + 1 moderate npm vulnerabilities via npm audit fix"
+    },
+    {
+      "hash": "f2a0720ae3db12f6ed7c5bc538eb0ebb00d47cd2",
+      "shortHash": "f2a0720",
+      "date": "2026-08-13",
+      "author": "UCH Dev",
+      "subject": "chore: add NPL demo seed script for bank pilot"
+    },
+    {
+      "hash": "30d3e6d54afb216bcc6312569ad13e30130e355f",
+      "shortHash": "30d3e6d",
+      "date": "2026-08-13",
+      "author": "UCH Dev",
+      "subject": "feat(npl): add portfolio dashboard, manual classify trigger, fix server corruption"
+    },
     {
       "hash": "e031530cd5d00ba961938ce345d9f53558acaed4",
       "shortHash": "e031530",
@@ -77,34 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-08-11",
       "author": "Uffe J Carlson",
       "subject": "fix: make staff login recovery accessible"
-    },
-    {
-      "hash": "ebd4bb80f7f765441b7db9fb2f881b1afb4670b3",
-      "shortHash": "ebd4bb8",
-      "date": "2026-08-11",
-      "author": "Uffe J Carlson",
-      "subject": "feat: govern NPL remediation decisions"
-    },
-    {
-      "hash": "14110d517f8a58092789bf9aad00aaa37ec3ba67",
-      "shortHash": "14110d5",
-      "date": "2026-08-11",
-      "author": "Uffe J Carlson",
-      "subject": "feat: add immutable NPL case ledger"
-    },
-    {
-      "hash": "41825c3ae5b580a634232e013b393c4b8f3ec2ab",
-      "shortHash": "41825c3",
-      "date": "2026-08-11",
-      "author": "Uffe J Carlson",
-      "subject": "feat: govern loan tape reconciliation"
-    },
-    {
-      "hash": "eb2c2451dfecbd564188a4e52f4e7901dccb620b",
-      "shortHash": "eb2c245",
-      "date": "2026-08-11",
-      "author": "Uffe J Carlson",
-      "subject": "feat: govern Ghana NPL reduction plans"
     }
   ]
 };

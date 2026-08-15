@@ -1936,6 +1936,86 @@ export const nplDecisionProposals = pgTable("npl_decision_proposals", {
 export type NplCase = typeof nplCases.$inferSelect;
 export type NplCaseEvent = typeof nplCaseEvents.$inferSelect;
 export type NplDecisionProposal = typeof nplDecisionProposals.$inferSelect;
+// ── NPL Classification Engine tables ───────────────────────────────────────
+
+export const creditAccountClassifications = pgTable("credit_account_classifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditAccountId: varchar("credit_account_id").notNull().references(() => creditAccounts.id),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  daysInArrears: integer("days_in_arrears").notNull().default(0),
+  currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).notNull().default("0"),
+  accountStatus: text("account_status").notNull(),
+  assetClassification: text("asset_classification"),
+  ifrs9Stage: text("ifrs9_stage").notNull(),
+  ifrs9Reasons: jsonb("ifrs9_reasons").notNull().default(sql`'[]'`),
+  nplStage: text("npl_stage").notNull(),
+  nplReasons: jsonb("npl_reasons").notNull().default(sql`'[]'`),
+  provisionAmount: decimal("provision_amount", { precision: 15, scale: 2 }).notNull().default("0"),
+  provisionRate: decimal("provision_rate", { precision: 5, scale: 4 }).notNull().default("0"),
+  collectionTriggered: boolean("collection_triggered").notNull().default(false),
+  classifiedAt: timestamp("classified_at").defaultNow().notNull(),
+});
+
+export const nplMigrations = pgTable("npl_migrations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  creditAccountId: varchar("credit_account_id").notNull().references(() => creditAccounts.id),
+  borrowerId: varchar("borrower_id").notNull().references(() => borrowers.id),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  fromIfrs9Stage: text("from_ifrs9_stage").notNull(),
+  toIfrs9Stage: text("to_ifrs9_stage").notNull(),
+  fromNplStage: text("from_npl_stage").notNull(),
+  toNplStage: text("to_npl_stage").notNull(),
+  balanceAtMigration: decimal("balance_at_migration", { precision: 15, scale: 2 }).notNull().default("0"),
+  provisionBefore: decimal("provision_before", { precision: 15, scale: 2 }).notNull().default("0"),
+  provisionAfter: decimal("provision_after", { precision: 15, scale: 2 }).notNull().default("0"),
+  daysInArrearsBefore: integer("days_in_arrears_before").notNull().default(0),
+  daysInArrearsAfter: integer("days_in_arrears_after").notNull().default(0),
+  triggeredCollection: boolean("triggered_collection").notNull().default(false),
+  collectionAssignmentId: varchar("collection_assignment_id").references(() => collectionAssignments.id),
+  migratedAt: timestamp("migrated_at").defaultNow().notNull(),
+});
+
+export const nplPortfolioSummaries = pgTable("npl_portfolio_summaries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  organizationId: varchar("organization_id").references(() => organizations.id),
+  country: text("country").notNull(),
+  summaryDate: text("summary_date").notNull(),
+  grossLoanExposure: decimal("gross_loan_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  nplExposure: decimal("npl_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  watchlistExposure: decimal("watchlist_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  substandardExposure: decimal("substandard_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  doubtfulExposure: decimal("doubtful_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  lossExposure: decimal("loss_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  totalFacilities: integer("total_facilities").notNull().default(0),
+  nplFacilities: integer("npl_facilities").notNull().default(0),
+  watchlistFacilities: integer("watchlist_facilities").notNull().default(0),
+  nplRatio: decimal("npl_ratio", { precision: 5, scale: 4 }).notNull().default("0"),
+  watchlistRatio: decimal("watchlist_ratio", { precision: 5, scale: 4 }).notNull().default("0"),
+  coverageRatio: decimal("coverage_ratio", { precision: 5, scale: 4 }).notNull().default("0"),
+  provisionRatio: decimal("provision_ratio", { precision: 5, scale: 4 }).notNull().default("0"),
+  stage1Exposure: decimal("stage_1_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  stage2Exposure: decimal("stage_2_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  stage3Exposure: decimal("stage_3_exposure", { precision: 15, scale: 2 }).notNull().default("0"),
+  stage1Provision: decimal("stage_1_provision", { precision: 15, scale: 2 }).notNull().default("0"),
+  stage2Provision: decimal("stage_2_provision", { precision: 15, scale: 2 }).notNull().default("0"),
+  stage3Provision: decimal("stage_3_provision", { precision: 15, scale: 2 }).notNull().default("0"),
+  inflowsStage1To2: integer("inflows_stage_1_to_2").notNull().default(0),
+  inflowsStage2To3: integer("inflows_stage_2_to_3").notNull().default(0),
+  curesStage3To2: integer("cures_stage_3_to_2").notNull().default(0),
+  curesStage2To1: integer("cures_stage_2_to_1").notNull().default(0),
+  writeOffs: integer("write_offs").notNull().default(0),
+  nplAssignedToCollection: integer("npl_assigned_to_collection").notNull().default(0),
+  nplNotAssigned: integer("npl_not_assigned").notNull().default(0),
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+});
+
+export type CreditAccountClassification = typeof creditAccountClassifications.$inferSelect;
+export type NplMigration = typeof nplMigrations.$inferSelect;
+export type NplPortfolioSummary = typeof nplPortfolioSummaries.$inferSelect;
+
 
 // ---------------------------------------------------------------------------
 // XDS Data Ghana — bureau enquiry audit log
