@@ -201,7 +201,7 @@ export async function loadAccountsForClassification(country?: string): Promise<{
       a.asset_classification, a.bog_asset_classification
     FROM credit_accounts a
     JOIN borrowers b ON b.id = a.borrower_id
-    WHERE a.status NOT IN ('closed', 'settled')
+    WHERE a.status NOT IN ('closed')
       AND ($1::text IS NULL OR b.country = $1)
   `, [country || null]);
 
