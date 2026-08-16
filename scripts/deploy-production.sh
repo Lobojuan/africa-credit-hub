@@ -72,6 +72,10 @@ git reset --hard "$resolved_target_commit"
 git clean -ffd -e uploads/ -e backups/
 npm ci --no-audit --no-fund --silent
 npm run build --silent
+# The build embeds the release SHA in the generated runtime artifacts. Restore
+# the tracked source copies afterwards so production remains a clean Git clone;
+# the already-built dist output keeps the exact deployed release metadata.
+git restore --worktree -- client/src/generated/version-history.ts docs/Version_History.md
 
 sudo /bin/systemctl restart "$SERVICE"
 sleep 5
