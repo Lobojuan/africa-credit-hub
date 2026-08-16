@@ -1955,6 +1955,7 @@ export const creditAccountClassifications = pgTable("credit_account_classificati
   provisionAmount: decimal("provision_amount", { precision: 15, scale: 2 }).notNull().default("0"),
   provisionRate: decimal("provision_rate", { precision: 5, scale: 4 }).notNull().default("0"),
   collectionTriggered: boolean("collection_triggered").notNull().default(false),
+  collectionAssignmentId: varchar("collection_assignment_id").references(() => collectionAssignments.id),
   classifiedAt: timestamp("classified_at").defaultNow().notNull(),
 });
 

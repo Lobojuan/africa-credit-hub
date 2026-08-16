@@ -320,17 +320,30 @@ export async function runNplClassification(options: {
         );
         if (!existing.rows[0]) {
           const assigneeResult = await client.query(`
+            WITH assignee AS (
+              SELECT id FROM users
+              WHERE role = 'lender' AND status = 'active' AND organization_id = $3
+              ORDER BY created_at
+              LIMIT 1
+            )
             INSERT INTO collection_assignments
               (borrower_id, credit_account_id, assigned_to, organization_id, status, priority, created_by)
-            SELECT $1, $2,
-              (SELECT id FROM users WHERE role = 'lender' AND status = 'active' AND organization_id = $3 ORDER BY created_at LIMIT 1),
-              $3, 'open', 'high', 'system'
-            WHERE EXISTS (SELECT 1 FROM users WHERE role = 'lender' AND status = 'active' AND organization_id = $3)
+            SELECT $1, $2, assignee.id, $3, 'open', 'high', assignee.id
+            FROM assignee
             RETURNING id
           `, [m.account.borrowerId, m.account.creditAccountId, m.account.organizationId]);
           collectionAssignmentId = assigneeResult.rows[0]?.id || null;
           if (collectionAssignmentId) triggeredCollections++;
         }
+      }
+
+      if (collectionAssignmentId) {
+        await client.query(
+          `UPDATE credit_account_classifications
+           SET collection_triggered = true, collection_assignment_id = $2
+           WHERE credit_account_id = $1 AND DATE(classified_at) = CURRENT_DATE`,
+          [m.account.creditAccountId, collectionAssignmentId],
+        );
       }
 
       await client.query(`
@@ -444,6 +457,15 @@ export async function generatePortfolioSummary(summaryDate: string, country: str
   const row = result.rows[0];
   if (!row || Number(row.gross_loan_exposure) === 0) return null;
 
+  // PostgreSQL treats NULL organization IDs as distinct in ordinary unique
+  // constraints. Replace the exact daily scope explicitly so global regulator
+  // summaries remain idempotent across restarts as well as bank-scoped runs.
+  await pool.query(
+    `DELETE FROM npl_portfolio_summaries
+     WHERE organization_id IS NOT DISTINCT FROM $1 AND country = $2 AND summary_date = $3`,
+    [organizationId || null, country, summaryDate],
+  );
+
   await pool.query(`
     INSERT INTO npl_portfolio_summaries
       (organization_id, country, summary_date, gross_loan_exposure, npl_exposure, watchlist_exposure,
@@ -452,36 +474,7 @@ export async function generatePortfolioSummary(summaryDate: string, country: str
        stage_1_exposure, stage_2_exposure, stage_3_exposure, stage_1_provision, stage_2_provision,
        stage_3_provision, inflows_stage_1_to_2, inflows_stage_2_to_3, cures_stage_3_to_2,
        cures_stage_2_to_1, write_offs, npl_assigned_to_collection, npl_not_assigned)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30)
-    ON CONFLICT (organization_id, country, summary_date)
-    DO UPDATE SET
-      gross_loan_exposure = EXCLUDED.gross_loan_exposure,
-      npl_exposure = EXCLUDED.npl_exposure,
-      watchlist_exposure = EXCLUDED.watchlist_exposure,
-      substandard_exposure = EXCLUDED.substandard_exposure,
-      doubtful_exposure = EXCLUDED.doubtful_exposure,
-      loss_exposure = EXCLUDED.loss_exposure,
-      total_facilities = EXCLUDED.total_facilities,
-      npl_facilities = EXCLUDED.npl_facilities,
-      watchlist_facilities = EXCLUDED.watchlist_facilities,
-      npl_ratio = EXCLUDED.npl_ratio,
-      watchlist_ratio = EXCLUDED.watchlist_ratio,
-      coverage_ratio = EXCLUDED.coverage_ratio,
-      provision_ratio = EXCLUDED.provision_ratio,
-      stage_1_exposure = EXCLUDED.stage_1_exposure,
-      stage_2_exposure = EXCLUDED.stage_2_exposure,
-      stage_3_exposure = EXCLUDED.stage_3_exposure,
-      stage_1_provision = EXCLUDED.stage_1_provision,
-      stage_2_provision = EXCLUDED.stage_2_provision,
-      stage_3_provision = EXCLUDED.stage_3_provision,
-      inflows_stage_1_to_2 = EXCLUDED.inflows_stage_1_to_2,
-      inflows_stage_2_to_3 = EXCLUDED.inflows_stage_2_to_3,
-      cures_stage_3_to_2 = EXCLUDED.cures_stage_3_to_2,
-      cures_stage_2_to_1 = EXCLUDED.cures_stage_2_to_1,
-      write_offs = EXCLUDED.write_offs,
-      npl_assigned_to_collection = EXCLUDED.npl_assigned_to_collection,
-      npl_not_assigned = EXCLUDED.npl_not_assigned,
-      generated_at = now()
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)
   `, [
     organizationId || null, country, summaryDate,
     row.gross_loan_exposure, row.npl_exposure, row.watchlist_exposure,

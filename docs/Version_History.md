@@ -1,9 +1,9 @@
 # Universal Credit Hub Version History
 
 **Platform Version:** 2.8.0
-**Current Commit:** `0b65e15`
+**Current Commit:** `1879ceb`
 **Branch:** `main`
-**Generated:** 2026-08-16T18:05:12.166Z
+**Generated:** 2026-08-16T18:35:53.288Z
 
 This file is generated from the repository history by `npm run version:history`.
 It is refreshed automatically before `npm run dev`, `npm run build`, and `npm run check`, and by `dev-server.sh` for local previews.
@@ -12,7 +12,7 @@ It is refreshed automatically before `npm run dev`, `npm run build`, and `npm ru
 
 | Date | Commit | Change | Author |
 |---|---|---|---|
-| 2026-08-13 | `0b65e15` | fix: integrate NPL security updates and sales delivery | Uffe J Carlson |
+| 2026-08-13 | `1879ceb` | fix: integrate NPL security updates and sales delivery | Uffe J Carlson |
 | 2026-08-15 | `23ac249` | fix: TypeScript strict errors in NPL engine, websocket logger, and portfolio dashboard | UCH Dev |
 | 2026-08-15 | `0e58b29` | fix: JSON.stringify reason arrays for PostgreSQL jsonb columns | UCH Dev |
 | 2026-08-15 | `84e9093` | feat: add NPL classification tables to schema + migration | UCH Dev |

@@ -18,13 +18,13 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-16T18:05:12.166Z",
+  "generatedAt": "2026-08-16T18:35:53.288Z",
   "branch": "main",
-  "currentCommit": "0b65e15",
+  "currentCommit": "1879ceb",
   "commits": [
     {
-      "hash": "0b65e15fe30fe6be5069f7d2036eb1d3231e0082",
-      "shortHash": "0b65e15",
+      "hash": "1879ceb5b2ad9891b6b7dc7257dc808eac4d0008",
+      "shortHash": "1879ceb",
       "date": "2026-08-13",
       "author": "Uffe J Carlson",
       "subject": "fix: integrate NPL security updates and sales delivery"

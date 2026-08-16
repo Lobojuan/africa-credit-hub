@@ -15,8 +15,13 @@ CREATE TABLE IF NOT EXISTS credit_account_classifications (
   provision_amount decimal(15,2) NOT NULL DEFAULT '0',
   provision_rate decimal(5,4) NOT NULL DEFAULT '0',
   collection_triggered boolean NOT NULL DEFAULT false,
+  collection_assignment_id varchar REFERENCES collection_assignments(id),
   classified_at timestamp DEFAULT now() NOT NULL
 );
+
+-- Existing pilot databases may already have the table from an earlier draft.
+ALTER TABLE credit_account_classifications
+  ADD COLUMN IF NOT EXISTS collection_assignment_id varchar REFERENCES collection_assignments(id);
 
 CREATE TABLE IF NOT EXISTS npl_migrations (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

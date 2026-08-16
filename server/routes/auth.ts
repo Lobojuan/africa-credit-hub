@@ -3,9 +3,12 @@ import bcrypt from "bcryptjs";
 import * as OTPAuth from "otpauth";
 import crypto from "crypto";
 import { storage } from "../storage";
+import { pool } from "../db";
 import { createLogger } from "../logger";
 import { loginLimiter, stripPassword, safeErrorMessage, isPlatformPrivileged } from "./middleware";
 import { getActiveCountryName } from "../country-mode";
+import { getBaseUrl } from "../base-url";
+import { sendStaffPasswordResetEmail } from "../email";
 
 const authLogger = createLogger("auth");
 
@@ -112,12 +115,14 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
 
     req.session.regenerate(async (err) => {
       if (err) return res.status(500).json({ message: "Session error" });
+      const mfaEnrollmentRequired = !!user.mfaRequired || isPlatformPrivileged(user.role);
       req.session.userId = user.id;
       req.session.userRole = user.role;
       req.session.allowedProducts = (user as any).allowedProducts ?? undefined;
       req.session.userDivision = (user as any).division || undefined;
       req.session.organizationId = user.organizationId || undefined;
       req.session.lastActivity = Date.now();
+      req.session.mfaEnrollmentRequired = mfaEnrollmentRequired;
 
       if (isPlatformPrivileged(user.role)) {
         delete req.session.viewingCountry;
@@ -150,6 +155,7 @@ router.post("/api/auth/login", loginLimiter, async (req, res) => {
       req.session.save(() => {
         res.json({
           ...stripPassword(user),
+          mfaRequired: mfaEnrollmentRequired,
           passwordExpired,
           organization,
           viewingCountry,
@@ -217,6 +223,112 @@ router.post("/api/auth/change-password", async (req, res) => {
   } catch (e: any) {
     authLogger.error("Change password error", e);
     res.status(500).json({ message: safeErrorMessage(e) });
+  }
+});
+
+const PASSWORD_RESET_RESPONSE = "If an active account matches those details, a secure reset link has been sent.";
+const PASSWORD_RULES = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
+
+function hashActionToken(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+router.post("/api/auth/password-reset/request", loginLimiter, async (req, res) => {
+  const identifier = typeof req.body?.identifier === "string" ? req.body.identifier.trim() : "";
+  if (!identifier || identifier.length > 254) {
+    return res.status(400).json({ message: "Enter a valid username or work email." });
+  }
+
+  try {
+    const lookup = await pool.query(
+      `SELECT id, email FROM users
+       WHERE status = 'active' AND (lower(username) = lower($1) OR lower(email) = lower($1))
+       LIMIT 1`,
+      [identifier],
+    );
+    const user = lookup.rows[0] as { id: string; email: string } | undefined;
+    if (user) {
+      const token = crypto.randomBytes(32).toString("base64url");
+      const tokenHash = hashActionToken(token);
+      await pool.query(
+        `DELETE FROM auth_action_tokens
+         WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
+        [user.id],
+      );
+      await pool.query(
+        `INSERT INTO auth_action_tokens (user_id, purpose, token_hash, expires_at)
+         VALUES ($1, 'password_reset', $2, NOW() + INTERVAL '30 minutes')`,
+        [user.id, tokenHash],
+      );
+      const delivered = await sendStaffPasswordResetEmail(user.email, token, getBaseUrl());
+      if (!delivered) {
+        authLogger.warn("Password reset email was not delivered", { userId: user.id });
+      }
+    }
+  } catch (e: unknown) {
+    // Keep the public response enumeration-safe while retaining an operational
+    // signal for administrators.
+    authLogger.error("Password reset request failed", { error: e instanceof Error ? e.message : String(e) });
+  }
+
+  return res.json({ message: PASSWORD_RESET_RESPONSE });
+});
+
+router.post("/api/auth/password-reset/confirm", loginLimiter, async (req, res) => {
+  const token = typeof req.body?.token === "string" ? req.body.token : "";
+  const newPassword = typeof req.body?.newPassword === "string" ? req.body.newPassword : "";
+  if (!token || token.length > 128) return res.status(400).json({ message: "This reset link is invalid." });
+  if (!PASSWORD_RULES.test(newPassword)) {
+    return res.status(400).json({ message: "Password must be at least 8 characters with uppercase, lowercase, digit, and special character" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const matched = await client.query(
+      `SELECT t.id, t.user_id, u.password
+       FROM auth_action_tokens t
+       JOIN users u ON u.id = t.user_id
+       WHERE t.token_hash = $1 AND t.purpose = 'password_reset'
+         AND t.used_at IS NULL AND t.expires_at > NOW() AND u.status = 'active'
+       FOR UPDATE`,
+      [hashActionToken(token)],
+    );
+    const record = matched.rows[0] as { id: string; user_id: string; password: string } | undefined;
+    if (!record) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ message: "This reset link is invalid or has expired." });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await client.query(
+      `UPDATE users SET password = $1, password_changed_at = NOW(), must_change_password = false,
+         failed_login_attempts = 0, locked_until = NULL,
+         password_history = array_append(COALESCE(password_history, ARRAY[]::text[]), password)
+       WHERE id = $2`,
+      [passwordHash, record.user_id],
+    );
+    await client.query("UPDATE auth_action_tokens SET used_at = NOW() WHERE id = $1", [record.id]);
+    const sessionTable = await client.query("SELECT to_regclass('public.user_sessions') AS name");
+    if (sessionTable.rows[0]?.name) {
+      await client.query("DELETE FROM user_sessions WHERE sess->>'userId' = $1", [record.user_id]);
+    }
+    await client.query("COMMIT");
+    await storage.createAuditLog({
+      action: "PASSWORD_RESET",
+      entity: "user",
+      entityId: record.user_id,
+      userId: record.user_id,
+      details: "Password reset completed; existing sessions invalidated",
+      ipAddress: req.ip || null,
+    });
+    return res.json({ message: "Your password has been reset. Sign in and complete MFA verification." });
+  } catch (e: unknown) {
+    await client.query("ROLLBACK").catch(() => {});
+    authLogger.error("Password reset confirmation failed", { error: e instanceof Error ? e.message : String(e) });
+    return res.status(500).json({ message: safeErrorMessage(e) });
+  } finally {
+    client.release();
   }
 });
 
@@ -358,7 +470,8 @@ router.post("/api/auth/mfa/verify", async (req, res) => {
       return res.status(401).json({ message: "MFA code already used. Please wait for the next code." });
     }
     usedTotpTokens.set(tokenKey, Date.now() + 90_000);
-    await storage.updateUser(user.id, { mfaEnabled: true } as any);
+    await storage.updateUser(user.id, { mfaEnabled: true, mfaRequired: false } as any);
+    req.session.mfaEnrollmentRequired = false;
     await storage.createAuditLog({
       action: "MFA_ENABLED", entity: "user", entityId: user.id, userId: user.id,
       details: `MFA enabled for ${user.fullName}`,
@@ -380,6 +493,9 @@ router.post("/api/auth/mfa/disable", async (req, res) => {
     }
     const user = await storage.getUser(req.session.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+    if (isPlatformPrivileged(user.role)) {
+      return res.status(403).json({ message: "MFA is mandatory for privileged staff accounts and cannot be disabled." });
+    }
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       return res.status(401).json({ message: "Incorrect password" });
@@ -514,7 +630,13 @@ router.get("/api/auth/me", async (req, res) => {
     }
   }
 
-  const userData = stripPassword(user);
+  const bypassSecurityPrompts = process.env.ENABLE_E2E_TEST_AUTH === "true"
+    && process.env.NODE_ENV !== "production"
+    && process.env.PRODUCTION_MODE !== "true"
+    && !!req.session.e2eBypassSecurityPrompts;
+  const mfaRequired = !bypassSecurityPrompts && (!!user.mfaRequired || isPlatformPrivileged(user.role));
+  req.session.mfaEnrollmentRequired = mfaRequired && !user.mfaEnabled;
+  const userData = { ...stripPassword(user), mfaRequired };
 
   const passwordExpired = isPasswordExpired(user);
 
