@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # UCH production release runner. Execute as the restricted `deploy` account.
-# Database and schema changes are intentionally blocked here: release them
-# separately after a verified backup and an approved migration plan.
+# Database and schema changes require an exact-commit approval marker created
+# only after a verified backup and the reviewed migrations have been applied.
 set -Eeuo pipefail
 
 readonly APP_DIR="/opt/uch"
@@ -10,6 +10,7 @@ readonly HEALTH_URL="http://127.0.0.1:5000/api/health"
 readonly PUBLIC_BASE_URL="${UCH_PUBLIC_BASE_URL:-${CANONICAL_URL:-https://universalcredithub.com}}"
 readonly PUBLIC_HEALTH_URL="${PUBLIC_BASE_URL%/}/api/health"
 readonly TARGET_COMMIT="${1:?Usage: deploy-production.sh <approved-commit-sha>}"
+readonly SCHEMA_APPROVAL_DIR="${UCH_SCHEMA_APPROVAL_DIR:-/home/deploy/.uch-schema-approvals}"
 
 cd "$APP_DIR"
 previous_commit="$(git rev-parse HEAD)"
@@ -48,14 +49,24 @@ assert_healthy() {
 
 git fetch --prune origin main
 git cat-file -e "${TARGET_COMMIT}^{commit}"
-git merge-base --is-ancestor "$TARGET_COMMIT" origin/main
+resolved_target_commit="$(git rev-parse "${TARGET_COMMIT}^{commit}")"
+git merge-base --is-ancestor "$resolved_target_commit" origin/main
 
-if git diff --name-only "$previous_commit" "$TARGET_COMMIT" | grep -Eq '^(migrations/|shared/schema\.ts$)'; then
-  echo "Schema or migration change detected. Stop: take a database backup and run the approved migration procedure separately." >&2
-  exit 20
+if git diff --name-only "$previous_commit" "$resolved_target_commit" | grep -Eq '^(db/migrations/|migrations/|shared/schema\.ts$)'; then
+  approval_file="${SCHEMA_APPROVAL_DIR}/${resolved_target_commit}"
+  if [[ ! -f "$approval_file" ]]; then
+    echo "Schema or migration change detected. Stop: take and verify a database backup, apply the reviewed migrations, then create ${approval_file}." >&2
+    exit 20
+  fi
+  approved_sha="$(tr -d '[:space:]' < "$approval_file")"
+  if [[ "$approved_sha" != "$resolved_target_commit" ]]; then
+    echo "Schema approval marker does not match the requested release commit." >&2
+    exit 21
+  fi
+  echo "Verified schema approval marker for ${resolved_target_commit}."
 fi
 
-git reset --hard "$TARGET_COMMIT"
+git reset --hard "$resolved_target_commit"
 # Runtime data is deliberately outside Git but lives below the release root.
 # Never let a source cleanup remove uploaded evidence or database backups.
 git clean -ffd -e uploads/ -e backups/
@@ -71,4 +82,4 @@ assert_healthy "$HEALTH_URL"
 assert_healthy "$PUBLIC_HEALTH_URL"
 sudo /bin/systemctl is-active --quiet "$SERVICE"
 trap - ERR
-echo "UCH release complete: ${TARGET_COMMIT}"
+echo "UCH release complete: ${resolved_target_commit}"

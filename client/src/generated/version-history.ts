@@ -18,10 +18,17 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-16T18:35:53.288Z",
+  "generatedAt": "2026-08-16T21:19:41.994Z",
   "branch": "main",
-  "currentCommit": "1879ceb",
+  "currentCommit": "d2d4ca4",
   "commits": [
+    {
+      "hash": "d2d4ca4f15e7e88d5d74ef9ac6682bb40b822c62",
+      "shortHash": "d2d4ca4",
+      "date": "2026-08-16",
+      "author": "Uffe J Carlson",
+      "subject": "fix: harden account recovery and NPL processing"
+    },
     {
       "hash": "1879ceb5b2ad9891b6b7dc7257dc808eac4d0008",
       "shortHash": "1879ceb",
@@ -98,13 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-08-12",
       "author": "UCH Dev",
       "subject": "security: enable RLS on all 108 tables with org-scoped and restrictive policies for bank pilot"
-    },
-    {
-      "hash": "f38c37435a89772e6a3ebf3dabaf4bfa2440428f",
-      "shortHash": "f38c374",
-      "date": "2026-08-12",
-      "author": "UCH Dev",
-      "subject": "security: remove hardcoded registry123 fallback, fix NPL SQL injection, replace console.log with structured logging, fix scheduler leak"
     }
   ]
 };
