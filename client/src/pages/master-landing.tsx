@@ -129,6 +129,7 @@ export default function MasterLandingPage() {
                 {!videoPlaying && (
                   <button
                     type="button"
+                    aria-label={t("landingShell.video.play")}
                     className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center transition-colors hover:bg-slate-950/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
                     onClick={() => {
                       setVideoRequested(true);
