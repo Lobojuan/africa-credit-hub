@@ -12,17 +12,17 @@ export default function PrivacyPolicyPage() {
     <div className="min-h-screen bg-background">
       <Seo
         title="Privacy Policy — Universal Credit Hub"
-        description="Universal Credit Hub privacy policy. How we collect, store, and protect personal data under Ghana's Data Protection Act and pan-African data sovereignty requirements."
+        description="Read how Universal Credit Hub collects, protects and governs personal data across its African credit and bank-risk operations platform."
         canonical="https://universalcredithub.com/privacy"
       />
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <nav className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" data-testid="link-back-home">
+          <Button asChild variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+            <Link href="/" data-testid="link-back-home">
               <ArrowLeft className="w-4 h-4" />
               {t("legal.backToHome")}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <span className="text-sm font-semibold text-foreground">Universal Credit Hub</span>

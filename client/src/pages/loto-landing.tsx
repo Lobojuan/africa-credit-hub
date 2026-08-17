@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -11,15 +10,12 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 import { PRODUCT_REGISTRY } from "@/lib/products";
+import { Seo } from "@/components/seo";
 
 export default function LotoLandingPage() {
   const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const p = PRODUCT_REGISTRY.loto;
-
-  useEffect(() => {
-    document.title = `${t("loto.pageTitle", "Loto Fiscal")} — ${brand}`;
-  }, [brand, t]);
 
   const features = [
     { icon: ScanLine, titleKey: "loto.feature1Title", bodyKey: "loto.feature1Body" },
@@ -29,6 +25,11 @@ export default function LotoLandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50/40 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-950">
+      <Seo
+        title="Loto Fiscal & Verified Receipt Credit Data | Universal Credit Hub"
+        description="Turn consent-controlled verified VAT receipts into merchant credit evidence and real-time fiscal visibility for African institutions."
+        canonical="/loto"
+      />
       <header className="border-b border-slate-200/60 dark:border-slate-800 backdrop-blur-sm bg-white/80 dark:bg-slate-950/80 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5" data-testid="link-platform">
@@ -43,7 +44,7 @@ export default function LotoLandingPage() {
           <nav className="flex items-center gap-2">
             <ThemeToggle />
             <LanguageSwitcher />
-            <Link href="/login"><Button size="sm" variant="outline" data-testid="button-signin">Sign in</Button></Link>
+            <Button asChild size="sm" variant="outline"><Link href="/login" data-testid="button-signin">Sign in</Link></Button>
           </nav>
         </div>
         <div className="bg-emerald-50 dark:bg-emerald-950/30 border-t border-emerald-200/50 dark:border-emerald-900/30">
@@ -75,23 +76,21 @@ export default function LotoLandingPage() {
           {t("loto.comingSoonBody")}
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/contact-sales">
-            <Button
-              size="lg"
-              className="gap-2 text-white shadow-md"
-              style={{ background: `linear-gradient(135deg, ${p.accentFrom}, ${p.accentTo})` }}
-              data-testid="button-notify-me"
-            >
-              <Bell className="w-4 h-4" />
-              {t("loto.notifyMe")}
-            </Button>
-          </Link>
-          <Link href="/">
-            <Button size="lg" variant="outline" className="gap-2" data-testid="button-back-home">
+          <Button
+            asChild
+            size="lg"
+            className="gap-2 text-white shadow-md"
+            style={{ background: `linear-gradient(135deg, ${p.accentFrom}, ${p.accentTo})` }}
+            data-testid="button-notify-me"
+          >
+            <Link href="/contact-sales"><Bell className="w-4 h-4" />{t("loto.notifyMe")}</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="gap-2">
+            <Link href="/" data-testid="button-back-home">
               <ArrowLeft className="w-4 h-4" />
               {t("loto.backHome")}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </section>
 

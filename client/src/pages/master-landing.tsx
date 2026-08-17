@@ -13,11 +13,12 @@ import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 const platformDemoVideo = "/marketing/platform-demo.mp4";
 
 export default function MasterLandingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const year = new Date().getFullYear();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoRequested, setVideoRequested] = useState(false);
   const [videoUnavailable, setVideoUnavailable] = useState(false);
   const pillars = [
     ...PRODUCT_ORDER.map((id) => ({ ...PRODUCT_REGISTRY[id], kind: "product" as const })),
@@ -37,8 +38,10 @@ export default function MasterLandingPage() {
   ];
 
   useEffect(() => {
-    document.title = `${brand} — ${t("platform.brand.tagline")}`;
-  }, [brand, t]);
+    document.title = i18n.resolvedLanguage?.startsWith("fr")
+      ? `${brand} — Opérations de risque bancaire maîtrisées`
+      : `${brand} — Controlled Bank Risk Operations`;
+  }, [brand, i18n.resolvedLanguage]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -54,16 +57,16 @@ export default function MasterLandingPage() {
             </div>
           </Link>
           <nav className="flex items-center gap-1.5 md:gap-2">
-            <Link href="/for-lenders" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-lenders">For Lenders</Button></Link>
-            <Link href="/for-regulators" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-for-regulators">For Regulators</Button></Link>
-            <Link href="/forensics" className="hidden xl:inline-flex"><Button variant="ghost" size="sm" data-testid="link-forensics">Diagnostic</Button></Link>
-            <Link href="/financial-inclusion" className="hidden lg:inline-flex"><Button variant="ghost" size="sm" data-testid="link-impact">Impact</Button></Link>
-            <Link href="/pricing" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-pricing">Pricing</Button></Link>
-            <Link href="/press" className="hidden md:inline-flex"><Button variant="ghost" size="sm" data-testid="link-press">Press</Button></Link>
+            <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex"><Link href="/for-lenders" data-testid="link-for-lenders">For Lenders</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex"><Link href="/for-regulators" data-testid="link-for-regulators">For Regulators</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden xl:inline-flex"><Link href="/forensics" data-testid="link-forensics">Diagnostic</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden lg:inline-flex"><Link href="/financial-inclusion" data-testid="link-impact">Impact</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex"><Link href="/contact-sales" data-testid="link-pricing">Pricing</Link></Button>
+            <Button asChild variant="ghost" size="sm" className="hidden md:inline-flex"><Link href="/press" data-testid="link-press">Press</Link></Button>
             <ThemeToggle />
             <LanguageSwitcher />
-            <Link href="/contact-sales" className="hidden sm:inline-flex"><Button variant="outline" size="sm" data-testid="button-header-diagnostic">{t("landingShell.ctaDiagnostic")}</Button></Link>
-            <Link href="/login"><Button size="sm" data-testid="button-signin">{t("landingShell.masterHero.ctaPrimary")}</Button></Link>
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex"><Link href="/contact-sales" data-testid="button-header-diagnostic">{t("landingShell.ctaDiagnostic")}</Link></Button>
+            <Button asChild size="sm"><Link href="/login" data-testid="button-signin">{t("landingShell.masterHero.ctaPrimary")}</Link></Button>
           </nav>
         </div>
       </header>
@@ -86,8 +89,8 @@ export default function MasterLandingPage() {
             {t("landingShell.masterHero.subtitle", { brand })}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-            <Link href="/contact-sales"><Button size="lg" className="gap-2" data-testid="cta-request-diagnostic">{t("landingShell.ctaDiagnostic")} <ArrowRight className="w-4 h-4" /></Button></Link>
-            <Link href="/demo"><Button size="lg" variant="outline" className="gap-2" data-testid="cta-explore-demo">{t("landingShell.ctaDemo")} <ArrowRight className="w-4 h-4" /></Button></Link>
+            <Button asChild size="lg" className="gap-2"><Link href="/contact-sales" data-testid="cta-request-diagnostic">{t("landingShell.ctaDiagnostic")} <ArrowRight className="w-4 h-4" /></Link></Button>
+            <Button asChild size="lg" variant="outline" className="gap-2"><Link href="/demo" data-testid="cta-explore-demo">{t("landingShell.ctaDemo")} <ArrowRight className="w-4 h-4" /></Link></Button>
           </div>
           <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs font-medium text-slate-600 dark:text-slate-300 lg:justify-start" data-testid="landing-trust-signals">
             <span className="inline-flex items-center gap-1.5"><LockKeyhole className="size-3.5 text-emerald-600" />{t("landingShell.trustSignal1")}</span>
@@ -101,24 +104,36 @@ export default function MasterLandingPage() {
               <>
                 <video
                   ref={videoRef}
-                  src={platformDemoVideo}
+                  src={videoRequested ? platformDemoVideo : undefined}
                   playsInline
-                  preload="metadata"
+                  preload="none"
                   controls={videoPlaying}
                   className="aspect-video w-full bg-slate-950 object-cover"
                   data-testid="video-platform-demo"
                   onEnded={() => setVideoPlaying(false)}
                   onError={() => setVideoUnavailable(true)}
-                />
+                  onCanPlay={() => {
+                    if (videoRequested && videoPlaying) {
+                      videoRef.current?.play().catch(() => setVideoPlaying(false));
+                    }
+                  }}
+                >
+                  <track
+                    kind="captions"
+                    src="/marketing/platform-demo.en.vtt"
+                    srcLang="en"
+                    label="English"
+                    default
+                  />
+                </video>
                 {!videoPlaying && (
                   <button
                     type="button"
                     className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center transition-colors hover:bg-slate-950/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
                     onClick={() => {
+                      setVideoRequested(true);
                       setVideoPlaying(true);
-                      videoRef.current?.play().catch(() => setVideoPlaying(false));
                     }}
-                    aria-label={t("landingShell.video.play")}
                     data-testid="button-play-landing-video"
                   >
                     <span className="flex size-16 items-center justify-center rounded-full bg-white/95 text-slate-950 shadow-xl transition-transform group-hover:scale-105"><Play className="ml-1 size-7" /></span>
@@ -179,17 +194,18 @@ export default function MasterLandingPage() {
                   <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed flex-1" data-testid={`text-product-desc-${p.id}`}>
                     {p.kind === "product" ? t(p.descKey, p.englishDesc) : p.description}
                   </p>
-                  <Link href={p.kind === "product" ? p.publicLanding : p.href}>
-                    <Button
-                      variant="ghost"
-                      className="mt-5 -ml-3 self-start gap-1.5 font-semibold"
-                      style={{ color: p.accentText }}
-                      data-testid={`button-learn-${p.id}`}
-                    >
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="mt-5 -ml-3 self-start gap-1.5 font-semibold"
+                    style={{ color: p.accentText }}
+                    data-testid={`button-learn-${p.id}`}
+                  >
+                    <Link href={p.kind === "product" ? p.publicLanding : p.href}>
                       {p.kind === "product" ? t(`products.${p.id}.learnMore`, `Learn about ${p.englishName}`) : p.action}
                       <ArrowRight className="w-4 h-4" />
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 </CardContent>
               </Card>
             );
@@ -313,7 +329,7 @@ export default function MasterLandingPage() {
             <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-slate-50" data-testid="text-trust-title">{t("landingShell.trustTitle")}</h3>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-300" data-testid="text-trust-subtitle">{t("landingShell.trustSubtitle")}</p>
           </div>
-          <Link href="/security"><Button variant="outline" className="gap-2" data-testid="button-security"><Shield className="w-4 h-4" />Security</Button></Link>
+          <Button asChild variant="outline" className="gap-2"><Link href="/security" data-testid="button-security"><Shield className="w-4 h-4" />Security</Link></Button>
         </div>
       </section>
 

@@ -77,7 +77,7 @@ export default function ContactSalesPage() {
 
   return (
     <main className="min-h-screen bg-background py-12 px-4">
-      <Seo title="Contact Universal Credit Hub | Bank Software & Diagnostic Engagements" description="Speak with Universal Credit Hub about controlled bank risk operations software or a Ghana and Africa bank diagnostic engagement." canonical="/contact-sales" />
+      <Seo title="Contact Universal Credit Hub | Bank Software & Diagnostics" description="Speak with Universal Credit Hub about bank risk operations software or a Ghana and Africa bank diagnostic engagement." canonical="/contact-sales" />
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <div className="flex items-center justify-between">
@@ -113,7 +113,7 @@ export default function ContactSalesPage() {
               </div>
               <div className="rounded-lg border bg-muted/30 p-4 text-sm">
                 <p className="font-medium text-foreground">Platform owners</p>
-                <div className="mt-2 space-y-1 text-slate-600 dark:text-slate-300">
+                <div className="mt-2 space-y-1 text-slate-700 dark:text-slate-200">
                   <p><a className="hover:text-foreground" href="mailto:Thomas.Baafi@universalcredithub.com">Thomas Baafi</a> · Platform owner</p>
                   <p><a className="hover:text-foreground" href="mailto:uffe.carlson@universalcredithub.com">Uffe Carlson</a> · Platform owner · <a className="hover:text-foreground" href="tel:+233552395548">+233 552 395 548</a></p>
                 </div>
@@ -156,7 +156,7 @@ export default function ContactSalesPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Contact our Enterprise Team</CardTitle>
-                <CardDescription>Fill out the form and we'll get back to you within 24 hours.</CardDescription>
+                <CardDescription className="text-slate-700 dark:text-slate-200">Fill out the form and we'll get back to you within 24 hours.</CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4" data-testid="form-contact-sales">
@@ -196,7 +196,7 @@ export default function ContactSalesPage() {
                   <div className="space-y-1.5">
                     <Label htmlFor="contact-tier">I'm interested in</Label>
                     <Select value={form.tier} onValueChange={(v) => setForm({ ...form, tier: v })}>
-                      <SelectTrigger id="contact-tier" data-testid="select-contact-tier">
+                      <SelectTrigger id="contact-tier" aria-label="I'm interested in" className="text-slate-700 data-[placeholder]:text-slate-700 dark:text-slate-200 dark:data-[placeholder]:text-slate-200" data-testid="select-contact-tier">
                         <SelectValue placeholder="Select a plan" />
                       </SelectTrigger>
                       <SelectContent>
@@ -212,7 +212,7 @@ export default function ContactSalesPage() {
                     <Textarea id="message" placeholder="Tell us about your needs, current infrastructure, timeline, or any questions..." rows={4} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} data-testid="input-contact-message" />
                   </div>
 
-                  <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700" disabled={sending} data-testid="button-submit-contact">
+                  <Button type="submit" className="w-full bg-teal-700 text-white hover:bg-teal-800" disabled={sending} data-testid="button-submit-contact">
                     {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                     {sending ? "Sending..." : "Send Message"}
                   </Button>

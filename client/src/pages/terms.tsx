@@ -12,17 +12,17 @@ export default function TermsOfServicePage() {
     <div className="min-h-screen bg-background">
       <Seo
         title="Terms of Service — Universal Credit Hub"
-        description="Universal Credit Hub terms of service. Governing usage of the pan-African credit registry platform across 54 African jurisdictions."
+        description="Read the Universal Credit Hub terms governing use of the African credit and bank-risk operations platform."
         canonical="https://universalcredithub.com/terms"
       />
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b border-border">
         <nav className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
-          <Link href="/">
-            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground" data-testid="link-back-home">
+          <Button asChild variant="ghost" size="sm" className="gap-2 text-muted-foreground">
+            <Link href="/" data-testid="link-back-home">
               <ArrowLeft className="w-4 h-4" />
               {t("legal.backToHome")}
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
             <span className="text-sm font-semibold text-foreground">Universal Credit Hub</span>

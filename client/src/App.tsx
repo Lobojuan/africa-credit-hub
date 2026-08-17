@@ -993,7 +993,7 @@ function App() {
             <Route path="/" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
             <Route path="/investor" component={() => <Redirect to="/" />} />
             <Route path="/solutions" component={() => <Redirect to="/" />} />
-            <Route path="/credit" component={() => <Suspense fallback={<LazyFallback />}><CreditLandingPage /></Suspense>} />
+            <Route path="/credit" component={() => <Redirect to="/for-lenders" />} />
             <Route path="/collateral" component={() => <Suspense fallback={<LazyFallback />}><CollateralLandingPage /></Suspense>} />
             <Route path="/loto" component={() => <Suspense fallback={<LazyFallback />}><LotoLandingPage /></Suspense>} />
             <Route path="/financial-inclusion" component={() => <PublicPageFrame><Suspense fallback={<LazyFallback />}><FinancialInclusionPage /></Suspense></PublicPageFrame>} />

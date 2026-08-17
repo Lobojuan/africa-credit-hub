@@ -2553,7 +2553,7 @@ const en = {
   platform: {
     brand: {
       name: CO,
-      tagline: "One platform. Three pillars of credit and revenue infrastructure.",
+      tagline: "One platform. Four pillars of controlled bank operations.",
     },
     headerProduct: "Product",
     switchProduct: "Switch product",
@@ -6006,7 +6006,7 @@ const fr: typeof en = {
   platform: {
     brand: {
       name: CO,
-      tagline: "Une plateforme. Trois piliers de l'infrastructure de crédit et de recettes.",
+      tagline: "Une plateforme. Quatre piliers d'opérations bancaires maîtrisées.",
     },
     headerProduct: "Produit",
     switchProduct: "Changer de produit",

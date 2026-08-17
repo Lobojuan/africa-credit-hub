@@ -18,10 +18,24 @@ export type RepoVersionHistory = {
 export const repoVersionHistory: RepoVersionHistory = {
   "productName": "Universal Credit Hub",
   "packageVersion": "2.8.0",
-  "generatedAt": "2026-08-16T21:19:41.994Z",
+  "generatedAt": "2026-08-17T12:17:23.211Z",
   "branch": "main",
-  "currentCommit": "d2d4ca4",
+  "currentCommit": "99b876a",
   "commits": [
+    {
+      "hash": "99b876a507c9887fd8766720c9fbad5ec004700f",
+      "shortHash": "99b876a",
+      "date": "2026-08-16",
+      "author": "Uffe J Carlson",
+      "subject": "chore: keep production release clone clean"
+    },
+    {
+      "hash": "cb58c43d290c65f4948c35a65f6676fd57bbc30f",
+      "shortHash": "cb58c43",
+      "date": "2026-08-16",
+      "author": "Uffe J Carlson",
+      "subject": "fix: validate NPL migration release gate"
+    },
     {
       "hash": "d2d4ca4f15e7e88d5d74ef9ac6682bb40b822c62",
       "shortHash": "d2d4ca4",
@@ -91,20 +105,6 @@ export const repoVersionHistory: RepoVersionHistory = {
       "date": "2026-08-13",
       "author": "UCH Dev",
       "subject": "chore: add NPL demo seed script for bank pilot"
-    },
-    {
-      "hash": "30d3e6d54afb216bcc6312569ad13e30130e355f",
-      "shortHash": "30d3e6d",
-      "date": "2026-08-13",
-      "author": "UCH Dev",
-      "subject": "feat(npl): add portfolio dashboard, manual classify trigger, fix server corruption"
-    },
-    {
-      "hash": "e031530cd5d00ba961938ce345d9f53558acaed4",
-      "shortHash": "e031530",
-      "date": "2026-08-12",
-      "author": "UCH Dev",
-      "subject": "security: enable RLS on all 108 tables with org-scoped and restrictive policies for bank pilot"
     }
   ]
 };

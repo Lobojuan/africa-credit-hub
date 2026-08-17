@@ -6,7 +6,7 @@ on:
   workflow_dispatch:       # "Run workflow" button in the Actions tab
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lighthouse:
@@ -26,6 +26,7 @@ jobs:
           temporaryPublicStorage: true
 
       - name: Check robots.txt is plain text
+        if: ${{ always() }}
         run: |
           CONTENT_TYPE=$(curl -sI https://universalcredithub.com/robots.txt | grep -i content-type | head -1)
           echo "robots.txt Content-Type: $CONTENT_TYPE"
@@ -36,6 +37,7 @@ jobs:
           echo "✅ robots.txt OK"
 
       - name: Check sitemap.xml is valid XML
+        if: ${{ always() }}
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://universalcredithub.com/sitemap.xml)
           echo "sitemap.xml HTTP status: $STATUS"
@@ -46,11 +48,13 @@ jobs:
           echo "✅ sitemap.xml OK"
 
       - name: Check X-Robots-Tag header
+        if: ${{ always() }}
         run: |
           HEADER=$(curl -sI https://universalcredithub.com/ | grep -i x-robots-tag || echo "(none)")
           echo "X-Robots-Tag: $HEADER"
 
       - name: Check structured data present
+        if: ${{ always() }}
         run: |
           BODY=$(curl -sL https://universalcredithub.com/)
           if echo "$BODY" | grep -q "application/ld+json"; then
@@ -61,6 +65,7 @@ jobs:
           fi
 
       - name: Check hreflang tags
+        if: ${{ always() }}
         run: |
           BODY=$(curl -sL https://universalcredithub.com/)
           if echo "$BODY" | grep -q 'hreflang="x-default"'; then

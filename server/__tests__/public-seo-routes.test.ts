@@ -19,6 +19,11 @@ describe("public SEO route manifest", () => {
     expect(isPublicSeoPath("/forensics/")).toBe(true);
     expect(isPublicSeoPath("/fr")).toBe(true);
     expect(isPublicSeoPath("/contact-sales")).toBe(true);
+    expect(isPublicSeoPath("/collateral")).toBe(true);
+    expect(isPublicSeoPath("/loto")).toBe(true);
+    expect(isPublicSeoPath("/terms")).toBe(true);
+    expect(isPublicSeoPath("/privacy")).toBe(true);
+    expect(isPublicSeoPath("/credit")).toBe(false);
     expect(isPublicSeoPath("/login")).toBe(false);
     expect(isPublicSeoPath("/api/borrowers")).toBe(false);
   });
@@ -28,6 +33,10 @@ describe("public SEO route manifest", () => {
     expect(sitemap).toContain("https://universalcredithub.com/forensics");
     expect(sitemap).toContain("https://universalcredithub.com/contact-sales");
     expect(sitemap).toContain("https://universalcredithub.com/fr");
+    expect(sitemap).toContain("https://universalcredithub.com/collateral");
+    expect(sitemap).toContain("https://universalcredithub.com/loto");
+    expect(sitemap).toContain("https://universalcredithub.com/terms");
+    expect(sitemap).toContain("https://universalcredithub.com/privacy");
     expect(sitemap).not.toContain("/login</loc>");
   });
 
@@ -36,6 +45,17 @@ describe("public SEO route manifest", () => {
     expect(html).toContain("Bank Diagnostic &amp; Forensics for African Banks");
     expect(html).toContain('content="https://universalcredithub.com/forensics"');
     expect(html).toContain('rel="canonical" href="https://universalcredithub.com/forensics"');
+  });
+
+  it.each([
+    ["/collateral", "Collateral Registry for African Lenders"],
+    ["/loto", "Loto Fiscal &amp; Verified Receipt Credit Data"],
+    ["/terms", "Terms of Service — Universal Credit Hub"],
+    ["/privacy", "Privacy Policy — Universal Credit Hub"],
+  ])("renders unique metadata for %s", (path, expectedTitle) => {
+    const html = renderPublicSeoHtml(shell, path);
+    expect(html).toContain(expectedTitle);
+    expect(html).toContain(`rel="canonical" href="https://universalcredithub.com${path}"`);
   });
 
   it("renders a French home page with reciprocal language metadata", () => {

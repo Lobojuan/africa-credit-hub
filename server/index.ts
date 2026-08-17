@@ -105,6 +105,27 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 app.set("etag", false);
 
+// Keep one public origin for search engines and shared links. The application
+// remains responsible for this redirect even when a reverse proxy is replaced
+// or reconfigured.
+app.use((req, res, next) => {
+  if (isProductionBoot && req.hostname.toLowerCase() === "www.universalcredithub.com") {
+    return res.redirect(308, `https://universalcredithub.com${req.originalUrl}`);
+  }
+  next();
+});
+
+// Retired marketing aliases should redirect in the initial HTTP response so
+// crawlers and no-JavaScript clients see the same destination as the SPA.
+app.get(["/credit", "/credit/"], (req, res) => {
+  const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+  res.redirect(308, `/for-lenders${query}`);
+});
+app.get(["/pricing", "/pricing/"], (req, res) => {
+  const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+  res.redirect(308, `/contact-sales${query}`);
+});
+
 app.get("/health", async (_req, res) => {
   const start = Date.now();
   const mem = process.memoryUsage();

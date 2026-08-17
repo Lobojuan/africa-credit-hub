@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link } from "wouter";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -11,15 +10,12 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PLATFORM_COMPANY_NAME } from "@/lib/platform-config";
 import { PRODUCT_REGISTRY } from "@/lib/products";
+import { Seo } from "@/components/seo";
 
 export default function CollateralLandingPage() {
   const { t } = useTranslation();
   const brand = PLATFORM_COMPANY_NAME;
   const p = PRODUCT_REGISTRY.collateral;
-
-  useEffect(() => {
-    document.title = `${t("products.collateral.name", "Collateral Registry")} — ${brand}`;
-  }, [brand, t]);
 
   const features = [
     { icon: Trophy,      titleKey: "collateralLanding.feature1Title", bodyKey: "collateralLanding.feature1Body" },
@@ -30,6 +26,11 @@ export default function CollateralLandingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50/40 via-white to-white dark:from-slate-950 dark:via-slate-950 dark:to-slate-950">
+      <Seo
+        title="Collateral Registry for African Lenders | Universal Credit Hub"
+        description="Register pledged assets, search liens and verify tamper-evident collateral certificates through controlled African secured-lending workflows."
+        canonical="/collateral"
+      />
       <header className="border-b border-slate-200/60 dark:border-slate-800 backdrop-blur-sm bg-white/80 dark:bg-slate-950/80 sticky top-0 z-30">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5" data-testid="link-platform">
@@ -44,7 +45,7 @@ export default function CollateralLandingPage() {
           <nav className="flex items-center gap-2">
             <ThemeToggle />
             <LanguageSwitcher />
-            <Link href="/login"><Button size="sm" data-testid="button-signin">{t("collateralLanding.ctaPrimary")}</Button></Link>
+            <Button asChild size="sm"><Link href="/login" data-testid="button-signin">{t("collateralLanding.ctaPrimary")}</Link></Button>
           </nav>
         </div>
         <div className="bg-amber-50 dark:bg-amber-950/30 border-t border-amber-200/50 dark:border-amber-900/30">
@@ -69,22 +70,21 @@ export default function CollateralLandingPage() {
             {t("collateralLanding.heroSubtitle")}
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/login">
-              <Button
-                size="lg"
-                className="gap-2 text-white shadow-md"
-                style={{ background: `linear-gradient(135deg, ${p.accentFrom}, ${p.accentTo})` }}
-                data-testid="button-cta-primary"
-              >
-                {t("collateralLanding.ctaPrimary")} <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-            <Link href="/verify">
-              <Button size="lg" variant="outline" className="gap-2" data-testid="button-cta-secondary">
+            <Button
+              asChild
+              size="lg"
+              className="gap-2 text-white shadow-md"
+              style={{ background: `linear-gradient(135deg, ${p.accentFrom}, ${p.accentTo})` }}
+              data-testid="button-cta-primary"
+            >
+              <Link href="/login">{t("collateralLanding.ctaPrimary")} <ArrowRight className="w-4 h-4" /></Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="gap-2">
+              <Link href="/verify" data-testid="button-cta-secondary">
                 <Search className="w-4 h-4" />
                 {t("collateralLanding.ctaSecondary")}
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

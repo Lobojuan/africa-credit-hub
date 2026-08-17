@@ -52,7 +52,7 @@ export const PRODUCT_REGISTRY: Record<ProductId, ProductDefinition> = {
     englishDesc:
       "Score, monitor and report on every borrower across the continent. Pan-African credit reports, AI-driven portfolio intelligence, and full regulator exports.",
     routePrefix: "/credit",
-    publicLanding: "/credit",
+    publicLanding: "/for-lenders",
     primaryAuthRoute: "/dashboard",
     status: "live",
     icon: CreditCard,
