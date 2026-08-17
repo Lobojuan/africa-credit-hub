@@ -481,6 +481,111 @@ describe("Bot detection public route exemptions", () => {
 
     expect(nextCalled).toBe(true);
   });
+
+  it("allows recognized search and social preview crawlers on public SEO pages", async () => {
+    const { botDetectionMiddleware } = await import("../middleware/bot-detection");
+    const previousProductionMode = process.env.PRODUCTION_MODE;
+    process.env.PRODUCTION_MODE = "true";
+
+    try {
+      for (const userAgent of [
+        "Mozilla/5.0 (compatible; DuckDuckBot/1.1)",
+        "facebookexternalhit/1.1",
+        "LinkedInBot/1.0",
+      ]) {
+        let nextCalled = false;
+        const req: any = {
+          path: "/for-lenders",
+          headers: { "user-agent": userAgent },
+          ip: "203.0.113.20",
+          session: {},
+        };
+        const res: any = {
+          setHeader: () => {},
+          status: () => res,
+          json: () => {
+            throw new Error("Public discovery crawler should not be blocked");
+          },
+        };
+
+        botDetectionMiddleware(req, res, () => {
+          nextCalled = true;
+        });
+        expect(nextCalled).toBe(true);
+      }
+    } finally {
+      if (previousProductionMode === undefined) delete process.env.PRODUCTION_MODE;
+      else process.env.PRODUCTION_MODE = previousProductionMode;
+    }
+  });
+
+  it("does not extend the crawler exemption to protected API routes", async () => {
+    const { botDetectionMiddleware } = await import("../middleware/bot-detection");
+    const previousProductionMode = process.env.PRODUCTION_MODE;
+    process.env.PRODUCTION_MODE = "true";
+    let statusSent = 0;
+    let nextCalled = false;
+
+    try {
+      const req: any = {
+        path: "/api/borrowers",
+        headers: { "user-agent": "facebookexternalhit/1.1" },
+        ip: "203.0.113.21",
+        session: {},
+      };
+      const res: any = {
+        setHeader: () => {},
+        status: (code: number) => { statusSent = code; return res; },
+        json: () => res,
+      };
+
+      botDetectionMiddleware(req, res, () => {
+        nextCalled = true;
+      });
+      expect(nextCalled).toBe(false);
+      expect(statusSent).toBe(429);
+    } finally {
+      if (previousProductionMode === undefined) delete process.env.PRODUCTION_MODE;
+      else process.env.PRODUCTION_MODE = previousProductionMode;
+    }
+  });
+
+  it("allows public caption and media assets through bot protection", async () => {
+    const { botDetectionMiddleware } = await import("../middleware/bot-detection");
+    const previousProductionMode = process.env.PRODUCTION_MODE;
+    process.env.PRODUCTION_MODE = "true";
+
+    try {
+      for (const assetPath of [
+        "/marketing/platform-demo.en.vtt",
+        "/marketing/platform-demo.mp4",
+        "/logo.svg",
+      ]) {
+        let nextCalled = false;
+        const req: any = {
+          path: assetPath,
+          headers: { "user-agent": "curl/8.0.0" },
+          ip: "203.0.113.22",
+          session: {},
+        };
+        const res: any = {
+          setHeader: () => {},
+          status: () => res,
+          json: () => {
+            throw new Error("Public static asset should not be bot-blocked");
+          },
+        };
+
+        botDetectionMiddleware(req, res, () => {
+          nextCalled = true;
+        });
+        expect(nextCalled).toBe(true);
+      }
+    } finally {
+      if (previousProductionMode === undefined) delete process.env.PRODUCTION_MODE;
+      else process.env.PRODUCTION_MODE = previousProductionMode;
+    }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

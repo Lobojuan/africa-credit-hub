@@ -10,6 +10,18 @@ const KNOWN_SCRAPERS = [
   "slurp",
 ];
 
+// These user agents only receive the same public marketing HTML that an
+// unauthenticated visitor can already view. The exemption never applies to
+// APIs or authenticated product routes, so it does not weaken bank-data
+// controls. Including social preview agents keeps shared UCH links usable.
+const PUBLIC_DISCOVERY_CRAWLERS = [
+  "googlebot", "google-inspectiontool", "adsbot-google",
+  "bingbot", "bingpreview", "duckduckbot", "applebot",
+  "yandexbot", "baiduspider",
+  "facebookexternalhit", "facebot", "twitterbot", "linkedinbot",
+  "slackbot", "discordbot", "whatsapp", "telegrambot",
+];
+
 const EXEMPT_PATHS = new Set([
   "/", "/login", "/register", "/consumer-portal",
   "/health", "/ready", "/live", "/ping", "/api/health", "/robots.txt", "/sitemap.xml",
@@ -37,7 +49,7 @@ export function botDetectionMiddleware(req: Request, res: Response, next: NextFu
   if (
     req.path.startsWith("/.well-known") ||
     EXEMPT_PATHS.has(req.path) ||
-    req.path.match(/\.(js|jsx|ts|tsx|css|png|jpg|ico|woff2?)$/)
+    req.path.match(/\.(?:js|jsx|ts|tsx|css|map|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|otf|mp4|webm|vtt|xml|txt)$/i)
   ) {
     return next();
   }
@@ -49,8 +61,8 @@ export function botDetectionMiddleware(req: Request, res: Response, next: NextFu
   // Public marketing pages are deliberately crawlable. This is not an access
   // control boundary: those pages contain no account, customer, or bank data.
   // API and authenticated routes continue through the anti-automation checks.
-  const isSearchCrawler = ua.includes("googlebot") || ua.includes("bingbot");
-  if (isSearchCrawler && isPublicSeoPath(req.path)) {
+  const isPublicDiscoveryCrawler = PUBLIC_DISCOVERY_CRAWLERS.some((crawler) => ua.includes(crawler));
+  if (isPublicDiscoveryCrawler && isPublicSeoPath(req.path)) {
     return next();
   }
 

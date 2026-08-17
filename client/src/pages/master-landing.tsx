@@ -129,7 +129,6 @@ export default function MasterLandingPage() {
                 {!videoPlaying && (
                   <button
                     type="button"
-                    aria-label={t("landingShell.video.play")}
                     className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/40 p-6 text-center transition-colors hover:bg-slate-950/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
                     onClick={() => {
                       setVideoRequested(true);
@@ -140,6 +139,7 @@ export default function MasterLandingPage() {
                     <span className="flex size-16 items-center justify-center rounded-full bg-white/95 text-slate-950 shadow-xl transition-transform group-hover:scale-105"><Play className="ml-1 size-7" /></span>
                     <span className="mt-4 text-base font-semibold text-white">{t("landingShell.video.title")}</span>
                     <span className="mt-1 max-w-sm text-sm text-slate-200">{t("landingShell.video.subtitle")}</span>
+                    <span className="sr-only">{t("landingShell.video.play")}</span>
                   </button>
                 )}
               </>

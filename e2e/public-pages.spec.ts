@@ -92,7 +92,7 @@ test.describe("Public pages — Demo Board", () => {
     await page.goto("/");
     await expect(page.getByTestId("landing-video-panel")).toBeVisible();
     await expect(page.getByTestId("video-platform-demo")).not.toHaveAttribute("src", /.+/);
-    await expect(page.getByTestId("button-play-landing-video")).toHaveAccessibleName("Play Universal Credit Hub introduction video");
+    await expect(page.getByTestId("button-play-landing-video")).toHaveAccessibleName(/Play Universal Credit Hub introduction video/);
     await page.getByTestId("button-play-landing-video").click();
     await expect(page.getByTestId("video-platform-demo")).toHaveAttribute("src", "/marketing/platform-demo.mp4");
     await page.getByTestId("cta-explore-demo").click();
